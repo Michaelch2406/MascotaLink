@@ -35,6 +35,23 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-storage'         // <- subir fotos, docs, videos
+    implementation 'com.google.firebase:firebase-messaging'       // <- push notifications
+    implementation 'com.google.firebase:firebase-functions'      // <- llamadas a Cloud Functions (opcional)
+
+    // FirebaseUI Auth (opcional, facilita login/registro con providers)
+    implementation 'com.firebaseui:firebase-ui-auth:9.0.0'         // opcional pero muy práctico
+
+    // ML Kit Face Detection (verificación selfie en tiempo real)
+    implementation 'com.google.mlkit:face-detection:16.1.7'      // detectar caras en fotos / cámara
+
+    // Google Play Services (Maps + Location para zonas y geoubicación)
+    implementation 'com.google.android.gms:play-services-maps:19.2.0'
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
+
+    // Image loading / caching
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0' // si usas Java (Glide requiere annotation processor)
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity
