@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regla genérica para colección usuarios
+    match /usuarios/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+
+      // Valida que no se cambie rol ni perfil_ref
+      allow update: if request.resource.data.rol == resource.data.rol &&
+                    request.resource.data.perfil_ref == resource.data.perfil_ref;
+    }
+
+    // Reglas para duenos y paseadores
+    match /duenos/{duenoId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == duenoId;
+      allow delete: if false;
+
+      // Prohibe que cambien estado de verificación y fecha
+      allow update: if request.resource.data.verificacion_estado == resource.data.verificacion_estado &&
+                    request.resource.data.verificacion_fecha == resource.data.verificacion_fecha;
+    }
+
+    match /paseadores/{paseadorId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == paseadorId;
+      allow delete: if false;
+
+      // Prohibe que cambien estado de verificación y fecha
+      allow update: if request.resource.data.verificacion_estado == resource.data.verificacion_estado &&
+                    request.resource.data.verificacion_fecha == resource.data.verificacion_fecha;
+    }
+
+    // Subcolecciones bajo usuarios
+    match /usuarios/{userId}/metodos_pago/{metodoId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Mascotas dentro de duenos
+    match /duenos/{duenoId}/mascotas/{mascotaId} {
+      allow read, write: if request.auth != null && request.auth.uid == duenoId;
+    }
+
+    // Servicios
+    match /servicios/{servicioId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.due_id.id ||
+        request.auth.uid == resource.data.pas_id.id
+      );
+
+      allow create: if request.auth != null &&
+                    request.auth.uid == request.resource.data.due_id.id;
+
+      allow update: if request.auth != null && (
+        (request.auth.uid == resource.data.due_id.id && request.resource.data.estado in ['SOLICITADO', 'CANCELADO', 'COMPLETADO']) ||
+        (request.auth.uid == resource.data.pas_id.id && request.resource.data.estado in ['CONFIRMADO', 'EN_PROGRESO'])
+      );
+
+      allow delete: if false;
+    }
+
+    // Chats y mensajes
+    match /chats/{chatId} {
+      allow read, write: if request.auth != null &&
+                        request.auth.uid in resource.data.participantes_ids;
+
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null &&
+                          request.auth.uid in resource.data.participantes_ids;
+      }
+    }
+
+    // Por defecto denegar todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
