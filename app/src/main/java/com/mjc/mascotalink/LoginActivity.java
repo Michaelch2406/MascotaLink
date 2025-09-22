@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
@@ -31,6 +32,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
 
+    private static final String TAG = "LoginActivity";
+    // Cambia a true si vas a usar los Emuladores de Firebase (y asegúrate de tenerlos corriendo)
+    private static final boolean USE_FIREBASE_EMULATORS = false;
+    
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
@@ -44,16 +49,34 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // CRÍTICO: Configurar emulator ANTES de usar Firebase
-        String host = "192.168.0.147"; // ajusta si tu emulador/PC cambia de red
-        // Nota: useEmulator debe llamarse antes de cualquier operación real
-        FirebaseAuth authInstance = FirebaseAuth.getInstance();
-        authInstance.useEmulator(host, 9099);
-        FirebaseFirestore firestoreInstance = FirebaseFirestore.getInstance();
-        firestoreInstance.useEmulator(host, 8080);
+        Log.d(TAG, "onCreate: Iniciando LoginActivity");
+        
+        // Configuración condicional de Firebase (Emuladores vs Producción)
+        try {
+            if (USE_FIREBASE_EMULATORS) {
+                // Ajusta el host si usas dispositivo físico o un emulador diferente
+                String host = "10.0.2.2"; // host del PC desde el emulador estándar de Android
+                Log.d(TAG, "Usando Emuladores de Firebase en host: " + host);
 
-        mAuth = authInstance;
-        db = firestoreInstance;
+                FirebaseAuth authInstance = FirebaseAuth.getInstance();
+                authInstance.useEmulator(host, 9099);
+
+                FirebaseFirestore firestoreInstance = FirebaseFirestore.getInstance();
+                firestoreInstance.useEmulator(host, 8080);
+
+                mAuth = authInstance;
+                db = firestoreInstance;
+                Log.d(TAG, "Emuladores configurados (Auth:9099, Firestore:8080)");
+            } else {
+                // Producción (proyecto real de Firebase definido por google-services.json)
+                mAuth = FirebaseAuth.getInstance();
+                db = FirebaseFirestore.getInstance();
+                Log.d(TAG, "Usando Firebase en la nube (producción)");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error configurando Firebase: ", e);
+            mostrarError("Error de configuración: " + e.getMessage());
+        }
 
         bindViews();
         setupUI();
@@ -98,13 +121,8 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    // Email helper + validación en tiempo real
+    // Email validación en tiempo real
     private void setupEmailField() {
-        tilEmail.setHelperText("Ejemplo: ejemplo@gmail.com");
-        tilEmail.setHelperTextColor(ColorStateList.valueOf(Color.GRAY));
-
-        etEmail.setHint("Ingresa tu correo electrónico");
-
         etEmail.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -118,13 +136,8 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    // Password helper + toggle + validación longitud
+    // Password validación en tiempo real
     private void setupPasswordField() {
-        tilPassword.setHelperText("Mínimo 6 caracteres");
-        tilPassword.setHelperTextColor(ColorStateList.valueOf(Color.GRAY));
-        etPassword.setHint("Ingresa tu contraseña");
-        tilPassword.setEndIconMode(TextInputLayout.END_ICON_PASSWORD_TOGGLE);
-
         etPassword.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -158,19 +171,28 @@ public class LoginActivity extends AppCompatActivity {
         String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
         String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
 
-        if (!validarCampos(email, password)) return;
+        Log.d(TAG, "Intentando login con email: " + email);
+        
+        if (!validarCampos(email, password)) {
+            Log.w(TAG, "Validación de campos fallida");
+            return;
+        }
 
         mostrarProgressBar(true);
+        Log.d(TAG, "Iniciando autenticación con Firebase...");
 
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     mostrarProgressBar(false);
                     if (task.isSuccessful()) {
+                        Log.d(TAG, "Login exitoso");
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null) {
+                            Log.d(TAG, "Usuario autenticado: " + user.getUid());
                             verificarRolYRedirigir(user.getUid());
                         }
                     } else {
+                        Log.e(TAG, "Error en login", task.getException());
                         manejarErrorLogin(task.getException());
                     }
                 });
@@ -268,15 +290,31 @@ public class LoginActivity extends AppCompatActivity {
 
     private void manejarErrorLogin(Exception exception) {
         String mensajeError = "Error desconocido";
+        
+        Log.e(TAG, "Error detallado en login: ", exception);
+        
         if (exception instanceof FirebaseAuthInvalidCredentialsException) {
             mensajeError = "Credenciales inválidas. Verifica tu correo y contraseña.";
+            Log.e(TAG, "Error: Credenciales inválidas");
         } else if (exception instanceof FirebaseAuthInvalidUserException) {
             mensajeError = "No existe una cuenta con este correo electrónico.";
+            Log.e(TAG, "Error: Usuario no existe");
         } else if (exception instanceof FirebaseNetworkException) {
-            mensajeError = "Error de conexión. Verifica tu internet.";
+            mensajeError = "Error de conexión. Verifica tu internet y la configuración del emulador.";
+            Log.e(TAG, "Error de red: " + exception.getMessage());
         } else if (exception != null && exception.getMessage() != null) {
             mensajeError = exception.getMessage();
+            Log.e(TAG, "Error con mensaje: " + exception.getMessage());
+            
+            // Verificar si es el error de cleartext traffic
+            if (exception.getMessage().contains("Cleartext HTTP traffic") || 
+                exception.getMessage().contains("not permitted")) {
+                mensajeError = "Error de configuración de red. Verifica la configuración del emulador Firebase.";
+                Log.e(TAG, "Error de cleartext traffic detectado");
+            }
         }
+        
+        Log.e(TAG, "Mensaje final de error: " + mensajeError);
         mostrarError(mensajeError);
     }
 

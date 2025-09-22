@@ -6,4 +6,10 @@
     </style>
 
     <style name="Theme.MascotaLink" parent="Base.Theme.MascotaLink" />
+    
+    <!-- Custom TextInputLayout style -->
+    <style name="CustomTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="android:textColorHint">#6B7280</item>
+        <item name="hintTextColor">#6B7280</item>
+    </style>
 </resources>

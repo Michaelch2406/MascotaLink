@@ -55,15 +55,17 @@
         <!-- Email Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_email"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            style="@style/CustomTextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:hint="Correo electrónico"
             app:boxBackgroundColor="#E5EDF1"
             app:boxCornerRadiusTopStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
             app:boxCornerRadiusBottomStart="12dp"
-            app:boxCornerRadiusBottomEnd="12dp">
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:helperText="Ejemplo: usuario@gmail.com">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_email"
@@ -71,32 +73,28 @@
                 android:layout_height="wrap_content"
                 android:inputType="textEmailAddress"
                 android:padding="12dp"
-                android:textColorHint="#9CA3AF" />
+                android:textColor="#111827"
+                android:textColorHint="#6B7280"
+                android:textSize="16sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
-            android:id="@+id/tv_email_helper"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Ejemplo: ejemplo@gmail.com"
-            android:textColor="#9CA3AF"
-            android:textSize="12sp"
-            android:layout_marginTop="4dp"
-            tools:ignore="HardcodedText" />
+
 
         <!-- Password Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_password"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            style="@style/CustomTextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:hint="Contraseña"
             app:endIconMode="password_toggle"
             app:boxBackgroundColor="#E5EDF1"
             app:boxCornerRadiusTopStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
             app:boxCornerRadiusBottomStart="12dp"
-            app:boxCornerRadiusBottomEnd="12dp">
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:helperText="Mínimo 6 caracteres">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_password"
@@ -104,7 +102,9 @@
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
                 android:padding="12dp"
-                android:textColorHint="#9CA3AF" />
+                android:textColor="#111827"
+                android:textColorHint="#6B7280"
+                android:textSize="16sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Forgot password link -->
@@ -170,10 +170,13 @@
             android:text="Continuar con Google"
             android:textAllCaps="false"
             android:textColor="#111827"
+            android:textSize="16sp"
             app:icon="@drawable/ic_google"
             app:iconGravity="textStart"
             app:iconPadding="12dp"
-            app:iconTint="#111827" />
+            app:iconSize="20dp"
+            app:strokeColor="#D1D5DB"
+            app:strokeWidth="1dp" />
 
         <!-- Register link -->
         <TextView
