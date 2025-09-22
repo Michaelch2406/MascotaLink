@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "993266900475",
+    "project_id": "mascotalink-2d9da",
+    "storage_bucket": "mascotalink-2d9da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:993266900475:android:2379398dba2c7e1a0f3f5e",
+        "android_client_info": {
+          "package_name": "com.mjc.mascotalink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5IPQpksKVeZd3Grv0TjEz1PS8IFxi7MU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
