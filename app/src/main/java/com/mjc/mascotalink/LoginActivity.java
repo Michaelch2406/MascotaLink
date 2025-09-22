@@ -29,12 +29,13 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
 
 public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
     // Cambia a true si vas a usar los Emuladores de Firebase (y asegúrate de tenerlos corriendo)
-    private static final boolean USE_FIREBASE_EMULATORS = false;
+    private static final boolean USE_FIREBASE_EMULATORS = true;
     
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -55,7 +56,7 @@ public class LoginActivity extends AppCompatActivity {
         try {
             if (USE_FIREBASE_EMULATORS) {
                 // Ajusta el host si usas dispositivo físico o un emulador diferente
-                String host = "10.0.2.2"; // host del PC desde el emulador estándar de Android
+                String host = "192.168.0.147"; // host del PC desde el emulador estándar de Android
                 Log.d(TAG, "Usando Emuladores de Firebase en host: " + host);
 
                 FirebaseAuth authInstance = FirebaseAuth.getInstance();
@@ -63,6 +64,8 @@ public class LoginActivity extends AppCompatActivity {
 
                 FirebaseFirestore firestoreInstance = FirebaseFirestore.getInstance();
                 firestoreInstance.useEmulator(host, 8080);
+
+                FirebaseStorage.getInstance().useEmulator(host, 9199);
 
                 mAuth = authInstance;
                 db = firestoreInstance;
@@ -72,6 +75,10 @@ public class LoginActivity extends AppCompatActivity {
                 mAuth = FirebaseAuth.getInstance();
                 db = FirebaseFirestore.getInstance();
                 Log.d(TAG, "Usando Firebase en la nube (producción)");
+            }
+            // Opcional: fija idioma para evitar X-Firebase-Locale null y mostrar mensajes en español
+            if (mAuth != null) {
+                mAuth.setLanguageCode("es");
             }
         } catch (Exception e) {
             Log.e(TAG, "Error configurando Firebase: ", e);
