@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#F7FAFC"
+    tools:context=".LoginActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Logo -->
+        <ImageView
+            android:id="@+id/iv_logo"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="24dp"
+            android:src="@drawable/mascotalink_logo_secundario"
+            android:contentDescription="@string/app_name" />
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:text="MascotaLink"
+            android:textColor="#111827"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Subtitle -->
+        <TextView
+            android:id="@+id/tv_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="4dp"
+            android:text="Conecta con paseadores de confianza para tu mascota"
+            android:textColor="#6B7280"
+            android:textSize="14sp" />
+
+        <!-- Spacing -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp" />
+
+        <!-- Email Field -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_email"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:boxBackgroundColor="#E5EDF1"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textEmailAddress"
+                android:padding="12dp"
+                android:textColorHint="#9CA3AF" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tv_email_helper"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ejemplo: ejemplo@gmail.com"
+            android:textColor="#9CA3AF"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp"
+            tools:ignore="HardcodedText" />
+
+        <!-- Password Field -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_password"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:endIconMode="password_toggle"
+            app:boxBackgroundColor="#E5EDF1"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:padding="12dp"
+                android:textColorHint="#9CA3AF" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Forgot password link -->
+        <TextView
+            android:id="@+id/tv_forgot_password"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="¿Olvidaste tu contraseña?"
+            android:textColor="#0EA5E9"
+            android:textSize="14sp" />
+
+        <!-- Remember me -->
+        <CheckBox
+            android:id="@+id/cb_remember"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Recordarme en este dispositivo"
+            android:textColor="#374151" />
+
+        <!-- Login button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_login"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#13A4EC"
+            android:text="Iniciar sesión"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+
+        <!-- Loading -->
+        <ProgressBar
+            android:id="@+id/pb_loading"
+            style="@android:style/Widget.DeviceDefault.Light.ProgressBar.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+
+        <!-- Separator -->
+        <TextView
+            android:id="@+id/tv_separator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="O"
+            android:textColor="#9CA3AF"
+            android:textSize="14sp" />
+
+        <!-- Google login button outlined -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_google_login"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Continuar con Google"
+            android:textAllCaps="false"
+            android:textColor="#111827"
+            app:icon="@drawable/ic_google"
+            app:iconGravity="textStart"
+            app:iconPadding="12dp"
+            app:iconTint="#111827" />
+
+        <!-- Register link -->
+        <TextView
+            android:id="@+id/tv_register_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:text="¿No tienes una cuenta? Regístrate"
+            android:textColor="#6B7280"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+</ScrollView>

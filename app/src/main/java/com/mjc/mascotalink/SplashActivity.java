@@ -20,7 +20,7 @@ public class SplashActivity extends AppCompatActivity {
         // Usar Handler para retrasar la transición a LoginActivity
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             // Crear un Intent para iniciar LoginActivity
-            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+            Intent intent = new Intent(SplashActivity.this, LoginActivity.class);
             startActivity(intent);
             
             // Cerrar SplashActivity para que no se pueda volver a ella con el botón atrás
