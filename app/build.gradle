@@ -9,12 +9,17 @@ android {
 
     defaultConfig {
         applicationId "com.mjc.mascotalink"
-        minSdk 34
-        targetSdk 36
+        minSdk 32
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // Solo ABI de destino del dispositivo: reduce tamaño y elimina x86/x86_64
+        ndk {
+            abiFilters "arm64-v8a", "x86_64"
+        }
     }
 
     buildTypes {
@@ -48,32 +53,26 @@ dependencies {
     implementation 'androidx.camera:camera-camera2:1.5.0'
     implementation 'androidx.camera:camera-lifecycle:1.5.0'
 
-    // ML Kit Face Detection
-    implementation 'com.google.mlkit:face-detection:16.1.7'
-    implementation 'com.google.mlkit:text-recognition:16.0.0'
+    // ML Kit vía Google Play services (evita incluir .so en el APK)
+    implementation 'com.google.android.gms:play-services-mlkit-face-detection:+'
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:+'
 
     // Google Play Services (Maps + Location para zonas y geoubicación)
     implementation 'com.google.android.gms:play-services-maps:19.2.0'
     implementation 'com.google.maps.android:android-maps-utils:3.16.2'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-
-    implementation 'com.cloudinary:cloudinary-android:3.1.1' // versión actualizada (Jul 2025):contentReference[oaicite:1]{index=1}
-
-    implementation 'com.github.bumptech.glide:glide:4.16.0' // para mostrar imágenes
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
-
     // FirebaseUI Auth (opcional, facilita login/registro con providers)
     implementation 'com.firebaseui:firebase-ui-auth:9.0.0'         // opcional pero muy práctico
 
-    // ML Kit Face Detection (verificación selfie en tiempo real)
-    implementation 'com.google.mlkit:face-detection:16.1.7'      // detectar caras en fotos / cámara
+    // ML Kit Face Detection (Play Services)
+    implementation 'com.google.android.gms:play-services-mlkit-face-detection:+'
 
 
 
     // Image loading / caching
-    implementation 'com.github.bumptech.glide:glide:4.16.0'
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0' // si usas Java (Glide requiere annotation processor)
+    implementation 'com.github.bumptech.glide:glide:5.0.5'
+    annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5' // si usas Java (Glide requiere annotation processor)
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity

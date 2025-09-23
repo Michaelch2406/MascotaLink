@@ -5,21 +5,20 @@ import android.text.TextUtils;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class ForgotPasswordActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
-    private TextInputLayout tilEmail;
-    private TextInputEditText etEmail;
+    private EditText etEmail;
     private ProgressBar progressBar;
 
     @Override
@@ -27,20 +26,22 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_forgot_password);
 
+        // Toolbar back navigation
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            toolbar.setNavigationOnClickListener(v -> finish());
+        }
+
         // Configurar emulator antes de usar Firebase
         String host = "192.168.0.147";
         FirebaseAuth authInstance = FirebaseAuth.getInstance();
         authInstance.useEmulator(host, 9099);
         mAuth = authInstance;
 
-        tilEmail = findViewById(R.id.til_email);
         etEmail = findViewById(R.id.et_email);
         progressBar = findViewById(R.id.pb_loading);
 
         Button btnSend = findViewById(R.id.btn_send);
-        Button btnBack = findViewById(R.id.btn_back);
-
-        btnBack.setOnClickListener(v -> finish());
 
         btnSend.setOnClickListener(v -> enviarEmailRecuperacion());
     }
@@ -48,14 +49,14 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     private void enviarEmailRecuperacion() {
         String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
         if (TextUtils.isEmpty(email)) {
-            tilEmail.setError("El correo es requerido");
+            etEmail.setError("El correo es requerido");
             return;
         }
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            tilEmail.setError("Formato de correo inválido");
+            etEmail.setError("Formato de correo inválido");
             return;
         }
-        tilEmail.setError(null);
+        etEmail.setError(null);
         mostrarLoading(true);
         mAuth.sendPasswordResetEmail(email).addOnCompleteListener(task -> {
             mostrarLoading(false);
