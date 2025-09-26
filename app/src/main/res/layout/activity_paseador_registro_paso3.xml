@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        app:navigationIcon="@drawable/abc_ic_ab_back_material"
+        app:navigationIconTint="#111827"
+        app:title="Documentos"
+        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolbar"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_above="@+id/bottom_bar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Verificación de antecedentes -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="Documentos"
+                style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_marginTop="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.TitleLarge"
+                android:layout_marginTop="12dp"
+                android:text="Verificación de antecedentes"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_marginTop="6dp"
+                android:text="Para garantizar la seguridad de todos, necesitamos verificar tus antecedentes. Por favor, sube una copia de tu certificado de antecedentes penales."/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:layout_marginTop="12dp"
+                android:text="Certificado de antecedentes penales"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/dashed_border">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sube tu certificado"
+                    style="@style/TextAppearance.Mascota.CardTitle"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/TextAppearance.Mascota.BodyMuted"
+                    android:layout_marginTop="4dp"
+                    android:text="Sube un archivo PDF o una imagen de tu certificado de antecedentes penales."/>
+
+                <TextView
+                    android:id="@+id/tv_antecedentes_nombre"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="(ningún archivo seleccionado)"
+                    style="@style/TextAppearance.Mascota.BodyMuted"/>
+
+                <Button
+                    android:id="@+id/btn_subir_antecedentes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="10dp"
+                    android:text="Subir archivo"
+                    android:textAllCaps="false"
+                    android:textStyle="bold"
+                    android:backgroundTint="#E7EEF2"
+                    android:textColor="#111827"/>
+            </LinearLayout>
+            
+            <!-- Preview del documento de antecedentes -->
+            <RelativeLayout
+                android:id="@+id/container_preview_antecedentes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+                
+                <ImageView
+                    android:id="@+id/preview_antecedentes"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:scaleType="centerCrop"
+                    android:background="#E5EDF1"
+                    android:contentDescription="Preview certificado antecedentes"/>
+                    
+                <Button
+                    android:id="@+id/btn_eliminar_antecedentes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_margin="8dp"
+                    android:text="❌ Eliminar"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:backgroundTint="#DC2626"
+                    android:textColor="#FFFFFF"/>
+            </RelativeLayout>
+
+            <!-- Verificación certificado médico -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.TitleLarge"
+                android:layout_marginTop="20dp"
+                android:text="Verificación de certificado médico"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_marginTop="6dp"
+                android:text="Para garantizar la seguridad de todas las mascotas, necesitamos que subas un certificado médico reciente que confirme tu capacidad para realizar paseos. Este documento debe ser emitido por un profesional de la salud y tener una validez no mayor a seis meses."/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:layout_marginTop="12dp"
+                android:text="Certificado médico"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/dashed_border">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sube tu certificado"
+                    style="@style/TextAppearance.Mascota.CardTitle"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/TextAppearance.Mascota.BodyMuted"
+                    android:layout_marginTop="4dp"
+                    android:text="Sube un archivo PDF o una imagen de tu certificado médico."/>
+
+                <TextView
+                    android:id="@+id/tv_medico_nombre"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="(ningún archivo seleccionado)"
+                    style="@style/TextAppearance.Mascota.BodyMuted"/>
+
+                <Button
+                    android:id="@+id/btn_subir_medico"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="10dp"
+                    android:text="Subir archivo"
+                    android:textAllCaps="false"
+                    android:textStyle="bold"
+                    android:backgroundTint="#E7EEF2"
+                    android:textColor="#111827"/>
+            </LinearLayout>
+            
+            <!-- Preview del certificado médico -->
+            <RelativeLayout
+                android:id="@+id/container_preview_medico"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+                
+                <ImageView
+                    android:id="@+id/preview_medico"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:scaleType="centerCrop"
+                    android:background="#E5EDF1"
+                    android:contentDescription="Preview certificado médico"/>
+                    
+                <Button
+                    android:id="@+id/btn_eliminar_medico"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_margin="8dp"
+                    android:text="❌ Eliminar"
+                    android:textSize="12sp"
+                    android:textAllCaps="false"
+                    android:backgroundTint="#DC2626"
+                    android:textColor="#FFFFFF"/>
+            </RelativeLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="24dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:padding="16dp">
+        <Button
+            android:id="@+id/btn_enviar_verificacion"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Enviar para verificación"
+            style="@style/Widget.Mascota.PrimaryButton"/>
+    </LinearLayout>
+
+</RelativeLayout>

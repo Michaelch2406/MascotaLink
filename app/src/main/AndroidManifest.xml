@@ -51,6 +51,22 @@
         <activity
             android:name=".SeleccionRolActivity"
             android:exported="false" />
+        <activity
+            android:name=".PaseadorRegistroPaso1Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".PaseadorRegistroPaso2Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".PaseadorRegistroPaso3Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".SelfieActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
     </application>
 
 </manifest>

@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        app:navigationIcon="@drawable/abc_ic_ab_back_material"
+        app:navigationIconTint="#111827"
+        app:title="Crea tu cuenta en pocos pasos"
+        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/toolbar"
+        android:layout_above="@+id/bottom_bar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
+
+            <!-- Nombre -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Nombre"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_nombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu nombre"
+                    android:inputType="textPersonName"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Apellido -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Apellido"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_apellido"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu apellido"
+                    android:inputType="textPersonName"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Cédula -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Cédula"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp">
+                <EditText
+                    android:id="@+id/et_cedula"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu cédula"
+                    android:inputType="number"
+                    android:maxLength="10"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tv_cedula_helper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="10 dígitos, cédula válida de Ecuador"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Fecha de nacimiento -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Fecha de nacimiento"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_fecha_nacimiento"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="DD/MM/AAAA"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:inputType="none"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tv_fecha_helper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Debes ser mayor de 18 años para registrarte"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Domicilio -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Domicilio"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_domicilio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu domicilio"
+                    android:inputType="textPostalAddress"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Número de teléfono -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Número de teléfono"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_telefono"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu número"
+                    android:inputType="phone"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tv_telefono_helper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Formato: +593XXXXXXXXX o 09XXXXXXXX"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Correo electrónico -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Correo electrónico"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp">
+                <EditText
+                    android:id="@+id/et_email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu correo"
+                    android:inputType="textEmailAddress"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tv_email_helper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Usa un correo válido para verificar tu cuenta"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Helper text para contraseña -->
+            <TextView
+                android:id="@+id/tv_password_helper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mínimo 6 caracteres"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Contraseña -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Contraseña"/>
+            
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="100dp"
+                app:endIconMode="password_toggle"
+                app:endIconTint="#13A4EC"
+                app:boxBackgroundMode="filled"
+                app:boxBackgroundColor="#E7EEF2"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu contraseña"
+                    android:inputType="textPassword"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:padding="16dp">
+        
+        <Button
+            android:id="@+id/btn_continuar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Continuar"
+            style="@style/Widget.Mascota.PrimaryButton"
+            android:enabled="false"/>
+            
+        <!-- Enlace para ir al login -->
+        <TextView
+            android:id="@+id/tv_login_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:text="¿Ya tienes una cuenta? Inicia sesión"
+            android:textColor="#13A4EC"
+            android:textSize="14sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:padding="8dp"/>
+    </LinearLayout>
+
+</RelativeLayout>

@@ -134,8 +134,9 @@ public class LoginActivity extends AppCompatActivity {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
-                if (!isValidEmail(s.toString()) && s.length() > 0) {
-                    tilEmail.setError("Formato de correo inválido");
+                String email = s.toString().trim();
+                if (email.length() > 0 && !isValidEmail(email)) {
+                    tilEmail.setError("⚠️ Formato de correo inválido. Ejemplo: usuario@gmail.com");
                 } else {
                     tilEmail.setError(null);
                 }
@@ -149,8 +150,9 @@ public class LoginActivity extends AppCompatActivity {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
-                if (s.length() > 0 && s.length() < 6) {
-                    tilPassword.setError("La contraseña debe tener al menos 6 caracteres");
+                String password = s.toString().trim();
+                if (password.length() > 0 && password.length() < 6) {
+                    tilPassword.setError("⚠️ La contraseña debe tener al menos 6 caracteres");
                 } else {
                     tilPassword.setError(null);
                 }
@@ -272,52 +274,68 @@ public class LoginActivity extends AppCompatActivity {
     private boolean validarCampos(String email, String password) {
         boolean esValido = true;
 
+        // Validar email
         if (TextUtils.isEmpty(email)) {
-            tilEmail.setError("El correo es requerido");
+            tilEmail.setError("⚠️ El correo electrónico es obligatorio");
             esValido = false;
         } else if (!isValidEmail(email)) {
-            tilEmail.setError("Formato de correo inválido");
+            tilEmail.setError("⚠️ Formato de correo inválido. Ejemplo: usuario@gmail.com");
             esValido = false;
         } else {
             tilEmail.setError(null);
         }
 
+        // Validar contraseña
         if (TextUtils.isEmpty(password)) {
-            tilPassword.setError("La contraseña es requerida");
+            tilPassword.setError("⚠️ La contraseña es obligatoria");
             esValido = false;
         } else if (password.length() < 6) {
-            tilPassword.setError("La contraseña debe tener al menos 6 caracteres");
+            tilPassword.setError("⚠️ La contraseña debe tener al menos 6 caracteres");
             esValido = false;
         } else {
             tilPassword.setError(null);
+        }
+
+        // Mostrar mensaje general si hay errores
+        if (!esValido) {
+            mostrarError("⚠️ Por favor corrige los errores antes de continuar");
         }
 
         return esValido;
     }
 
     private void manejarErrorLogin(Exception exception) {
-        String mensajeError = "Error desconocido";
+        String mensajeError = "❌ Error desconocido";
         
         Log.e(TAG, "Error detallado en login: ", exception);
         
         if (exception instanceof FirebaseAuthInvalidCredentialsException) {
-            mensajeError = "Credenciales inválidas. Verifica tu correo y contraseña.";
+            mensajeError = "⚠️ Credenciales inválidas. Verifica tu correo y contraseña.";
+            // También mostrar error en los campos
+            tilEmail.setError("⚠️ Correo o contraseña incorrectos");
+            tilPassword.setError("⚠️ Correo o contraseña incorrectos");
             Log.e(TAG, "Error: Credenciales inválidas");
         } else if (exception instanceof FirebaseAuthInvalidUserException) {
-            mensajeError = "No existe una cuenta con este correo electrónico.";
+            mensajeError = "⚠️ No existe una cuenta con este correo electrónico.";
+            tilEmail.setError("⚠️ Este correo no está registrado");
             Log.e(TAG, "Error: Usuario no existe");
         } else if (exception instanceof FirebaseNetworkException) {
-            mensajeError = "Error de conexión. Verifica tu internet y la configuración del emulador.";
+            mensajeError = "⚠️ Error de conexión. Verifica tu internet e inténtalo nuevamente.";
             Log.e(TAG, "Error de red: " + exception.getMessage());
         } else if (exception != null && exception.getMessage() != null) {
-            mensajeError = exception.getMessage();
-            Log.e(TAG, "Error con mensaje: " + exception.getMessage());
+            String msg = exception.getMessage();
+            Log.e(TAG, "Error con mensaje: " + msg);
             
-            // Verificar si es el error de cleartext traffic
-            if (exception.getMessage().contains("Cleartext HTTP traffic") || 
-                exception.getMessage().contains("not permitted")) {
-                mensajeError = "Error de configuración de red. Verifica la configuración del emulador Firebase.";
+            // Traducir errores comunes
+            if (msg.contains("Cleartext HTTP traffic") || msg.contains("not permitted")) {
+                mensajeError = "⚠️ Error de configuración de red. Contacta al soporte técnico.";
                 Log.e(TAG, "Error de cleartext traffic detectado");
+            } else if (msg.contains("too-many-requests")) {
+                mensajeError = "⚠️ Demasiados intentos fallidos. Espera unos minutos antes de intentar nuevamente.";
+            } else if (msg.contains("user-disabled")) {
+                mensajeError = "⚠️ Esta cuenta ha sido deshabilitada. Contacta al soporte técnico.";
+            } else {
+                mensajeError = "❌ Error: " + msg;
             }
         }
         
@@ -350,6 +368,15 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void mostrarError(String msg) {
-        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        // Si el mensaje es muy largo, usar AlertDialog en lugar de Toast
+        if (msg.length() > 100 || msg.contains("\n")) {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("⚠️ Error")
+                .setMessage(msg)
+                .setPositiveButton("Entendido", null)
+                .show();
+        } else {
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        }
     }
 }

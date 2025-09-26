@@ -3,6 +3,7 @@ package com.mjc.mascotalink;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.Toast;
+import android.content.Intent;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,7 +26,8 @@ public class SeleccionRolActivity extends AppCompatActivity {
 
         btnDueno.setOnClickListener(v ->
                 Toast.makeText(this, "Registro de Dueño próximamente", Toast.LENGTH_SHORT).show());
-        btnPaseador.setOnClickListener(v ->
-                Toast.makeText(this, "Registro de Paseador próximamente", Toast.LENGTH_SHORT).show());
+        btnPaseador.setOnClickListener(v -> {
+                startActivity(new Intent(this, PaseadorRegistroPaso1Activity.class));
+        });
     }
 }
