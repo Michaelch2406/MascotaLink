@@ -90,6 +90,11 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
 
+        String host = "192.168.0.147";
+        mAuth.useEmulator(host, 9099);
+        storage.useEmulator(host, 9199);
+        db.useEmulator(host, 8080);
+
         btnMetodoPago = findViewById(R.id.btn_metodo_pago);
         btnGrabarVideo = findViewById(R.id.btn_grabar_video);
         btnGuardar = findViewById(R.id.btn_guardar_continuar);
@@ -268,11 +273,54 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             Toast.makeText(this, "Por favor selecciona una zona de servicio en el mapa", Toast.LENGTH_LONG).show();
             return;
         }
-        String uid = mAuth.getCurrentUser().getUid();
 
-        // Cargar todos los datos del wizard desde SharedPreferences
+        // Iniciar el proceso de subida de archivos y luego guardar los datos
+        subirTodosLosArchivos();
+    }
+
+    private void subirTodosLosArchivos() {
+        String uid = mAuth.getCurrentUser().getUid();
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        
+
+        // Obtener URIs de SharedPreferences
+        Uri selfieUri = Uri.parse(prefs.getString("selfieUri", ""));
+        Uri fotoPerfilUri = Uri.parse(prefs.getString("fotoPerfilUri", ""));
+        Uri antecedentesUri = Uri.parse(prefs.getString("antecedentesUri", ""));
+        Uri medicoUri = Uri.parse(prefs.getString("medicoUri", ""));
+
+        // Referencias de Storage
+        StorageReference selfieRef = storage.getReference().child("selfies/" + uid + ".jpg");
+        StorageReference fotoPerfilRef = storage.getReference().child("fotos_perfil/" + uid + ".jpg");
+        StorageReference antecedentesRef = storage.getReference().child("documentos/" + uid + "_antecedentes.pdf");
+        StorageReference medicoRef = storage.getReference().child("documentos/" + uid + "_medico.pdf");
+
+        // Tareas de subida
+        List<com.google.android.gms.tasks.Task<Uri>> tasks = new ArrayList<>();
+        tasks.add(selfieRef.putFile(selfieUri).continueWithTask(task -> selfieRef.getDownloadUrl()));
+        tasks.add(fotoPerfilRef.putFile(fotoPerfilUri).continueWithTask(task -> fotoPerfilRef.getDownloadUrl()));
+        tasks.add(antecedentesRef.putFile(antecedentesUri).continueWithTask(task -> antecedentesRef.getDownloadUrl()));
+        tasks.add(medicoRef.putFile(medicoUri).continueWithTask(task -> medicoRef.getDownloadUrl()));
+
+        com.google.android.gms.tasks.Tasks.whenAllSuccess(tasks).addOnSuccessListener(urls -> {
+            // Guardar URLs en SharedPreferences
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString("selfieUrl", urls.get(0).toString());
+            editor.putString("fotoPerfilUrl", urls.get(1).toString());
+            editor.putString("antecedentesUrl", urls.get(2).toString());
+            editor.putString("medicoUrl", urls.get(3).toString());
+            editor.apply();
+
+            // Ahora, guardar todos los datos en Firestore
+            guardarDatosEnFirestore();
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Error al subir archivos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        });
+    }
+
+    private void guardarDatosEnFirestore() {
+        String uid = mAuth.getCurrentUser().getUid();
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+
         // Cargar URLs de galería de Paso 4
         String csv = prefs.getString("galeria_paseos_urls", "");
         List<String> galeria = new ArrayList<>();

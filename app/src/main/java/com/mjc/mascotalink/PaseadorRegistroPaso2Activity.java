@@ -276,7 +276,6 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private void continuarAlPaso3() {
         if (selfieUri != null && fotoPerfilUri != null) {
             startActivity(new Intent(this, PaseadorRegistroPaso3Activity.class));
-            finish(); // Cerrar esta actividad para evitar regresar
         } else {
             Toast.makeText(this, "⚠️ Asegúrate de completar ambas fotos antes de continuar", Toast.LENGTH_SHORT).show();
         }

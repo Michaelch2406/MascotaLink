@@ -240,10 +240,10 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
             return;
         }
 
-        ensureSignedIn(() -> {
-            // Subir ambos PDFs y actualizar Firestore, luego navegar a Paso 4
-            subirAmbosDocumentosYActualizarFirestore();
-        });
+        // Guardar URIs en SharedPreferences y navegar a Paso 4
+        saveState(); // Asegura que las URIs más recientes estén guardadas
+        guardarDatosPaso3(); // Marca el paso 3 como completo
+        mostrarSiguientePaso();
     }
     
     private void guardarDatosPaso3() {
@@ -559,63 +559,11 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     private void mostrarSiguientePaso() {
         Toast.makeText(this, "✅ Documentos enviados", Toast.LENGTH_SHORT).show();
         startActivity(new Intent(this, PaseadorRegistroPaso4Activity.class));
-        finish();
     }
 
-    private void subirAmbosDocumentosYActualizarFirestore() {
-        String uid = mAuth.getCurrentUser().getUid();
-        if (uid == null) {
-            Toast.makeText(this, "❌ Usuario no válido", Toast.LENGTH_LONG).show();
-            return;
-        }
 
-        // Referencias de Storage
-        StorageReference antecedentesRef = storage.getReference().child("documentos/" + uid + "_antecedentes.pdf");
-        StorageReference medicoRef = storage.getReference().child("documentos/" + uid + "_medico.pdf");
 
-        Toast.makeText(this, "🔄 Subiendo documentos...", Toast.LENGTH_SHORT).show();
 
-        Task<Uri> upAnte = antecedentesRef.putFile(antecedentesUri)
-                .continueWithTask(t -> { if (!t.isSuccessful()) throw t.getException(); return antecedentesRef.getDownloadUrl(); });
-        Task<Uri> upMed = medicoRef.putFile(medicoUri)
-                .continueWithTask(t -> { if (!t.isSuccessful()) throw t.getException(); return medicoRef.getDownloadUrl(); });
-
-        Tasks.whenAllSuccess(upAnte, upMed)
-                .addOnSuccessListener(results -> {
-                    try {
-                        String antecedentesUrl = upAnte.getResult().toString();
-                        String medicoUrl = upMed.getResult().toString();
-
-                        // Guardar en SharedPreferences para consistencia con pasos previos
-                        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-                        prefs.edit()
-                                .putString("antecedentesUrl", antecedentesUrl)
-                                .putString("medicoUrl", medicoUrl)
-                                .apply();
-
-                        // Actualizar Firestore: paseadores/{uid}.documentos + ultima_actualizacion
-                        FirebaseFirestore.getInstance()
-                                .collection("paseadores").document(uid)
-                                .update("documentos.certificado_antecedentes_url", antecedentesUrl,
-                                        "documentos.certificado_medico_url", medicoUrl,
-                                        "ultima_actualizacion", FieldValue.serverTimestamp())
-                                .addOnSuccessListener(v -> mostrarSiguientePaso())
-                                .addOnFailureListener(e -> Toast.makeText(this, "Error Firestore: " + e.getMessage(), Toast.LENGTH_LONG).show());
-
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Error al obtener URLs: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, obtenerMensajeErrorStorage(e, "subir"), Toast.LENGTH_LONG).show());
-    }
-
-    // Garantiza una sesión (anónima) para poder subir a Storage/Firestore durante el registro
-    private void ensureSignedIn(Runnable onReady) {
-        if (mAuth.getCurrentUser() != null) { onReady.run(); return; }
-        mAuth.signInAnonymously()
-                .addOnSuccessListener(result -> onReady.run())
-                .addOnFailureListener(e -> Toast.makeText(this, "Error de autenticación: " + e.getMessage(), Toast.LENGTH_LONG).show());
-    }
 
     private void saveState() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);

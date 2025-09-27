@@ -31,10 +31,14 @@
             <!-- Método de pago -->
             <TextView
                 style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="Método de Pago"/>
             <TextView
                 style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="Selecciona un método de pago para completar tus transacciones de forma segura."/>
             <com.google.android.material.button.MaterialButton
@@ -50,10 +54,14 @@
             <!-- Video de presentación -->
             <TextView
                 style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="Video de presentación"/>
             <TextView
                 style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="Graba un video corto (30–60 segundos) para que los dueños te conozcan mejor."/>
             <com.google.android.material.button.MaterialButton
@@ -71,10 +79,14 @@
             <!-- Zona de servicio -->
             <TextView
                 style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="Zona de servicio"/>
             <TextView
                 style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="Define el área donde ofreces tus servicios de paseo."/>
             <FrameLayout
@@ -87,10 +99,14 @@
             <!-- Disponibilidad -->
             <TextView
                 style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="Disponibilidad"/>
             <TextView
                 style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="Indica los días y horas en que estás disponible para pasear."/>
             <LinearLayout
@@ -118,10 +134,14 @@
             <!-- Tipos de perros -->
             <TextView
                 style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="Tipos de perros"/>
             <TextView
                 style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="Especifica los tamaños y temperamentos de perros que puedes manejar."/>
             <LinearLayout

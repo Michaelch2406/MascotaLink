@@ -41,8 +41,11 @@ public class VideoRecordActivity extends AppCompatActivity {
     private Recording activeRecording;
     private long startMs = 0L;
 
+    private boolean audioPermissionGranted = false;
+
     private final ActivityResultLauncher<String[]> permLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+                audioPermissionGranted = Boolean.TRUE.equals(result.get(Manifest.permission.RECORD_AUDIO));
                 // Try to start after permission
                 startCamera();
             });
@@ -104,12 +107,16 @@ public class VideoRecordActivity extends AppCompatActivity {
         cameraProvider.bindToLifecycle(this, selector, preview, videoCapture);
     }
 
+    @SuppressWarnings("MissingPermission")
     private void startRecording() {
         File file = new File(getCacheDir(), "record_" + System.currentTimeMillis() + ".mp4");
         FileOutputOptions output = new FileOutputOptions.Builder(file).build();
 
         PendingRecording pending = videoCapture.getOutput().prepareRecording(this, output);
-        activeRecording = pending.withAudioEnabled().start(ContextCompat.getMainExecutor(this), recordEvent -> {});
+        if (audioPermissionGranted) {
+            pending.withAudioEnabled();
+        }
+        activeRecording = pending.start(ContextCompat.getMainExecutor(this), recordEvent -> {});
         startMs = System.currentTimeMillis();
         btnRecord.setSelected(true);
 

@@ -26,12 +26,8 @@ service cloud.firestore {
 
     match /paseadores/{paseadorId} {
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null && request.auth.uid == paseadorId;
-      allow delete: if false;
-
-      // Prohibe que cambien estado de verificación y fecha
-      allow update: if request.resource.data.verificacion_estado == resource.data.verificacion_estado &&
-                    request.resource.data.verificacion_fecha == resource.data.verificacion_fecha;
+      allow create: if request.auth != null && request.auth.uid == paseadorId;
+      allow update: if request.auth != null && request.auth.uid == paseadorId && request.resource.data.verificacion_estado == resource.data.verificacion_estado;
     }
 
     // Subcolecciones bajo usuarios

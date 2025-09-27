@@ -11,4 +11,5 @@
     <color name="google_button_gray">#4285F4</color>
     <color name="blue_primary">#13A4EC</color>
     <color name="gray_disabled">#9CA3AF</color>
+    <color name="green_success">#4CAF50</color>
 </resources>

@@ -16,10 +16,12 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
+
 import com.google.firebase.firestore.FirebaseFirestore;
+
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -36,6 +38,7 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private FirebaseFirestore db;
 
     private final List<String> urlsGaleria = new ArrayList<>();
+    private final List<Uri> localUris = new ArrayList<>();
 
     private ImageView img1, img2, img3; // para refrescar placeholders cuando subamos algo
 
@@ -50,6 +53,12 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         storage = FirebaseStorage.getInstance();
         db = FirebaseFirestore.getInstance();
+
+        String host = "192.168.0.147";
+        mAuth.useEmulator(host, 9099);
+        storage.useEmulator(host, 9199);
+        db.useEmulator(host, 8080);
+
 
         Button btnGaleria = findViewById(R.id.btn_galeria);
         Button btnCamara = findViewById(R.id.btn_camara);
@@ -133,6 +142,16 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
             Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_LONG).show();
             return;
         }
+
+        // Añadir URI local para la preview y actualizar la vista
+        if (localUris.size() < 3) {
+            localUris.add(archivoUri);
+            actualizarVistaGaleria();
+        } else {
+            Toast.makeText(this, "Puedes subir un máximo de 3 archivos", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String uid = mAuth.getCurrentUser().getUid();
         String fileName = uid + "_paseo_" + System.currentTimeMillis();
 
@@ -143,7 +162,8 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         ref.putFile(archivoUri).addOnSuccessListener(ts ->
                 ref.getDownloadUrl().addOnSuccessListener(uri -> {
                     agregarUrlGaleriaPaseos(uri.toString());
-                    actualizarVistaGaleria();
+                    // La vista ya se actualizó, aquí solo se confirma la subida
+                    Toast.makeText(this, "Archivo subido exitosamente", Toast.LENGTH_SHORT).show();
                 })
         ).addOnFailureListener(e -> Toast.makeText(this, "Error al subir archivo", Toast.LENGTH_SHORT).show());
     }
@@ -151,14 +171,26 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private void agregarUrlGaleriaPaseos(String url) {
         urlsGaleria.add(url);
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        List<String> prev = new ArrayList<>(urlsGaleria);
-        prefs.edit().putString("galeria_paseos_urls", String.join(",", prev)).apply();
+        // Guardar la lista completa de URLs de Firebase
+        prefs.edit().putString("galeria_paseos_urls", String.join(",", urlsGaleria)).apply();
     }
 
     private void actualizarVistaGaleria() {
-        // Placeholder: podríamos cargar la última imagen en uno de los ImageView si es imagen
-        // Para mantener la maqueta, no tocamos los placeholders si es video.
-        // Esta función queda lista para ampliarse con Glide/Picasso.
+        ImageView[] placeholders = {img1, img2, img3};
+        for (int i = 0; i < placeholders.length; i++) {
+            if (i < localUris.size()) {
+                Uri uri = localUris.get(i);
+                placeholders[i].setAlpha(1.0f); // Hacer visible
+                Glide.with(this)
+                     .load(uri)
+                     .centerCrop()
+                     .into(placeholders[i]);
+            } else {
+                // Resetear a placeholder si no hay imagen
+                placeholders[i].setImageResource(R.drawable.galeria_paseos_foto1); // Un placeholder genérico
+                placeholders[i].setAlpha(0.5f); // Hacerlo semitransparente
+            }
+        }
     }
 
     private void iniciarCuestionario() {
@@ -167,20 +199,9 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     }
 
     private void guardarYContinuar() {
-        if (mAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_LONG).show();
-        }
-        String uid = mAuth.getCurrentUser().getUid();
-
-        // Escritura mínima: persistir galería en el documento del paseador
-        db.collection("paseadores").document(uid)
-                .update("galeria_paseos_urls", urlsGaleria,
-                        "ultima_actualizacion", FieldValue.serverTimestamp())
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Guardado", Toast.LENGTH_SHORT).show();
-                    // Navegar al Paso 5
-                    startActivity(new Intent(this, PaseadorRegistroPaso5Activity.class));
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show());
+        // Las URLs ya se guardan en SharedPreferences a medida que se suben.
+        // Este botón solo necesita navegar al siguiente paso.
+        Toast.makeText(this, "Progreso guardado. Continuando...", Toast.LENGTH_SHORT).show();
+        startActivity(new Intent(this, PaseadorRegistroPaso5Activity.class));
     }
 }

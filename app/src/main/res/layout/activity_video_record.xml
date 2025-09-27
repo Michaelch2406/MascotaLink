@@ -31,6 +31,6 @@
         android:background="@android:color/transparent"
         android:contentDescription="Grabar"
         android:src="@android:drawable/ic_btn_speak_now"
-        android:tint="#FF3B30"/>
+        app:tint="#FF3B30"/>
 
 </RelativeLayout>

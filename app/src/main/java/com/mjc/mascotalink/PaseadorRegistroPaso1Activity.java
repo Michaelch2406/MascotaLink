@@ -254,27 +254,20 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         showLoading(true);
         
         // Verificar si el email ya existe sin crear la cuenta
-        mAuth.fetchSignInMethodsForEmail(email)
+        mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     showLoading(false);
                     if (task.isSuccessful()) {
-                        if (task.getResult().getSignInMethods().isEmpty()) {
-                            // Email disponible, guardar datos localmente y continuar
-                            guardarDatosCompletos();
-                            Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
-                            
-                            // Navegar a la siguiente pantalla
-                            Intent intent = new Intent(this, PaseadorRegistroPaso2Activity.class);
-                            startActivity(intent);
-                        } else {
-                            // Email ya está en uso
-                            etEmail.setError("⚠️ Este correo ya está registrado");
-                            etEmail.requestFocus();
-                            mostrarError("⚠️ Este correo electrónico ya está registrado.\n\n💡 Opciones:\n• Usa otro correo electrónico\n• Ve a 'Iniciar Sesión' si ya tienes cuenta");
-                        }
+                        // Guardar datos localmente y continuar
+                        guardarDatosCompletos();
+                        Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
+                        
+                        // Navegar a la siguiente pantalla
+                        Intent intent = new Intent(this, PaseadorRegistroPaso2Activity.class);
+                        startActivity(intent);
                     } else {
-                        // Error en la verificación
-                        Log.e(TAG, "Error verificando email: ", task.getException());
+                        // Error en la creación de la cuenta
+                        Log.e(TAG, "Error creando cuenta: ", task.getException());
                         String errorMsg = obtenerMensajeErrorVerificacion(task.getException());
                         if (errorMsg != null) {
                             mostrarError(errorMsg);

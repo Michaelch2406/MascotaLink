@@ -34,6 +34,8 @@ public class QuizActivity extends AppCompatActivity {
     private final Map<String, Integer> categoryScores = new HashMap<>();
     private final List<Integer> answers = new ArrayList<>();
 
+    private final List<Integer> incorrectAnswersIndices = new ArrayList<>();
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,6 +90,8 @@ public class QuizActivity extends AppCompatActivity {
                 criticalScore += q.getWeight();
             }
             categoryScores.put(q.getCategory(), categoryScores.getOrDefault(q.getCategory(), 0) + q.getWeight());
+        } else {
+            incorrectAnswersIndices.add(index);
         }
         return true;
     }
@@ -105,6 +109,7 @@ public class QuizActivity extends AppCompatActivity {
         intent.putExtra("totalScore", totalScore);
         intent.putExtra("maxScore", maxScore);
         intent.putExtra("criticalScore", criticalScore);
+        intent.putIntegerArrayListExtra("incorrectIndices", (ArrayList<Integer>) incorrectAnswersIndices);
         startActivity(intent);
         finish();
     }
