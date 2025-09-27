@@ -15,7 +15,19 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="AIzaSyAwXY_rbM36NhLOaDLxZUP4202sTFvE_o0" />
+    <!-- Necesario para Google Play Services -->
+    <meta-data
+        android:name="com.google.android.gms.version"
+        android:value="@integer/google_play_services_version" />
 
     <application
         android:allowBackup="true"
@@ -64,7 +76,39 @@
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
+            android:name=".PaseadorRegistroPaso4Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".QuizActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".QuizResultsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".PaseadorRegistroPaso5Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".MetodoPagoActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".DisponibilidadActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".TiposPerrosActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
             android:name=".SelfieActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".VideoRecordActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
     </application>

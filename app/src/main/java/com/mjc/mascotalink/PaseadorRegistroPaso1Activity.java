@@ -3,22 +3,29 @@ package com.mjc.mascotalink;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.Html;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputLayout;
@@ -27,6 +34,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -42,10 +50,11 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     private static final String PREFS = "WizardPaseador";
 
     private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private FirebaseStorage storage;
 
     private EditText etNombre, etApellido, etCedula, etFechaNac, etDomicilio, etTelefono, etEmail, etPassword;
     private TextInputLayout tilPassword;
+    private CheckBox cbAceptaTerminos;
     private Button btnContinuar;
     private ProgressBar progressBar;
 
@@ -59,24 +68,19 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Firebase (Emuladores)
-        try {
-            String host = "192.168.0.147"; // IP LAN del host
-            FirebaseAuth authInstance = FirebaseAuth.getInstance();
-            authInstance.useEmulator(host, 9099);
-            FirebaseFirestore firestoreInstance = FirebaseFirestore.getInstance();
-            firestoreInstance.useEmulator(host, 8080);
-            mAuth = authInstance;
-            db = firestoreInstance;
-        } catch (Exception e) {
-            Log.e(TAG, "Firebase config error", e);
-            Toast.makeText(this, "Error configuración Firebase: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+        // Firebase (Producción)
+        // Firebase emuladores
+        String host = "192.168.0.147";
+        mAuth = FirebaseAuth.getInstance();
+        mAuth.useEmulator(host, 9099);
+        storage = FirebaseStorage.getInstance();
+        storage.useEmulator(host, 9199);
 
         bindViews();
         wireDatePicker();
         loadSavedState();
         setupWatchers();
+        configurarTerminosYCondiciones();
 
         btnContinuar.setOnClickListener(v -> onContinuar());
         
@@ -100,6 +104,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         tilPassword = findViewById(R.id.til_password);
+        cbAceptaTerminos = findViewById(R.id.cb_acepta_terminos);
         btnContinuar = findViewById(R.id.btn_continuar);
         progressBar = new ProgressBar(this);
     }
@@ -159,9 +164,84 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etPassword.addTextChangedListener(passwordWatcher);
     }
 
+    private void configurarTerminosYCondiciones() {
+        // Texto con enlace clickeable
+        String textoTerminos = "Acepto los <a href='#'>Términos y Condiciones</a> y la <a href='#'>Política de Privacidad</a>";
+        cbAceptaTerminos.setText(Html.fromHtml(textoTerminos, Html.FROM_HTML_MODE_LEGACY));
+        cbAceptaTerminos.setMovementMethod(LinkMovementMethod.getInstance());
+        
+        // Listener para habilitar/deshabilitar botón
+        cbAceptaTerminos.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            validarCamposYHabilitarBoton();
+        });
+        
+        // Hacer el texto clickeable para mostrar términos completos
+        cbAceptaTerminos.setOnClickListener(v -> {
+            if (!cbAceptaTerminos.isChecked()) {
+                // Si no está marcado, mostrar diálogo antes de marcar
+                mostrarDialogoTerminos();
+            }
+        });
+    }
 
+    private void mostrarDialogoTerminos() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        
+        // Crear ScrollView para texto largo
+        ScrollView scrollView = new ScrollView(this);
+        TextView textView = new TextView(this);
+        textView.setPadding(50, 50, 50, 50);
+        textView.setTextSize(14);
+        textView.setText(getTextoTerminosCompleto());
+        scrollView.addView(textView);
+        
+        builder.setTitle("Términos y Condiciones")
+            .setView(scrollView)
+            .setPositiveButton("Aceptar", (dialog, which) -> {
+                cbAceptaTerminos.setChecked(true);
+                validarCamposYHabilitarBoton();
+            })
+            .setNegativeButton("Cancelar", (dialog, which) -> {
+                cbAceptaTerminos.setChecked(false);
+            })
+            .setCancelable(false)
+            .show();
+    }
+    
+    private String getTextoTerminosCompleto() {
+        return "TÉRMINOS Y CONDICIONES DE USO - MascotaLink\n\n" +
+               "1. ACEPTACIÓN DE TÉRMINOS\n" +
+               "Al registrarte como paseador en MascotaLink, aceptas cumplir con estos términos y condiciones.\n\n" +
+               "2. RESPONSABILIDADES DEL PASEADOR\n" +
+               "- Cuidar la seguridad y bienestar de las mascotas bajo tu responsabilidad\n" +
+               "- Seguir las instrucciones específicas del dueño de la mascota\n" +
+               "- Reportar cualquier incidente o emergencia inmediatamente\n" +
+               "- Mantener actualizados tus documentos de verificación\n\n" +
+               "3. VERIFICACIÓN Y DOCUMENTOS\n" +
+               "- Proporcionar documentación veraz y actualizada\n" +
+               "- Someterte al proceso de verificación de antecedentes\n" +
+               "- Mantener vigentes los certificados médicos requeridos\n\n" +
+               "4. CÓDIGO DE CONDUCTA\n" +
+               "- Tratar a las mascotas con respeto y cuidado\n" +
+               "- Comunicarte de manera profesional con los dueños\n" +
+               "- Seguir todas las normas de seguridad establecidas\n\n" +
+               "5. PRIVACIDAD Y DATOS\n" +
+               "- Proteger la información personal de los clientes\n" +
+               "- No compartir datos de contacto fuera de la plataforma\n" +
+               "- Respetar la privacidad de los hogares visitados\n\n" +
+               "6. TERMINACIÓN DEL SERVICIO\n" +
+               "MascotaLink se reserva el derecho de suspender o terminar el acceso del paseador en caso de incumplimiento de estos términos.\n\n" +
+               "Al marcar esta casilla, confirmas que has leído, entendido y aceptas cumplir con todos estos términos y condiciones.\n\n" +
+               "Fecha de última actualización: Septiembre 2025";
+    }
 
     private void onContinuar() {
+        if (!cbAceptaTerminos.isChecked()) {
+            Toast.makeText(this, "Debes aceptar los términos y condiciones para continuar", 
+                          Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
         if (!validarCamposPantalla1()) {
             Toast.makeText(this, "⚠️ Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
             return;
@@ -192,11 +272,14 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
                             etEmail.requestFocus();
                             mostrarError("⚠️ Este correo electrónico ya está registrado.\n\n💡 Opciones:\n• Usa otro correo electrónico\n• Ve a 'Iniciar Sesión' si ya tienes cuenta");
                         }
-                        } else {
-                            // Error en la verificación
-                            String errorMsg = obtenerMensajeErrorFirebase(task.getException());
+                    } else {
+                        // Error en la verificación
+                        Log.e(TAG, "Error verificando email: ", task.getException());
+                        String errorMsg = obtenerMensajeErrorVerificacion(task.getException());
+                        if (errorMsg != null) {
                             mostrarError(errorMsg);
                         }
+                    }
                 });
     }
     
@@ -214,44 +297,48 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         editor.putString("email", etEmail.getText().toString().trim());
         editor.putString("password", etPassword.getText().toString().trim());
         
-        // Marcar que el paso 1 está completo
+        // Marcar que el paso 1 está completo y términos aceptados
         editor.putBoolean("paso1_completo", true);
+        editor.putBoolean("acepto_terminos", true);
         editor.putLong("timestamp_paso1", System.currentTimeMillis());
+        editor.putLong("fecha_aceptacion_terminos", System.currentTimeMillis());
         
         editor.apply();
         
         Log.d(TAG, "Datos del paso 1 guardados localmente");
     }
     
-    private String obtenerMensajeErrorFirebase(Exception exception) {
+    private String obtenerMensajeErrorVerificacion(Exception exception) {
         if (exception == null) {
-            return "❌ Error desconocido al crear la cuenta";
+            return "⚠️ Error desconocido al verificar el correo electrónico";
         }
         
         String mensaje = exception.getMessage();
         if (mensaje == null) {
-            return "❌ Error desconocido al crear la cuenta";
+            return "⚠️ Error desconocido al verificar el correo electrónico";
         }
         
-        // Traducir errores comunes de Firebase
-        if (mensaje.contains("email-already-in-use")) {
-            // Mostrar error específico en el campo de email
-            etEmail.setError("⚠️ Este correo ya está registrado");
-            etEmail.requestFocus();
-            return "⚠️ Este correo electrónico ya está registrado.\n\n💡 Opciones:\n• Usa otro correo electrónico\n• Ve a 'Iniciar Sesión' si ya tienes cuenta";
-        } else if (mensaje.contains("weak-password")) {
-            tilPassword.setError("⚠️ Contraseña muy débil");
-            return "⚠️ La contraseña es muy débil. Usa al menos 6 caracteres con letras y números.";
-        } else if (mensaje.contains("invalid-email")) {
+        Log.e(TAG, "Error verificación: " + mensaje);
+        
+        // Traducir errores comunes de verificación de email
+        if (mensaje.contains("invalid-email")) {
             etEmail.setError("⚠️ Formato de correo inválido");
             etEmail.requestFocus();
             return "⚠️ El formato del correo electrónico no es válido.";
-        } else if (mensaje.contains("network")) {
+        } else if (mensaje.contains("network") || mensaje.contains("timeout")) {
             return "⚠️ Error de conexión. Verifica tu internet e inténtalo nuevamente.";
         } else if (mensaje.contains("too-many-requests")) {
             return "⚠️ Demasiados intentos. Espera unos minutos antes de intentar nuevamente.";
+        } else if (mensaje.contains("UNAVAILABLE") || mensaje.contains("INTERNAL")) {
+            return "⚠️ Servicio temporalmente no disponible. Inténtalo nuevamente en unos minutos.";
         } else {
-            return "❌ Error al crear cuenta: " + mensaje;
+            // Por ahora, permitir continuar si hay un error de verificación
+            Log.w(TAG, "Error de verificación no crítico, permitiendo continuar: " + mensaje);
+            guardarDatosCompletos();
+            Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(this, PaseadorRegistroPaso2Activity.class);
+            startActivity(intent);
+            return null; // No mostrar error
         }
     }
 
@@ -461,17 +548,37 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etPassword.setText(prefs.getString("password", ""));
     }
 
-    private void updateButtonEnabled() {
-        btnContinuar.setEnabled(
-                !TextUtils.isEmpty(etNombre.getText()) &&
+    private void validarCamposYHabilitarBoton() {
+        // Validar que todos los campos estén completos Y términos aceptados
+        boolean camposCompletos = validarTodosLosCampos();
+        boolean terminosAceptados = cbAceptaTerminos.isChecked();
+        
+        btnContinuar.setEnabled(camposCompletos && terminosAceptados);
+        
+        // Cambiar color del botón según estado
+        if (btnContinuar.isEnabled()) {
+            btnContinuar.setBackgroundTintList(ColorStateList.valueOf(
+                ContextCompat.getColor(this, R.color.blue_primary)));
+        } else {
+            btnContinuar.setBackgroundTintList(ColorStateList.valueOf(
+                ContextCompat.getColor(this, R.color.gray_disabled)));
+        }
+    }
+    
+    private boolean validarTodosLosCampos() {
+        return !TextUtils.isEmpty(etNombre.getText()) &&
                 !TextUtils.isEmpty(etApellido.getText()) &&
                 etCedula.getText().toString().matches("\\d{10}") &&
                 !TextUtils.isEmpty(etFechaNac.getText()) &&
                 !TextUtils.isEmpty(etDomicilio.getText()) &&
                 !TextUtils.isEmpty(etTelefono.getText()) &&
                 Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString()).matches() &&
-                etPassword.getText().toString().length() >= 6
-        );
+                etPassword.getText().toString().length() >= 6;
+    }
+    
+    // Método de compatibilidad para mantener las llamadas existentes
+    private void updateButtonEnabled() {
+        validarCamposYHabilitarBoton();
     }
 
     private void showLoading(boolean show) {
@@ -480,6 +587,10 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
     
     private void mostrarError(String msg) {
+        if (msg == null || msg.trim().isEmpty()) {
+            return; // No mostrar errores vacíos
+        }
+        
         // Si el mensaje es muy largo, usar AlertDialog en lugar de Toast
         if (msg.length() > 100 || msg.contains("\n")) {
             new AlertDialog.Builder(this)

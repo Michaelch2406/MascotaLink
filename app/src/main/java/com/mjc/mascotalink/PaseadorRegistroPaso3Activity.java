@@ -87,12 +87,16 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         btnEliminarMedico.setOnClickListener(v -> eliminarDocumento("medico"));
 
         loadState();
+        
+        // Verificar estado inicial de los documentos
+        verificarEstadoDocumentos();
     }
 
     private void subirDocumento(String tipo) {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("application/pdf");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         if ("antecedentes".equals(tipo)) {
             antecedentesPdfLauncher.launch(intent);
         } else {
@@ -104,7 +108,11 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri pdfUri = result.getData().getData();
+                    int flags = result.getData().getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     if (pdfUri != null) {
+                        try {
+                            getContentResolver().takePersistableUriPermission(pdfUri, flags);
+                        } catch (SecurityException ignored) {}
                         antecedentesUri = pdfUri;
                         tvAntecedentesNombre.setText(getFileNameFromUri(pdfUri));
                         saveState();
@@ -117,7 +125,11 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri pdfUri = result.getData().getData();
+                    int flags = result.getData().getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     if (pdfUri != null) {
+                        try {
+                            getContentResolver().takePersistableUriPermission(pdfUri, flags);
+                        } catch (SecurityException ignored) {}
                         medicoUri = pdfUri;
                         tvMedicoNombre.setText(getFileNameFromUri(pdfUri));
                         saveState();
@@ -148,10 +160,10 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
                     SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
                     if ("antecedentes".equals(tipoDocumento)) {
                         prefs.edit().putString("antecedentesUrl", uri.toString()).apply();
-                        Toast.makeText(this, "✅ Certificado de antecedentes subido exitosamente", Toast.LENGTH_SHORT).show();
+                        // Toast de éxito removido para evitar spam
                     } else {
                         prefs.edit().putString("medicoUrl", uri.toString()).apply();
-                        Toast.makeText(this, "✅ Certificado médico subido exitosamente", Toast.LENGTH_SHORT).show();
+                        // Toast de éxito removido para evitar spam
                     }
                     
                     // Actualizar UI para mostrar que el archivo fue subido
@@ -223,19 +235,15 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void enviarParaVerificacion() {
-        // Validar que ambos documentos estén subidos
+        // Validar que ambos documentos estén seleccionados
         if (!verificarDocumentosCompletos()) {
             return;
         }
-        
-        // Guardar datos del paso 3 localmente
-        guardarDatosPaso3();
-        
-        // Mostrar mensaje de que el proceso está completo localmente
-        Toast.makeText(this, "✅ Datos del paso 3 guardados. El registro estará disponible próximamente.", Toast.LENGTH_SHORT).show();
-        
-        // Mostrar pantalla de "próximamente" sin enviar a Firebase aún
-        mostrarPantallaProximamente();
+
+        ensureSignedIn(() -> {
+            // Subir ambos PDFs y actualizar Firestore, luego navegar a Paso 4
+            subirAmbosDocumentosYActualizarFirestore();
+        });
     }
     
     private void guardarDatosPaso3() {
@@ -445,10 +453,18 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         // Crear documento de paseador
         Map<String, Object> paseador = new HashMap<>();
         paseador.put("cedula", prefs.getString("cedula", ""));
-        paseador.put("acepto_terminos", true);
+        paseador.put("acepto_terminos", true); // Garantizado por el checkbox
+        paseador.put("fecha_aceptacion_terminos", FieldValue.serverTimestamp());
         paseador.put("verificacion_estado", "PENDIENTE");
         paseador.put("calificacion_promedio", 0.0);
         paseador.put("num_servicios_completados", 0);
+        
+        // Campos del quiz (iniciales)
+        paseador.put("quiz_completado", false);
+        paseador.put("quiz_aprobado", false);
+        paseador.put("quiz_intentos", 0);
+        paseador.put("quiz_score_total", 0);
+        
         paseador.put("ultima_actualizacion", FieldValue.serverTimestamp());
         paseador.put("verificacion_fecha", FieldValue.serverTimestamp());
         
@@ -506,17 +522,14 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     }
     
     private boolean verificarDocumentosCompletos() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        String antecedentesUrl = prefs.getString("antecedentesUrl", null);
-        String medicoUrl = prefs.getString("medicoUrl", null);
-        
-        if (antecedentesUrl == null && medicoUrl == null) {
+        // Verificar URIs locales en lugar de URLs de Firebase
+        if (antecedentesUri == null && medicoUri == null) {
             Toast.makeText(this, "⚠️ Por favor sube ambos documentos requeridos:\n• Certificado de antecedentes penales\n• Certificado médico", Toast.LENGTH_LONG).show();
             return false;
-        } else if (antecedentesUrl == null) {
+        } else if (antecedentesUri == null) {
             Toast.makeText(this, "⚠️ Falta subir el certificado de antecedentes penales", Toast.LENGTH_LONG).show();
             return false;
-        } else if (medicoUrl == null) {
+        } else if (medicoUri == null) {
             Toast.makeText(this, "⚠️ Falta subir el certificado médico", Toast.LENGTH_LONG).show();
             return false;
         }
@@ -543,18 +556,65 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         }
     }
 
-    private void mostrarPantallaProximamente() {
-        new AlertDialog.Builder(this)
-                .setTitle("Registro en Proceso")
-                .setMessage("Tu registro ha sido enviado para verificación. La galería de paseos y configuración adicional estará disponible próximamente.")
-                .setPositiveButton("Entendido", (d, i) -> {
-                    Intent intent = new Intent(this, LoginActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    finish();
+    private void mostrarSiguientePaso() {
+        Toast.makeText(this, "✅ Documentos enviados", Toast.LENGTH_SHORT).show();
+        startActivity(new Intent(this, PaseadorRegistroPaso4Activity.class));
+        finish();
+    }
+
+    private void subirAmbosDocumentosYActualizarFirestore() {
+        String uid = mAuth.getCurrentUser().getUid();
+        if (uid == null) {
+            Toast.makeText(this, "❌ Usuario no válido", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Referencias de Storage
+        StorageReference antecedentesRef = storage.getReference().child("documentos/" + uid + "_antecedentes.pdf");
+        StorageReference medicoRef = storage.getReference().child("documentos/" + uid + "_medico.pdf");
+
+        Toast.makeText(this, "🔄 Subiendo documentos...", Toast.LENGTH_SHORT).show();
+
+        Task<Uri> upAnte = antecedentesRef.putFile(antecedentesUri)
+                .continueWithTask(t -> { if (!t.isSuccessful()) throw t.getException(); return antecedentesRef.getDownloadUrl(); });
+        Task<Uri> upMed = medicoRef.putFile(medicoUri)
+                .continueWithTask(t -> { if (!t.isSuccessful()) throw t.getException(); return medicoRef.getDownloadUrl(); });
+
+        Tasks.whenAllSuccess(upAnte, upMed)
+                .addOnSuccessListener(results -> {
+                    try {
+                        String antecedentesUrl = upAnte.getResult().toString();
+                        String medicoUrl = upMed.getResult().toString();
+
+                        // Guardar en SharedPreferences para consistencia con pasos previos
+                        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+                        prefs.edit()
+                                .putString("antecedentesUrl", antecedentesUrl)
+                                .putString("medicoUrl", medicoUrl)
+                                .apply();
+
+                        // Actualizar Firestore: paseadores/{uid}.documentos + ultima_actualizacion
+                        FirebaseFirestore.getInstance()
+                                .collection("paseadores").document(uid)
+                                .update("documentos.certificado_antecedentes_url", antecedentesUrl,
+                                        "documentos.certificado_medico_url", medicoUrl,
+                                        "ultima_actualizacion", FieldValue.serverTimestamp())
+                                .addOnSuccessListener(v -> mostrarSiguientePaso())
+                                .addOnFailureListener(e -> Toast.makeText(this, "Error Firestore: " + e.getMessage(), Toast.LENGTH_LONG).show());
+
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Error al obtener URLs: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
                 })
-                .setCancelable(false)
-                .show();
+                .addOnFailureListener(e -> Toast.makeText(this, obtenerMensajeErrorStorage(e, "subir"), Toast.LENGTH_LONG).show());
+    }
+
+    // Garantiza una sesión (anónima) para poder subir a Storage/Firestore durante el registro
+    private void ensureSignedIn(Runnable onReady) {
+        if (mAuth.getCurrentUser() != null) { onReady.run(); return; }
+        mAuth.signInAnonymously()
+                .addOnSuccessListener(result -> onReady.run())
+                .addOnFailureListener(e -> Toast.makeText(this, "Error de autenticación: " + e.getMessage(), Toast.LENGTH_LONG).show());
     }
 
     private void saveState() {
@@ -569,8 +629,30 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         String a = prefs.getString("antecedentesUri", null);
         String m = prefs.getString("medicoUri", null);
-        if (a != null) tvAntecedentesNombre.setText(getFileNameFromUri(Uri.parse(a)));
-        if (m != null) tvMedicoNombre.setText(getFileNameFromUri(Uri.parse(m)));
+        
+        if (a != null) {
+            try {
+                antecedentesUri = Uri.parse(a);
+                tvAntecedentesNombre.setText("✅ Archivo subido: " + getFileNameFromUri(antecedentesUri));
+                tvAntecedentesNombre.setTextColor(Color.parseColor("#059669"));
+            } catch (Exception e) {
+                // Error al cargar URI - limpiar
+                prefs.edit().remove("antecedentesUri").apply();
+                antecedentesUri = null;
+            }
+        }
+        
+        if (m != null) {
+            try {
+                medicoUri = Uri.parse(m);
+                tvMedicoNombre.setText("✅ Archivo subido: " + getFileNameFromUri(medicoUri));
+                tvMedicoNombre.setTextColor(Color.parseColor("#059669"));
+            } catch (Exception e) {
+                // Error al cargar URI - limpiar
+                prefs.edit().remove("medicoUri").apply();
+                medicoUri = null;
+            }
+        }
     }
 
     private String getFileNameFromUri(Uri uri) {
@@ -608,5 +690,20 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
                 
             Toast.makeText(this, "✅ Certificado médico eliminado. Puedes subir uno nuevo.", Toast.LENGTH_SHORT).show();
         }
+        
+        // Guardar el estado actualizado
+        saveState();
+    }
+    
+    private void verificarEstadoDocumentos() {
+        // Solo mostrar mensaje si hay documentos faltantes, no si están completos
+        String mensaje = "";
+        if (antecedentesUri == null) mensaje += "• Falta certificado de antecedentes\n";
+        if (medicoUri == null) mensaje += "• Falta certificado médico\n";
+        
+        if (!mensaje.isEmpty()) {
+            Toast.makeText(this, "📋 Documentos pendientes:\n" + mensaje, Toast.LENGTH_SHORT).show();
+        }
+        // Eliminado el mensaje de éxito para evitar spam
     }
 }

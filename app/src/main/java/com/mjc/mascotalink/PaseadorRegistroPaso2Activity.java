@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -28,6 +29,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private ImageView previewFotoPerfil;
     private ImageView previewSelfie;
     private Button btnEliminarSelfie, btnEliminarFotoPerfil;
+    private Button btnContinuarPaso3;
     private Uri selfieUri;
     private Uri fotoPerfilUri;
 
@@ -50,6 +52,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         previewSelfie = findViewById(R.id.preview_selfie);
         btnEliminarSelfie = findViewById(R.id.btn_eliminar_selfie);
         btnEliminarFotoPerfil = findViewById(R.id.btn_eliminar_foto_perfil);
+        btnContinuarPaso3 = findViewById(R.id.btn_continuar_paso3);
         
         findViewById(R.id.img_selfie_ilustracion).setOnClickListener(v -> activarCamaraSelfie());
         Button btnElegirFoto = findViewById(R.id.btn_elegir_foto);
@@ -57,6 +60,9 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         Button btnActivarCamara = findViewById(R.id.btn_activar_camara);
 
         loadState();
+        
+        // Verificar estado inicial del botón de continuar
+        verificarCompletitudPaso2();
 
         btnElegirFoto.setOnClickListener(v -> elegirFotoPerfil());
         btnTomarFoto.setOnClickListener(v -> tomarFotoPerfil());
@@ -65,6 +71,9 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         // Configurar botones de eliminar
         btnEliminarSelfie.setOnClickListener(v -> eliminarSelfie());
         btnEliminarFotoPerfil.setOnClickListener(v -> eliminarFotoPerfil());
+        
+        // Configurar botón de continuar
+        btnContinuarPaso3.setOnClickListener(v -> continuarAlPaso3());
     }
 
     private void elegirFotoPerfil() {
@@ -145,16 +154,20 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 .putLong("timestamp_paso2", System.currentTimeMillis())
                 .apply();
             
-            Toast.makeText(this, "✅ Paso 2 completado. Puedes continuar al paso 3", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "✅ ¡Paso 2 completado! Puedes continuar al paso 3", Toast.LENGTH_SHORT).show();
             
-            // Navegar automáticamente al paso 3
-            startActivity(new Intent(this, PaseadorRegistroPaso3Activity.class));
+            // Habilitar botón de continuar
+            habilitarBotonContinuar();
+            
         } else {
             String mensaje = "";
             if (selfieUri == null) mensaje += "• Falta tomar la selfie\n";
             if (fotoPerfilUri == null) mensaje += "• Falta seleccionar foto de perfil\n";
             
             Toast.makeText(this, "⚠️ Faltan elementos:\n" + mensaje, Toast.LENGTH_LONG).show();
+            
+            // Ocultar botón de continuar
+            ocultarBotonContinuar();
         }
     }
 
@@ -175,6 +188,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
             try {
                 fotoPerfilUri = Uri.parse(s2);
                 mostrarPreviewFotoPerfil(fotoPerfilUri);
+                Log.d("Paso2", "Foto de perfil cargada: " + fotoPerfilUri.toString());
             } catch (SecurityException e) {
                 // Error de permisos - limpiar URI inválida
                 prefs.edit().remove("fotoPerfilUri").apply();
@@ -184,6 +198,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 // Otros errores - limpiar URI inválida
                 prefs.edit().remove("fotoPerfilUri").apply();
                 fotoPerfilUri = null;
+                Log.e("Paso2", "Error cargando foto de perfil: " + e.getMessage());
             }
         }
         
@@ -191,6 +206,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
             try {
                 selfieUri = Uri.parse(s1);
                 mostrarPreviewSelfie(selfieUri);
+                Log.d("Paso2", "Selfie cargada: " + selfieUri.toString());
             } catch (SecurityException e) {
                 // Error de permisos - limpiar URI inválida
                 prefs.edit().remove("selfieUri").apply();
@@ -200,8 +216,11 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 // Otros errores - limpiar URI inválida
                 prefs.edit().remove("selfieUri").apply();
                 selfieUri = null;
+                Log.e("Paso2", "Error cargando selfie: " + e.getMessage());
             }
         }
+        
+        Log.d("Paso2", "Estado cargado - Selfie: " + (selfieUri != null) + ", FotoPerfil: " + (fotoPerfilUri != null));
     }
 
     // Método eliminado - ahora verificamos las URIs locales en lugar de URLs de Firebase
@@ -252,5 +271,28 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         
         // Verificar completitud
         verificarCompletitudPaso2();
+    }
+    
+    private void continuarAlPaso3() {
+        if (selfieUri != null && fotoPerfilUri != null) {
+            startActivity(new Intent(this, PaseadorRegistroPaso3Activity.class));
+            finish(); // Cerrar esta actividad para evitar regresar
+        } else {
+            Toast.makeText(this, "⚠️ Asegúrate de completar ambas fotos antes de continuar", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void habilitarBotonContinuar() {
+        if (btnContinuarPaso3 != null) {
+            btnContinuarPaso3.setVisibility(Button.VISIBLE);
+            btnContinuarPaso3.setEnabled(true);
+        }
+    }
+    
+    private void ocultarBotonContinuar() {
+        if (btnContinuarPaso3 != null) {
+            btnContinuarPaso3.setVisibility(Button.GONE);
+            btnContinuarPaso3.setEnabled(false);
+        }
     }
 }

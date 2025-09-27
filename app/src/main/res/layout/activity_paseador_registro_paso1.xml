@@ -242,7 +242,7 @@
                 android:layout_height="wrap_content"
                 style="@style/TextAppearance.Mascota.Label"
                 android:text="Contraseña"/>
-            
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_password"
                 android:layout_width="match_parent"
@@ -280,15 +280,27 @@
         android:layout_alignParentBottom="true"
         android:orientation="vertical"
         android:padding="16dp">
-        
+
+        <!-- Checkbox de términos y condiciones -->
+        <CheckBox
+            android:id="@+id/cb_acepta_terminos"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            android:text="" />
+
         <Button
             android:id="@+id/btn_continuar"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:text="Continuar"
             style="@style/Widget.Mascota.PrimaryButton"
-            android:enabled="false"/>
-            
+            android:enabled="false"
+            android:backgroundTint="@color/blue_primary" />
+
         <!-- Enlace para ir al login -->
         <TextView
             android:id="@+id/tv_login_link"
