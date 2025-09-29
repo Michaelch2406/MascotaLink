@@ -57,35 +57,65 @@
                 android:orientation="horizontal"
                 android:layout_marginTop="8dp">
 
-                <ImageView
-                    android:id="@+id/placeholder_img1"
+                <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:src="@drawable/galeria_paseos_foto1"
-                    android:scaleType="centerCrop"
-                    android:background="#FFFFFFFF"
-                    android:contentDescription="foto1"/>
+                    android:layout_weight="1">
+                    <ImageView
+                        android:id="@+id/placeholder_img1"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/galeria_paseos_foto1"
+                        android:scaleType="centerCrop"
+                        android:background="#FFFFFFFF"/>
+                    <ImageView
+                        android:id="@+id/play_icon1"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_media_play"
+                        android:layout_gravity="center"
+                        android:visibility="gone"/>
+                </FrameLayout>
                 <View android:layout_width="8dp" android:layout_height="0dp"/>
-                <ImageView
-                    android:id="@+id/placeholder_img2"
+                <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:src="@drawable/galeria_paseos_foto2"
-                    android:scaleType="centerCrop"
-                    android:background="#FFFFFFFF"
-                    android:contentDescription="foto2"/>
+                    android:layout_weight="1">
+                    <ImageView
+                        android:id="@+id/placeholder_img2"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/galeria_paseos_foto2"
+                        android:scaleType="centerCrop"
+                        android:background="#FFFFFFFF"/>
+                    <ImageView
+                        android:id="@+id/play_icon2"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_media_play"
+                        android:layout_gravity="center"
+                        android:visibility="gone"/>
+                </FrameLayout>
                 <View android:layout_width="8dp" android:layout_height="0dp"/>
-                <ImageView
-                    android:id="@+id/placeholder_img3"
+                <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:src="@drawable/galeria_paseos_foto3"
-                    android:scaleType="centerCrop"
-                    android:background="#FFFFFFFF"
-                    android:contentDescription="foto3"/>
+                    android:layout_weight="1">
+                    <ImageView
+                        android:id="@+id/placeholder_img3"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/galeria_paseos_foto3"
+                        android:scaleType="centerCrop"
+                        android:background="#FFFFFFFF"/>
+                    <ImageView
+                        android:id="@+id/play_icon3"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_media_play"
+                        android:layout_gravity="center"
+                        android:visibility="gone"/>
+                </FrameLayout>
             </LinearLayout>
 
             <LinearLayout
@@ -122,12 +152,29 @@
             </LinearLayout>
 
             <!-- Sección 3: Cuestionario -->
-            <TextView
-                style="@style/TextAppearance.Mascota.CardTitle"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Cuestionario de conocimientos"/>
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/TextAppearance.Mascota.CardTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Cuestionario de conocimientos"/>
+
+                <ImageView
+                    android:id="@+id/iv_quiz_completed_check"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="20dp"
+                    android:src="@drawable/abc_btn_check_to_on_mtrl_015"
+                    app:tint="@color/colorSuccess"
+                    android:visibility="gone"/>
+            </LinearLayout>
 
             <TextView
                 style="@style/TextAppearance.Mascota.BodyMuted"
@@ -161,12 +208,14 @@
                     android:paddingStart="12dp">
 
                     <TextView
+                        android:id="@+id/tv_quiz_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Cuestionario de conocimientos"
                         style="@style/TextAppearance.Mascota.Label"/>
 
                     <TextView
+                        android:id="@+id/tv_quiz_description"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Comportamiento canino, primeros auxilios, manejo de emergencias y normas de seguridad"
@@ -192,7 +241,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
+        android:orientation="vertical"
         android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tv_validation_messages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textAlignment="center"
+            android:textColor="@color/colorError"
+            android:visibility="gone"/>
+
         <Button
             android:id="@+id/btn_guardar_continuar"
             android:layout_width="match_parent"

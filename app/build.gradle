@@ -14,6 +14,14 @@ android {
         versionCode 1
         versionName "1.0"
 
+        // Leer la clave de API desde local.properties y asignarla a manifestPlaceholders
+        def localProperties = new Properties()
+        def localPropertiesFile = rootProject.file('local.properties')
+        if (localPropertiesFile.exists()) {
+            localProperties.load(new FileInputStream(localPropertiesFile))
+        }
+        manifestPlaceholders = [MAPS_API_KEY: localProperties.getProperty('mapsApiKey', "")]
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // Solo ABI de destino del dispositivo: reduce tamaño y elimina x86/x86_64
@@ -31,6 +39,9 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+    lint {
+        baseline = file("lint-baseline.xml")
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11

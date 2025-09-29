@@ -23,7 +23,7 @@
 
     <meta-data
         android:name="com.google.android.geo.API_KEY"
-        android:value="AIzaSyAwXY_rbM36NhLOaDLxZUP4202sTFvE_o0" />
+        android:value="${MAPS_API_KEY}" />
     <!-- Necesario para Google Play Services -->
     <meta-data
         android:name="com.google.android.gms.version"
@@ -111,6 +111,16 @@
             android:name=".VideoRecordActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
     </application>
 
 </manifest>

@@ -100,22 +100,50 @@
                     android:textColor="#111827"/>
             </LinearLayout>
             
-            <!-- Preview del documento de antecedentes -->
+            <!-- Contenedor de Previsualización (Antecedentes) -->
             <RelativeLayout
                 android:id="@+id/container_preview_antecedentes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:visibility="gone">
-                
+
+                <!-- Previsualización para Imágenes -->
                 <ImageView
-                    android:id="@+id/preview_antecedentes"
+                    android:id="@+id/preview_antecedentes_img"
                     android:layout_width="match_parent"
                     android:layout_height="200dp"
                     android:scaleType="centerCrop"
-                    android:background="#E5EDF1"
-                    android:contentDescription="Preview certificado antecedentes"/>
-                    
+                    android:visibility="gone"
+                    android:background="#E5EDF1"/>
+
+                <!-- Previsualización para PDF -->
+                <LinearLayout
+                    android:id="@+id/preview_antecedentes_pdf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:background="#E7EEF2"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@android:drawable/ic_input_get" 
+                        app:tint="#4B5563"/>
+
+                    <TextView
+                        android:id="@+id/tv_antecedentes_pdf_nombre"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="documento.pdf"
+                        android:textColor="#111827"/>
+                </LinearLayout>
+
                 <Button
                     android:id="@+id/btn_eliminar_antecedentes"
                     android:layout_width="wrap_content"
@@ -193,22 +221,50 @@
                     android:textColor="#111827"/>
             </LinearLayout>
             
-            <!-- Preview del certificado médico -->
+            <!-- Contenedor de Previsualización (Médico) -->
             <RelativeLayout
                 android:id="@+id/container_preview_medico"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:visibility="gone">
-                
+
+                <!-- Previsualización para Imágenes -->
                 <ImageView
-                    android:id="@+id/preview_medico"
+                    android:id="@+id/preview_medico_img"
                     android:layout_width="match_parent"
                     android:layout_height="200dp"
                     android:scaleType="centerCrop"
-                    android:background="#E5EDF1"
-                    android:contentDescription="Preview certificado médico"/>
-                    
+                    android:visibility="gone"
+                    android:background="#E5EDF1"/>
+
+                <!-- Previsualización para PDF -->
+                <LinearLayout
+                    android:id="@+id/preview_medico_pdf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:background="#E7EEF2"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@android:drawable/ic_input_get" 
+                        app:tint="#4B5563"/>
+
+                    <TextView
+                        android:id="@+id/tv_medico_pdf_nombre"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="documento.pdf"
+                        android:textColor="#111827"/>
+                </LinearLayout>
+
                 <Button
                     android:id="@+id/btn_eliminar_medico"
                     android:layout_width="wrap_content"
@@ -233,13 +289,25 @@
         android:id="@+id/bottom_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:layout_alignParentBottom="true"
         android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tv_validation_messages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textAlignment="center"
+            android:textColor="@color/colorError"
+            android:visibility="gone"
+            android:text="Faltan campos por completar"/>
+
         <Button
             android:id="@+id/btn_enviar_verificacion"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Enviar para verificación"
+            android:text="Continuar al Paso 4"
             style="@style/Widget.Mascota.PrimaryButton"/>
     </LinearLayout>
 

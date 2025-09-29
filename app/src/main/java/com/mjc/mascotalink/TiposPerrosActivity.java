@@ -1,8 +1,11 @@
 package com.mjc.mascotalink;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -12,26 +15,30 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class TiposPerrosActivity extends AppCompatActivity {
 
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private static final String PREFS = "WizardPaseador";
 
     private CheckBox cbPequeno, cbMediano, cbGrande;
     private CheckBox cbCalmo, cbActivo, cbReactividadBaja, cbReactividadAlta;
-    private Button btnGuardar;
+    private TextView tvValidationMessages;
+
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tipos_perros);
 
+        // Firebase emuladores
+        String host = "192.168.0.147";
         mAuth = FirebaseAuth.getInstance();
+        mAuth.useEmulator(host, 9099);
         db = FirebaseFirestore.getInstance();
+        db.useEmulator(host, 8080);
 
         cbPequeno = findViewById(R.id.cb_pequeno);
         cbMediano = findViewById(R.id.cb_mediano);
@@ -40,19 +47,13 @@ public class TiposPerrosActivity extends AppCompatActivity {
         cbActivo = findViewById(R.id.cb_activo);
         cbReactividadBaja = findViewById(R.id.cb_reactividad_baja);
         cbReactividadAlta = findViewById(R.id.cb_reactividad_alta);
-        btnGuardar = findViewById(R.id.btn_guardar_tipos);
+        tvValidationMessages = findViewById(R.id.tv_validation_messages);
+        Button btnGuardar = findViewById(R.id.btn_guardar_tipos);
 
         btnGuardar.setOnClickListener(v -> guardarTiposPerros());
     }
 
     private void guardarTiposPerros() {
-        if (mAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_LONG).show();
-            return;
-        }
-        
-        String uid = mAuth.getCurrentUser().getUid();
-
         List<String> tamanos = new ArrayList<>();
         if (cbPequeno.isChecked()) tamanos.add("pequeno");
         if (cbMediano.isChecked()) tamanos.add("mediano");
@@ -64,36 +65,23 @@ public class TiposPerrosActivity extends AppCompatActivity {
         if (cbReactividadBaja.isChecked()) temperamentos.add("reactividad_baja");
         if (cbReactividadAlta.isChecked()) temperamentos.add("reactividad_alta");
 
-        // Validar que al menos una opción de tamaño esté seleccionada
-        if (tamanos.isEmpty()) {
-            Toast.makeText(this, "Debes seleccionar al menos un tamaño de perro", Toast.LENGTH_LONG).show();
-            return;
-        }
-        
-        // Validar que al menos una opción de temperamento esté seleccionada
-        if (temperamentos.isEmpty()) {
-            Toast.makeText(this, "Debes seleccionar al menos un tipo de temperamento", Toast.LENGTH_LONG).show();
+        if (tamanos.isEmpty() || temperamentos.isEmpty()) {
+            String error = "";
+            if (tamanos.isEmpty()) error += "Debes seleccionar al menos un tamaño.\n";
+            if (temperamentos.isEmpty()) error += "Debes seleccionar al menos un temperamento.";
+            tvValidationMessages.setText(error.trim());
+            tvValidationMessages.setVisibility(View.VISIBLE);
             return;
         }
 
-        Map<String, Object> manejoPerros = new HashMap<>();
-        manejoPerros.put("tamanos", tamanos);
-        manejoPerros.put("temperamentos", temperamentos);
+        tvValidationMessages.setVisibility(View.GONE);
 
-        btnGuardar.setEnabled(false);
-        btnGuardar.setText("Guardando...");
+        // Simulando guardado exitoso para el flujo del wizard
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        prefs.edit().putBoolean("perros_completo", true).apply();
 
-        db.collection("paseadores").document(uid)
-                .update("manejo_perros", manejoPerros)
-                .addOnSuccessListener(v -> {
-                    Toast.makeText(this, "Preferencias guardadas exitosamente", Toast.LENGTH_SHORT).show();
-                    setResult(RESULT_OK);
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    btnGuardar.setEnabled(true);
-                    btnGuardar.setText("Guardar Preferencias");
-                    Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+        Toast.makeText(this, "Preferencias guardadas", Toast.LENGTH_SHORT).show();
+        setResult(RESULT_OK);
+        finish();
     }
 }

@@ -246,34 +246,14 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
             Toast.makeText(this, "⚠️ Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
             return;
         }
-        
-        // Solo validar que el email no esté en uso, pero NO crear la cuenta aún
-        String email = etEmail.getText().toString().trim();
-        String password = etPassword.getText().toString().trim();
 
-        showLoading(true);
+        // Guardar datos localmente y continuar
+        guardarDatosCompletos();
+        Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
         
-        // Verificar si el email ya existe sin crear la cuenta
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
-                    showLoading(false);
-                    if (task.isSuccessful()) {
-                        // Guardar datos localmente y continuar
-                        guardarDatosCompletos();
-                        Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
-                        
-                        // Navegar a la siguiente pantalla
-                        Intent intent = new Intent(this, PaseadorRegistroPaso2Activity.class);
-                        startActivity(intent);
-                    } else {
-                        // Error en la creación de la cuenta
-                        Log.e(TAG, "Error creando cuenta: ", task.getException());
-                        String errorMsg = obtenerMensajeErrorVerificacion(task.getException());
-                        if (errorMsg != null) {
-                            mostrarError(errorMsg);
-                        }
-                    }
-                });
+        // Navegar a la siguiente pantalla
+        Intent intent = new Intent(this, PaseadorRegistroPaso2Activity.class);
+        startActivity(intent);
     }
     
     private void guardarDatosCompletos() {

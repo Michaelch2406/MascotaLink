@@ -4,14 +4,14 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -19,8 +19,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -31,388 +31,447 @@ import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.Timestamp;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Date;
+import java.text.ParseException;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements OnMapReadyCallback {
 
-    private static final String TAG = "Paso5Paseador";
     private static final String PREFS = "WizardPaseador";
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
 
-    private Button btnMetodoPago, btnGrabarVideo, btnGuardar;
-    private LinearLayout rowDisponibilidad, rowTiposPerros;
+    private Button btnGuardar;
+    private TextView tvValidationMessages;
+    private ImageView ivPagoCheck, ivDisponibilidadCheck, ivPerrosCheck;
 
     private GoogleMap mMap;
     private Circle zonaCircle;
-    private double zonaLat = 0.0, zonaLng = 0.0, zonaRadioKm = 5.0;
+    private LatLng zonaCentro;
+    private double zonaRadioKm = 5.0; // Default radius
 
-    private String videoPresentacionUrl = null;
-    private FusedLocationProviderClient fusedLocation;
-    private boolean locationPermissionGranted = false;
-    private final ActivityResultLauncher<String[]> locationPermsLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-                boolean fine = Boolean.TRUE.equals(result.getOrDefault(android.Manifest.permission.ACCESS_FINE_LOCATION, false));
-                boolean coarse = Boolean.TRUE.equals(result.getOrDefault(android.Manifest.permission.ACCESS_COARSE_LOCATION, false));
-                locationPermissionGranted = fine || coarse;
-                if (locationPermissionGranted) {
-                    centerOnUserIfPossible();
-                    enableMyLocationIfPossible();
-                }
-            });
+    private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
+        new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
+    );
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_paseador_registro_paso5);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        setupFirebase();
+        setupViews();
+        setupListeners();
+        setupMap();
+        loadState();
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        verificarCompletitudTotal();
+    }
+
+    private void setupFirebase() {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
 
-        String host = "192.168.0.147";
-        mAuth.useEmulator(host, 9099);
-        storage.useEmulator(host, 9199);
-        db.useEmulator(host, 8080);
+    private void setupViews() {
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
 
-        btnMetodoPago = findViewById(R.id.btn_metodo_pago);
-        btnGrabarVideo = findViewById(R.id.btn_grabar_video);
         btnGuardar = findViewById(R.id.btn_guardar_continuar);
-        rowDisponibilidad = findViewById(R.id.row_disponibilidad);
-        rowTiposPerros = findViewById(R.id.row_tipos_perros);
+        tvValidationMessages = findViewById(R.id.tv_validation_messages);
+        ivPagoCheck = findViewById(R.id.iv_pago_check);
+        ivDisponibilidadCheck = findViewById(R.id.iv_disponibilidad_check);
+        ivPerrosCheck = findViewById(R.id.iv_perros_check);
+    }
 
-        btnMetodoPago.setOnClickListener(v -> configurarMetodoPago());
-        btnGrabarVideo.setOnClickListener(v -> grabarVideoPresentacion());
-        rowDisponibilidad.setOnClickListener(v -> configurarDisponibilidad());
-        rowTiposPerros.setOnClickListener(v -> configurarTiposPerros());
+    private void setupListeners() {
+        findViewById(R.id.btn_metodo_pago).setOnClickListener(v -> startActivity(new Intent(this, MetodoPagoActivity.class)));
+        findViewById(R.id.btn_grabar_video).setOnClickListener(v -> grabarVideoPresentacion());
+        findViewById(R.id.btn_eliminar_video).setOnClickListener(v -> eliminarVideo());
+        findViewById(R.id.row_disponibilidad).setOnClickListener(v -> startActivity(new Intent(this, DisponibilidadActivity.class)));
+        findViewById(R.id.row_tipos_perros).setOnClickListener(v -> startActivity(new Intent(this, TiposPerrosActivity.class)));
         btnGuardar.setOnClickListener(v -> completarRegistro());
-
-        fusedLocation = LocationServices.getFusedLocationProviderClient(this);
-        setupMap();
-
-        // Solicitar permisos de ubicación al entrar a Paso 5
-        requestLocationPermission();
     }
 
     private void setupMap() {
-        FrameLayout container = findViewById(R.id.map_container);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_container);
-        if (mapFragment == null) {
-            mapFragment = SupportMapFragment.newInstance();
-            getSupportFragmentManager().beginTransaction().replace(R.id.map_container, mapFragment).commit();
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
         }
-        mapFragment.getMapAsync(this);
     }
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setOnMapClickListener(latLng -> {
-            if (zonaCircle != null) zonaCircle.remove();
-            zonaLat = latLng.latitude;
-            zonaLng = latLng.longitude;
-            CircleOptions opts = new CircleOptions()
-                    .center(latLng)
-                    .radius(zonaRadioKm * 1000)
-                    .strokeColor(Color.parseColor("#2680EB"))
-                    .strokeWidth(2f)
-                    .fillColor(Color.parseColor("#302680EB"));
-            zonaCircle = mMap.addCircle(opts);
-            guardarZonaServicio(zonaLat, zonaLng, zonaRadioKm);
+            zonaCentro = latLng;
+            saveState();
+            dibujarCirculo();
+            verificarCompletitudTotal();
         });
-        centerOnUserIfPossible();
-        enableMyLocationIfPossible();
+        loadMapState();
     }
 
-    private void requestLocationPermission() {
-        locationPermissionGranted = false;
-        locationPermsLauncher.launch(new String[]{
-                android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION
-        });
+    private void dibujarCirculo() {
+        if (mMap == null || zonaCentro == null) return;
+        if (zonaCircle != null) zonaCircle.remove();
+        zonaCircle = mMap.addCircle(new CircleOptions()
+                .center(zonaCentro)
+                .radius(zonaRadioKm * 1000)
+                .strokeColor(Color.parseColor("#2680EB"))
+                .strokeWidth(2f)
+                .fillColor(Color.parseColor("#302680EB")));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(zonaCentro, 12f));
     }
-
-    private void centerOnUserIfPossible() {
-        if (!locationPermissionGranted) return;
-        try {
-            fusedLocation.getLastLocation().addOnSuccessListener(loc -> {
-                if (loc != null && mMap != null) {
-                    LatLng here = new LatLng(loc.getLatitude(), loc.getLongitude());
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(here, 12f));
-                }
-            });
-        } catch (SecurityException ignored) {}
-    }
-
-    private void enableMyLocationIfPossible() {
-        if (mMap == null) return;
-        try {
-            if (locationPermissionGranted) {
-                mMap.setMyLocationEnabled(true);
-            }
-        } catch (SecurityException ignored) {}
-    }
-
-    private void guardarZonaServicio(double lat, double lng, double radioKm) {
-        if (mAuth.getCurrentUser() == null) return;
-        String uid = mAuth.getCurrentUser().getUid();
-        Map<String, Object> zona = new HashMap<>();
-        zona.put("nombre", "Zona de Servicio");
-        Map<String, Object> centro = new HashMap<>();
-        centro.put("lat", lat);
-        centro.put("lng", lng);
-        zona.put("ubicacion_centro", centro); // Alternativa sin GeoPoint para emulador
-        zona.put("radio_km", radioKm);
-        zona.put("activo", true);
-        db.collection("paseadores").document(uid)
-                .collection("zonas_servicio").add(zona);
-    }
-
-    private void configurarMetodoPago() {
-        Intent intent = new Intent(this, MetodoPagoActivity.class);
-        metodoPagoLauncher.launch(intent);
-    }
-
-    private final ActivityResultLauncher<Intent> metodoPagoLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                // Método de pago guardado silenciosamente
-            });
-
-    private void configurarDisponibilidad() {
-        Intent intent = new Intent(this, DisponibilidadActivity.class);
-        disponibilidadLauncher.launch(intent);
-    }
-
-    private final ActivityResultLauncher<Intent> disponibilidadLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                // Disponibilidad guardada silenciosamente
-            });
-
-    private void configurarTiposPerros() {
-        Intent intent = new Intent(this, TiposPerrosActivity.class);
-        tiposPerrosLauncher.launch(intent);
-    }
-
-    private final ActivityResultLauncher<Intent> tiposPerrosLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                // Preferencias de perros guardadas silenciosamente
-            });
-
-    private final ActivityResultLauncher<Intent> videoLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri uri = result.getData().getData();
-                    if (uri != null) {
-                        subirVideoPresentacion(uri);
-                    }
-                }
-            });
 
     private void grabarVideoPresentacion() {
         Intent intent = new Intent(this, VideoRecordActivity.class);
         videoLauncher.launch(intent);
     }
 
-    private boolean validarDuracionVideo(Uri videoUri) {
-        try {
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            retriever.setDataSource(this, videoUri);
-            String dur = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-            retriever.release();
-            long ms = Long.parseLong(dur);
-            long seg = ms / 1000;
-            return seg >= 30 && seg <= 60;
-        } catch (Exception e) {
-            return false;
+    private void handleVideoResult(androidx.activity.result.ActivityResult result) {
+        if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+            Uri tempUri = result.getData().getData();
+            if (tempUri != null) {
+                Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "VIDEO_PRESENTACION_");
+                if (permanentUri != null) {
+                    SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+                    editor.putString("videoPresentacionUri", permanentUri.toString());
+                    editor.apply();
+                    mostrarPreviewVideo(permanentUri);
+                    verificarCompletitudTotal();
+                } else {
+                    Toast.makeText(this, "Error al guardar el video.", Toast.LENGTH_SHORT).show();
+                }
+            }
         }
     }
 
-    private void subirVideoPresentacion(Uri uri) {
-        if (mAuth.getCurrentUser() == null) return;
-        String uid = mAuth.getCurrentUser().getUid();
-        String name = uid + "_presentacion_" + System.currentTimeMillis() + ".mp4";
-        StorageReference ref = storage.getReference().child("videos_presentacion/" + name);
-        ref.putFile(uri).addOnSuccessListener(t ->
-                ref.getDownloadUrl().addOnSuccessListener(url -> {
-                    videoPresentacionUrl = url.toString();
-                })
-        ).addOnFailureListener(e -> Toast.makeText(this, "Error al subir video", Toast.LENGTH_SHORT).show());
+    private void eliminarVideo() {
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        editor.remove("videoPresentacionUri");
+        editor.apply();
+        findViewById(R.id.video_preview_container).setVisibility(View.GONE);
+        verificarCompletitudTotal();
     }
 
-    private boolean validarCamposCompletos() {
-        // Requisitos mínimos: tener zona seleccionada y (opcional) video
-        return zonaLat != 0.0 || zonaLng != 0.0; // al menos una selección en mapa
+    private void mostrarPreviewVideo(Uri uri) {
+        FrameLayout container = findViewById(R.id.video_preview_container);
+        ImageView thumbnail = findViewById(R.id.video_thumbnail);
+        Glide.with(this).load(uri).centerCrop().into(thumbnail);
+        container.setVisibility(View.VISIBLE);
+    }
+
+    private void verificarCompletitudTotal() {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        List<String> faltantes = new ArrayList<>();
+
+        // Verificar pasos anteriores
+        if (!prefs.getBoolean("paso1_completo", false)) faltantes.add("• Faltan datos del Paso 1.");
+        if (!prefs.getBoolean("paso2_completo", false)) faltantes.add("• Faltan fotos del Paso 2.");
+        if (!prefs.getBoolean("paso3_completo", false)) faltantes.add("• Faltan documentos del Paso 3.");
+        if (!prefs.getBoolean("paso4_completo", false)) faltantes.add("• Faltan datos del Paso 4 (Galería y Cuestionario).");
+
+        // Verificar campos de este paso (Paso 5)
+        boolean pagoOk = prefs.getBoolean("metodo_pago_completo", false);
+        ivPagoCheck.setVisibility(pagoOk ? View.VISIBLE : View.GONE);
+        if (!pagoOk) faltantes.add("• Falta configurar el método de pago.");
+
+        boolean disponibilidadOk = prefs.getBoolean("disponibilidad_completa", false);
+        ivDisponibilidadCheck.setVisibility(disponibilidadOk ? View.VISIBLE : View.GONE);
+        if (!disponibilidadOk) faltantes.add("• Falta configurar tu disponibilidad.");
+
+        boolean perrosOk = prefs.getBoolean("perros_completo", false);
+        ivPerrosCheck.setVisibility(perrosOk ? View.VISIBLE : View.GONE);
+        if (!perrosOk) faltantes.add("• Falta especificar los tipos de perros que manejas.");
+
+        if (prefs.getString("videoPresentacionUri", null) == null) {
+            faltantes.add("• Falta grabar el video de presentación.");
+        }
+        if (zonaCentro == null) {
+            faltantes.add("• Falta seleccionar tu zona de servicio en el mapa.");
+        }
+
+        if (faltantes.isEmpty()) {
+            tvValidationMessages.setVisibility(View.GONE);
+            btnGuardar.setEnabled(true);
+        } else {
+            tvValidationMessages.setText(String.join("\n", faltantes));
+            tvValidationMessages.setVisibility(View.VISIBLE);
+            btnGuardar.setEnabled(false);
+        }
     }
 
     private void completarRegistro() {
-        if (mAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_LONG).show();
-            return;
-        }
-        if (!validarCamposCompletos()) {
-            Toast.makeText(this, "Por favor selecciona una zona de servicio en el mapa", Toast.LENGTH_LONG).show();
-            return;
-        }
+        btnGuardar.setEnabled(false);
+        btnGuardar.setText("Registrando...");
+        tvValidationMessages.setVisibility(View.GONE);
 
-        // Iniciar el proceso de subida de archivos y luego guardar los datos
-        subirTodosLosArchivos();
-    }
-
-    private void subirTodosLosArchivos() {
-        String uid = mAuth.getCurrentUser().getUid();
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
 
-        // Obtener URIs de SharedPreferences
-        Uri selfieUri = Uri.parse(prefs.getString("selfieUri", ""));
-        Uri fotoPerfilUri = Uri.parse(prefs.getString("fotoPerfilUri", ""));
-        Uri antecedentesUri = Uri.parse(prefs.getString("antecedentesUri", ""));
-        Uri medicoUri = Uri.parse(prefs.getString("medicoUri", ""));
+        // Paso 1 Data
+        String nombre = prefs.getString("nombre", "");
+        String apellido = prefs.getString("apellido", "");
+        String cedula = prefs.getString("cedula", "");
+        String fechaNacStr = prefs.getString("fecha_nacimiento", "");
+        String domicilio = prefs.getString("domicilio", "");
+        String telefono = prefs.getString("telefono", "");
+        String email = prefs.getString("email", "");
+        String password = prefs.getString("password", "");
 
-        // Referencias de Storage
-        StorageReference selfieRef = storage.getReference().child("selfies/" + uid + ".jpg");
-        StorageReference fotoPerfilRef = storage.getReference().child("fotos_perfil/" + uid + ".jpg");
-        StorageReference antecedentesRef = storage.getReference().child("documentos/" + uid + "_antecedentes.pdf");
-        StorageReference medicoRef = storage.getReference().child("documentos/" + uid + "_medico.pdf");
+        // Paso 2 Data
+        String selfieUriStr = prefs.getString("selfieUri", null);
+        String fotoPerfilUriStr = prefs.getString("fotoPerfilUri", null);
 
-        // Tareas de subida
-        List<com.google.android.gms.tasks.Task<Uri>> tasks = new ArrayList<>();
-        tasks.add(selfieRef.putFile(selfieUri).continueWithTask(task -> selfieRef.getDownloadUrl()));
-        tasks.add(fotoPerfilRef.putFile(fotoPerfilUri).continueWithTask(task -> fotoPerfilRef.getDownloadUrl()));
-        tasks.add(antecedentesRef.putFile(antecedentesUri).continueWithTask(task -> antecedentesRef.getDownloadUrl()));
-        tasks.add(medicoRef.putFile(medicoUri).continueWithTask(task -> medicoRef.getDownloadUrl()));
+        // Paso 3 Data
+        String antecedentesUriStr = prefs.getString("antecedentesUri", null);
+        String medicoUriStr = prefs.getString("medicoUri", null);
 
-        com.google.android.gms.tasks.Tasks.whenAllSuccess(tasks).addOnSuccessListener(urls -> {
-            // Guardar URLs en SharedPreferences
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putString("selfieUrl", urls.get(0).toString());
-            editor.putString("fotoPerfilUrl", urls.get(1).toString());
-            editor.putString("antecedentesUrl", urls.get(2).toString());
-            editor.putString("medicoUrl", urls.get(3).toString());
-            editor.apply();
+        // Paso 4 Data
+        String galeriaUrisStr = prefs.getString("galeria_paseos_uris", "");
+        boolean quizAprobado = prefs.getBoolean("quiz_aprobado", false);
 
-            // Ahora, guardar todos los datos en Firestore
-            guardarDatosEnFirestore();
-        }).addOnFailureListener(e -> {
-            Toast.makeText(this, "Error al subir archivos: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        });
+        // Paso 5 Data
+        boolean metodoPagoCompleto = prefs.getBoolean("metodo_pago_completo", false);
+        boolean disponibilidadCompleta = prefs.getBoolean("disponibilidad_completa", false);
+        boolean perrosCompleto = prefs.getBoolean("perros_completo", false);
+        String videoPresentacionUriStr = prefs.getString("videoPresentacionUri", null);
+        double zonaLat = prefs.getFloat("zonaLat", 0);
+        double zonaLng = prefs.getFloat("zonaLng", 0);
+
+        // 1. Crear usuario en Firebase Authentication
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        String uid = mAuth.getCurrentUser().getUid();
+                        // 2. Subir archivos a Firebase Storage
+                        uploadFiles(uid, nombre, apellido, cedula, fechaNacStr, domicilio, telefono, email,
+                                selfieUriStr, fotoPerfilUriStr, antecedentesUriStr, medicoUriStr, galeriaUrisStr,
+                                quizAprobado, metodoPagoCompleto, disponibilidadCompleta, perrosCompleto,
+                                videoPresentacionUriStr, zonaLat, zonaLng);
+                    } else {
+                        // Si la creación de usuario falla, mostrar error
+                        btnGuardar.setEnabled(true);
+                        btnGuardar.setText("Reintentar Registro");
+                        String errorMessage = task.getException().getMessage();
+                        if (errorMessage.contains("email address is already in use")) {
+                            mostrarError("El correo electrónico ya está registrado.");
+                        } else {
+                            mostrarError("Error al crear usuario: " + errorMessage);
+                        }
+                    }
+                });
     }
 
-    private void guardarDatosEnFirestore() {
-        String uid = mAuth.getCurrentUser().getUid();
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+    private void uploadFiles(String uid, String nombre, String apellido, String cedula, String fechaNacStr, String domicilio, String telefono, String email,
+                             String selfieUriStr, String fotoPerfilUriStr, String antecedentesUriStr, String medicoUriStr, String galeriaUrisStr,
+                             boolean quizAprobado, boolean metodoPagoCompleto, boolean disponibilidadCompleta, boolean perrosCompleto,
+                             String videoPresentacionUriStr, double zonaLat, double zonaLng) {
 
-        // Cargar URLs de galería de Paso 4
-        String csv = prefs.getString("galeria_paseos_urls", "");
-        List<String> galeria = new ArrayList<>();
-        if (csv != null && !csv.isEmpty()) {
-            for (String s : csv.split(",")) {
-                if (!s.trim().isEmpty()) galeria.add(s.trim());
+        Map<String, Uri> filesToUpload = new HashMap<>();
+        if (selfieUriStr != null) filesToUpload.put("selfie", Uri.parse(selfieUriStr));
+        if (fotoPerfilUriStr != null) filesToUpload.put("fotoPerfil", Uri.parse(fotoPerfilUriStr));
+        if (antecedentesUriStr != null) filesToUpload.put("antecedentes", Uri.parse(antecedentesUriStr));
+        if (medicoUriStr != null) filesToUpload.put("medico", Uri.parse(medicoUriStr));
+        if (videoPresentacionUriStr != null) filesToUpload.put("videoPresentacion", Uri.parse(videoPresentacionUriStr));
+
+        List<Uri> galeriaUris = new ArrayList<>();
+        if (!galeriaUrisStr.isEmpty()) {
+            for (String s : galeriaUrisStr.split(",")) {
+                galeriaUris.add(Uri.parse(s));
             }
         }
 
-        // Crear documento completo del paseador
-        Map<String, Object> paseadorData = new HashMap<>();
-        
-        // Datos básicos del paso 1
-        paseadorData.put("nombre", prefs.getString("nombre", ""));
-        paseadorData.put("apellido", prefs.getString("apellido", ""));
-        paseadorData.put("correo", prefs.getString("email", ""));
-        paseadorData.put("telefono", prefs.getString("telefono", ""));
-        paseadorData.put("direccion", prefs.getString("domicilio", ""));
-        paseadorData.put("cedula", prefs.getString("cedula", ""));
-        
-        // Fecha de nacimiento
-        String fechaStr = prefs.getString("fecha_nacimiento", "");
-        if (!fechaStr.isEmpty()) {
+        List<Task<Uri>> uploadTasks = new ArrayList<>();
+        Map<String, String> downloadUrls = new HashMap<>();
+
+        // Upload single files
+        for (Map.Entry<String, Uri> entry : filesToUpload.entrySet()) {
+            String fileType = entry.getKey();
+            Uri fileUri = entry.getValue();
             try {
-                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-                Date fecha = sdf.parse(fechaStr);
-                if (fecha != null) {
-                    paseadorData.put("fecha_nacimiento", new Timestamp(fecha));
+                InputStream inputStream = getContentResolver().openInputStream(fileUri);
+                if (inputStream != null) {
+                    StorageReference ref = storage.getReference().child("users").child(uid).child(fileType + "_" + System.currentTimeMillis());
+                    Task<Uri> uploadTask = ref.putStream(inputStream).continueWithTask(task -> {
+                        if (!task.isSuccessful()) {
+                            throw task.getException();
+                        }
+                        return ref.getDownloadUrl();
+                    }).addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            downloadUrls.put(fileType, task.getResult().toString());
+                        } else {
+                            Log.e("FirebaseStorage", "Upload failed for " + fileType, task.getException());
+                        }
+                    });
+                    uploadTasks.add(uploadTask);
+                } else {
+                    Log.e("FirebaseStorage", "InputStream is null for " + fileType);
                 }
             } catch (Exception e) {
-                // Ignorar error de fecha
+                Log.e("FirebaseStorage", "Error opening stream for " + fileType, e);
             }
         }
-        
-        // URLs de imágenes del paso 2
-        paseadorData.put("selfie_url", prefs.getString("selfieUrl", ""));
-        paseadorData.put("foto_perfil_url", prefs.getString("fotoPerfilUrl", ""));
-        
-        // URLs de documentos del paso 3
-        paseadorData.put("certificado_antecedentes_url", prefs.getString("antecedentesUrl", ""));
-        paseadorData.put("certificado_medico_url", prefs.getString("medicoUrl", ""));
-        
-        // Galería del paso 4
-        paseadorData.put("galeria_paseos_urls", galeria);
-        
-        // Video de presentación del paso 5
-        if (videoPresentacionUrl != null) {
-            paseadorData.put("video_presentacion_url", videoPresentacionUrl);
-        }
-        
-        // Zona de servicio
-        Map<String, Object> zona = new HashMap<>();
-        zona.put("lat", zonaLat);
-        zona.put("lng", zonaLng);
-        zona.put("radio_km", zonaRadioKm);
-        paseadorData.put("zona_servicio", zona);
-        
-        // Estado del registro
-        paseadorData.put("verificacion_estado", "PENDIENTE");
-        paseadorData.put("acepto_terminos", true);
-        paseadorData.put("fecha_aceptacion_terminos", FieldValue.serverTimestamp());
-        paseadorData.put("ultima_actualizacion", FieldValue.serverTimestamp());
-        paseadorData.put("fecha_registro", FieldValue.serverTimestamp());
-        
-        // Campos iniciales
-        paseadorData.put("calificacion_promedio", 0.0);
-        paseadorData.put("num_servicios_completados", 0);
-        paseadorData.put("activo", true);
 
-        // Guardar en Firestore
-        db.collection("paseadores").document(uid)
-                .set(paseadorData, SetOptions.merge())
-                .addOnSuccessListener(v -> {
-                    // Limpiar datos temporales
+        // Upload gallery files
+        AtomicInteger galeriaCount = new AtomicInteger(0);
+        for (Uri galeriaUri : galeriaUris) {
+            try {
+                InputStream inputStream = getContentResolver().openInputStream(galeriaUri);
+                if (inputStream != null) {
+                    StorageReference ref = storage.getReference().child("users").child(uid).child("galeria_" + galeriaCount.incrementAndGet() + "_" + System.currentTimeMillis());
+                    Task<Uri> uploadTask = ref.putStream(inputStream).continueWithTask(task -> {
+                        if (!task.isSuccessful()) {
+                            throw task.getException();
+                        }
+                        return ref.getDownloadUrl();
+                    }).addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            // Store gallery URLs in a list or comma-separated string
+                            String currentGaleriaUrls = downloadUrls.getOrDefault("galeria", "");
+                            if (!currentGaleriaUrls.isEmpty()) {
+                                downloadUrls.put("galeria", currentGaleriaUrls + "," + task.getResult().toString());
+                            } else {
+                                downloadUrls.put("galeria", task.getResult().toString());
+                            }
+                        }
+                    });
+                    uploadTasks.add(uploadTask);
+                } else {
+                    Log.e("FirebaseStorage", "InputStream is null for gallery file");
+                }
+            } catch (Exception e) {
+                Log.e("FirebaseStorage", "Error opening stream for gallery file", e);
+            }
+        }
+
+        Tasks.whenAllComplete(uploadTasks)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        // 3. Guardar datos en Firestore
+                        saveUserDataToFirestore(uid, nombre, apellido, cedula, fechaNacStr, domicilio, telefono, email,
+                                quizAprobado, metodoPagoCompleto, disponibilidadCompleta, perrosCompleto,
+                                zonaLat, zonaLng, downloadUrls);
+                    } else {
+                        btnGuardar.setEnabled(true);
+                        btnGuardar.setText("Reintentar Registro");
+                        mostrarError("Error al subir archivos: " + task.getException().getMessage());
+                        // Optionally, delete the created user if file upload fails
+                        mAuth.getCurrentUser().delete();
+                    }
+                });
+    }
+
+    private void saveUserDataToFirestore(String uid, String nombre, String apellido, String cedula, String fechaNacStr, String domicilio, String telefono, String email,
+                                         boolean quizAprobado, boolean metodoPagoCompleto, boolean disponibilidadCompleta, boolean perrosCompleto,
+                                         double zonaLat, double zonaLng, Map<String, String> downloadUrls) {
+
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("nombre", nombre);
+        userData.put("apellido", apellido);
+        userData.put("cedula", cedula);
+        userData.put("fechaNacimiento", fechaNacStr);
+        userData.put("domicilio", domicilio);
+        userData.put("telefono", telefono);
+        userData.put("email", email);
+        userData.put("rol", "paseador");
+        userData.put("quizAprobado", quizAprobado);
+        userData.put("metodoPagoCompleto", metodoPagoCompleto);
+        userData.put("disponibilidadCompleta", disponibilidadCompleta);
+        userData.put("perrosCompleto", perrosCompleto);
+        userData.put("zonaServicioLat", zonaLat);
+        userData.put("zonaServicioLng", zonaLng);
+        userData.put("registroCompleto", true);
+        userData.put("fechaRegistro", new Timestamp(new Date()));
+
+        // Add download URLs
+        userData.putAll(downloadUrls);
+
+        db.collection("paseadores").document(uid).set(userData)
+                .addOnSuccessListener(aVoid -> {
                     limpiarDatosTemporales();
                     mostrarMensajeFinalRegistro();
                 })
-                .addOnFailureListener(e -> Toast.makeText(this, "Error al completar registro", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> {
+                    btnGuardar.setEnabled(true);
+                    btnGuardar.setText("Reintentar Registro");
+                    mostrarError("Error al guardar datos en Firestore: " + e.getMessage());
+                    // Optionally, delete the created user and uploaded files if Firestore save fails
+                    mAuth.getCurrentUser().delete();
+                });
     }
-    
-    private void limpiarDatosTemporales() {
+
+    private void mostrarError(String msg) {
+        new AlertDialog.Builder(this)
+                .setTitle("⚠️ Error")
+                .setMessage(msg)
+                .setPositiveButton("Entendido", null)
+                .show();
+    }
+
+    private void saveState() {
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        if (zonaCentro != null) {
+            editor.putFloat("zonaLat", (float) zonaCentro.latitude);
+            editor.putFloat("zonaLng", (float) zonaCentro.longitude);
+        }
+        editor.apply();
+    }
+
+    private void loadState() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        prefs.edit().clear().apply();
+        String videoUriString = prefs.getString("videoPresentacionUri", null);
+        if (videoUriString != null) {
+            mostrarPreviewVideo(Uri.parse(videoUriString));
+        }
+    }
+
+    private void loadMapState() {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        float lat = prefs.getFloat("zonaLat", 0);
+        float lng = prefs.getFloat("zonaLng", 0);
+        if (lat != 0 && lng != 0) {
+            zonaCentro = new LatLng(lat, lng);
+            dibujarCirculo();
+        }
+    }
+
+    private void limpiarDatosTemporales() {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().clear().apply();
     }
 
     private void mostrarMensajeFinalRegistro() {
         new AlertDialog.Builder(this)
                 .setTitle("¡Registro Completado!")
-                .setMessage("Tu perfil de paseador ha sido enviado para revisión. Te notificaremos cuando tu perfil sea aprobado.")
-                .setPositiveButton("Finalizar", (d, w) -> {
+                .setMessage("Tu perfil ha sido enviado para revisión. Te notificaremos cuando sea aprobado.")
+                .setPositiveButton("Finalizar", (dialog, which) -> {
                     Intent intent = new Intent(this, LoginActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                     finish();
                 })

@@ -189,25 +189,28 @@
         android:padding="16dp"
         android:orientation="vertical">
         
+        <!-- Mensajes de validación -->
+        <TextView
+            android:id="@+id/tv_validation_messages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textAlignment="center"
+            android:textColor="@color/colorError"
+            android:visibility="gone"
+            android:text="Faltan campos por completar"/>
+
         <!-- Botón para continuar al paso 3 (se muestra solo cuando ambas fotos están completas) -->
         <Button
             android:id="@+id/btn_continuar_paso3"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="✅ Continuar al Paso 3"
+            android:text="Continuar al Paso 3"
             android:visibility="gone"
             android:textAllCaps="false"
             android:textStyle="bold"
             style="@style/Widget.Mascota.PrimaryButton"/>
-            
-        <!-- Botón para activar cámara (siempre visible) -->
-        <Button
-            android:id="@+id/btn_activar_camara"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Activar cámara"
-            android:layout_marginTop="8dp"
-            style="@style/Widget.Mascota.PrimaryButton"/>
+
     </LinearLayout>
 
 </RelativeLayout>

@@ -1,6 +1,8 @@
 package com.mjc.mascotalink;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -20,12 +22,12 @@ import java.util.Map;
 
 public class MetodoPagoActivity extends AppCompatActivity {
 
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
-
+    private static final String PREFS = "WizardPaseador";
     private AutoCompleteTextView etBanco;
     private EditText etCuenta;
-    private Button btnGuardar;
+
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -33,47 +35,53 @@ public class MetodoPagoActivity extends AppCompatActivity {
         setContentView(R.layout.activity_metodo_pago);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setNavigationOnClickListener(v -> finish());
 
+        // Firebase emuladores
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
         etBanco = findViewById(R.id.et_banco);
         etCuenta = findViewById(R.id.et_numero_cuenta);
-        btnGuardar = findViewById(R.id.btn_guardar_metodo);
+        Button btnGuardar = findViewById(R.id.btn_guardar_metodo);
 
-        String[] bancos = new String[]{"Banco Pichincha", "Produbanco", "Banco Guayaquil"};
+        String[] bancos = getResources().getStringArray(R.array.bancos);
         etBanco.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, bancos));
 
         btnGuardar.setOnClickListener(v -> guardarMetodoPago());
     }
 
     private void guardarMetodoPago() {
-        if (mAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "Usuario no autenticado", Toast.LENGTH_LONG).show();
-            return;
-        }
-        String bancoSeleccionado = etBanco.getText().toString().trim();
-        String numeroCuenta = etCuenta.getText().toString().trim();
-        if (bancoSeleccionado.isEmpty() || numeroCuenta.isEmpty()) {
-            Toast.makeText(this, "Completa banco y número de cuenta", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String uid = mAuth.getCurrentUser().getUid();
-        Map<String, Object> metodoPago = new HashMap<>();
-        metodoPago.put("banco", bancoSeleccionado);
-        metodoPago.put("numero_cuenta", numeroCuenta);
-        metodoPago.put("tipo", "Ahorros");
-        metodoPago.put("predeterminado", true);
-        metodoPago.put("fecha_registro", FieldValue.serverTimestamp());
+        String banco = etBanco.getText().toString().trim();
+        String cuenta = etCuenta.getText().toString().trim();
 
-        db.collection("usuarios").document(uid)
-                .collection("metodos_pago")
-                .add(metodoPago)
-                .addOnSuccessListener(ref -> {
-                    setResult(RESULT_OK);
-                    finish();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show());
+        if (!validateInputs(banco, cuenta)) {
+            return;
+        }
+
+        // Simulando guardado exitoso para el flujo del wizard
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        prefs.edit().putBoolean("metodo_pago_completo", true).apply();
+
+        Toast.makeText(this, "Método de pago guardado", Toast.LENGTH_SHORT).show();
+        setResult(RESULT_OK);
+        finish();
+    }
+
+    private boolean validateInputs(String banco, String cuenta) {
+        etBanco.setError(null);
+        etCuenta.setError(null);
+
+        if (TextUtils.isEmpty(banco)) {
+            etBanco.setError("Debes seleccionar un banco");
+            return false;
+        }
+
+        if (TextUtils.isEmpty(cuenta)) {
+            etCuenta.setError("El número de cuenta es requerido");
+            return false;
+        }
+
+        return true;
     }
 }

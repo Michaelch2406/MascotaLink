@@ -46,21 +46,25 @@
             android:id="@+id/rb1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:buttonTint="@color/blue_primary"
             android:text="Opción 1"/>
         <RadioButton
             android:id="@+id/rb2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:buttonTint="@color/blue_primary"
             android:text="Opción 2"/>
         <RadioButton
             android:id="@+id/rb3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:buttonTint="@color/blue_primary"
             android:text="Opción 3"/>
         <RadioButton
             android:id="@+id/rb4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            app:buttonTint="@color/blue_primary"
             android:text="Opción 4"/>
     </RadioGroup>
 
@@ -69,6 +73,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginTop="16dp"
+        android:backgroundTint="@color/blue_primary"
         android:text="Siguiente"/>
 
 </LinearLayout>

@@ -25,6 +25,7 @@ import androidx.camera.video.Recording;
 import androidx.camera.video.Recorder;
 import androidx.camera.video.VideoCapture;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -40,6 +41,7 @@ public class VideoRecordActivity extends AppCompatActivity {
     private VideoCapture<Recorder> videoCapture;
     private Recording activeRecording;
     private long startMs = 0L;
+    private Uri videoUri; // Add this field
 
     private boolean audioPermissionGranted = false;
 
@@ -109,8 +111,21 @@ public class VideoRecordActivity extends AppCompatActivity {
 
     @SuppressWarnings("MissingPermission")
     private void startRecording() {
-        File file = new File(getCacheDir(), "record_" + System.currentTimeMillis() + ".mp4");
-        FileOutputOptions output = new FileOutputOptions.Builder(file).build();
+        File videoFile = null;
+        try {
+            File sharedDir = new File(getFilesDir(), "shared_files");
+            if (!sharedDir.exists()) {
+                sharedDir.mkdirs();
+            }
+            videoFile = new File(sharedDir, "record_" + System.currentTimeMillis() + ".mp4");
+        } catch (Exception e) {
+            Toast.makeText(this, "Error creating video file", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        videoUri = FileProvider.getUriForFile(this, com.mjc.mascotalink.BuildConfig.APPLICATION_ID + ".provider", videoFile);
+
+        FileOutputOptions output = new FileOutputOptions.Builder(videoFile).build();
 
         PendingRecording pending = videoCapture.getOutput().prepareRecording(this, output);
         if (audioPermissionGranted) {
@@ -135,23 +150,20 @@ public class VideoRecordActivity extends AppCompatActivity {
         btnRecord.setSelected(false);
 
         long elapsed = (System.currentTimeMillis() - startMs) / 1000L;
-        if (elapsed < 30L || elapsed > 60L) {
-            Toast.makeText(this, "El video debe durar entre 30 y 60 segundos", Toast.LENGTH_LONG).show();
+        if (elapsed < 30L) { // Removed upper bound check as timer handles it
+            Toast.makeText(this, "El video debe durar al menos 30 segundos", Toast.LENGTH_LONG).show();
+            // Delete the file if it's too short
+            if (videoUri != null) {
+                getContentResolver().delete(videoUri, null, null);
+            }
+            videoUri = null;
             return;
         }
 
-        // Return the last file created in cache directory
-        // In a robust version we'd track the exact file; here we scan by lastModified
-        File dir = getCacheDir();
-        File latest = null;
-        for (File f : dir.listFiles()) {
-            if (f.getName().startsWith("record_") && f.getName().endsWith(".mp4")) {
-                if (latest == null || f.lastModified() > latest.lastModified()) latest = f;
-            }
-        }
-        if (latest != null) {
+        if (videoUri != null) {
             Intent data = new Intent();
-            data.setData(Uri.fromFile(latest));
+            data.setData(videoUri);
+            data.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             setResult(RESULT_OK, data);
             finish();
         }

@@ -36,6 +36,9 @@ public class QuizActivity extends AppCompatActivity {
 
     private final List<Integer> incorrectAnswersIndices = new ArrayList<>();
 
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,6 +46,22 @@ public class QuizActivity extends AppCompatActivity {
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+
+        // Firebase emuladores
+        String host = "192.168.0.147";
+        db = FirebaseFirestore.getInstance();
+        try {
+            db.useEmulator(host, 8080);
+        } catch (IllegalStateException e) {
+            // Emulator may already be set, ignore
+        }
+
+        mAuth = FirebaseAuth.getInstance();
+        try {
+            mAuth.useEmulator(host, 9099);
+        } catch (IllegalStateException e) {
+            // Emulator may already be set, ignore
+        }
 
         tvQuestion = findViewById(R.id.tv_question);
         tvProgress = findViewById(R.id.tv_progress);
@@ -115,14 +134,14 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void updateFirestoreScores(boolean passed) {
-        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
-        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
         Map<String, Object> conocimientos = new HashMap<>();
         conocimientos.put("comportamiento_canino_score", categoryScores.getOrDefault("comportamiento", 0) * 33);
         conocimientos.put("primeros_auxilios_score", categoryScores.getOrDefault("primeros_auxilios", 0) * 17);
         conocimientos.put("manejo_emergencia_score", categoryScores.getOrDefault("emergencias", 0) * 17);
 
-        FirebaseFirestore.getInstance().collection("paseadores").document(uid)
+        db.collection("paseadores").document(uid)
                 .update("conocimientos", conocimientos,
                         "quiz_completado", true,
                         "quiz_aprobado", passed,

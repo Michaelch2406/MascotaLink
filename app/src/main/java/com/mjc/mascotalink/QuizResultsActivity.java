@@ -14,9 +14,22 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class QuizResultsActivity extends AppCompatActivity {
+
+    private TextView tvResult, tvScore, tvCriticalScore, tvFeedback;
+    private Button btnRetry, btnFinish;
+    private LinearLayout feedbackContainer;
+
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -24,7 +37,23 @@ public class QuizResultsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_quiz_results);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+
+        // Firebase emuladores
+        String host = "192.168.0.147";
+        db = FirebaseFirestore.getInstance();
+        try {
+            db.useEmulator(host, 8080);
+        } catch (IllegalStateException e) {
+            // Emulator may already be set, ignore
+        }
+
+        mAuth = FirebaseAuth.getInstance();
+        try {
+            mAuth.useEmulator(host, 9099);
+        } catch (IllegalStateException e) {
+            // Emulator may already be set, ignore
+        }
 
         TextView tvResultStatus = findViewById(R.id.tv_result_status);
         TextView tvResultScore = findViewById(R.id.tv_result_score);
