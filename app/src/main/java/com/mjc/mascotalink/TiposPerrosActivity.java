@@ -42,6 +42,15 @@ public class TiposPerrosActivity extends AppCompatActivity {
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
         Button btnGuardar = findViewById(R.id.btn_guardar_tipos);
 
+        // Verificar que todos los elementos existen
+        if (cbPequeno == null || cbMediano == null || cbGrande == null || 
+            cbCalmo == null || cbActivo == null || cbReactividadBaja == null || 
+            cbReactividadAlta == null || btnGuardar == null) {
+            Toast.makeText(this, "Error: Elementos de la interfaz no encontrados", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
         loadState(); // Load previously saved state
 
         btnGuardar.setOnClickListener(v -> guardarTiposPerros());

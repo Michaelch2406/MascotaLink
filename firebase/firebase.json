@@ -8,6 +8,9 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": {
+    "source": "functions"
+  },
   "emulators": {
     "auth": {
       "port": 9099,
@@ -24,7 +27,12 @@
     "ui": {
       "enabled": true,
       "host": "0.0.0.0"
-    },
-    "singleProjectMode": true
+    }
+    , 
+    "singleProjectMode": true,
+    "functions": {
+      "port": 5001,
+      "host": "0.0.0.0"
+    }
   }
 }

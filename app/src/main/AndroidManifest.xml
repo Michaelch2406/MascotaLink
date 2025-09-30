@@ -115,6 +115,10 @@
             android:name=".VideoRecordActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".ZonasServicioActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

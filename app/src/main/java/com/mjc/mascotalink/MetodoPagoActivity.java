@@ -32,6 +32,13 @@ public class MetodoPagoActivity extends AppCompatActivity {
         etCuenta = findViewById(R.id.et_numero_cuenta);
         Button btnGuardar = findViewById(R.id.btn_guardar_metodo);
 
+        // Verificar que todos los elementos existen
+        if (etBanco == null || etCuenta == null || btnGuardar == null) {
+            Toast.makeText(this, "Error: Elementos de la interfaz no encontrados", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
         String[] bancos = getResources().getStringArray(R.array.bancos);
         etBanco.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, bancos));
 
@@ -45,8 +52,10 @@ public class MetodoPagoActivity extends AppCompatActivity {
         etBanco.setText(prefs.getString("pago_banco", ""));
         etCuenta.setText(prefs.getString("pago_cuenta", ""));
         // This is to ensure the dropdown shows the text
-        if (etBanco.getAdapter() != null) {
-            ((ArrayAdapter<String>) etBanco.getAdapter()).getFilter().filter(null);
+        if (etBanco.getAdapter() instanceof ArrayAdapter) {
+            @SuppressWarnings("unchecked")
+            ArrayAdapter<String> adapter = (ArrayAdapter<String>) etBanco.getAdapter();
+            adapter.getFilter().filter(null);
         }
     }
 

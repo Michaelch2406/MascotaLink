@@ -8,7 +8,29 @@ service cloud.firestore {
     }
 
     // Colecciones de perfiles: duenos y paseadores
-    match /(duenos|paseadores)/{userId} {
+    match /duenos/{userId} {
+      // Cualquiera autenticado puede leer perfiles (para listados, etc.)
+      allow read: if request.auth != null;
+
+      // El usuario puede crear su propio documento
+      allow create: if isOwner(userId);
+
+      // El usuario puede actualizar su propio documento, pero con restricciones
+      allow update: if isOwner(userId) &&
+                      // Campos que no se pueden cambiar una vez establecidos
+                      request.resource.data.rol == resource.data.rol &&
+                      request.resource.data.email == resource.data.email &&
+                      request.resource.data.cedula == resource.data.cedula &&
+                      request.resource.data.fechaRegistro == resource.data.fechaRegistro &&
+                      // Campos de verificación que el usuario no puede tocar
+                      request.resource.data.verificacion_estado == resource.data.verificacion_estado &&
+                      request.resource.data.verificacion_fecha == resource.data.verificacion_fecha;
+
+      // Nadie puede borrar perfiles directamente
+      allow delete: if false;
+    }
+
+    match /paseadores/{userId} {
       // Cualquiera autenticado puede leer perfiles (para listados, etc.)
       allow read: if request.auth != null;
 

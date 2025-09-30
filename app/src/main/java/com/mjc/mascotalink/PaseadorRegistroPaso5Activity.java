@@ -80,6 +80,13 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
     private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
     );
+    
+    private final ActivityResultLauncher<Intent> activityLauncher = registerForActivityResult(
+        new ActivityResultContracts.StartActivityForResult(), result -> {
+            // Refresh the validation when returning from any child activity
+            verificarCompletitudTotal();
+        }
+    );
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -118,17 +125,55 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
     }
 
     private void setupListeners() {
-        findViewById(R.id.btn_metodo_pago).setOnClickListener(v -> startActivity(new Intent(this, MetodoPagoActivity.class)));
-        findViewById(R.id.btn_grabar_video).setOnClickListener(v -> grabarVideoPresentacion());
-        findViewById(R.id.btn_eliminar_video).setOnClickListener(v -> eliminarVideo());
-        findViewById(R.id.row_disponibilidad).setOnClickListener(v -> startActivity(new Intent(this, DisponibilidadActivity.class)));
-        findViewById(R.id.row_tipos_perros).setOnClickListener(v -> startActivity(new Intent(this, TiposPerrosActivity.class)));
-        btnGuardar.setOnClickListener(v -> completarRegistro());
+        Button btnMetodoPago = findViewById(R.id.btn_metodo_pago);
+        if (btnMetodoPago != null) {
+            btnMetodoPago.setOnClickListener(v -> 
+                activityLauncher.launch(new Intent(this, MetodoPagoActivity.class)));
+        }
+        
+        Button btnGrabarVideo = findViewById(R.id.btn_grabar_video);
+        if (btnGrabarVideo != null) {
+            btnGrabarVideo.setOnClickListener(v -> grabarVideoPresentacion());
+        }
+        
+        Button btnEliminarVideo = findViewById(R.id.btn_eliminar_video);
+        if (btnEliminarVideo != null) {
+            btnEliminarVideo.setOnClickListener(v -> eliminarVideo());
+        }
+        
+        View rowDisponibilidad = findViewById(R.id.row_disponibilidad);
+        if (rowDisponibilidad != null) {
+            rowDisponibilidad.setOnClickListener(v -> 
+                activityLauncher.launch(new Intent(this, DisponibilidadActivity.class)));
+        }
+        
+        View rowTiposPerros = findViewById(R.id.row_tipos_perros);
+        if (rowTiposPerros != null) {
+            rowTiposPerros.setOnClickListener(v -> 
+                activityLauncher.launch(new Intent(this, TiposPerrosActivity.class)));
+        }
+        
+        // Intentar agregar funcionalidad de zonas de servicio usando el mapa existente como proxy
+        // Agregar un botón temporal en el mapa para acceder a zonas de servicio
+        if (mMap != null) {
+            // Se configurará cuando el mapa esté listo
+        }
+        
+        if (btnGuardar != null) {
+            btnGuardar.setOnClickListener(v -> completarRegistro());
+        }
     }
 
     private void setupMap() {
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_container);
         if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        } else {
+            // Try to create the fragment if it doesn't exist
+            mapFragment = SupportMapFragment.newInstance();
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.map_container, mapFragment)
+                    .commit();
             mapFragment.getMapAsync(this);
         }
     }
@@ -184,6 +229,18 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             dibujarCirculo();
             verificarCompletitudTotal();
         });
+        
+        // Long press para abrir ZonasServicioActivity
+        mMap.setOnMapLongClickListener(latLng -> {
+            androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+            builder.setTitle("Configurar Zonas de Servicio")
+                   .setMessage("¿Quieres abrir el editor avanzado de zonas de servicio?\n\nEsto te permitirá configurar múltiples zonas con diferentes radios.")
+                   .setPositiveButton("Abrir Editor", (dialog, which) -> 
+                       activityLauncher.launch(new Intent(this, ZonasServicioActivity.class)))
+                   .setNegativeButton("Cancelar", null)
+                   .show();
+        });
+        
         loadMapState();
     }
 
@@ -263,8 +320,11 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         if (prefs.getString("videoPresentacionUri", null) == null) {
             faltantes.add("• Falta grabar el video de presentación.");
         }
-        if (zonaCentro == null) {
-            faltantes.add("• Falta seleccionar tu zona de servicio en el mapa.");
+        
+        // Verificar zonas de servicio (nuevo sistema)
+        boolean zonasServicioOk = prefs.getBoolean("zonas_servicio_completo", false);
+        if (!zonasServicioOk && zonaCentro == null) {
+            faltantes.add("• Falta configurar tus zonas de servicio.");
         }
 
         if (faltantes.isEmpty()) {

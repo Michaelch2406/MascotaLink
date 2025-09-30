@@ -161,6 +161,13 @@ public class VideoRecordActivity extends AppCompatActivity {
         }
 
         if (videoUri != null) {
+            // Save video data to SharedPreferences
+            android.content.SharedPreferences.Editor editor = getSharedPreferences("WizardPaseador", MODE_PRIVATE).edit();
+            editor.putBoolean("video_presentacion_completo", true);
+            editor.putString("video_presentacion_uri", videoUri.toString());
+            editor.putLong("video_presentacion_timestamp", System.currentTimeMillis());
+            editor.apply();
+            
             Intent data = new Intent();
             data.setData(videoUri);
             data.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);

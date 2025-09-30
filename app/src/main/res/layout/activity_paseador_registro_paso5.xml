@@ -155,12 +155,20 @@
 
             </androidx.cardview.widget.CardView>
 
-            <FrameLayout
-                android:id="@+id/map_container"
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="200dp"
                 android:layout_marginTop="8dp"
-                android:background="#E7EEF2"/>
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <fragment
+                    android:id="@+id/map_container"
+                    android:name="com.google.android.gms.maps.SupportMapFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+            </androidx.cardview.widget.CardView>
 
             <!-- Disponibilidad -->
             <LinearLayout

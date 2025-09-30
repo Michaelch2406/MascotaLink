@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".ZonasServicioActivity">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/blue_primary"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@color/white"
+        app:title="Zonas de Servicio"
+        app:titleTextColor="@color/white" />
+
+    <!-- Contenido principal -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Instrucciones -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Selecciona las zonas donde ofreces tu servicio de paseo de mascotas"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/blue_primary"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Buscador de direcciones -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Buscar dirección"
+                app:boxStrokeColor="@color/blue_primary"
+                app:hintTextColor="@color/blue_primary">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_direccion_busqueda"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:maxLines="2" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/btn_buscar_direccion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Buscar"
+                android:layout_marginBottom="16dp"
+                android:backgroundTint="@color/blue_primary"
+                android:textColor="@color/white" />
+
+            <!-- Control de radio -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Radio de servicio"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tv_radio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Radio: 2.0 km"
+                android:textSize="16sp"
+                android:textColor="@color/blue_primary"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/slider_radio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="0.5"
+                android:valueTo="5.0"
+                android:stepSize="0.5"
+                android:value="2.0"
+                app:thumbColor="@color/blue_primary"
+                app:trackColorActive="@color/blue_primary"
+                app:trackColorInactive="@color/gray_light"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Botón para agregar zona -->
+            <Button
+                android:id="@+id/btn_agregar_zona"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Agregar Zona Seleccionada"
+                android:enabled="false"
+                android:backgroundTint="@color/green_accent"
+                android:textColor="@color/white"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Mapa -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="300dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="4dp">
+
+                <fragment
+                    android:id="@+id/map"
+                    android:name="com.google.android.gms.maps.SupportMapFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Instrucciones para el mapa -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• Toca el mapa para seleccionar una ubicación\n• Ajusta el radio de servicio con el deslizador\n• Toca 'Agregar Zona' para confirmar\n• Toca una zona existente (verde) para eliminarla"
+                android:textSize="12sp"
+                android:textColor="@color/gray_dark"
+                android:layout_marginBottom="16dp"
+                android:lineSpacingExtra="2dp" />
+
+            <!-- Mensajes de validación -->
+            <TextView
+                android:id="@+id/tv_validation_messages"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/red_error"
+                android:textSize="14sp"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Botón guardar -->
+            <Button
+                android:id="@+id/btn_guardar_zonas"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Guardar Zonas de Servicio"
+                android:enabled="false"
+                android:backgroundTint="@color/blue_primary"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="32dp"
+                android:minHeight="48dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
