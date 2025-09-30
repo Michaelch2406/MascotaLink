@@ -46,12 +46,8 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Firebase emuladores
-        String host = "192.168.0.147";
         mAuth = FirebaseAuth.getInstance();
-        mAuth.useEmulator(host, 9099);
         storage = FirebaseStorage.getInstance();
-        storage.useEmulator(host, 9199);
 
         // Vistas
         previewFotoPerfil = findViewById(R.id.preview_foto_perfil);

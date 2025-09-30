@@ -13,21 +13,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class MetodoPagoActivity extends AppCompatActivity {
 
     private static final String PREFS = "WizardPaseador";
     private AutoCompleteTextView etBanco;
     private EditText etCuenta;
-
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -37,10 +28,6 @@ public class MetodoPagoActivity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Firebase emuladores
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
-
         etBanco = findViewById(R.id.et_banco);
         etCuenta = findViewById(R.id.et_numero_cuenta);
         Button btnGuardar = findViewById(R.id.btn_guardar_metodo);
@@ -48,7 +35,19 @@ public class MetodoPagoActivity extends AppCompatActivity {
         String[] bancos = getResources().getStringArray(R.array.bancos);
         etBanco.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, bancos));
 
+        loadState(); // Load previously saved data
+
         btnGuardar.setOnClickListener(v -> guardarMetodoPago());
+    }
+
+    private void loadState() {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        etBanco.setText(prefs.getString("pago_banco", ""));
+        etCuenta.setText(prefs.getString("pago_cuenta", ""));
+        // This is to ensure the dropdown shows the text
+        if (etBanco.getAdapter() != null) {
+            ((ArrayAdapter<String>) etBanco.getAdapter()).getFilter().filter(null);
+        }
     }
 
     private void guardarMetodoPago() {
@@ -59,9 +58,12 @@ public class MetodoPagoActivity extends AppCompatActivity {
             return;
         }
 
-        // Simulando guardado exitoso para el flujo del wizard
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        prefs.edit().putBoolean("metodo_pago_completo", true).apply();
+        // Save state to SharedPreferences
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        editor.putBoolean("metodo_pago_completo", true);
+        editor.putString("pago_banco", banco);
+        editor.putString("pago_cuenta", cuenta);
+        editor.apply();
 
         Toast.makeText(this, "Método de pago guardado", Toast.LENGTH_SHORT).show();
         setResult(RESULT_OK);

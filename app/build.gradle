@@ -58,6 +58,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-storage'         // <- subir fotos, docs, videos
     implementation 'com.google.firebase:firebase-messaging'       // <- push notifications
     implementation 'com.google.firebase:firebase-functions'      // <- llamadas a Cloud Functions (opcional)
+    implementation 'com.google.firebase:firebase-appcheck-playintegrity' // <- App Check para seguridad
 
     // Places API
     implementation 'com.google.android.libraries.places:places:4.1.0'

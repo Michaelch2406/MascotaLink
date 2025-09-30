@@ -39,22 +39,8 @@ public class QuizResultsActivity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Firebase emuladores
-        String host = "192.168.0.147";
         db = FirebaseFirestore.getInstance();
-        try {
-            db.useEmulator(host, 8080);
-        } catch (IllegalStateException e) {
-            // Emulator may already be set, ignore
-        }
-
         mAuth = FirebaseAuth.getInstance();
-        try {
-            mAuth.useEmulator(host, 9099);
-        } catch (IllegalStateException e) {
-            // Emulator may already be set, ignore
-        }
-
         TextView tvResultStatus = findViewById(R.id.tv_result_status);
         TextView tvResultScore = findViewById(R.id.tv_result_score);
         TextView tvResultMessage = findViewById(R.id.tv_result_message);
@@ -66,6 +52,11 @@ public class QuizResultsActivity extends AppCompatActivity {
         int totalScore = getIntent().getIntExtra("totalScore", 0);
         int maxScore = getIntent().getIntExtra("maxScore", 18);
         ArrayList<Integer> incorrectIndices = getIntent().getIntegerArrayListExtra("incorrectIndices");
+
+        // Guardar el estado de aprobación en SharedPreferences para que el Paso 4 lo sepa
+        getSharedPreferences("WizardPaseador", MODE_PRIVATE).edit()
+            .putBoolean("quiz_aprobado", passed)
+            .apply();
 
         tvResultScore.setText(String.format("Tu puntaje: %d de %d", totalScore, maxScore));
 

@@ -1,149 +1,162 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
     android:background="#FFFFFF">
 
-    <LinearLayout
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal">
+        android:layout_height="?attr/actionBarSize"
+        app:title="Tipos de Perros"
+        app:navigationIcon="@drawable/abc_ic_ab_back_material" />
 
-        <!-- Logo -->
-        <ImageView
-            android:layout_width="150dp"
-            android:layout_height="75dp"
-            android:layout_marginBottom="24dp"
-            android:src="@drawable/mascotalink_logo_principal"
-            android:contentDescription="MascotaLink Logo" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolbar"
+        android:padding="16dp">
 
-        <!-- Título -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Tipos de perros"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:gravity="center" />
-
-        <!-- Descripción -->
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:text="Especifica los tamaños y temperamentos de perros que puedes manejar."
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:gravity="center" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
 
-        <!-- Sección Tamaño -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="Tamaño"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#F4A261" />
+            <!-- Logo -->
+            <ImageView
+                android:layout_width="150dp"
+                android:layout_height="75dp"
+                android:layout_marginBottom="24dp"
+                android:src="@drawable/mascotalink_logo_principal"
+                android:contentDescription="MascotaLink Logo" />
 
-        <CheckBox
-            android:id="@+id/cb_pequeno"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Pequeño (hasta 10kg)"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp"
-            android:buttonTint="#F4A261" />
+            <!-- Título -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Tipos de perros"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:gravity="center" />
 
-        <CheckBox
-            android:id="@+id/cb_mediano"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Mediano (10-25kg)"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp"
-            android:buttonTint="#F4A261" />
+            <!-- Descripción -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:text="Especifica los tamaños y temperamentos de perros que puedes manejar."
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:gravity="center" />
 
-        <CheckBox
-            android:id="@+id/cb_grande"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Grande (más de 25kg)"
-            android:textSize="16sp"
-            android:layout_marginBottom="24dp"
-            android:buttonTint="#F4A261" />
+            <!-- Sección Tamaño -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Tamaño"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#F4A261" />
 
-        <!-- Sección Temperamento -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="Temperamento"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#F4A261" />
+            <CheckBox
+                android:id="@+id/cb_pequeno"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Pequeño (hasta 10kg)"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"
+                android:buttonTint="#F4A261" />
 
-        <CheckBox
-            android:id="@+id/cb_calmo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Calmo/Tranquilo"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp"
-            android:buttonTint="#F4A261" />
+            <CheckBox
+                android:id="@+id/cb_mediano"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Mediano (10-25kg)"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"
+                android:buttonTint="#F4A261" />
 
-        <CheckBox
-            android:id="@+id/cb_activo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Activo/Energético"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp"
-            android:buttonTint="#F4A261" />
+            <CheckBox
+                android:id="@+id/cb_grande"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Grande (más de 25kg)"
+                android:textSize="16sp"
+                android:layout_marginBottom="24dp"
+                android:buttonTint="#F4A261" />
 
-        <CheckBox
-            android:id="@+id/cb_reactividad_baja"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Baja reactividad (sociable con otros perros)"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp"
-            android:buttonTint="#F4A261" />
+            <!-- Sección Temperamento -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Temperamento"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#F4A261" />
 
-        <CheckBox
-            android:id="@+id/cb_reactividad_alta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Alta reactividad (requiere manejo especial)"
-            android:textSize="16sp"
-            android:layout_marginBottom="32dp"
-            android:buttonTint="#F4A261" />
+            <CheckBox
+                android:id="@+id/cb_calmo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Calmo/Tranquilo"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"
+                android:buttonTint="#F4A261" />
 
-        <TextView
-            android:id="@+id/tv_validation_messages"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:gravity="center"
-            android:textColor="@color/colorError"
-            android:visibility="gone" />
+            <CheckBox
+                android:id="@+id/cb_activo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Activo/Energético"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"
+                android:buttonTint="#F4A261" />
 
-        <!-- Botón Guardar -->
-        <Button
-            android:id="@+id/btn_guardar_tipos"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="Guardar Preferencias"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/button_background"
-            android:layout_marginTop="24dp" />
+            <CheckBox
+                android:id="@+id/cb_reactividad_baja"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Baja reactividad (sociable con otros perros)"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"
+                android:buttonTint="#F4A261" />
 
-    </LinearLayout>
-</ScrollView>
+            <CheckBox
+                android:id="@+id/cb_reactividad_alta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Alta reactividad (requiere manejo especial)"
+                android:textSize="16sp"
+                android:layout_marginBottom="32dp"
+                android:buttonTint="#F4A261" />
+
+            <TextView
+                android:id="@+id/tv_validation_messages"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:gravity="center"
+                android:textColor="@color/colorError"
+                android:visibility="gone" />
+
+            <!-- Botón Guardar -->
+            <Button
+                android:id="@+id/btn_guardar_tipos"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="Guardar Preferencias"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/button_background"
+                android:layout_marginTop="24dp" />
+
+        </LinearLayout>
+    </ScrollView>
+</RelativeLayout>

@@ -52,31 +52,9 @@ public class LoginActivity extends AppCompatActivity {
 
         Log.d(TAG, "onCreate: Iniciando LoginActivity");
         
-        // Configuración condicional de Firebase (Emuladores vs Producción)
         try {
-            if (USE_FIREBASE_EMULATORS) {
-                // Ajusta el host si usas dispositivo físico o un emulador diferente
-                String host = "192.168.0.147"; // host del PC desde el emulador estándar de Android
-                Log.d(TAG, "Usando Emuladores de Firebase en host: " + host);
-
-                FirebaseAuth authInstance = FirebaseAuth.getInstance();
-                authInstance.useEmulator(host, 9099);
-
-                FirebaseFirestore firestoreInstance = FirebaseFirestore.getInstance();
-                firestoreInstance.useEmulator(host, 8080);
-
-                FirebaseStorage.getInstance().useEmulator(host, 9199);
-
-                mAuth = authInstance;
-                db = firestoreInstance;
-                Log.d(TAG, "Emuladores configurados (Auth:9099, Firestore:8080)");
-            } else {
-                // Producción (proyecto real de Firebase definido por google-services.json)
-                mAuth = FirebaseAuth.getInstance();
-                db = FirebaseFirestore.getInstance();
-                Log.d(TAG, "Usando Firebase en la nube (producción)");
-            }
-            // Opcional: fija idioma para evitar X-Firebase-Locale null y mostrar mensajes en español
+            mAuth = FirebaseAuth.getInstance();
+            db = FirebaseFirestore.getInstance();
             if (mAuth != null) {
                 mAuth.setLanguageCode("es");
             }

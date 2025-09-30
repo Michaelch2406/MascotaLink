@@ -54,12 +54,8 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_paseador_registro_paso4);
 
-        // Firebase emuladores
-        String host = "192.168.0.147";
         mAuth = FirebaseAuth.getInstance();
-        mAuth.useEmulator(host, 9099);
         storage = FirebaseStorage.getInstance();
-        storage.useEmulator(host, 9199);
 
         setupViews();
         setupListeners();

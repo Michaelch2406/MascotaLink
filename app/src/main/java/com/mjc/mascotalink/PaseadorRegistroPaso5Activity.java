@@ -3,6 +3,8 @@ package com.mjc.mascotalink;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -30,6 +32,10 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -55,6 +61,7 @@ import java.util.List;
 
 public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements OnMapReadyCallback {
 
+    private static final String TAG = "PaseadorPaso5";
     private static final String PREFS = "WizardPaseador";
 
     private FirebaseAuth mAuth;
@@ -83,6 +90,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         setupViews();
         setupListeners();
         setupMap();
+        setupPlacesAutocomplete(); // Add this call
         loadState();
     }
 
@@ -96,6 +104,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
+    }
 
     private void setupViews() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
@@ -121,6 +130,48 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_container);
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
+        }
+    }
+
+    private void setupPlacesAutocomplete() {
+        if (!Places.isInitialized()) {
+            try {
+                ApplicationInfo app = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
+                Bundle bundle = app.metaData;
+                String apiKey = bundle.getString("com.google.android.geo.API_KEY");
+
+                if (apiKey == null || apiKey.isEmpty()) {
+                    Toast.makeText(this, "Maps API Key not found in manifest", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Places.initialize(getApplicationContext(), apiKey);
+            } catch (PackageManager.NameNotFoundException e) {
+                Log.e(TAG, "Failed to load meta-data, NameNotFound: " + e.getMessage());
+            }
+        }
+
+        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+
+        if (autocompleteFragment != null) {
+            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.ADDRESS));
+            autocompleteFragment.setHint("Buscar dirección de servicio");
+            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(@NonNull Place place) {
+                    Log.i(TAG, "Place: " + place.getName() + ", " + place.getId() + ", " + place.getLatLng());
+                    zonaCentro = place.getLatLng();
+                    saveState();
+                    dibujarCirculo();
+                    verificarCompletitudTotal();
+                }
+
+                @Override
+                public void onError(@NonNull com.google.android.gms.common.api.Status status) {
+                    Log.e(TAG, "An error occurred: " + status);
+                    Toast.makeText(PaseadorRegistroPaso5Activity.this, "Error en búsqueda: " + status.getStatusMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 

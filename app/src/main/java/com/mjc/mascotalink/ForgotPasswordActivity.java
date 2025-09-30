@@ -32,11 +32,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
             toolbar.setNavigationOnClickListener(v -> finish());
         }
 
-        // Configurar emulator antes de usar Firebase
-        String host = "192.168.0.147";
-        FirebaseAuth authInstance = FirebaseAuth.getInstance();
-        authInstance.useEmulator(host, 9099);
-        mAuth = authInstance;
+        mAuth = FirebaseAuth.getInstance();
 
         etEmail = findViewById(R.id.et_email);
         progressBar = findViewById(R.id.pb_loading);

@@ -11,8 +11,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,20 +24,13 @@ public class TiposPerrosActivity extends AppCompatActivity {
     private CheckBox cbCalmo, cbActivo, cbReactividadBaja, cbReactividadAlta;
     private TextView tvValidationMessages;
 
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tipos_perros);
 
-        // Firebase emuladores
-        String host = "192.168.0.147";
-        mAuth = FirebaseAuth.getInstance();
-        mAuth.useEmulator(host, 9099);
-        db = FirebaseFirestore.getInstance();
-        db.useEmulator(host, 8080);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
 
         cbPequeno = findViewById(R.id.cb_pequeno);
         cbMediano = findViewById(R.id.cb_mediano);
@@ -50,7 +42,20 @@ public class TiposPerrosActivity extends AppCompatActivity {
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
         Button btnGuardar = findViewById(R.id.btn_guardar_tipos);
 
+        loadState(); // Load previously saved state
+
         btnGuardar.setOnClickListener(v -> guardarTiposPerros());
+    }
+
+    private void loadState() {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        cbPequeno.setChecked(prefs.getBoolean("perros_pequeno", false));
+        cbMediano.setChecked(prefs.getBoolean("perros_mediano", false));
+        cbGrande.setChecked(prefs.getBoolean("perros_grande", false));
+        cbCalmo.setChecked(prefs.getBoolean("perros_calmo", false));
+        cbActivo.setChecked(prefs.getBoolean("perros_activo", false));
+        cbReactividadBaja.setChecked(prefs.getBoolean("perros_reactividad_baja", false));
+        cbReactividadAlta.setChecked(prefs.getBoolean("perros_reactividad_alta", false));
     }
 
     private void guardarTiposPerros() {
@@ -76,9 +81,17 @@ public class TiposPerrosActivity extends AppCompatActivity {
 
         tvValidationMessages.setVisibility(View.GONE);
 
-        // Simulando guardado exitoso para el flujo del wizard
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        prefs.edit().putBoolean("perros_completo", true).apply();
+        // Save state to SharedPreferences
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        editor.putBoolean("perros_completo", true);
+        editor.putBoolean("perros_pequeno", cbPequeno.isChecked());
+        editor.putBoolean("perros_mediano", cbMediano.isChecked());
+        editor.putBoolean("perros_grande", cbGrande.isChecked());
+        editor.putBoolean("perros_calmo", cbCalmo.isChecked());
+        editor.putBoolean("perros_activo", cbActivo.isChecked());
+        editor.putBoolean("perros_reactividad_baja", cbReactividadBaja.isChecked());
+        editor.putBoolean("perros_reactividad_alta", cbReactividadAlta.isChecked());
+        editor.apply();
 
         Toast.makeText(this, "Preferencias guardadas", Toast.LENGTH_SHORT).show();
         setResult(RESULT_OK);
