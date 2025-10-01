@@ -39,6 +39,7 @@ import com.google.android.libraries.places.widget.listener.PlaceSelectionListene
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.Timestamp;
@@ -343,73 +344,48 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         tvValidationMessages.setVisibility(View.GONE);
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-
-        // Paso 1 Data
-        String nombre = prefs.getString("nombre", "");
-        String apellido = prefs.getString("apellido", "");
-        String cedula = prefs.getString("cedula", "");
-        String fechaNacStr = prefs.getString("fecha_nacimiento", "");
-        String domicilio = prefs.getString("domicilio", "");
-        String telefono = prefs.getString("telefono", "");
         String email = prefs.getString("email", "");
         String password = prefs.getString("password", "");
 
-        // Paso 2 Data
-        String selfieUriStr = prefs.getString("selfieUri", null);
-        String fotoPerfilUriStr = prefs.getString("fotoPerfilUri", null);
+        if (email.isEmpty() || password.isEmpty()) {
+            mostrarError("El correo y la contraseña no pueden estar vacíos. Por favor, vuelve al paso 1.");
+            btnGuardar.setEnabled(true);
+            btnGuardar.setText("Reintentar Registro");
+            return;
+        }
 
-        // Paso 3 Data
-        String antecedentesUriStr = prefs.getString("antecedentesUri", null);
-        String medicoUriStr = prefs.getString("medicoUri", null);
-
-        // Paso 4 Data
-        String galeriaUrisStr = prefs.getString("galeria_paseos_uris", "");
-        boolean quizAprobado = prefs.getBoolean("quiz_aprobado", false);
-
-        // Paso 5 Data
-        boolean metodoPagoCompleto = prefs.getBoolean("metodo_pago_completo", false);
-        boolean disponibilidadCompleta = prefs.getBoolean("disponibilidad_completa", false);
-        boolean perrosCompleto = prefs.getBoolean("perros_completo", false);
-        String videoPresentacionUriStr = prefs.getString("videoPresentacionUri", null);
-        double zonaLat = prefs.getFloat("zonaLat", 0);
-        double zonaLng = prefs.getFloat("zonaLng", 0);
-
-        // 1. Crear usuario en Firebase Authentication
         mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
-                    if (task.isSuccessful()) {
-                        String uid = mAuth.getCurrentUser().getUid();
-                        // 2. Subir archivos a Firebase Storage
-                        uploadFiles(uid, nombre, apellido, cedula, fechaNacStr, domicilio, telefono, email,
-                                selfieUriStr, fotoPerfilUriStr, antecedentesUriStr, medicoUriStr, galeriaUrisStr,
-                                quizAprobado, metodoPagoCompleto, disponibilidadCompleta, perrosCompleto,
-                                videoPresentacionUriStr, zonaLat, zonaLng);
+                .addOnSuccessListener(authResult -> {
+                    String uid = authResult.getUser().getUid();
+                    Log.d(TAG, "Usuario creado en Auth con UID: " + uid);
+                    subirArchivosYGuardarDatos(uid);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al crear usuario en Auth", e);
+                    btnGuardar.setEnabled(true);
+                    btnGuardar.setText("Reintentar Registro");
+                    if (e.getMessage() != null && e.getMessage().contains("email address is already in use")) {
+                        mostrarError("El correo electrónico ya está registrado. Por favor, usa otro o inicia sesión.");
                     } else {
-                        // Si la creación de usuario falla, mostrar error
-                        btnGuardar.setEnabled(true);
-                        btnGuardar.setText("Reintentar Registro");
-                        String errorMessage = task.getException().getMessage();
-                        if (errorMessage.contains("email address is already in use")) {
-                            mostrarError("El correo electrónico ya está registrado.");
-                        } else {
-                            mostrarError("Error al crear usuario: " + errorMessage);
-                        }
+                        mostrarError("Error al crear usuario: " + e.getMessage());
                     }
                 });
     }
 
-    private void uploadFiles(String uid, String nombre, String apellido, String cedula, String fechaNacStr, String domicilio, String telefono, String email,
-                             String selfieUriStr, String fotoPerfilUriStr, String antecedentesUriStr, String medicoUriStr, String galeriaUrisStr,
-                             boolean quizAprobado, boolean metodoPagoCompleto, boolean disponibilidadCompleta, boolean perrosCompleto,
-                             String videoPresentacionUriStr, double zonaLat, double zonaLng) {
-
+    private void subirArchivosYGuardarDatos(String uid) {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         Map<String, Uri> filesToUpload = new HashMap<>();
-        if (selfieUriStr != null) filesToUpload.put("selfie", Uri.parse(selfieUriStr));
-        if (fotoPerfilUriStr != null) filesToUpload.put("fotoPerfil", Uri.parse(fotoPerfilUriStr));
-        if (antecedentesUriStr != null) filesToUpload.put("antecedentes", Uri.parse(antecedentesUriStr));
-        if (medicoUriStr != null) filesToUpload.put("medico", Uri.parse(medicoUriStr));
-        if (videoPresentacionUriStr != null) filesToUpload.put("videoPresentacion", Uri.parse(videoPresentacionUriStr));
+        Map<String, String> storagePaths = new HashMap<>();
 
+        // Mapeo de archivos a sus rutas de destino en Storage
+        addFileToUpload(filesToUpload, storagePaths, "foto_perfil", prefs.getString("fotoPerfilUri", null), "foto_de_perfil/" + uid);
+        addFileToUpload(filesToUpload, storagePaths, "selfie", prefs.getString("selfieUri", null), "selfie/" + uid);
+        addFileToUpload(filesToUpload, storagePaths, "certificado_antecedentes", prefs.getString("antecedentesUri", null), "documentos/" + uid + "_antecedentes");
+        addFileToUpload(filesToUpload, storagePaths, "certificado_medico", prefs.getString("medicoUri", null), "documentos/" + uid + "_medico");
+        addFileToUpload(filesToUpload, storagePaths, "video_presentacion", prefs.getString("videoPresentacionUri", null), "video_presentacion/" + uid);
+
+        // Galería de paseos
+        String galeriaUrisStr = prefs.getString("galeria_paseos_uris", "");
         List<Uri> galeriaUris = new ArrayList<>();
         if (!galeriaUrisStr.isEmpty()) {
             for (String s : galeriaUrisStr.split(",")) {
@@ -418,124 +394,150 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         }
 
         List<Task<Uri>> uploadTasks = new ArrayList<>();
-        Map<String, String> downloadUrls = new HashMap<>();
+        AtomicReference<Map<String, Object>> downloadUrls = new AtomicReference<>(new HashMap<>());
 
-        // Upload single files
+        // Subir archivos individuales
         for (Map.Entry<String, Uri> entry : filesToUpload.entrySet()) {
-            String fileType = entry.getKey();
-            Uri fileUri = entry.getValue();
-            try {
-                InputStream inputStream = getContentResolver().openInputStream(fileUri);
-                if (inputStream != null) {
-                    StorageReference ref = storage.getReference().child("users").child(uid).child(fileType + "_" + System.currentTimeMillis());
-                    Task<Uri> uploadTask = ref.putStream(inputStream).continueWithTask(task -> {
-                        if (!task.isSuccessful()) {
-                            throw task.getException();
-                        }
-                        return ref.getDownloadUrl();
-                    }).addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            downloadUrls.put(fileType, task.getResult().toString());
-                        } else {
-                            Log.e("FirebaseStorage", "Upload failed for " + fileType, task.getException());
-                        }
-                    });
-                    uploadTasks.add(uploadTask);
-                } else {
-                    Log.e("FirebaseStorage", "InputStream is null for " + fileType);
-                }
-            } catch (Exception e) {
-                Log.e("FirebaseStorage", "Error opening stream for " + fileType, e);
-            }
-        }
-
-        // Upload gallery files
-        AtomicInteger galeriaCount = new AtomicInteger(0);
-        for (Uri galeriaUri : galeriaUris) {
-            try {
-                InputStream inputStream = getContentResolver().openInputStream(galeriaUri);
-                if (inputStream != null) {
-                    StorageReference ref = storage.getReference().child("users").child(uid).child("galeria_" + galeriaCount.incrementAndGet() + "_" + System.currentTimeMillis());
-                    Task<Uri> uploadTask = ref.putStream(inputStream).continueWithTask(task -> {
-                        if (!task.isSuccessful()) {
-                            throw task.getException();
-                        }
-                        return ref.getDownloadUrl();
-                    }).addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            // Store gallery URLs in a list or comma-separated string
-                            String currentGaleriaUrls = downloadUrls.getOrDefault("galeria", "");
-                            if (!currentGaleriaUrls.isEmpty()) {
-                                downloadUrls.put("galeria", currentGaleriaUrls + "," + task.getResult().toString());
-                            } else {
-                                downloadUrls.put("galeria", task.getResult().toString());
-                            }
-                        }
-                    });
-                    uploadTasks.add(uploadTask);
-                } else {
-                    Log.e("FirebaseStorage", "InputStream is null for gallery file");
-                }
-            } catch (Exception e) {
-                Log.e("FirebaseStorage", "Error opening stream for gallery file", e);
-            }
-        }
-
-        Tasks.whenAllComplete(uploadTasks)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        // 3. Guardar datos en Firestore
-                        saveUserDataToFirestore(uid, nombre, apellido, cedula, fechaNacStr, domicilio, telefono, email,
-                                quizAprobado, metodoPagoCompleto, disponibilidadCompleta, perrosCompleto,
-                                zonaLat, zonaLng, downloadUrls);
-                    } else {
-                        btnGuardar.setEnabled(true);
-                        btnGuardar.setText("Reintentar Registro");
-                        mostrarError("Error al subir archivos: " + task.getException().getMessage());
-                        // Optionally, delete the created user if file upload fails
-                        mAuth.getCurrentUser().delete();
-                    }
-                });
-    }
-
-    private void saveUserDataToFirestore(String uid, String nombre, String apellido, String cedula, String fechaNacStr, String domicilio, String telefono, String email,
-                                         boolean quizAprobado, boolean metodoPagoCompleto, boolean disponibilidadCompleta, boolean perrosCompleto,
-                                         double zonaLat, double zonaLng, Map<String, String> downloadUrls) {
-
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("nombre", nombre);
-        userData.put("apellido", apellido);
-        userData.put("cedula", cedula);
-        userData.put("fechaNacimiento", fechaNacStr);
-        userData.put("domicilio", domicilio);
-        userData.put("telefono", telefono);
-        userData.put("email", email);
-        userData.put("rol", "paseador");
-        userData.put("quizAprobado", quizAprobado);
-        userData.put("metodoPagoCompleto", metodoPagoCompleto);
-        userData.put("disponibilidadCompleta", disponibilidadCompleta);
-        userData.put("perrosCompleto", perrosCompleto);
-        userData.put("zonaServicioLat", zonaLat);
-        userData.put("zonaServicioLng", zonaLng);
-        userData.put("registroCompleto", true);
-        userData.put("fechaRegistro", new Timestamp(new Date()));
-
-        // Add download URLs
-        userData.putAll(downloadUrls);
-
-        db.collection("paseadores").document(uid).set(userData)
-                .addOnSuccessListener(aVoid -> {
-                    limpiarDatosTemporales();
-                    mostrarMensajeFinalRegistro();
+            String key = entry.getKey();
+            Uri uri = entry.getValue();
+            String path = storagePaths.get(key);
+            StorageReference ref = storage.getReference().child(path);
+            uploadTasks.add(
+                ref.putFile(uri).continueWithTask(task -> {
+                    if (!task.isSuccessful()) { throw task.getException(); }
+                    return ref.getDownloadUrl();
+                }).addOnSuccessListener(url -> {
+                    downloadUrls.get().put(key + "_url", url.toString());
                 })
-                .addOnFailureListener(e -> {
-                    btnGuardar.setEnabled(true);
-                    btnGuardar.setText("Reintentar Registro");
-                    mostrarError("Error al guardar datos en Firestore: " + e.getMessage());
-                    // Optionally, delete the created user and uploaded files if Firestore save fails
-                    mAuth.getCurrentUser().delete();
-                });
+            );
+        }
+
+        // Subir galería
+        List<String> galeriaUrls = new ArrayList<>();
+        for (int i = 0; i < galeriaUris.size(); i++) {
+            Uri uri = galeriaUris.get(i);
+            StorageReference ref = storage.getReference().child("galeria_paseos/" + uid + "_paseo_" + (i + 1));
+            uploadTasks.add(
+                ref.putFile(uri).continueWithTask(task -> {
+                    if (!task.isSuccessful()) { throw task.getException(); }
+                    return ref.getDownloadUrl();
+                }).addOnSuccessListener(url -> {
+                    galeriaUrls.add(url.toString());
+                })
+            );
+        }
+
+        Tasks.whenAllSuccess(uploadTasks).addOnSuccessListener(results -> {
+            downloadUrls.get().put("galeria_paseos_urls", galeriaUrls);
+            Log.d(TAG, "Todos los archivos subidos con éxito. URLs: " + downloadUrls.get());
+            guardarDatosEnFirestore(uid, downloadUrls.get());
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Fallo al subir uno o más archivos", e);
+            mostrarError("Error al subir archivos: " + e.getMessage());
+            // Limpieza: eliminar usuario de Auth si falla la subida
+            if (mAuth.getCurrentUser() != null) {
+                mAuth.getCurrentUser().delete();
+            }
+            btnGuardar.setEnabled(true);
+            btnGuardar.setText("Reintentar Registro");
+        });
     }
+
+    private void addFileToUpload(Map<String, Uri> files, Map<String, String> paths, String key, String uriString, String storagePath) {
+        if (uriString != null) {
+            files.put(key, Uri.parse(uriString));
+            paths.put(key, storagePath);
+        }
+    }
+
+    private void guardarDatosEnFirestore(String uid, Map<String, Object> urls) {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        
+        // --- 1. Construir el documento para la colección 'usuarios' ---
+        Map<String, Object> usuarioData = new HashMap<>();
+        usuarioData.put("nombre", prefs.getString("nombre", ""));
+        usuarioData.put("apellido", prefs.getString("apellido", ""));
+        usuarioData.put("correo", prefs.getString("email", ""));
+        usuarioData.put("telefono", prefs.getString("telefono", ""));
+        usuarioData.put("direccion", prefs.getString("domicilio", ""));
+        try {
+            String fechaNacStr = prefs.getString("fecha_nacimiento", "");
+            if (!fechaNacStr.isEmpty()) {
+                Date fechaNac = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(fechaNacStr);
+                usuarioData.put("fecha_nacimiento", new Timestamp(fechaNac));
+            }
+        } catch (ParseException e) {
+            Log.e(TAG, "Error al parsear fecha de nacimiento", e);
+        }
+        usuarioData.put("foto_perfil", urls.get("foto_perfil_url"));
+        usuarioData.put("selfie_url", urls.get("selfie_url"));
+        usuarioData.put("rol", "PASEADOR");
+        usuarioData.put("activo", true);
+        usuarioData.put("fecha_registro", FieldValue.serverTimestamp());
+        usuarioData.put("perfil_ref", db.collection("paseadores").document(uid));
+        usuarioData.put("nombre_display", prefs.getString("nombre", "") + " " + prefs.getString("apellido", ""));
+
+        // --- 2. Construir el documento para la colección 'paseadores' ---
+        Map<String, Object> paseadorData = new HashMap<>();
+        paseadorData.put("cedula", prefs.getString("cedula", ""));
+        paseadorData.put("domicilio", prefs.getString("domicilio", ""));
+        paseadorData.put("acepto_terminos", prefs.getBoolean("acepto_terminos", false));
+        paseadorData.put("fecha_aceptacion_terminos", new Timestamp(new Date(prefs.getLong("fecha_aceptacion_terminos", System.currentTimeMillis()))));
+        paseadorData.put("verificacion_estado", "PENDIENTE");
+        paseadorData.put("verificacion_fecha", FieldValue.serverTimestamp());
+        paseadorData.put("ultima_actualizacion", FieldValue.serverTimestamp());
+        paseadorData.put("calificacion_promedio", 0.0);
+        paseadorData.put("num_servicios_completados", 0);
+
+        // Sub-mapa: documentos
+        Map<String, Object> documentos = new HashMap<>();
+        documentos.put("certificado_antecedentes_url", urls.get("certificado_antecedentes_url"));
+        documentos.put("certificado_medico_url", urls.get("certificado_medico_url"));
+        paseadorData.put("documentos", documentos);
+
+        // Sub-mapa: conocimientos (del quiz)
+        Map<String, Object> conocimientos = new HashMap<>();
+        conocimientos.put("comportamiento_canino_score", prefs.getInt("score_comportamiento_canino", 0));
+        conocimientos.put("primeros_auxilios_score", prefs.getInt("score_primeros_auxilios", 0));
+        conocimientos.put("manejo_emergencia_score", prefs.getInt("score_manejo_emergencia", 0));
+        paseadorData.put("conocimientos", conocimientos);
+        
+        paseadorData.put("quiz_completado", prefs.getBoolean("quiz_completado", false));
+        paseadorData.put("quiz_aprobado", prefs.getBoolean("quiz_aprobado", false));
+        paseadorData.put("quiz_score_total", prefs.getInt("quiz_score_total", 0));
+        paseadorData.put("quiz_intentos", prefs.getInt("quiz_intentos", 0));
+        paseadorData.put("quiz_fecha", new Timestamp(new Date(prefs.getLong("quiz_fecha", System.currentTimeMillis()))));
+
+        // Sub-mapa: perfil_profesional
+        Map<String, Object> perfilProfesional = new HashMap<>();
+        perfilProfesional.put("experiencia_general", ""); // Campo a ser llenado post-registro
+        perfilProfesional.put("motivacion", ""); // Campo a ser llenado post-registro
+        perfilProfesional.put("video_presentacion_url", urls.get("video_presentacion_url"));
+        perfilProfesional.put("galeria_paseos_urls", urls.get("galeria_paseos_urls"));
+        paseadorData.put("perfil_profesional", perfilProfesional);
+
+        // --- 3. Ejecutar la escritura en lote (atomic) ---
+        db.runBatch(batch -> {
+            batch.set(db.collection("usuarios").document(uid), usuarioData);
+            batch.set(db.collection("paseadores").document(uid), paseadorData);
+        }).addOnSuccessListener(aVoid -> {
+            Log.d(TAG, "¡Registro completado y datos guardados en Firestore!");
+            limpiarDatosTemporales();
+            mostrarMensajeFinalRegistro();
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error al guardar datos en Firestore", e);
+            mostrarError("Error final al guardar tu perfil: " + e.getMessage());
+            // Limpieza crítica: si Firestore falla, eliminar usuario de Auth y archivos de Storage
+            if (mAuth.getCurrentUser() != null) {
+                mAuth.getCurrentUser().delete();
+            }
+            // (Opcional) Aquí iría la lógica para eliminar los archivos ya subidos de Storage
+            btnGuardar.setEnabled(true);
+            btnGuardar.setText("Reintentar Registro");
+        });
+    }
+
 
     private void mostrarError(String msg) {
         new AlertDialog.Builder(this)
