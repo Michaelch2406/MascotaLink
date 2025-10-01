@@ -186,67 +186,80 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void verificarRolYRedirigir(String uid) {
-        db.collection("usuarios").document(uid)
-                .get()
+        db.collection("usuarios").document(uid).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String rol = documentSnapshot.getString("rol");
-                        String verificacionEstado = obtenerEstadoVerificacion(documentSnapshot, rol);
-
                         if (cbRemember.isChecked()) {
                             guardarPreferenciasLogin(uid, rol);
                         }
-                        redirigirSegunRol(rol, verificacionEstado);
+
+                        if ("PASEADOR".equals(rol)) {
+                            // Si es paseador, necesitamos consultar su estado de verificación en la colección 'paseadores'
+                            db.collection("paseadores").document(uid).get()
+                                    .addOnSuccessListener(paseadorDoc -> {
+                                        if (paseadorDoc.exists()) {
+                                            String verificacionEstado = paseadorDoc.getString("verificacion_estado");
+                                            redirigirSegunRol(rol, verificacionEstado);
+                                        } else {
+                                            // Esto sería un estado inconsistente, un usuario con rol PASEADOR sin documento en paseadores
+                                            mostrarError("Error de consistencia de datos del paseador.");
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> mostrarError("Error al verificar estado del paseador: " + e.getMessage()));
+                        } else {
+                            // Para otros roles (DUENO, ADMIN), redirigir directamente
+                            redirigirSegunRol(rol, null);
+                        }
                     } else {
                         mostrarError("Usuario no encontrado en la base de datos");
                     }
                 })
-                .addOnFailureListener(e -> mostrarError("Error al verificar datos: " + e.getMessage()));
-    }
-
-    private String obtenerEstadoVerificacion(DocumentSnapshot doc, String rol) {
-        if (doc == null) return "";
-        // Campos esperados: estado_verificacion para PASEADOR
-        if ("PASEADOR".equals(rol)) {
-            String estado = doc.getString("estado_verificacion");
-            return estado != null ? estado : "PENDIENTE";
-        }
-        return ""; // otros roles no requieren estado
+                .addOnFailureListener(e -> mostrarError("Error al verificar datos de usuario: " + e.getMessage()));
     }
 
     private void redirigirSegunRol(String rol, String estadoVerificacion) {
-        // Para evitar dependencias con Activities no creadas, dejamos mensajes y ejemplo de navegación
         if (rol == null) {
             mostrarError("Rol de usuario no válido");
             return;
         }
+
+        Intent intent = null;
+
         switch (rol) {
             case "PASEADOR":
-                if ("PENDIENTE".equals(estadoVerificacion)) {
+                if ("APROBADO".equals(estadoVerificacion)) {
+                    // Si está aprobado, va a la MainActivity
+                    intent = new Intent(this, MainActivity.class);
+                } else if ("PENDIENTE".equals(estadoVerificacion)) {
                     mostrarMensaje("Tu perfil está en revisión. Te notificaremos cuando sea aprobado.");
-                    // startActivity(new Intent(this, PaseadorPendienteActivity.class));
-                } else if ("APROBADO".equals(estadoVerificacion)) {
-                    mostrarMensaje("Bienvenido(a), paseador");
-                    // startActivity(new Intent(this, PaseadorMainActivity.class));
-                } else {
-                    mostrarMensaje("Tu perfil fue rechazado. Contacta soporte para más información.");
-                    // startActivity(new Intent(this, PaseadorRechazadoActivity.class));
-                    return;
+                    // Aquí podrías redirigir a una pantalla de "En Revisión" si la tuvieras
+                    // intent = new Intent(this, PaseadorPendienteActivity.class);
+                } else { // RECHAZADO u otro estado
+                    mostrarMensaje("Tu perfil fue rechazado o está inactivo. Contacta a soporte.");
+                    // Aquí podrías redirigir a una pantalla de "Rechazado"
+                    // intent = new Intent(this, PaseadorRechazadoActivity.class);
                 }
                 break;
             case "DUENO":
                 mostrarMensaje("Bienvenido(a), dueño");
-                // startActivity(new Intent(this, DuenoMainActivity.class));
+                // Por ahora, los dueños también pueden ir a MainActivity o a su propia pantalla principal
+                // intent = new Intent(this, DuenoMainActivity.class);
                 break;
             case "ADMIN":
                 mostrarMensaje("Bienvenido(a), admin");
-                // startActivity(new Intent(this, AdminDashboardActivity.class));
+                // intent = new Intent(this, AdminDashboardActivity.class);
                 break;
             default:
-                mostrarError("Rol de usuario no válido");
-                return;
+                mostrarError("Rol de usuario desconocido.");
+                break;
         }
-        // finish(); // Descomenta cuando navegues a otra Activity real
+
+        if (intent != null) {
+            startActivity(intent);
+            finish(); // Cierra LoginActivity para que el usuario no pueda volver atrás
+        }
+        // Si el intent es null (ej. paseador pendiente), el usuario se queda en la pantalla de login
     }
 
     private boolean validarCampos(String email, String password) {
