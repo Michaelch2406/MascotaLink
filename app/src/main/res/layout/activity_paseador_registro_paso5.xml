@@ -79,17 +79,35 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="Graba un video corto (30–60 segundos) para que los dueños te conozcan mejor."/>
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_grabar_video"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Grabar video"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                app:icon="@android:drawable/ic_menu_camera"
-                app:iconTint="#111827"
-                app:strokeColor="#CBD5E1"
-                app:strokeWidth="1dp"/>
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_subir_video"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Subir video"
+                    app:icon="@android:drawable/ic_menu_upload" />
+
+                <View
+                    android:layout_width="16dp"
+                    android:layout_height="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_grabar_video"
+                    style="@style/Widget.Mascota.PrimaryPillButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Grabar video"
+                    app:icon="@android:drawable/ic_menu_camera" />
+
+            </LinearLayout>
 
             <FrameLayout
                 android:id="@+id/video_preview_container"

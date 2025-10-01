@@ -49,8 +49,19 @@ public class MetodoPagoActivity extends AppCompatActivity {
 
     private void loadState() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        etBanco.setText(prefs.getString("pago_banco", ""));
+        String savedBank = prefs.getString("pago_banco", "");
         etCuenta.setText(prefs.getString("pago_cuenta", ""));
+
+        if (!savedBank.isEmpty()) {
+            etBanco.setText(savedBank);
+        } else {
+            // Si no hay nada guardado, seleccionar el primer banco de la lista por defecto
+            String[] bancos = getResources().getStringArray(R.array.bancos);
+            if (bancos.length > 0) {
+                etBanco.setText(bancos[0]);
+            }
+        }
+
         // This is to ensure the dropdown shows the text
         if (etBanco.getAdapter() instanceof ArrayAdapter) {
             @SuppressWarnings("unchecked")

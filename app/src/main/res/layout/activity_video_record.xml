@@ -21,6 +21,19 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
+    <TextView
+        android:id="@+id/tv_timer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/btn_record"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="16dp"
+        android:text="00:00"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:visibility="gone"/>
+
     <ImageButton
         android:id="@+id/btn_record"
         android:layout_width="64dp"

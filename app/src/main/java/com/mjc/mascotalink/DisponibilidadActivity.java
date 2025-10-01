@@ -5,12 +5,10 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,7 +19,6 @@ import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -30,18 +27,11 @@ import java.util.Set;
 public class DisponibilidadActivity extends AppCompatActivity {
 
     private static final String PREFS = "WizardPaseador";
-    
-    // Días de la semana
-    private CheckBox[] diasCheckBoxes = new CheckBox[7];
-    private String[] diasSemana = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
-    
-    // Horarios
+
+    private final String[] diasSemana = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+    private final List<CheckBox> checkBoxes = new ArrayList<>();
+
     private EditText etHoraInicio, etHoraFin;
-    private Button btnHorariosRapidos;
-    
-    // Botones de horarios rápidos
-    private Button btnMañana, btnTarde, btnCompleto;
-    
     private TextView tvValidationMessages;
 
     @Override
@@ -49,147 +39,94 @@ public class DisponibilidadActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_disponibilidad);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
-
+        setupToolbar();
         setupViews();
         setupTimePickers();
-        setupQuickTimeButtons();
-        setupDayCheckboxes();
         loadState();
     }
 
+    private void setupToolbar() {
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+    }
+
     private void setupViews() {
-        // For now, use simple implementation with existing layout
-        // TODO: Update layout to include day checkboxes and quick buttons
-        
-        // Horarios
         etHoraInicio = findViewById(R.id.et_hora_inicio);
         etHoraFin = findViewById(R.id.et_hora_fin);
+        tvValidationMessages = findViewById(R.id.tv_validation_messages);
+
+        Button btnSeleccionarTodos = findViewById(R.id.btn_seleccionar_todos);
+        Button btnDeseleccionarTodos = findViewById(R.id.btn_deseleccionar_todos);
         Button btnGuardar = findViewById(R.id.btn_guardar_disponibilidad);
-        
-        // Verificar que los elementos esenciales existen
-        if (etHoraInicio == null || etHoraFin == null || btnGuardar == null) {
-            Toast.makeText(this, "Error: Elementos de la interfaz no encontrados", Toast.LENGTH_LONG).show();
-            finish();
-            return;
+
+        GridLayout gridLayout = findViewById(R.id.grid_dias);
+        createDayCheckBoxes(gridLayout);
+
+        btnSeleccionarTodos.setOnClickListener(v -> setAllCheckBoxes(true));
+        btnDeseleccionarTodos.setOnClickListener(v -> setAllCheckBoxes(false));
+        btnGuardar.setOnClickListener(v -> guardarDisponibilidad());
+    }
+
+    private void createDayCheckBoxes(GridLayout gridLayout) {
+        gridLayout.removeAllViews();
+        checkBoxes.clear();
+        for (String dia : diasSemana) {
+            CheckBox checkBox = new CheckBox(this);
+            checkBox.setText(dia);
+            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+            params.width = 0;
+            params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+            checkBox.setLayoutParams(params);
+            gridLayout.addView(checkBox);
+            checkBoxes.add(checkBox);
         }
-        
-        // AutoCompleteTextView for days (temporary solution)
-        AutoCompleteTextView etDia = findViewById(R.id.et_dia);
-        if (etDia != null) {
-            etDia.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, diasSemana));
-        }
-        
-        btnGuardar.setOnClickListener(v -> guardarDisponibilidadSimple());
     }
 
     private void setupTimePickers() {
-        // Valores por defecto sugeridos
-        etHoraInicio.setText("08:00");
-        etHoraFin.setText("18:00");
-        
-        setupTimePicker(etHoraInicio);
-        setupTimePicker(etHoraFin);
+        etHoraInicio.setOnClickListener(v -> showTimePicker(etHoraInicio));
+        etHoraFin.setOnClickListener(v -> showTimePicker(etHoraFin));
     }
 
-    private void setupTimePicker(EditText editText) {
-        editText.setFocusable(false);
-        editText.setClickable(true);
-        editText.setOnClickListener(v -> {
-            // Parse current time from EditText or use default
-            String currentTime = editText.getText().toString();
-            int hour = 8, minute = 0;
-            if (!TextUtils.isEmpty(currentTime) && currentTime.contains(":")) {
-                try {
-                    String[] parts = currentTime.split(":");
-                    hour = Integer.parseInt(parts[0]);
-                    minute = Integer.parseInt(parts[1]);
-                } catch (Exception e) {
-                    // Use defaults
-                }
+    private void showTimePicker(EditText editText) {
+        String currentTime = editText.getText().toString();
+        int hour = 8, minute = 0;
+        if (!TextUtils.isEmpty(currentTime) && currentTime.contains(":")) {
+            try {
+                String[] parts = currentTime.split(":");
+                hour = Integer.parseInt(parts[0]);
+                minute = Integer.parseInt(parts[1]);
+            } catch (Exception e) { /* Ignored */ }
+        }
+
+        new TimePickerDialog(this, (view, hourOfDay, minuteOfHour) -> {
+            String formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minuteOfHour);
+            editText.setText(formattedTime);
+        }, hour, minute, true).show();
+    }
+
+    private void setAllCheckBoxes(boolean isChecked) {
+        for (CheckBox checkBox : checkBoxes) {
+            checkBox.setChecked(isChecked);
+        }
+    }
+
+    private void guardarDisponibilidad() {
+        List<String> diasSeleccionados = new ArrayList<>();
+        for (int i = 0; i < checkBoxes.size(); i++) {
+            if (checkBoxes.get(i).isChecked()) {
+                diasSeleccionados.add(diasSemana[i]);
             }
-
-            TimePickerDialog timePickerDialog = new TimePickerDialog(this, (view, hourOfDay, minuteOfHour) -> {
-                String formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minuteOfHour);
-                editText.setText(formattedTime);
-            }, hour, minute, true);
-            timePickerDialog.show();
-        });
-    }
-
-    private void setupQuickTimeButtons() {
-        // No quick time buttons in current layout - skip this step
-        // TODO: Add quick time buttons to layout if needed
-        
-        // For now, just set default values
-        if (TextUtils.isEmpty(etHoraInicio.getText())) {
-            etHoraInicio.setText("08:00");
         }
-        if (TextUtils.isEmpty(etHoraFin.getText())) {
-            etHoraFin.setText("18:00");
-        }
-    }
 
-    private void setupDayCheckboxes() {
-        // Simple implementation - no checkboxes in current layout
-        AutoCompleteTextView etDia = findViewById(R.id.et_dia);
-        if (etDia != null && TextUtils.isEmpty(etDia.getText())) {
-            etDia.setText("Lunes a Viernes");
-        }
-    }
-
-    private void seleccionarDiasLaborales() {
-        // Simple implementation
-        AutoCompleteTextView etDia = findViewById(R.id.et_dia);
-        if (etDia != null) {
-            etDia.setText("Lunes a Viernes");
-        }
-    }
-
-    private void seleccionarFinesDeSemana() {
-        // Simple implementation
-        AutoCompleteTextView etDia = findViewById(R.id.et_dia);
-        if (etDia != null) {
-            etDia.setText("Sábado y Domingo");
-        }
-    }
-
-    private void seleccionarTodosLosDias() {
-        // Simple implementation
-        AutoCompleteTextView etDia = findViewById(R.id.et_dia);
-        if (etDia != null) {
-            etDia.setText("Todos los días");
-        }
-    }
-
-    private void guardarDisponibilidadSimple() {
         String inicio = etHoraInicio.getText().toString().trim();
         String fin = etHoraFin.getText().toString().trim();
-        
-        AutoCompleteTextView etDia = findViewById(R.id.et_dia);
-        String diaSeleccionado = etDia.getText().toString().trim();
-        
-        if (TextUtils.isEmpty(diaSeleccionado)) {
-            etDia.setError("Selecciona un día");
-            return;
-        }
-        
-        if (TextUtils.isEmpty(inicio)) {
-            etHoraInicio.setError("Hora de inicio requerida");
-            return;
-        }
-        
-        if (TextUtils.isEmpty(fin)) {
-            etHoraFin.setError("Hora de fin requerida");
-            return;
-        }
-        
-        // Simple save - assume Monday to Friday by default
-        List<String> diasDefault = Arrays.asList("Lunes", "Martes", "Miércoles", "Jueves", "Viernes");
-        saveState(diasDefault, inicio, fin);
 
-        Toast.makeText(this, "Disponibilidad guardada correctamente", Toast.LENGTH_SHORT).show();
+        if (!validateInputs(diasSeleccionados, inicio, fin)) {
+            return;
+        }
+
+        saveState(diasSeleccionados, inicio, fin);
+        Toast.makeText(this, "Disponibilidad guardada", Toast.LENGTH_SHORT).show();
         setResult(RESULT_OK);
         finish();
     }
@@ -197,40 +134,22 @@ public class DisponibilidadActivity extends AppCompatActivity {
     private void saveState(List<String> diasSeleccionados, String inicio, String fin) {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
         editor.putBoolean("disponibilidad_completa", true);
-        
-        // Guardar días como un conjunto de strings
-        Set<String> diasSet = new HashSet<>(diasSeleccionados);
-        editor.putStringSet("disponibilidad_dias", diasSet);
-        
-        // Guardar horarios
+        editor.putStringSet("disponibilidad_dias", new HashSet<>(diasSeleccionados));
         editor.putString("disponibilidad_inicio", inicio);
         editor.putString("disponibilidad_fin", fin);
-        
-        // Guardar como texto legible para mostrar en la UI principal
-        String diasTexto = String.join(", ", diasSeleccionados);
-        editor.putString("disponibilidad_resumen", diasTexto + " de " + inicio + " a " + fin);
-        
         editor.apply();
     }
 
     private void loadState() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        
-        // Cargar horarios
-        etHoraInicio.setText(prefs.getString("disponibilidad_inicio", "08:00"));
-        etHoraFin.setText(prefs.getString("disponibilidad_fin", "18:00"));
-        
-        // Cargar resumen de días (simple implementation)
-        String resumen = prefs.getString("disponibilidad_resumen", "");
-        AutoCompleteTextView etDia = findViewById(R.id.et_dia);
-        if (etDia != null && !TextUtils.isEmpty(resumen)) {
-            // Extract days from summary
-            if (resumen.contains("de")) {
-                String diasPart = resumen.split(" de ")[0];
-                etDia.setText(diasPart);
+        etHoraInicio.setText(prefs.getString("disponibilidad_inicio", "09:00"));
+        etHoraFin.setText(prefs.getString("disponibilidad_fin", "17:00"));
+
+        Set<String> diasGuardados = prefs.getStringSet("disponibilidad_dias", new HashSet<>());
+        for (int i = 0; i < diasSemana.length; i++) {
+            if (diasGuardados.contains(diasSemana[i])) {
+                checkBoxes.get(i).setChecked(true);
             }
-        } else {
-            setupDayCheckboxes();
         }
     }
 
@@ -239,36 +158,27 @@ public class DisponibilidadActivity extends AppCompatActivity {
         List<String> errores = new ArrayList<>();
 
         if (dias.isEmpty()) {
-            errores.add("• Debes seleccionar al menos un día");
+            errores.add("• Debes seleccionar al menos un día.");
         }
-        
         if (TextUtils.isEmpty(inicio)) {
-            errores.add("• La hora de inicio es requerida");
+            errores.add("• La hora de inicio es requerida.");
         }
-        
         if (TextUtils.isEmpty(fin)) {
-            errores.add("• La hora de fin es requerida");
+            errores.add("• La hora de fin es requerida.");
         }
 
-        // Validar que la hora de fin sea posterior a la de inicio
         if (!TextUtils.isEmpty(inicio) && !TextUtils.isEmpty(fin)) {
             try {
                 String[] inicioPartes = inicio.split(":");
                 String[] finPartes = fin.split(":");
                 int inicioMinutos = Integer.parseInt(inicioPartes[0]) * 60 + Integer.parseInt(inicioPartes[1]);
                 int finMinutos = Integer.parseInt(finPartes[0]) * 60 + Integer.parseInt(finPartes[1]);
-                
+
                 if (finMinutos <= inicioMinutos) {
-                    errores.add("• La hora de fin debe ser posterior a la hora de inicio");
+                    errores.add("• La hora de fin debe ser posterior a la de inicio.");
                 }
-                
-                // Validar que el horario tenga al menos 2 horas
-                if (finMinutos - inicioMinutos < 120) {
-                    errores.add("• El horario debe tener al menos 2 horas de duración");
-                }
-                
             } catch (Exception e) {
-                errores.add("• Formato de hora inválido");
+                errores.add("• Formato de hora inválido.");
             }
         }
 
@@ -277,7 +187,6 @@ public class DisponibilidadActivity extends AppCompatActivity {
             tvValidationMessages.setVisibility(View.VISIBLE);
             return false;
         }
-
         return true;
     }
 }

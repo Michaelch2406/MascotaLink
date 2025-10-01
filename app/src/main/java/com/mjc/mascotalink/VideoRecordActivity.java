@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -30,13 +31,19 @@ import androidx.core.content.FileProvider;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.android.material.appbar.MaterialToolbar;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.TextView;
+
 import java.io.File;
 import java.util.concurrent.ExecutionException;
+import java.util.Locale;
 
 public class VideoRecordActivity extends AppCompatActivity {
 
     private androidx.camera.view.PreviewView previewView;
     private ImageButton btnRecord;
+    private TextView tvTimer;
 
     private VideoCapture<Recorder> videoCapture;
     private Recording activeRecording;
@@ -44,6 +51,11 @@ public class VideoRecordActivity extends AppCompatActivity {
     private Uri videoUri; // Add this field
 
     private boolean audioPermissionGranted = false;
+
+    // Timer variables
+    private Handler timerHandler;
+    private Runnable timerRunnable;
+    private int secondsCount = 0;
 
     private final ActivityResultLauncher<String[]> permLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
@@ -62,6 +74,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 
         previewView = findViewById(R.id.preview_view);
         btnRecord = findViewById(R.id.btn_record);
+        tvTimer = findViewById(R.id.tv_timer);
 
         requestPermsAndStart();
 
@@ -72,6 +85,19 @@ public class VideoRecordActivity extends AppCompatActivity {
                 stopRecording();
             }
         });
+
+        // Setup Timer
+        timerHandler = new Handler(Looper.getMainLooper());
+        timerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                secondsCount++;
+                int minutes = secondsCount / 60;
+                int seconds = secondsCount % 60;
+                tvTimer.setText(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds));
+                timerHandler.postDelayed(this, 1000);
+            }
+        };
     }
 
     private void requestPermsAndStart() {
@@ -135,6 +161,11 @@ public class VideoRecordActivity extends AppCompatActivity {
         startMs = System.currentTimeMillis();
         btnRecord.setSelected(true);
 
+        // Start timer
+        secondsCount = 0;
+        tvTimer.setVisibility(View.VISIBLE);
+        timerHandler.post(timerRunnable);
+
         // Auto-stop at 60s
         new CountDownTimer(60_000, 60_000) {
             @Override public void onTick(long l) {}
@@ -144,6 +175,11 @@ public class VideoRecordActivity extends AppCompatActivity {
 
     private void stopRecording() {
         if (activeRecording == null) return;
+
+        // Stop timer
+        timerHandler.removeCallbacks(timerRunnable);
+        tvTimer.setVisibility(View.GONE);
+
         activeRecording.stop();
         activeRecording.close();
         activeRecording = null;

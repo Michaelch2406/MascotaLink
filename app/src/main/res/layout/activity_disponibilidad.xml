@@ -1,76 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
+    android:background="#F7FAFC"
+    tools:context=".DisponibilidadActivity">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material"
+        app:navigationIcon="@drawable/ic_arrow_back"
         app:navigationIconTint="#111827"
-        app:title="Disponibilidad"/>
+        app:title="Disponibilidad"
+        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle" />
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/toolbar"
+        android:layout_above="@+id/bottom_bar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Sección Días de la Semana -->
+            <TextView
+                style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Días de la semana" />
+
+            <TextView
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Selecciona los días que estás disponible." />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_seleccionar_todos"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Seleccionar Todos"
+                    android:textAllCaps="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_deseleccionar_todos"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Deseleccionar Todos"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
+            <GridLayout
+                android:id="@+id/grid_dias"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:columnCount="2"
+                android:rowCount="4">
+
+                <!-- Checkboxes will be added programmatically -->
+
+            </GridLayout>
+
+            <!-- Sección Horarios -->
+            <TextView
+                style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Horario General" />
+
+            <TextView
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Define un rango horario para los días seleccionados." />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Desde">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_hora_inicio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <View
+                    android:layout_width="16dp"
+                    android:layout_height="0dp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Hasta">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_hora_fin"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
         android:orientation="vertical"
         android:padding="16dp">
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Día de la semana"/>
-
-        <AutoCompleteTextView
-            android:id="@+id/et_dia"
+            android:id="@+id/tv_validation_messages"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Selecciona día"
-            android:background="#FFFFFF"
-            android:padding="12dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Hora inicio (HH:mm)"/>
-
-        <EditText
-            android:id="@+id/et_hora_inicio"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="08:00"
-            android:inputType="time"
-            android:background="#FFFFFF"
-            android:padding="12dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Hora fin (HH:mm)"/>
-
-        <EditText
-            android:id="@+id/et_hora_fin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="18:00"
-            android:inputType="time"
-            android:background="#FFFFFF"
-            android:padding="12dp"/>
+            android:layout_marginBottom="8dp"
+            android:textAlignment="center"
+            android:textColor="@color/colorError"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btn_guardar_disponibilidad"
+            style="@style/Widget.Mascota.PrimaryButton"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="16dp"
-            android:text="Guardar" />
-
+            android:layout_height="wrap_content"
+            android:text="Guardar Disponibilidad" />
     </LinearLayout>
 
 </RelativeLayout>

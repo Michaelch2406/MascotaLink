@@ -81,7 +81,11 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
     private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
     );
-    
+
+    private final ActivityResultLauncher<Intent> videoPickerLauncher = registerForActivityResult(
+        new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult // Reutilizamos el mismo handler
+    );
+
     private final ActivityResultLauncher<Intent> activityLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), result -> {
             // Refresh the validation when returning from any child activity
@@ -135,6 +139,11 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         Button btnGrabarVideo = findViewById(R.id.btn_grabar_video);
         if (btnGrabarVideo != null) {
             btnGrabarVideo.setOnClickListener(v -> grabarVideoPresentacion());
+        }
+
+        Button btnSubirVideo = findViewById(R.id.btn_subir_video);
+        if (btnSubirVideo != null) {
+            btnSubirVideo.setOnClickListener(v -> subirVideoPresentacion());
         }
         
         Button btnEliminarVideo = findViewById(R.id.btn_eliminar_video);
@@ -260,6 +269,12 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
     private void grabarVideoPresentacion() {
         Intent intent = new Intent(this, VideoRecordActivity.class);
         videoLauncher.launch(intent);
+    }
+
+    private void subirVideoPresentacion() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("video/*");
+        videoPickerLauncher.launch(intent);
     }
 
     private void handleVideoResult(androidx.activity.result.ActivityResult result) {
