@@ -28,43 +28,48 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Nombre"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
-                <EditText android:id="@+id/et_nombre" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu nombre" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Nombre"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
+                <EditText android:id="@+id/et_nombre" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu nombre" android:inputType="textPersonName" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
             </LinearLayout>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Xavier"/>
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Apellido"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
-                <EditText android:id="@+id/et_apellido" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu apellido" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Apellido"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
+                <EditText android:id="@+id/et_apellido" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu apellido" android:inputType="textPersonName" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
             </LinearLayout>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Zambrano"/>
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Número de teléfono"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
-                <EditText android:id="@+id/et_telefono" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu número de teléfono" android:inputType="phone" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Número de teléfono"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
+                <EditText android:id="@+id/et_telefono" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu número de teléfono" android:inputType="phone" android:maxLength="10" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
             </LinearLayout>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Formato: +593XXXXXXXXX o 09XXXXXXXX"/>
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Correo electrónico"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Correo electrónico"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
                 <EditText android:id="@+id/et_correo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu correo electrónico" android:inputType="textEmailAddress" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
             </LinearLayout>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Usarás este correo para iniciar sesión."/>
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Domicilio"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Domicilio"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
                 <EditText android:id="@+id/et_direccion" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu domicilio" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
             </LinearLayout>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Dirección de residencia actual."/>
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Cédula"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cédula"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
                 <EditText android:id="@+id/et_cedula" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu cédula" android:inputType="number" android:maxLength="10" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
             </LinearLayout>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Cédula de identidad ecuatoriana válida."/>
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Contraseña"/>
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Contraseña"/>
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp"
                 app:endIconMode="password_toggle"
                 app:endIconTint="#13A4EC"
                 app:boxBackgroundMode="filled"
@@ -85,6 +90,8 @@
                     android:textColor="#111827"
                     android:textColorHint="#9CA3AF"/>
             </com.google.android.material.textfield.TextInputLayout>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Mínimo 6 caracteres."/>
+
         </LinearLayout>
     </ScrollView>
 
@@ -96,19 +103,20 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView style="@style/TextAppearance.Mascota.Label" android:text="Términos y condiciones"/>
         <CheckBox
             android:id="@+id/cb_terminos"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Acepto los Términos y Condiciones"
-            android:textColor="@color/black"/>
+            android:layout_marginBottom="16dp"
+            android:textSize="14sp"
+            android:textColor="@color/black"
+            android:text="" />
 
         <Button
             android:id="@+id/btn_registrarse"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Registrarse"
+            android:text="Continuar"
             style="@style/Widget.Mascota.PrimaryButton"
             android:enabled="false"
             android:backgroundTint="@color/blue_primary" />

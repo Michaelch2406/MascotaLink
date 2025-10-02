@@ -2,25 +2,28 @@ package com.mjc.mascotalink;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.Html;
+import android.text.TextWatcher;
 import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.firebase.Timestamp;
-import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.FirebaseFirestore;
+import android.content.SharedPreferences;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -28,8 +31,7 @@ import java.util.Map;
 
 public class DuenoRegistroPaso1Activity extends AppCompatActivity {
 
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+
 
     private EditText etNombre, etApellido, etTelefono, etCorreo, etDireccion, etCedula;
     private TextInputLayout tilPassword;
@@ -45,8 +47,7 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
 
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+
 
         etNombre = findViewById(R.id.et_nombre);
         etApellido = findViewById(R.id.et_apellido);
@@ -59,19 +60,94 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         cbTerminos = findViewById(R.id.cb_terminos);
         btnRegistrarse = findViewById(R.id.btn_registrarse);
 
+        configurarTerminosYCondiciones();
+
+        // Configurar listener para el botón de continuar
         btnRegistrarse.setOnClickListener(v -> intentarRegistro());
 
+        // Configurar TextWatcher para validación en tiempo real
+        TextWatcher textWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                actualizarBoton();
+            }
+        };
+
+        etNombre.addTextChangedListener(textWatcher);
+        etApellido.addTextChangedListener(textWatcher);
+        etTelefono.addTextChangedListener(textWatcher);
+        etCorreo.addTextChangedListener(textWatcher);
+        etDireccion.addTextChangedListener(textWatcher);
+        etCedula.addTextChangedListener(textWatcher);
+        etPassword.addTextChangedListener(textWatcher);
+
+        cbTerminos.setOnCheckedChangeListener((buttonView, isChecked) -> actualizarBoton());
+
+        // Llamada inicial para establecer el estado del botón
         actualizarBoton();
-        View.OnFocusChangeListener watcher = (v, has) -> actualizarBoton();
-        etNombre.setOnFocusChangeListener(watcher);
-        etApellido.setOnFocusChangeListener(watcher);
-        etTelefono.setOnFocusChangeListener(watcher);
-        etCorreo.setOnFocusChangeListener(watcher);
-        etDireccion.setOnFocusChangeListener(watcher);
-        etCedula.setOnFocusChangeListener(watcher);
-        etPassword.setOnFocusChangeListener(watcher);
-        cbTerminos.setOnCheckedChangeListener((b, c) -> actualizarBoton());
     }
+
+    private void configurarTerminosYCondiciones() {
+        String textoTerminos = "Acepto los <a href='#'>Términos y Condiciones</a> y la <a href='#'>Política de Privacidad</a>";
+        cbTerminos.setText(Html.fromHtml(textoTerminos, Html.FROM_HTML_MODE_LEGACY));
+        cbTerminos.setMovementMethod(LinkMovementMethod.getInstance());
+
+        cbTerminos.setOnClickListener(v -> {
+            if (!cbTerminos.isChecked()) {
+                mostrarDialogoTerminos();
+            }
+        });
+    }
+
+    private void mostrarDialogoTerminos() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        ScrollView scrollView = new ScrollView(this);
+        TextView textView = new TextView(this);
+        textView.setPadding(50, 50, 50, 50);
+        textView.setTextSize(14);
+        textView.setText(getTextoTerminosCompleto());
+        scrollView.addView(textView);
+
+        builder.setTitle("Términos y Condiciones")
+                .setView(scrollView)
+                .setPositiveButton("Aceptar", (dialog, which) -> {
+                    cbTerminos.setChecked(true);
+                    actualizarBoton();
+                })
+                .setNegativeButton("Cancelar", (dialog, which) -> cbTerminos.setChecked(false))
+                .setCancelable(false)
+                .show();
+    }
+
+    private String getTextoTerminosCompleto() {
+        return "TÉRMINOS Y CONDICIONES DE USO - MascotaLink (Dueños)\n\n" +
+                "1. ACEPTACIÓN DE TÉRMINOS\n" +
+                "Al registrarte como dueño de mascota en MascotaLink, aceptas cumplir con estos términos y condiciones.\n\n" +
+                "2. RESPONSABILIDADES DEL DUEÑO\n" +
+                "- Proporcionar información precisa y completa sobre tu mascota.\n" +
+                "- Asegurarte de que tu mascota esté al día con sus vacunas y tratamientos.\n" +
+                "- Informar al paseador sobre cualquier comportamiento o necesidad especial.\n\n" +
+                "3. PAGOS Y CANCELACIONES\n" +
+                "- Realizar los pagos de los servicios a través de la plataforma.\n" +
+                "- Respetar las políticas de cancelación de los paseadores.\n\n" +
+                "4. CÓDIGO DE CONDUCTA\n" +
+                "- Tratar a los paseadores con respeto y profesionalismo.\n" +
+                "- No solicitar ni realizar pagos fuera de la plataforma.\n\n" +
+                "5. PRIVACIDAD Y DATOS\n" +
+                "- Aceptas que la información de tu perfil sea visible para los paseadores.\n" +
+                "- MascotaLink se compromete a proteger tus datos según la política de privacidad.\n\n" +
+                "6. LIMITACIÓN DE RESPONSABILIDAD\n" +
+                "MascotaLink actúa como intermediario y no se hace responsable de incidentes ocurridos durante los paseos.\n\n" +
+                "Al marcar esta casilla, confirmas que has leído, entendido y aceptas cumplir con todos estos términos y condiciones.\n\n" +
+                "Fecha de última actualización: Octubre 2025";
+    }
+
 
     private void actualizarBoton() {
         btnRegistrarse.setEnabled(camposValidosBasicos() && cbTerminos.isChecked());
@@ -113,75 +189,34 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void intentarRegistro() {
-        if (!cbTerminos.isChecked()) {
-            toast("Debes aceptar los términos y condiciones");
-            return;
-        }
         if (!camposValidosBasicos()) {
-            toast("Corrige los campos");
+            toast("Por favor, corrige los campos marcados en rojo.");
+            // Podrías incluso hacer scroll hasta el primer campo con error
+            return;
+        }
+        if (!cbTerminos.isChecked()) {
+            toast("Debes aceptar los términos y condiciones para continuar.");
             return;
         }
 
-        String email = etCorreo.getText().toString().trim();
-        String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
+        // Guardar todos los datos en SharedPreferences
+        SharedPreferences.Editor editor = getSharedPreferences("WizardDueno", MODE_PRIVATE).edit();
+        editor.putString("nombre", etNombre.getText().toString().trim());
+        editor.putString("apellido", etApellido.getText().toString().trim());
+        editor.putString("telefono", etTelefono.getText().toString().trim());
+        editor.putString("correo", etCorreo.getText().toString().trim());
+        editor.putString("direccion", etDireccion.getText().toString().trim());
+        editor.putString("cedula", etCedula.getText().toString().trim());
+        if (etPassword.getText() != null) {
+            editor.putString("password", etPassword.getText().toString());
+        }
+        editor.putBoolean("acepta_terminos", cbTerminos.isChecked());
+        editor.apply();
 
-        btnRegistrarse.setEnabled(false);
+        toast("Paso 1 completado. Continúa con el siguiente paso.");
 
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener(this, (AuthResult res) -> {
-                    String uid = res.getUser().getUid();
-                    crearDocsFirestore(uid, () -> {
-                        toast("Cuenta creada");
-                        startActivity(new Intent(this, DuenoRegistroPaso2Activity.class));
-                        finish();
-                    });
-                })
-                .addOnFailureListener(e -> {
-                    btnRegistrarse.setEnabled(true);
-                    toast("Error registrando: " + e.getMessage());
-                });
-    }
-
-    private interface Done { void ok(); }
-
-    private void crearDocsFirestore(String uid, Done done) {
-        String nombre = etNombre.getText().toString().trim();
-        String apellido = etApellido.getText().toString().trim();
-        String telefono = etTelefono.getText().toString().trim();
-        String correo = etCorreo.getText().toString().trim();
-        String direccion = etDireccion.getText().toString().trim();
-        String cedula = etCedula.getText().toString().trim();
-
-        Map<String, Object> usuario = new HashMap<>();
-        usuario.put("nombre", nombre);
-        usuario.put("apellido", apellido);
-        usuario.put("cedula", cedula);
-        usuario.put("correo", correo);
-        usuario.put("telefono", telefono);
-        usuario.put("direccion", direccion);
-        usuario.put("fecha_registro", Timestamp.now());
-        usuario.put("activo", true);
-        usuario.put("foto_perfil", "");
-        usuario.put("selfie_url", "");
-        usuario.put("nombre_display", String.format(Locale.getDefault(), "%s %s", nombre, apellido).trim());
-        usuario.put("perfil_ref", "/duenos/" + uid);
-        usuario.put("rol", "DUENO");
-
-        Map<String, Object> dueno = new HashMap<>();
-        dueno.put("cedula", cedula);
-        dueno.put("direccion_recogida", direccion);
-        dueno.put("acepta_terminos", true);
-        dueno.put("verificacion_estado", "PENDIENTE");
-        dueno.put("verificacion_fecha", Timestamp.now());
-        dueno.put("ultima_actualizacion", Timestamp.now());
-
-        DocumentReference userRef = db.collection("usuarios").document(uid);
-        DocumentReference duenoRef = db.collection("duenos").document(uid);
-
-        userRef.set(usuario)
-                .continueWithTask(t -> duenoRef.set(dueno))
-                .addOnSuccessListener(aVoid -> done.ok())
-                .addOnFailureListener(e -> toast("Error guardando datos: " + e.getMessage()));
+        // Navegar al siguiente paso
+        startActivity(new Intent(this, DuenoRegistroPaso2Activity.class));
     }
 
     private void toast(String m) { Toast.makeText(this, m, Toast.LENGTH_SHORT).show(); }

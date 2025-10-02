@@ -1,7 +1,6 @@
 package com.mjc.mascotalink;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -17,14 +16,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+import android.content.SharedPreferences;
 
 public class DuenoRegistroPaso2Activity extends AppCompatActivity {
-
-    private static final String PREFS = "WizardDueno";
 
     private ImageView previewFotoPerfil;
     private ImageView previewSelfie;
@@ -33,9 +27,7 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
     private Uri selfieUri;
     private Uri fotoPerfilUri;
 
-    private FirebaseAuth mAuth;
-    private FirebaseStorage storage;
-    private FirebaseFirestore db;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -45,117 +37,118 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        mAuth = FirebaseAuth.getInstance();
-        storage = FirebaseStorage.getInstance();
-        db = FirebaseFirestore.getInstance();
+        bindViews();
+        setupListeners();
+        loadUrisFromPrefs(); // Cargar URIs guardadas al iniciar
+        updateUI();
+    }
 
-        // Vistas
+    private void bindViews() {
         previewFotoPerfil = findViewById(R.id.preview_foto_perfil);
         previewSelfie = findViewById(R.id.preview_selfie);
         btnContinuarPaso3 = findViewById(R.id.btn_continuar_paso3);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
-        Button btnEliminarSelfie = findViewById(R.id.btn_eliminar_selfie);
-        Button btnEliminarFotoPerfil = findViewById(R.id.btn_eliminar_foto_perfil);
-        Button btnElegirFoto = findViewById(R.id.btn_elegir_foto);
-        Button btnTomarFoto = findViewById(R.id.btn_tomar_foto);
+    }
 
-        // Listeners
-        findViewById(R.id.img_selfie_ilustracion).setOnClickListener(v -> activarCamaraSelfie());
-        btnElegirFoto.setOnClickListener(v -> elegirFotoPerfil());
-        btnTomarFoto.setOnClickListener(v -> tomarFotoPerfil());
-        btnEliminarSelfie.setOnClickListener(v -> eliminarSelfie());
-        btnEliminarFotoPerfil.setOnClickListener(v -> eliminarFotoPerfil());
-        btnContinuarPaso3.setOnClickListener(v -> subirYContinuar());
+    private void setupListeners() {
+        findViewById(R.id.img_selfie_ilustracion).setOnClickListener(v -> tomarSelfie());
+        findViewById(R.id.btn_elegir_foto).setOnClickListener(v -> elegirFotoPerfil());
+        findViewById(R.id.btn_tomar_foto).setOnClickListener(v -> tomarFotoPerfil());
+        findViewById(R.id.btn_eliminar_selfie).setOnClickListener(v -> {
+            selfieUri = null;
+            updateUI();
+        });
+        findViewById(R.id.btn_eliminar_foto_perfil).setOnClickListener(v -> {
+            fotoPerfilUri = null;
+            updateUI();
+        });
+        btnContinuarPaso3.setOnClickListener(v -> guardarUrisYContinuar());
+    }
 
-        loadState();
-        verificarCompletitudPaso2();
+    private void loadUrisFromPrefs() {
+        SharedPreferences prefs = getSharedPreferences("WizardDueno", MODE_PRIVATE);
+        String selfieUriString = prefs.getString("selfieUri", null);
+        String fotoPerfilUriString = prefs.getString("fotoPerfilUri", null);
+
+        if (selfieUriString != null) {
+            selfieUri = Uri.parse(selfieUriString);
+        }
+        if (fotoPerfilUriString != null) {
+            fotoPerfilUri = Uri.parse(fotoPerfilUriString);
+        }
+    }
+
+    private void tomarSelfie() {
+        Intent intent = new Intent(this, SelfieActivity.class);
+        intent.putExtra("front", true);
+        selfieLauncher.launch(intent);
     }
 
     private void elegirFotoPerfil() {
-        Intent galleryIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        galleryIntent.addCategory(Intent.CATEGORY_OPENABLE);
-        galleryIntent.setType("image/*");
-        galleryIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        fotoPerfilGaleriaLauncher.launch(galleryIntent);
+        galeriaLauncher.launch("image/*");
     }
 
     private void tomarFotoPerfil() {
         Intent intent = new Intent(this, SelfieActivity.class);
         intent.putExtra("front", true);
-        intent.putExtra("tipo", "foto_perfil");
-        fotoPerfilCamaraLauncher.launch(intent);
+        fotoPerfilLauncher.launch(intent);
     }
 
-    private void activarCamaraSelfie() {
-        Intent intent = new Intent(this, SelfieActivity.class);
-        intent.putExtra("front", true);
-        selfieResultLauncher.launch(intent);
+    private final ActivityResultLauncher<Intent> selfieLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    selfieUri = result.getData().getData();
+                    updateUI();
+                }
+            });
+
+    private final ActivityResultLauncher<String> galeriaLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    fotoPerfilUri = uri;
+                    updateUI();
+                }
+            });
+
+    private final ActivityResultLauncher<Intent> fotoPerfilLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    fotoPerfilUri = result.getData().getData();
+                    updateUI();
+                }
+            });
+
+    private void updateUI() {
+        // Selfie
+        if (selfieUri != null) {
+            Glide.with(this).load(selfieUri).into(previewSelfie);
+            findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
+        } else {
+            findViewById(R.id.container_preview_selfie).setVisibility(View.GONE);
+        }
+
+        // Foto de perfil
+        if (fotoPerfilUri != null) {
+            Glide.with(this).load(fotoPerfilUri).into(previewFotoPerfil);
+            findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
+        } else {
+            findViewById(R.id.container_preview_foto_perfil).setVisibility(View.GONE);
+        }
+
+        checkCompletitud();
     }
 
-    private final ActivityResultLauncher<Intent> selfieResultLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri tempUri = result.getData().getData();
-                    if (tempUri != null) {
-                        Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "SELFIE_");
-                        if (permanentUri != null) {
-                            selfieUri = permanentUri;
-                            mostrarPreviewSelfie(selfieUri);
-                            saveState();
-                            verificarCompletitudPaso2();
-                        } else {
-                            Toast.makeText(this, "Error al guardar la selfie.", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                }
-            });
-
-    private final ActivityResultLauncher<Intent> fotoPerfilCamaraLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri tempUri = result.getData().getData();
-                    if (tempUri != null) {
-                        Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "FOTO_PERFIL_");
-                        if (permanentUri != null) {
-                            fotoPerfilUri = permanentUri;
-                            mostrarPreviewFotoPerfil(fotoPerfilUri);
-                            saveState();
-                            verificarCompletitudPaso2();
-                        } else {
-                            Toast.makeText(this, "Error al guardar la foto de perfil.", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                }
-            });
-
-    private final ActivityResultLauncher<Intent> fotoPerfilGaleriaLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri tempUri = result.getData().getData();
-                    if (tempUri != null) {
-                        Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "FOTO_PERFIL_");
-                        if (permanentUri != null) {
-                            fotoPerfilUri = permanentUri;
-                            mostrarPreviewFotoPerfil(fotoPerfilUri);
-                            saveState();
-                            verificarCompletitudPaso2();
-                        } else {
-                            Toast.makeText(this, "Error al guardar la foto de perfil.", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                }
-            });
-
-    private void verificarCompletitudPaso2() {
+    private void checkCompletitud() {
         StringBuilder faltantes = new StringBuilder();
-        if (selfieUri == null) faltantes.append("• Falta tomar la selfie\n");
-        if (fotoPerfilUri == null) faltantes.append("• Falta seleccionar foto de perfil\n");
+        if (selfieUri == null) faltantes.append("• Falta tomar la selfie de verificación.\n");
+        if (fotoPerfilUri == null) faltantes.append("• Falta seleccionar o tomar una foto de perfil.\n");
 
         if (faltantes.length() == 0) {
             tvValidationMessages.setVisibility(View.GONE);
             btnContinuarPaso3.setVisibility(View.VISIBLE);
-            SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-            prefs.edit().putBoolean("paso2_completo", true).apply();
         } else {
             tvValidationMessages.setText(faltantes.toString().trim());
             tvValidationMessages.setVisibility(View.VISIBLE);
@@ -163,74 +156,27 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
         }
     }
 
-    private void saveState() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        SharedPreferences.Editor ed = prefs.edit();
-        ed.putString("selfieUri", selfieUri != null ? selfieUri.toString() : null);
-        ed.putString("fotoPerfilUri", fotoPerfilUri != null ? fotoPerfilUri.toString() : null);
-        ed.apply();
-    }
+    private void guardarUrisYContinuar() {
+        if (selfieUri == null || fotoPerfilUri == null) {
+            checkCompletitud();
+            return;
+        }
 
-    private void loadState() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        String s1 = prefs.getString("selfieUri", null);
-        String s2 = prefs.getString("fotoPerfilUri", null);
-        if (s1 != null) try { selfieUri = Uri.parse(s1); mostrarPreviewSelfie(selfieUri);} catch (Exception ignored) {}
-        if (s2 != null) try { fotoPerfilUri = Uri.parse(s2); mostrarPreviewFotoPerfil(fotoPerfilUri);} catch (Exception ignored) {}
-    }
+        // Copiamos los archivos a almacenamiento interno para asegurar que los URIs persistan
+        Uri persistentSelfieUri = FileStorageHelper.copyFileToInternalStorage(this, selfieUri, "selfie_dueno_");
+        Uri persistentFotoPerfilUri = FileStorageHelper.copyFileToInternalStorage(this, fotoPerfilUri, "fotoperfil_dueno_");
 
-    private void mostrarPreviewSelfie(Uri uri) { Glide.with(this).load(uri).into(previewSelfie); findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE); }
-    private void mostrarPreviewFotoPerfil(Uri uri) { Glide.with(this).load(uri).into(previewFotoPerfil); findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE); }
+        if (persistentSelfieUri == null || persistentFotoPerfilUri == null) {
+            Toast.makeText(this, "Error al guardar las imágenes localmente.", Toast.LENGTH_LONG).show();
+            return;
+        }
 
-    private void eliminarSelfie() { selfieUri = null; findViewById(R.id.container_preview_selfie).setVisibility(View.GONE); saveState(); verificarCompletitudPaso2(); }
-    private void eliminarFotoPerfil() { fotoPerfilUri = null; findViewById(R.id.container_preview_foto_perfil).setVisibility(View.GONE); saveState(); verificarCompletitudPaso2(); }
+        SharedPreferences.Editor editor = getSharedPreferences("WizardDueno", MODE_PRIVATE).edit();
+        editor.putString("selfieUri", persistentSelfieUri.toString());
+        editor.putString("fotoPerfilUri", persistentFotoPerfilUri.toString());
+        editor.apply();
 
-    private void subirYContinuar() {
-        if (mAuth.getCurrentUser() == null) { Toast.makeText(this, "Sesión inválida", Toast.LENGTH_SHORT).show(); return; }
-        String uid = mAuth.getCurrentUser().getUid();
-        if (selfieUri == null || fotoPerfilUri == null) { verificarCompletitudPaso2(); return; }
-
-        btnContinuarPaso3.setEnabled(false);
-
-        StorageReference root = storage.getReference();
-        StorageReference selfieRef = root.child("usuarios/" + uid + "/selfie.jpg");
-        StorageReference fotoRef = root.child("usuarios/" + uid + "/foto_perfil.jpg");
-
-        selfieRef.putFile(selfieUri)
-                .addOnSuccessListener(taskSnapshot -> selfieRef.getDownloadUrl()
-                        .addOnSuccessListener(selfieUrl -> {
-                            fotoRef.putFile(fotoPerfilUri)
-                                    .addOnSuccessListener(ts -> fotoRef.getDownloadUrl()
-                                            .addOnSuccessListener(fotoUrl -> {
-                                                db.collection("usuarios").document(uid)
-                                                        .update("selfie_url", selfieUrl.toString(),
-                                                                "foto_perfil", fotoUrl.toString())
-                                                        .addOnSuccessListener(aVoid -> {
-                                                            Toast.makeText(this, "Imágenes guardadas", Toast.LENGTH_SHORT).show();
-                                                            startActivity(new Intent(this, DuenoRegistroPaso3Activity.class));
-                                                            finish();
-                                                        })
-                                                        .addOnFailureListener(e -> {
-                                                            btnContinuarPaso3.setEnabled(true);
-                                                            Toast.makeText(this, "Error guardando URLs: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                                        });
-                                            })
-                                            .addOnFailureListener(e -> {
-                                                btnContinuarPaso3.setEnabled(true);
-                                                Toast.makeText(this, "Error obteniendo URL de foto: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                            }))
-                                    .addOnFailureListener(e -> {
-                                        btnContinuarPaso3.setEnabled(true);
-                                        Toast.makeText(this, "Error subiendo foto de perfil: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                    });
-                        })
-                        .addOnFailureListener(e -> {
-                            btnContinuarPaso3.setEnabled(true);
-                            Toast.makeText(this, "Error obteniendo URL de selfie: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        }))
-                .addOnFailureListener(e -> {
-                    btnContinuarPaso3.setEnabled(true);
-                    Toast.makeText(this, "Error subiendo selfie: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+        Toast.makeText(this, "Imágenes listas para registrar.", Toast.LENGTH_SHORT).show();
+        startActivity(new Intent(this, DuenoRegistroPaso3Activity.class));
     }
 }

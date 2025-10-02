@@ -83,7 +83,9 @@ dependencies {
     implementation 'com.firebaseui:firebase-ui-auth:9.0.0'         // opcional pero muy práctico
 
     // Image loading / caching
-    implementation 'com.github.bumptech.glide:glide:5.0.5'
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    implementation 'de.hdodenhof:circleimageview:3.1.0' // Para vistas de imagen circulares
+
     annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5' // si usas Java (Glide requiere annotation processor)
     implementation libs.appcompat
     implementation libs.material
