@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        app:navigationIcon="@drawable/abc_ic_ab_back_material"
+        app:navigationIconTint="#111827"
+        app:title="Registro"
+        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolbar"
+        android:layout_above="@+id/bottom_bar"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Nombre"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+                <EditText android:id="@+id/et_nombre" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu nombre" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Apellido"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+                <EditText android:id="@+id/et_apellido" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu apellido" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Número de teléfono"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+                <EditText android:id="@+id/et_telefono" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu número de teléfono" android:inputType="phone" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Correo electrónico"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+                <EditText android:id="@+id/et_correo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu correo electrónico" android:inputType="textEmailAddress" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Domicilio"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+                <EditText android:id="@+id/et_direccion" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu domicilio" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Cédula"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp" android:layout_marginBottom="12dp">
+                <EditText android:id="@+id/et_cedula" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu cédula" android:inputType="number" android:maxLength="10" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Contraseña"/>
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                app:endIconMode="password_toggle"
+                app:endIconTint="#13A4EC"
+                app:boxBackgroundMode="filled"
+                app:boxBackgroundColor="#E7EEF2"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu contraseña"
+                    android:inputType="textPassword"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView style="@style/TextAppearance.Mascota.Label" android:text="Términos y condiciones"/>
+        <CheckBox
+            android:id="@+id/cb_terminos"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Acepto los Términos y Condiciones"
+            android:textColor="@color/black"/>
+
+        <Button
+            android:id="@+id/btn_registrarse"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Registrarse"
+            style="@style/Widget.Mascota.PrimaryButton"
+            android:enabled="false"
+            android:backgroundTint="@color/blue_primary" />
+    </LinearLayout>
+
+</RelativeLayout>

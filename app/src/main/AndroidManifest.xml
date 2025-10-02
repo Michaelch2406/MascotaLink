@@ -72,6 +72,22 @@
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
+            android:name=".DuenoRegistroPaso1Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".DuenoRegistroPaso2Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".DuenoRegistroPaso3Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".DuenoRegistroPaso4Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
             android:name=".PaseadorRegistroPaso2Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />

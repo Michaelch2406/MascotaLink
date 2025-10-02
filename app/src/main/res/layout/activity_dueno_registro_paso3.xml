@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        app:navigationIcon="@drawable/abc_ic_ab_back_material"
+        app:navigationIconTint="#111827"
+        app:title="Configuración"
+        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/toolbar"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_above="@+id/bottom_bar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Título principal -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.CardTitle"
+                android:text="Configuración"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"/>
+
+            <!-- Foto de perfil -->
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Foto de perfil" android:layout_marginTop="16dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@android:drawable/ic_menu_camera"
+                    android:background="#E7EEF2"
+                    android:padding="8dp"
+                    android:contentDescription="Icono cámara"
+                    android:layout_marginEnd="12dp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/TextAppearance.Mascota.BodyMuted"
+                    android:text="Añadir foto"/>
+            </LinearLayout>
+
+            <!-- Dirección -->
+            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Dirección" android:layout_marginTop="16dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp">
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@android:drawable/ic_menu_mylocation"
+                    android:background="#E7EEF2"
+                    android:padding="8dp"
+                    android:contentDescription="Icono ubicación"
+                    android:layout_marginEnd="12dp"/>
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        style="@style/TextAppearance.Mascota.Label"
+                        android:text="Dirección de recogida/entrega"/>
+                    <EditText
+                        android:id="@+id/et_direccion_recogida"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="123 Main St, Anytown"
+                        android:background="@android:color/transparent"
+                        android:textColor="#111827"
+                        android:textColorHint="#9CA3AF"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Método de Pago -->
+            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Método de Pago" android:layout_marginTop="16dp"/>
+            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:text="Selecciona un método de pago para completar tus transacciones de forma segura." android:layout_marginTop="6dp"/>
+
+            <Button
+                android:id="@+id/btn_ingresar_metodo"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:text="Ingresar Cuenta Bancaria (Ecuador)"
+                android:textAllCaps="false"
+                android:backgroundTint="#E7EEF2"
+                android:textColor="#111827"/>
+
+            <!-- Preferencias de comunicación -->
+            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Preferencias de comunicación" android:layout_marginTop="20dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/TextAppearance.Mascota.Label" android:text="Mensajes"/>
+                    <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:text="Recibe mensajes en la app"/>
+                </LinearLayout>
+                <Switch android:id="@+id/sw_mensajes" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:padding="16dp"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btn_guardar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Guardar"
+            style="@style/Widget.Mascota.PrimaryButton"/>
+    </LinearLayout>
+
+</RelativeLayout>

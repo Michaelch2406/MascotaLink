@@ -24,8 +24,9 @@ public class SeleccionRolActivity extends AppCompatActivity {
         Button btnDueno = findViewById(R.id.btn_select_dueno);
         Button btnPaseador = findViewById(R.id.btn_select_paseador);
 
-        btnDueno.setOnClickListener(v ->
-                Toast.makeText(this, "Registro de Dueño próximamente", Toast.LENGTH_SHORT).show());
+        btnDueno.setOnClickListener(v -> {
+                startActivity(new Intent(this, DuenoRegistroPaso1Activity.class));
+        });
         btnPaseador.setOnClickListener(v -> {
                 startActivity(new Intent(this, PaseadorRegistroPaso1Activity.class));
         });

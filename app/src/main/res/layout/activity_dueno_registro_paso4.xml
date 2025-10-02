@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tv_proximamente"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="El registro de mascotas estará disponible próximamente. Pronto podrás añadir y gestionar la información de tus mascotas desde aquí."
+        android:textAlignment="center"
+        android:textColor="#111827"
+        android:textSize="18sp"/>
+
+</RelativeLayout>
