@@ -492,10 +492,10 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         usuarioData.put("fecha_registro", FieldValue.serverTimestamp());
         usuarioData.put("perfil_ref", db.collection("paseadores").document(uid));
         usuarioData.put("nombre_display", prefs.getString("nombre", "") + " " + prefs.getString("apellido", ""));
+        usuarioData.put("cedula", prefs.getString("cedula", ""));
 
         // --- 2. Construir el documento para la colección 'paseadores' ---
         Map<String, Object> paseadorData = new HashMap<>();
-        paseadorData.put("cedula", prefs.getString("cedula", ""));
         paseadorData.put("domicilio", prefs.getString("domicilio", ""));
         paseadorData.put("acepto_terminos", prefs.getBoolean("acepto_terminos", false));
         paseadorData.put("fecha_aceptacion_terminos", new Timestamp(new Date(prefs.getLong("fecha_aceptacion_terminos", System.currentTimeMillis()))));

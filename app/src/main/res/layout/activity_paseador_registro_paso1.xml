@@ -147,7 +147,7 @@
                 android:layout_height="wrap_content"
                 style="@style/TextAppearance.Mascota.Label"
                 android:text="Domicilio"/>
-            <LinearLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="#E7EEF2"
@@ -162,8 +162,18 @@
                     android:inputType="textPostalAddress"
                     android:background="@android:color/transparent"
                     android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
+                    android:textColorHint="#9CA3AF"
+                    android:layout_toStartOf="@+id/iv_geolocate" />
+                <ImageView
+                    android:id="@+id/iv_geolocate"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_my_location"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:contentDescription="Obtener ubicación actual"
+                    app:tint="#13A4EC" />
+            </RelativeLayout>
 
             <!-- Número de teléfono -->
             <TextView

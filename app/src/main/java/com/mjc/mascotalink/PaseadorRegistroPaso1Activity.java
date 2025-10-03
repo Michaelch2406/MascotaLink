@@ -34,15 +34,30 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+
+
 import com.google.firebase.storage.FirebaseStorage;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.widget.ImageView;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 
 public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
@@ -57,6 +72,10 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     private CheckBox cbAceptaTerminos;
     private Button btnContinuar;
     private ProgressBar progressBar;
+    private ImageView ivGeolocate;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
@@ -72,13 +91,15 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         storage = FirebaseStorage.getInstance();
 
         bindViews();
+        setupLocationServices();
         wireDatePicker();
         loadSavedState();
         setupWatchers();
         configurarTerminosYCondiciones();
 
         btnContinuar.setOnClickListener(v -> onContinuar());
-        
+        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
+
         // Configurar enlace para ir al login
         findViewById(R.id.tv_login_link).setOnClickListener(v -> {
             Intent intent = new Intent(this, LoginActivity.class);
@@ -101,9 +122,54 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         tilPassword = findViewById(R.id.til_password);
         cbAceptaTerminos = findViewById(R.id.cb_acepta_terminos);
         btnContinuar = findViewById(R.id.btn_continuar);
+        ivGeolocate = findViewById(R.id.iv_geolocate);
         progressBar = new ProgressBar(this);
     }
 
+    private void setupLocationServices() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) {
+                fetchLocationAndFillAddress();
+            } else {
+                Toast.makeText(this, "Permiso de ubicación denegado.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void onGeolocateClick() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fetchLocationAndFillAddress();
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fetchLocationAndFillAddress() {
+        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show();
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                try {
+                    List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                    if (addresses != null && !addresses.isEmpty()) {
+                        Address address = addresses.get(0);
+                        String addressLine = address.getAddressLine(0);
+                        etDomicilio.setText(addressLine);
+                        Toast.makeText(this, "Dirección autocompletada.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "No se pudo encontrar una dirección.", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Servicio de geocodificación no disponible", e);
+                    Toast.makeText(this, "Error al obtener la dirección.", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(this, "No se pudo obtener la ubicación. Asegúrate de que el GPS esté activado.", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
     private void wireDatePicker() {
         etFechaNac.setInputType(InputType.TYPE_NULL);
         etFechaNac.setOnClickListener(v -> {

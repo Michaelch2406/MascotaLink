@@ -84,7 +84,7 @@
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
-            android:name=".DuenoRegistroPaso4Activity"
+            android:name=".MascotaRegistroPaso1Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity

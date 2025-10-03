@@ -201,7 +201,6 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
 
         // 2. Documento para la colección 'duenos'
         Map<String, Object> duenoData = new HashMap<>();
-        duenoData.put("cedula", prefs.getString("cedula", ""));
         duenoData.put("direccion_recogida", prefs.getString("direccion_recogida", ""));
         duenoData.put("acepta_terminos", prefs.getBoolean("acepta_terminos", false));
         duenoData.put("verificacion_estado", "PENDIENTE");
@@ -217,7 +216,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             Log.d(TAG, "Registro de dueño completado en Firestore.");
             prefs.edit().clear().apply(); // Limpiar datos temporales
             Toast.makeText(this, "¡Registro completado!", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, DuenoRegistroPaso4Activity.class);
+            Intent intent = new Intent(this, MascotaRegistroPaso1Activity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
             finish();
