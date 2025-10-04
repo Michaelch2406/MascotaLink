@@ -93,6 +93,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         paymentMethodButton.setOnClickListener(v -> {
             saveDataToPrefs();
             Intent intent = new Intent(this, MetodoPagoActivity.class);
+            intent.putExtra("prefs", PREFS_DUENO);
             startActivity(intent);
         });
     }

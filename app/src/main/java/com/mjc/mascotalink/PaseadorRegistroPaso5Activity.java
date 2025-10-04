@@ -130,7 +130,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         Button btnMetodoPago = findViewById(R.id.btn_metodo_pago);
         if (btnMetodoPago != null) {
             btnMetodoPago.setOnClickListener(v -> 
-                activityLauncher.launch(new Intent(this, MetodoPagoActivity.class)));
+                activityLauncher.launch(new Intent(this, MetodoPagoActivity.class).putExtra("prefs", PREFS)));
         }
         
         Button btnGrabarVideo = findViewById(R.id.btn_grabar_video);

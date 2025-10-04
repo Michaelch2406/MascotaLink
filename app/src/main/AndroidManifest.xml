@@ -105,9 +105,6 @@
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".QuizResultsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MascotaLink" />
-        <activity
             android:name=".PaseadorRegistroPaso5Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
@@ -116,11 +113,11 @@
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
-            android:name=".DisponibilidadActivity"
+            android:name=".MascotaRegistroPaso1Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
-            android:name=".TiposPerrosActivity"
+            android:name=".MascotaRegistroPaso2Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
