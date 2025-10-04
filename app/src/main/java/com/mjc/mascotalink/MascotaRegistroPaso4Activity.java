@@ -1,157 +1,202 @@
 package com.mjc.mascotalink;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
-    private static final String PREFS = "MascotaWizard";
+    private ImageView arrowBack;
+    private TextInputEditText rutinaPaseoEditText, tipoCorreaArnesEditText, recompensasEditText, instruccionesEmergenciaEditText, accesoViviendaEditText, notasAdicionalesEditText;
+    private Button guardarButton;
 
-    private EditText etRutina, etCorrea, etRecompensas, etEmergencia, etAcceso, etNotas;
-    private Button btnGuardar;
-
-    private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
     private FirebaseStorage storage;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mascota_registro_paso4);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
-
-        etRutina = findViewById(R.id.et_rutina);
-        etCorrea = findViewById(R.id.et_correa);
-        etRecompensas = findViewById(R.id.et_recompensas);
-        etEmergencia = findViewById(R.id.et_emergencia);
-        etAcceso = findViewById(R.id.et_acceso);
-        etNotas = findViewById(R.id.et_notas);
-        btnGuardar = findViewById(R.id.btn_guardar);
-
-        mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
         storage = FirebaseStorage.getInstance();
 
-        btnGuardar.setOnClickListener(v -> guardarMascotaCompleta());
+        arrowBack = findViewById(R.id.arrow_back);
+        rutinaPaseoEditText = findViewById(R.id.rutinaPaseoEditText);
+        tipoCorreaArnesEditText = findViewById(R.id.tipoCorreaArnesEditText);
+        recompensasEditText = findViewById(R.id.recompensasEditText);
+        instruccionesEmergenciaEditText = findViewById(R.id.instruccionesEmergenciaEditText);
+        accesoViviendaEditText = findViewById(R.id.accesoViviendaEditText);
+        notasAdicionalesEditText = findViewById(R.id.notasAdicionalesEditText);
+        guardarButton = findViewById(R.id.guardarButton);
+
+        setupListeners();
+        validateInputs();
+    }
+
+    private void setupListeners() {
+        arrowBack.setOnClickListener(v -> finish());
+        guardarButton.setOnClickListener(v -> guardarMascotaCompleta());
+
+        TextWatcher textWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                validateInputs();
+            }
+        };
+
+        rutinaPaseoEditText.addTextChangedListener(textWatcher);
+        tipoCorreaArnesEditText.addTextChangedListener(textWatcher);
+        recompensasEditText.addTextChangedListener(textWatcher);
+        instruccionesEmergenciaEditText.addTextChangedListener(textWatcher);
+        accesoViviendaEditText.addTextChangedListener(textWatcher);
+        notasAdicionalesEditText.addTextChangedListener(textWatcher);
+    }
+
+    private void validateInputs() {
+        boolean allFilled = !rutinaPaseoEditText.getText().toString().trim().isEmpty()
+                && !tipoCorreaArnesEditText.getText().toString().trim().isEmpty()
+                && !recompensasEditText.getText().toString().trim().isEmpty()
+                && !instruccionesEmergenciaEditText.getText().toString().trim().isEmpty()
+                && !accesoViviendaEditText.getText().toString().trim().isEmpty()
+                && !notasAdicionalesEditText.getText().toString().trim().isEmpty();
+        guardarButton.setEnabled(allFilled);
     }
 
     private void guardarMascotaCompleta() {
-        if (mAuth.getCurrentUser() == null) { Toast.makeText(this, "Sesión inválida", Toast.LENGTH_SHORT).show(); return; }
+        guardarButton.setEnabled(false); // Prevent double clicks
         String duenoId = mAuth.getCurrentUser().getUid();
+        Intent intent = getIntent();
+        String fotoUriString = intent.getStringExtra("foto_uri");
 
-        // Paso 4 - Instrucciones
-        Map<String, Object> instrucciones = new HashMap<>();
-        instrucciones.put("rutina_paseo", etRutina.getText().toString().trim());
-        instrucciones.put("tipo_correa_arnes", etCorrea.getText().toString().trim());
-        instrucciones.put("recompensas", etRecompensas.getText().toString().trim());
-        instrucciones.put("instrucciones_emergencia", etEmergencia.getText().toString().trim());
-        instrucciones.put("acceso_vivienda", etAcceso.getText().toString().trim());
-        instrucciones.put("notas_adicionales", etNotas.getText().toString().trim());
+        if (fotoUriString == null) {
+            mostrarErrorDialog("No se encontró la imagen de la mascota. Por favor, vuelve al paso 1.");
+            guardarButton.setEnabled(true);
+            return;
+        }
+        Uri fotoUri = Uri.parse(fotoUriString);
 
-        // Paso 1
-        android.content.SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        String nombre = prefs.getString("nombre", "");
-        String raza = prefs.getString("raza", "");
-        String sexo = prefs.getString("sexo", "Macho");
-        long fechaNac = prefs.getLong("fecha_nacimiento", 0);
-        String tamano = prefs.getString("tamano", "");
-        String pesoStr = prefs.getString("peso", "");
-        String fotoUriStr = prefs.getString("foto_uri", "");
+        StorageReference storageRef = storage.getReference();
+        StorageReference fotoRef = storageRef.child("fotos_mascotas/" + duenoId + "/" + UUID.randomUUID().toString());
 
-        // Paso 2 - Salud
-        Map<String, Object> salud = new HashMap<>();
-        salud.put("vacunas_al_dia", prefs.getBoolean("salud_vacunas_al_dia", false));
-        salud.put("desparasitacion_aldia", prefs.getBoolean("salud_desparasitacion_aldia", false));
-        long ultimaVet = prefs.getLong("salud_ultima_visita_vet", 0);
-        salud.put("ultima_visita_vet", ultimaVet == 0 ? null : new Timestamp(new java.util.Date(ultimaVet)));
-        salud.put("condiciones_medicas", prefs.getString("salud_condiciones_medicas", ""));
-        salud.put("medicamentos_actuales", prefs.getString("salud_medicamentos_actuales", ""));
-        salud.put("veterinario_nombre", prefs.getString("salud_veterinario_nombre", ""));
-        salud.put("veterinario_telefono", prefs.getString("salud_veterinario_telefono", ""));
+        fotoRef.putFile(fotoUri)
+                .addOnSuccessListener(taskSnapshot -> fotoRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                    String fotoUrl = uri.toString();
+                    crearDocumentoMascota(duenoId, intent, fotoUrl);
+                }))
+                .addOnFailureListener(e -> {
+                    Log.e("Storage", "Error al subir foto", e);
+                    mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
+                    guardarButton.setEnabled(true);
+                });
+    }
 
-        // Paso 3 - Comportamiento
-        Map<String, Object> comportamiento = new HashMap<>();
-        comportamiento.put("nivel_energia", prefs.getString("comp_nivel_energia", ""));
-        comportamiento.put("con_personas", prefs.getString("comp_con_personas", ""));
-        comportamiento.put("con_otros_animales", prefs.getString("comp_con_otros_animales", ""));
-        comportamiento.put("con_otros_perros", prefs.getString("comp_con_otros_perros", ""));
-        comportamiento.put("habitos_correa", prefs.getString("comp_habitos_correa", ""));
-        comportamiento.put("comandos_conocidos", prefs.getString("comp_comandos_conocidos", ""));
-        comportamiento.put("miedos_fobias", prefs.getString("comp_miedos_fobias", ""));
-        comportamiento.put("manias_habitos", prefs.getString("comp_manias_habitos", ""));
-
-        // Documento mascota base
+    private void crearDocumentoMascota(String duenoId, Intent intent, String fotoUrl) {
         Map<String, Object> mascota = new HashMap<>();
-        mascota.put("nombre", nombre);
-        mascota.put("raza", raza);
-        mascota.put("sexo", sexo);
-        mascota.put("fecha_nacimiento", fechaNac == 0 ? null : new Timestamp(new java.util.Date(fechaNac)));
-        mascota.put("tamano", tamano);
-        double peso = 0;
-        try { peso = TextUtils.isEmpty(pesoStr) ? 0 : Double.parseDouble(pesoStr); } catch (Exception ignored) {}
-        mascota.put("peso", peso);
-        mascota.put("foto_principal_url", "");
+
+        // Pantalla 1 - Información Básica
+        mascota.put("nombre", intent.getStringExtra("nombre"));
+        mascota.put("raza", intent.getStringExtra("raza"));
+        mascota.put("sexo", intent.getStringExtra("sexo"));
+        mascota.put("fecha_nacimiento", new com.google.firebase.Timestamp(new java.util.Date(intent.getLongExtra("fecha_nacimiento", 0))));
+        mascota.put("tamano", intent.getStringExtra("tamano"));
+        mascota.put("peso", intent.getDoubleExtra("peso", 0.0));
+        mascota.put("foto_principal_url", fotoUrl);
         mascota.put("fecha_registro", FieldValue.serverTimestamp());
         mascota.put("ultima_actualizacion", FieldValue.serverTimestamp());
+
+        // Pantalla 2 - Salud
+        Map<String, Object> salud = new HashMap<>();
+        salud.put("vacunas_al_dia", intent.getBooleanExtra("vacunas_al_dia", false));
+        salud.put("desparasitacion_aldia", intent.getBooleanExtra("desparasitacion_al_dia", false));
+        long ultimaVisita = intent.getLongExtra("ultima_visita_vet", 0);
+        if (ultimaVisita != 0) {
+            salud.put("ultima_visita_vet", new com.google.firebase.Timestamp(new java.util.Date(ultimaVisita)));
+        } else {
+            salud.put("ultima_visita_vet", null);
+        }
+        salud.put("condiciones_medicas", intent.getStringExtra("condiciones_medicas"));
+        salud.put("medicamentos_actuales", intent.getStringExtra("medicamentos_actuales"));
+        salud.put("veterinario_nombre", intent.getStringExtra("veterinario_nombre"));
+        salud.put("veterinario_telefono", intent.getStringExtra("veterinario_telefono"));
         mascota.put("salud", salud);
+
+        // Pantalla 3 - Comportamiento
+        Map<String, Object> comportamiento = new HashMap<>();
+        comportamiento.put("nivel_energia", intent.getStringExtra("nivel_energia"));
+        comportamiento.put("con_personas", intent.getStringExtra("con_personas"));
+        comportamiento.put("con_otros_animales", intent.getStringExtra("con_otros_animales"));
+        comportamiento.put("con_otros_perros", intent.getStringExtra("con_otros_perros"));
+        comportamiento.put("habitos_correa", intent.getStringExtra("habitos_correa"));
+        comportamiento.put("comandos_conocidos", intent.getStringExtra("comandos_conocidos"));
+        comportamiento.put("miedos_fobias", intent.getStringExtra("miedos_fobias"));
+        comportamiento.put("manias_habitos", intent.getStringExtra("manias_habitos"));
         mascota.put("comportamiento", comportamiento);
+
+        // Pantalla 4 - Instrucciones
+        Map<String, Object> instrucciones = new HashMap<>();
+        instrucciones.put("rutina_paseo", rutinaPaseoEditText.getText().toString().trim());
+        instrucciones.put("tipo_correa_arnes", tipoCorreaArnesEditText.getText().toString().trim());
+        instrucciones.put("recompensas", recompensasEditText.getText().toString().trim());
+        instrucciones.put("instrucciones_emergencia", instruccionesEmergenciaEditText.getText().toString().trim());
+        instrucciones.put("acceso_vivienda", accesoViviendaEditText.getText().toString().trim());
+        instrucciones.put("notas_adicionales", notasAdicionalesEditText.getText().toString().trim());
         mascota.put("instrucciones", instrucciones);
 
-        btnGuardar.setEnabled(false);
-
-        // Crear documento primero
-        db.collection("duenos").document(duenoId)
+        db.collection("dueños").document(duenoId)
                 .collection("mascotas")
                 .add(mascota)
-                .addOnSuccessListener(docRef -> {
-                    // Subir foto si existe y actualizar URL
-                    if (!TextUtils.isEmpty(fotoUriStr)) {
-                        Uri local = Uri.parse(fotoUriStr);
-                        StorageReference ref = storage.getReference().child("duenos/"+duenoId+"/mascotas/"+docRef.getId()+"/foto_principal.jpg");
-                        ref.putFile(local)
-                                .continueWithTask(t -> ref.getDownloadUrl())
-                                .addOnSuccessListener(uri -> actualizarFoto(docRef, uri.toString()))
-                                .addOnFailureListener(e -> finalizarConError(e.getMessage()));
-                    } else {
-                        Toast.makeText(this, "Mascota registrada", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
+                .addOnSuccessListener(documentReference -> {
+                    Log.d("Registro", "Mascota registrada: " + documentReference.getId());
+                    mostrarMensajeExito();
                 })
-                .addOnFailureListener(e -> finalizarConError(e.getMessage()));
+                .addOnFailureListener(e -> {
+                    Log.e("Registro", "Error: " + e.getMessage());
+                    mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
+                    guardarButton.setEnabled(true);
+                });
     }
 
-    private void actualizarFoto(DocumentReference docRef, String url) {
-        docRef.update("foto_principal_url", url, "ultima_actualizacion", FieldValue.serverTimestamp())
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Mascota registrada", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> finalizarConError(e.getMessage()));
+    private void mostrarMensajeExito() {
+        Toast.makeText(this, getString(R.string.registro_exitoso_mascota), Toast.LENGTH_LONG).show();
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
-    private void finalizarConError(String msg) {
-        btnGuardar.setEnabled(true);
-        Toast.makeText(this, "Error: " + msg, Toast.LENGTH_LONG).show();
+    private void mostrarErrorDialog(String mensaje) {
+        new AlertDialog.Builder(this)
+                .setTitle("Error en el Registro")
+                .setMessage(mensaje)
+                .setPositiveButton(android.R.string.ok, null)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
     }
 }

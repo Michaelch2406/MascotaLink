@@ -19,4 +19,75 @@
         <item>Banco del Pacífico</item>
         <item>Banco Bolivariano</item>
     </string-array>
+    <string name="title_activity_mascota_registro_paso1">Registra tu mascota</string>
+    <string name="info_basica_title">Información básica de tu perro</string>
+    <string name="nombre_mascota_hint">Nombre de tu perro</string>
+    <string name="raza_mascota_prompt">Selecciona la raza</string>
+    <string name="sexo_mascota_label">Sexo</string>
+    <string name="sexo_macho">Macho</string>
+    <string name="sexo_hembra">Hembra</string>
+    <string name="fecha_nacimiento_hint">DD/MM/AAAA</string>
+    <string name="tamano_mascota_label">Tamaño</string>
+    <string name="tamano_pequeno">Pequeño</string>
+    <string name="tamano_mediano">Mediano</string>
+    <string name="tamano_grande">Grande</string>
+    <string name="tamano_extra_grande">Extra Grande</string>
+    <string name="peso_mascota_hint">Peso en kg</string>
+    <string name="foto_principal_title">Foto Principal</string>
+    <string name="foto_principal_desc">Agrega una foto clara de tu mascota</string>
+    <string name="elegir_galeria_button">Elegir de galería</string>
+    <string name="tomar_foto_button">Tomar foto</string>
+    <string name="guardar_button">Guardar</string>
+    <string name="siguiente_button">Siguiente</string>
+
+    <string name="title_activity_mascota_registro_paso2">Salud y bienestar</string>
+    <string name="salud_vacunacion_label">Vacunas al día</string>
+    <string name="salud_desparasitacion_label">Desparasitación al día</string>
+    <string name="salud_ultima_visita_vet_label">Última visita al veterinario</string>
+    <string name="salud_ultima_visita_vet_hint">Selecciona una fecha</string>
+    <string name="salud_condiciones_medicas_label">Condiciones médicas</string>
+    <string name="salud_condiciones_medicas_hint">Ej: Alergia al pollo, Problemas cardíacos</string>
+    <string name="salud_condiciones_medicas_helper">Describe cualquier condición médica crónica o relevante.</string>
+    <string name="salud_medicamentos_actuales_label">Medicamentos actuales</string>
+    <string name="salud_medicamentos_actuales_hint">Ej: Prednisona 5mg, 1 cada 24 horas</string>
+    <string name="salud_medicamentos_actuales_helper">Lista los medicamentos que la mascota está tomando actualmente.</string>
+    <string name="salud_veterinario_nombre_label">Nombre del veterinario</string>
+    <string name="salud_veterinario_nombre_hint">Dr. [Nombre Apellido]</string>
+    <string name="salud_veterinario_telefono_label">Teléfono del veterinario</string>
+    <string name="salud_veterinario_telefono_hint">0900000000</string>
+    <string name="guardar_cambios_button">Guardar Cambios</string>
+
+    <string name="title_activity_mascota_registro_paso3">Comportamiento y personalidad</string>
+    <string name="comportamiento_energia_label">Nivel de energía</string>
+    <string name="comportamiento_energia_baja">Bajo</string>
+    <string name="comportamiento_energia_moderada">Moderado</string>
+    <string name="comportamiento_energia_alta">Alto</string>
+    <string name="comportamiento_con_personas_label">Comportamiento con personas</string>
+    <string name="comportamiento_con_personas_amigable">Amigable</string>
+    <string name="comportamiento_con_personas_timido">Tímido</string>
+    <string name="comportamiento_con_personas_agresivo">Agresivo</string>
+    <string name="comportamiento_con_animales_label">Comportamiento con otros animales</string>
+    <string name="comportamiento_con_animales_amigable">Amigable</string>
+    <string name="comportamiento_con_animales_indiferente">Indiferente</string>
+    <string name="comportamiento_con_animales_agresivo">Agresivo</string>
+    <string name="comportamiento_con_perros_label">Comportamiento con otros perros</string>
+    <string name="comportamiento_con_perros_jugueton">Juguetón</string>
+    <string name="comportamiento_habitos_correa_label">Hábitos de correa</string>
+    <string name="comportamiento_habitos_correa_camina_bien">Camina bien con correa</string>
+    <string name="comportamiento_habitos_correa_tira">Tira de la correa</string>
+    <string name="comportamiento_habitos_correa_necesita_entrenamiento">Necesita entrenamiento</string>
+    <string name="comportamiento_comandos_conocidos_label">Comandos que conoce</string>
+    <string name="comportamiento_miedos_fobias_label">Miedos/Fobias</string>
+    <string name="comportamiento_manias_habitos_label">Manías/Hábitos particulares</string>
+
+    <string name="title_activity_mascota_registro_paso4">Instrucciones para el paseador</string>
+    <string name="instrucciones_rutina_paseo_label">Rutina de paseo preferida</string>
+    <string name="instrucciones_tipo_correa_arnes_label">Correa/Arnés</string>
+    <string name="instrucciones_recompensas_label">Premios</string>
+    <string name="instrucciones_emergencia_label">Instrucciones de emergencia</string>
+    <string name="instrucciones_acceso_vivienda_label">Acceso a la vivienda</string>
+    <string name="instrucciones_notas_adicionales_label">Notas adicionales</string>
+    <string name="registro_exitoso_mascota">Mascota registrada con éxito</string>
+    <string name="error_registro_mascota">Error al registrar mascota</string>
+
 </resources>

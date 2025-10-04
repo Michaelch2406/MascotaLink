@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="TextAppearance.Mascota.CardTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">#111827</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+    <style name="TextAppearance.Mascota.Label" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">#111827</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="TextAppearance.Mascota.BodyMuted" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">#6B7280</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+</resources>

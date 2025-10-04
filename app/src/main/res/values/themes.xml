@@ -29,23 +29,6 @@
         <item name="android:textSize">22sp</item>
     </style>
 
-    <style name="TextAppearance.Mascota.Label" parent="TextAppearance.Material3.LabelLarge">
-        <item name="android:textStyle">bold</item>
-        <item name="android:textColor">#111827</item>
-        <item name="android:textSize">14sp</item>
-    </style>
-
-    <style name="TextAppearance.Mascota.BodyMuted" parent="TextAppearance.Material3.BodyMedium">
-        <item name="android:textColor">#6B7280</item>
-        <item name="android:textSize">14sp</item>
-    </style>
-
-    <style name="TextAppearance.Mascota.CardTitle" parent="TextAppearance.Material3.TitleMedium">
-        <item name="android:textStyle">bold</item>
-        <item name="android:textColor">#111827</item>
-        <item name="android:textSize">18sp</item>
-    </style>
-
     <!-- Buttons -->
     <style name="Widget.Mascota.PrimaryButton" parent="Widget.Material3.Button">
         <item name="android:height">48dp</item>

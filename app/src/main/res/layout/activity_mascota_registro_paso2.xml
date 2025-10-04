@@ -1,133 +1,165 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
-
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material"
-        app:navigationIconTint="#111827"
-        app:title="Salud y bienestar"/>
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:layout_above="@+id/bottom_bar"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="8dp">
-
-            <!-- Vacunación -->
-            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Vacunación"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="space_between" android:layout_marginTop="8dp">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                    <TextView style="@style/TextAppearance.Mascota.Label" android:text="Vacunas al día"/>
-                    <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:text="Vacunas al día"/>
-                </LinearLayout>
-                <Switch android:id="@+id/sw_vacunas" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- Desparasitación -->
-            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Desparasitación" android:layout_marginTop="16dp"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="space_between" android:layout_marginTop="8dp">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                    <TextView style="@style/TextAppearance.Mascota.Label" android:text="Desparasitación al día"/>
-                    <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:text="Desparasitación al día"/>
-                </LinearLayout>
-                <Switch android:id="@+id/sw_desparasitacion" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            </LinearLayout>
-
-            <!-- Última visita -->
-            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Visita al veterinario" android:layout_marginTop="16dp"/>
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Última visita al veterinario" android:layout_marginTop="8dp"/>
-            <EditText android:id="@+id/et_ultima_visita" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Selecciona una fecha" android:focusable="false" android:background="#FFFFFF" android:padding="12dp"/>
-
-            <!-- Condiciones médicas -->
-            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Condiciones médicas" android:layout_marginTop="16dp"/>
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:boxBackgroundMode="filled"
-                app:boxBackgroundColor="#E7EEF2">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_condiciones_medicas"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minLines="3"
-                    android:hint="Ej: Alergia al pollo, Problemas cardíacos"/>
-            </com.google.android.material.textfield.TextInputLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:text="Describe cualquier condición médica crónica o relevante."/>
-
-            <!-- Medicamentos actuales -->
-            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Medicamentos" android:layout_marginTop="16dp"/>
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:boxBackgroundMode="filled"
-                app:boxBackgroundColor="#E7EEF2">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_medicamentos"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minLines="3"
-                    android:hint="Ej: Prednisona 5mg, 1 cada 24 horas"/>
-            </com.google.android.material.textfield.TextInputLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:text="Lista los medicamentos que la mascota está tomando actualmente."/>
-
-            <!-- Veterinario -->
-            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:text="Veterinario" android:layout_marginTop="16dp"/>
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Nombre del veterinario"/>
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:boxBackgroundMode="filled"
-                app:boxBackgroundColor="#E7EEF2">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_veterinario_nombre"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Dr. [Nombre Apellido]"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <TextView style="@style/TextAppearance.Mascota.Label" android:text="Teléfono del veterinario"/>
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:boxBackgroundMode="filled"
-                app:boxBackgroundColor="#E7EEF2">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_veterinario_telefono"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="0900000000"
-                    android:inputType="phone"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-        </LinearLayout>
-    </ScrollView>
+    android:background="@color/white"
+    tools:context=".MascotaRegistroPaso2Activity">
 
     <LinearLayout
-        android:id="@+id/bottom_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
         android:padding="16dp">
-        <Button
-            android:id="@+id/btn_guardar"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Guardar cambios"/>
-    </LinearLayout>
 
-</RelativeLayout>
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/arrow_back"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_arrow_back" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:text="@string/title_activity_mascota_registro_paso2"
+                android:textColor="@color/black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Vacunación"
+            android:textColor="@color/black"
+            android:textSize="18sp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/vacunasSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/salud_vacunacion_label"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Desparasitación"
+            android:textColor="@color/black"
+            android:textSize="18sp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/desparasitacionSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/salud_desparasitacion_label"
+            android:layout_marginBottom="16dp"/>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:hint="@string/salud_ultima_visita_vet_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/ultimaVisitaVetEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="false"
+                android:clickable="true"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:hint="@string/salud_condiciones_medicas_label"
+            app:helperText="@string/salud_condiciones_medicas_helper">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/condicionesMedicasEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:lines="3" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:hint="@string/salud_medicamentos_actuales_label"
+            app:helperText="@string/salud_medicamentos_actuales_helper">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/medicamentosActualesEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:lines="3" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Veterinario"
+            android:textColor="@color/black"
+            android:textSize="18sp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/salud_veterinario_nombre_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/veterinarioNombreEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:hint="@string/salud_veterinario_telefono_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/veterinarioTelefonoEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="phone"
+                android:maxLength="10" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/siguienteButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="@string/siguiente_button"
+            android:background="@drawable/button_background"
+            android:textColor="@android:color/white"
+            android:enabled="false" />
+
+    </LinearLayout>
+</ScrollView>

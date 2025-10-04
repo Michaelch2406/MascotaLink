@@ -1,25 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="razas_perros">
+        <item>Selecciona la raza</item>
         <item>Mestizo</item>
         <item>Otra</item>
         <item>Labrador Retriever</item>
+        <item>Bulldog Francés</item>
         <item>Golden Retriever</item>
         <item>Pastor Alemán</item>
-        <item>Bulldog</item>
         <item>Poodle</item>
         <item>Beagle</item>
         <item>Rottweiler</item>
+        <item>Yorkshire Terrier</item>
+        <item>Boxer</item>
+        <item>Dachshund</item>
+        <item>Siberian Husky</item>
         <item>Chihuahua</item>
         <item>Shih Tzu</item>
-        <item>Pitbull</item>
-        <item>Husky Siberiano</item>
-        <item>Boxer</item>
-        <item>Dálmata</item>
-        <item>Doberman</item>
-        <item>Yorkshire Terrier</item>
-        <item>Border Collie</item>
-        <item>Pug</item>
-        <item>San Bernardo</item>
+        <item>Schnauzer</item>
     </string-array>
 </resources>

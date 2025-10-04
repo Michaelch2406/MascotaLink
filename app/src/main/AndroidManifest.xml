@@ -88,6 +88,18 @@
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
+            android:name=".MascotaRegistroPaso2Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".MascotaRegistroPaso3Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".MascotaRegistroPaso4Activity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
             android:name=".PaseadorRegistroPaso2Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
@@ -105,19 +117,14 @@
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".QuizResultsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
             android:name=".PaseadorRegistroPaso5Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MetodoPagoActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MascotaLink" />
-        <activity
-            android:name=".MascotaRegistroPaso1Activity"
-            android:exported="false"
-            android:theme="@style/Theme.MascotaLink" />
-        <activity
-            android:name=".MascotaRegistroPaso2Activity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
         <activity

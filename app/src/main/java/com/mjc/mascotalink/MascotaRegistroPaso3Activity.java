@@ -1,113 +1,104 @@
 package com.mjc.mascotalink;
 
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.textfield.TextInputEditText;
 
 public class MascotaRegistroPaso3Activity extends AppCompatActivity {
 
-    private static final String PREFS = "MascotaWizard";
-
-    private RadioGroup rgNivelEnergia, rgConPersonas, rgConOtrosAnimales, rgConOtrosPerrosFila1, rgConOtrosPerrosFila2, rgHabitosFila1, rgHabitosFila2;
-    private EditText etComandos, etMiedos, etManias;
-    private Button btnGuardar;
+    private ImageView arrowBack;
+    private RadioGroup nivelEnergiaRadioGroup, conPersonasRadioGroup, conAnimalesRadioGroup, conPerrosRadioGroup, habitosCorreaRadioGroup;
+    private TextInputEditText comandosConocidosEditText, miedosFobiasEditText, maniasHabitosEditText;
+    private Button siguienteButton;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mascota_registro_paso3);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        arrowBack = findViewById(R.id.arrow_back);
+        nivelEnergiaRadioGroup = findViewById(R.id.nivelEnergiaRadioGroup);
+        conPersonasRadioGroup = findViewById(R.id.conPersonasRadioGroup);
+        conAnimalesRadioGroup = findViewById(R.id.conAnimalesRadioGroup);
+        conPerrosRadioGroup = findViewById(R.id.conPerrosRadioGroup);
+        habitosCorreaRadioGroup = findViewById(R.id.habitosCorreaRadioGroup);
+        comandosConocidosEditText = findViewById(R.id.comandosConocidosEditText);
+        miedosFobiasEditText = findViewById(R.id.miedosFobiasEditText);
+        maniasHabitosEditText = findViewById(R.id.maniasHabitosEditText);
+        siguienteButton = findViewById(R.id.siguienteButton);
 
-        bindViews();
-        loadState();
-
-        rgConOtrosPerrosFila1.setOnCheckedChangeListener((g, id) -> { if (id != -1) rgConOtrosPerrosFila2.clearCheck(); });
-        rgConOtrosPerrosFila2.setOnCheckedChangeListener((g, id) -> { if (id != -1) rgConOtrosPerrosFila1.clearCheck(); });
-        rgHabitosFila1.setOnCheckedChangeListener((g, id) -> { if (id != -1) rgHabitosFila2.clearCheck(); });
-        rgHabitosFila2.setOnCheckedChangeListener((g, id) -> { if (id != -1) rgHabitosFila1.clearCheck(); });
-
-        btnGuardar.setOnClickListener(v -> { saveState(); finish(); });
+        setupListeners();
+        validateInputs();
     }
 
-    private void bindViews() {
-        rgNivelEnergia = findViewById(R.id.rg_nivel_energia);
-        rgConPersonas = findViewById(R.id.rg_con_personas);
-        rgConOtrosAnimales = findViewById(R.id.rg_con_otros_animales);
-        rgConOtrosPerrosFila1 = findViewById(R.id.rg_con_otros_perros_1);
-        rgConOtrosPerrosFila2 = findViewById(R.id.rg_con_otros_perros_2);
-        rgHabitosFila1 = findViewById(R.id.rg_habitos_correa_1);
-        rgHabitosFila2 = findViewById(R.id.rg_habitos_correa_2);
-        etComandos = findViewById(R.id.et_comandos);
-        etMiedos = findViewById(R.id.et_miedos);
-        etManias = findViewById(R.id.et_manias);
-        btnGuardar = findViewById(R.id.btn_guardar);
-    }
+    private void setupListeners() {
+        arrowBack.setOnClickListener(v -> finish());
+        siguienteButton.setOnClickListener(v -> collectDataAndProceed());
 
-    private void saveState() {
-        SharedPreferences.Editor ed = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        ed.putString("comp_nivel_energia", getTextFrom(rgNivelEnergia));
-        ed.putString("comp_con_personas", getTextFrom(rgConPersonas));
-        ed.putString("comp_con_otros_animales", getTextFrom(rgConOtrosAnimales));
-        ed.putString("comp_con_otros_perros", getTextFromTwo(rgConOtrosPerrosFila1, rgConOtrosPerrosFila2));
-        ed.putString("comp_habitos_correa", getTextFromTwo(rgHabitosFila1, rgHabitosFila2));
-        ed.putString("comp_comandos_conocidos", etComandos.getText().toString().trim());
-        ed.putString("comp_miedos_fobias", etMiedos.getText().toString().trim());
-        ed.putString("comp_manias_habitos", etManias.getText().toString().trim());
-        ed.apply();
-    }
+        RadioGroup.OnCheckedChangeListener radioListener = (group, checkedId) -> validateInputs();
+        nivelEnergiaRadioGroup.setOnCheckedChangeListener(radioListener);
+        conPersonasRadioGroup.setOnCheckedChangeListener(radioListener);
+        conAnimalesRadioGroup.setOnCheckedChangeListener(radioListener);
+        conPerrosRadioGroup.setOnCheckedChangeListener(radioListener);
+        habitosCorreaRadioGroup.setOnCheckedChangeListener(radioListener);
 
-    private void loadState() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        checkRadio(rgNivelEnergia, prefs.getString("comp_nivel_energia", ""));
-        checkRadio(rgConPersonas, prefs.getString("comp_con_personas", ""));
-        checkRadio(rgConOtrosAnimales, prefs.getString("comp_con_otros_animales", ""));
-        checkTwo(rgConOtrosPerrosFila1, rgConOtrosPerrosFila2, prefs.getString("comp_con_otros_perros", ""));
-        checkTwo(rgHabitosFila1, rgHabitosFila2, prefs.getString("comp_habitos_correa", ""));
-        etComandos.setText(prefs.getString("comp_comandos_conocidos", ""));
-        etMiedos.setText(prefs.getString("comp_miedos_fobias", ""));
-        etManias.setText(prefs.getString("comp_manias_habitos", ""));
-    }
-
-    private String getTextFrom(RadioGroup group) {
-        int id = group.getCheckedRadioButtonId();
-        if (id == -1) return "";
-        RadioButton rb = findViewById(id);
-        return rb != null ? rb.getText().toString().trim() : "";
-    }
-
-    private String getTextFromTwo(RadioGroup g1, RadioGroup g2) {
-        String t = getTextFrom(g1);
-        if (!TextUtils.isEmpty(t)) return t;
-        return getTextFrom(g2);
-    }
-
-    private void checkRadio(RadioGroup group, String text) {
-        if (TextUtils.isEmpty(text)) return;
-        for (int i = 0; i < group.getChildCount(); i++) {
-            if (group.getChildAt(i) instanceof RadioButton) {
-                RadioButton rb = (RadioButton) group.getChildAt(i);
-                if (text.equalsIgnoreCase(rb.getText().toString())) {
-                    rb.setChecked(true);
-                    break;
-                }
+        TextWatcher textWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                validateInputs();
             }
-        }
+        };
+        comandosConocidosEditText.addTextChangedListener(textWatcher);
+        miedosFobiasEditText.addTextChangedListener(textWatcher);
+        maniasHabitosEditText.addTextChangedListener(textWatcher);
     }
 
-    private void checkTwo(RadioGroup g1, RadioGroup g2, String text) {
-        if (TextUtils.isEmpty(text)) return;
-        checkRadio(g1, text);
-        checkRadio(g2, text);
+    private void validateInputs() {
+        boolean allFilled = nivelEnergiaRadioGroup.getCheckedRadioButtonId() != -1
+                && conPersonasRadioGroup.getCheckedRadioButtonId() != -1
+                && conAnimalesRadioGroup.getCheckedRadioButtonId() != -1
+                && conPerrosRadioGroup.getCheckedRadioButtonId() != -1
+                && habitosCorreaRadioGroup.getCheckedRadioButtonId() != -1
+                && !comandosConocidosEditText.getText().toString().trim().isEmpty()
+                && !miedosFobiasEditText.getText().toString().trim().isEmpty()
+                && !maniasHabitosEditText.getText().toString().trim().isEmpty();
+        siguienteButton.setEnabled(allFilled);
+    }
+
+    private void collectDataAndProceed() {
+        Intent intent = new Intent(this, MascotaRegistroPaso4Activity.class);
+        intent.putExtras(getIntent().getExtras()); // Carry over all previous data
+
+        // Add data from Paso 3
+        intent.putExtra("nivel_energia", getSelectedRadioButtonText(nivelEnergiaRadioGroup));
+        intent.putExtra("con_personas", getSelectedRadioButtonText(conPersonasRadioGroup));
+        intent.putExtra("con_otros_animales", getSelectedRadioButtonText(conAnimalesRadioGroup));
+        intent.putExtra("con_otros_perros", getSelectedRadioButtonText(conPerrosRadioGroup));
+        intent.putExtra("habitos_correa", getSelectedRadioButtonText(habitosCorreaRadioGroup));
+        intent.putExtra("comandos_conocidos", comandosConocidosEditText.getText().toString().trim());
+        intent.putExtra("miedos_fobias", miedosFobiasEditText.getText().toString().trim());
+        intent.putExtra("manias_habitos", maniasHabitosEditText.getText().toString().trim());
+
+        startActivity(intent);
+    }
+
+    private String getSelectedRadioButtonText(RadioGroup radioGroup) {
+        int selectedId = radioGroup.getCheckedRadioButtonId();
+        if (selectedId != -1) {
+            RadioButton selectedRadioButton = findViewById(selectedId);
+            return selectedRadioButton.getText().toString();
+        }
+        return "";
     }
 }
