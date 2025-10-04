@@ -1,19 +1,30 @@
 package com.mjc.mascotalink;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -24,9 +35,14 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import android.content.ContentResolver;
+import android.webkit.MimeTypeMap;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class DuenoRegistroPaso3Activity extends AppCompatActivity {
@@ -41,6 +57,10 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     private EditText addressEditText;
     private SwitchMaterial messagesSwitch;
     private Button saveButton;
+    private ImageView ivGeolocate;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,6 +69,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
 
         setupFirebase();
         setupViews();
+        setupLocationServices();
         setupListeners();
         loadDataFromPrefs();
     }
@@ -66,18 +87,64 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         addressEditText = findViewById(R.id.addressEditText);
         messagesSwitch = findViewById(R.id.messagesSwitch);
         saveButton = findViewById(R.id.saveButton);
+        ivGeolocate = findViewById(R.id.iv_geolocate);
 
         Button paymentMethodButton = findViewById(R.id.paymentMethodButton);
         paymentMethodButton.setOnClickListener(v -> {
-            // Guardamos el estado actual antes de ir a otra pantalla
             saveDataToPrefs();
             Intent intent = new Intent(this, MetodoPagoActivity.class);
             startActivity(intent);
         });
     }
 
+    private void setupLocationServices() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) {
+                fetchLocationAndFillAddress();
+            } else {
+                Toast.makeText(this, "Permiso de ubicación denegado.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void setupListeners() {
         saveButton.setOnClickListener(v -> completarRegistroDueno());
+        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
+    }
+
+    private void onGeolocateClick() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fetchLocationAndFillAddress();
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void fetchLocationAndFillAddress() {
+        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show();
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                try {
+                    List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                    if (addresses != null && !addresses.isEmpty()) {
+                        Address address = addresses.get(0);
+                        String addressLine = address.getAddressLine(0);
+                        addressEditText.setText(addressLine);
+                        Toast.makeText(this, "Dirección autocompletada.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "No se pudo encontrar una dirección.", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Servicio de geocodificación no disponible", e);
+                    Toast.makeText(this, "Error al obtener la dirección.", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(this, "No se pudo obtener la ubicación. Asegúrate de que el GPS esté activado.", Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void loadDataFromPrefs() {
@@ -94,7 +161,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void completarRegistroDueno() {
-        saveDataToPrefs(); // Guardar los últimos datos de la UI
+        saveDataToPrefs();
         String address = addressEditText.getText().toString().trim();
         if (TextUtils.isEmpty(address)) {
             addressEditText.setError("La dirección es requerida");
@@ -128,11 +195,22 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
                 });
     }
 
+    private String getFileExtension(Uri uri) {
+        ContentResolver cR = getContentResolver();
+        MimeTypeMap mime = MimeTypeMap.getSingleton();
+        String type = cR.getType(uri);
+        return mime.getExtensionFromMimeType(type);
+    }
+
     private void subirArchivosYGuardarDatos(String uid) {
         SharedPreferences prefs = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE);
-        Map<String, Uri> filesToUpload = new HashMap<>();
 
-        // Añadir archivos a la lista de subida
+        String nombre = prefs.getString("nombre", "").replaceAll("\\s", "");
+        String apellido = prefs.getString("apellido", "").replaceAll("\\s", "");
+        String cedula = prefs.getString("cedula", "");
+        String userFolder = uid + "_" + cedula + "_" + nombre + "_" + apellido;
+
+        Map<String, Uri> filesToUpload = new HashMap<>();
         addFileToUpload(filesToUpload, "foto_perfil", prefs.getString("fotoPerfilUri", null));
         addFileToUpload(filesToUpload, "selfie", prefs.getString("selfieUri", null));
 
@@ -148,8 +226,11 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         for (Map.Entry<String, Uri> entry : filesToUpload.entrySet()) {
             String key = entry.getKey();
             Uri uri = entry.getValue();
-            String storagePath = key.equals("foto_perfil") ? "foto_de_perfil/" + uid : "selfie/" + uid;
-            StorageReference ref = storage.getReference().child(storagePath);
+            String extension = getFileExtension(uri);
+            String folder = key.equals("foto_perfil") ? "foto_de_perfil" : "selfie";
+            String fileName = key + "." + extension;
+            
+            StorageReference ref = storage.getReference().child(folder + "/" + userFolder + "/" + fileName);
 
             uploadTasks.add(
                 ref.putFile(uri).continueWithTask(task -> {
@@ -167,7 +248,6 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Fallo al subir archivos de dueño", e);
             mostrarError("Error al subir imágenes: " + e.getMessage());
-            // Limpieza: eliminar usuario de Auth si falla la subida
             if (mAuth.getCurrentUser() != null) { mAuth.getCurrentUser().delete(); }
             saveButton.setEnabled(true);
             saveButton.setText("Guardar");
@@ -214,6 +294,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             batch.set(db.collection("duenos").document(uid), duenoData);
         }).addOnSuccessListener(aVoid -> {
             Log.d(TAG, "Registro de dueño completado en Firestore.");
+            guardarMetodoDePago(uid, prefs);
             prefs.edit().clear().apply(); // Limpiar datos temporales
             Toast.makeText(this, "¡Registro completado!", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(this, MascotaRegistroPaso1Activity.class);
@@ -235,5 +316,31 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
                 .setMessage(msg)
                 .setPositiveButton("Entendido", null)
                 .show();
+    }
+
+    private void guardarMetodoDePago(String uid, SharedPreferences prefs) {
+        boolean metodoPagoCompleto = prefs.getBoolean("metodo_pago_completo", false);
+        if (!metodoPagoCompleto) {
+            return; // No hay método de pago para guardar
+        }
+
+        String banco = prefs.getString("pago_banco", "");
+        String cuenta = prefs.getString("pago_cuenta", "");
+
+        if (banco.isEmpty() || cuenta.isEmpty()) {
+            Log.w(TAG, "metodo_pago_completo era true, pero los datos del banco/cuenta están vacíos.");
+            return;
+        }
+
+        Map<String, Object> metodoPagoData = new HashMap<>();
+        metodoPagoData.put("banco", banco);
+        metodoPagoData.put("numero_cuenta", cuenta);
+        metodoPagoData.put("predeterminado", true); // El primer método siempre es el predeterminado
+        metodoPagoData.put("fecha_registro", FieldValue.serverTimestamp());
+
+        db.collection("usuarios").document(uid).collection("metodos_pago")
+                .add(metodoPagoData)
+                .addOnSuccessListener(documentReference -> Log.d(TAG, "Método de pago guardado con ID: " + documentReference.getId()))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar método de pago", e));
     }
 }

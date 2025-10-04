@@ -39,8 +39,10 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -187,7 +189,15 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void actualizarBoton() {
-        btnRegistrarse.setEnabled(validarCamposDetallado() && cbTerminos.isChecked());
+        // Validación silenciosa para habilitar/deshabilitar el botón sin mostrar errores.
+        btnRegistrarse.setEnabled(camposEstanLlenos() && cbTerminos.isChecked());
+    }
+
+    // Validación silenciosa que solo revisa si los campos tienen texto.
+    private boolean camposEstanLlenos() {
+        return !isEmpty(etNombre) && !isEmpty(etApellido) && !isEmpty(etFechaNacimiento)
+                && !isEmpty(etDireccion) && !isEmpty(etCedula) && !isEmpty(etTelefono) 
+                && !isEmpty(etCorreo) && etPassword.getText() != null && !etPassword.getText().toString().isEmpty();
     }
 
     private boolean validarCamposDetallado() {

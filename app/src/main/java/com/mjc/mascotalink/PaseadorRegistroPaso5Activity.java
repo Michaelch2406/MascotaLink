@@ -1,6 +1,7 @@
 package com.mjc.mascotalink;
 
 import android.app.AlertDialog;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
@@ -10,6 +11,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -23,8 +25,19 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -32,33 +45,17 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
-import com.google.firebase.Timestamp;
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
 
-import java.io.InputStream;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Date;
 import java.text.ParseException;
-import java.util.Locale;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements OnMapReadyCallback {
 
@@ -163,12 +160,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
                 activityLauncher.launch(new Intent(this, TiposPerrosActivity.class)));
         }
         
-        // Intentar agregar funcionalidad de zonas de servicio usando el mapa existente como proxy
-        // Agregar un botón temporal en el mapa para acceder a zonas de servicio
-        if (mMap != null) {
-            // Se configurará cuando el mapa esté listo
-        }
-        
         if (btnGuardar != null) {
             btnGuardar.setOnClickListener(v -> completarRegistro());
         }
@@ -179,7 +170,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         } else {
-            // Try to create the fragment if it doesn't exist
             mapFragment = SupportMapFragment.newInstance();
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.map_container, mapFragment)
@@ -214,7 +204,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
                 @Override
                 public void onPlaceSelected(@NonNull Place place) {
-                    Log.i(TAG, "Place: " + place.getName() + ", " + place.getId() + ", " + place.getLatLng());
                     zonaCentro = place.getLatLng();
                     saveState();
                     dibujarCirculo();
@@ -240,7 +229,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             verificarCompletitudTotal();
         });
         
-        // Long press para abrir ZonasServicioActivity
         mMap.setOnMapLongClickListener(latLng -> {
             androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
             builder.setTitle("Configurar Zonas de Servicio")
@@ -314,13 +302,11 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         List<String> faltantes = new ArrayList<>();
 
-        // Verificar pasos anteriores
         if (!prefs.getBoolean("paso1_completo", false)) faltantes.add("• Faltan datos del Paso 1.");
         if (!prefs.getBoolean("paso2_completo", false)) faltantes.add("• Faltan fotos del Paso 2.");
         if (!prefs.getBoolean("paso3_completo", false)) faltantes.add("• Faltan documentos del Paso 3.");
         if (!prefs.getBoolean("paso4_completo", false)) faltantes.add("• Faltan datos del Paso 4 (Galería y Cuestionario).");
 
-        // Verificar campos de este paso (Paso 5)
         boolean pagoOk = prefs.getBoolean("metodo_pago_completo", false);
         ivPagoCheck.setVisibility(pagoOk ? View.VISIBLE : View.GONE);
         if (!pagoOk) faltantes.add("• Falta configurar el método de pago.");
@@ -337,7 +323,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             faltantes.add("• Falta grabar el video de presentación.");
         }
         
-        // Verificar zonas de servicio (nuevo sistema)
         boolean zonasServicioOk = prefs.getBoolean("zonas_servicio_completo", false);
         if (!zonasServicioOk && zonaCentro == null) {
             faltantes.add("• Falta configurar tus zonas de servicio.");
@@ -387,17 +372,31 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
                 });
     }
 
+    private String getFileExtension(Uri uri) {
+        ContentResolver cR = getContentResolver();
+        MimeTypeMap mime = MimeTypeMap.getSingleton();
+        String type = cR.getType(uri);
+        return mime.getExtensionFromMimeType(type);
+    }
+
     private void subirArchivosYGuardarDatos(String uid) {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        Map<String, Uri> filesToUpload = new HashMap<>();
-        Map<String, String> storagePaths = new HashMap<>();
 
-        // Mapeo de archivos a sus rutas de destino en Storage
-        addFileToUpload(filesToUpload, storagePaths, "foto_perfil", prefs.getString("fotoPerfilUri", null), "foto_de_perfil/" + uid);
-        addFileToUpload(filesToUpload, storagePaths, "selfie", prefs.getString("selfieUri", null), "selfie/" + uid);
-        addFileToUpload(filesToUpload, storagePaths, "certificado_antecedentes", prefs.getString("antecedentesUri", null), "documentos/" + uid + "_antecedentes");
-        addFileToUpload(filesToUpload, storagePaths, "certificado_medico", prefs.getString("medicoUri", null), "documentos/" + uid + "_medico");
-        addFileToUpload(filesToUpload, storagePaths, "video_presentacion", prefs.getString("videoPresentacionUri", null), "video_presentacion/" + uid);
+        // 1. Construir la carpeta de usuario
+        String nombre = prefs.getString("nombre", "").replaceAll("\\s", "");
+        String apellido = prefs.getString("apellido", "").replaceAll("\\s", "");
+        String cedula = prefs.getString("cedula", "");
+        String userFolder = uid + "_" + cedula + "_" + nombre + "_" + apellido;
+
+        // 2. Mapear URIs locales a sus carpetas de destino y nombres de archivo
+        Map<String, Uri> filesToUpload = new HashMap<>();
+        Map<String, String> fileDestinations = new HashMap<>();
+
+        addFileToUpload(filesToUpload, fileDestinations, "foto_perfil", prefs.getString("fotoPerfilUri", null), "foto_de_perfil");
+        addFileToUpload(filesToUpload, fileDestinations, "selfie", prefs.getString("selfieUri", null), "selfie");
+        addFileToUpload(filesToUpload, fileDestinations, "certificado_antecedentes", prefs.getString("antecedentesUri", null), "documentos");
+        addFileToUpload(filesToUpload, fileDestinations, "certificado_medico", prefs.getString("medicoUri", null), "documentos");
+        addFileToUpload(filesToUpload, fileDestinations, "video_presentacion", prefs.getString("videoPresentacionUri", null), "video_presentacion");
 
         // Galería de paseos
         String galeriaUrisStr = prefs.getString("galeria_paseos_uris", "");
@@ -411,12 +410,16 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         List<Task<Uri>> uploadTasks = new ArrayList<>();
         AtomicReference<Map<String, Object>> downloadUrls = new AtomicReference<>(new HashMap<>());
 
-        // Subir archivos individuales
+        // 3. Subir archivos individuales
         for (Map.Entry<String, Uri> entry : filesToUpload.entrySet()) {
-            String key = entry.getKey();
+            String key = entry.getKey(); // ej: "foto_perfil"
             Uri uri = entry.getValue();
-            String path = storagePaths.get(key);
-            StorageReference ref = storage.getReference().child(path);
+            String extension = getFileExtension(uri);
+            String destinationFolder = fileDestinations.get(key);
+            String fileName = key + "." + extension; // ej: "foto_perfil.jpg"
+            
+            StorageReference ref = storage.getReference().child(destinationFolder + "/" + userFolder + "/" + fileName);
+
             uploadTasks.add(
                 ref.putFile(uri).continueWithTask(task -> {
                     if (!task.isSuccessful()) { throw task.getException(); }
@@ -427,11 +430,14 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             );
         }
 
-        // Subir galería
+        // 4. Subir galería
         List<String> galeriaUrls = new ArrayList<>();
         for (int i = 0; i < galeriaUris.size(); i++) {
             Uri uri = galeriaUris.get(i);
-            StorageReference ref = storage.getReference().child("galeria_paseos/" + uid + "_paseo_" + (i + 1));
+            String extension = getFileExtension(uri);
+            String fileName = "paseo_" + (i + 1) + "." + extension;
+            StorageReference ref = storage.getReference().child("galeria_paseos/" + userFolder + "/" + fileName);
+            
             uploadTasks.add(
                 ref.putFile(uri).continueWithTask(task -> {
                     if (!task.isSuccessful()) { throw task.getException(); }
@@ -442,6 +448,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             );
         }
 
+        // 5. Esperar a que todo se complete
         Tasks.whenAllSuccess(uploadTasks).addOnSuccessListener(results -> {
             downloadUrls.get().put("galeria_paseos_urls", galeriaUrls);
             Log.d(TAG, "Todos los archivos subidos con éxito. URLs: " + downloadUrls.get());
@@ -449,7 +456,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Fallo al subir uno o más archivos", e);
             mostrarError("Error al subir archivos: " + e.getMessage());
-            // Limpieza: eliminar usuario de Auth si falla la subida
             if (mAuth.getCurrentUser() != null) {
                 mAuth.getCurrentUser().delete();
             }
@@ -459,7 +465,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
     }
 
     private void addFileToUpload(Map<String, Uri> files, Map<String, String> paths, String key, String uriString, String storagePath) {
-        if (uriString != null) {
+        if (uriString != null && !uriString.isEmpty()) {
             files.put(key, Uri.parse(uriString));
             paths.put(key, storagePath);
         }
@@ -538,6 +544,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             batch.set(db.collection("paseadores").document(uid), paseadorData);
         }).addOnSuccessListener(aVoid -> {
             Log.d(TAG, "¡Registro completado y datos guardados en Firestore!");
+            guardarMetodoDePago(uid, getSharedPreferences(PREFS, MODE_PRIVATE));
             limpiarDatosTemporales();
             mostrarMensajeFinalRegistro();
         }).addOnFailureListener(e -> {
@@ -605,5 +612,31 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
                 })
                 .setCancelable(false)
                 .show();
+    }
+
+    private void guardarMetodoDePago(String uid, SharedPreferences prefs) {
+        boolean metodoPagoCompleto = prefs.getBoolean("metodo_pago_completo", false);
+        if (!metodoPagoCompleto) {
+            return; // No hay método de pago para guardar
+        }
+
+        String banco = prefs.getString("pago_banco", "");
+        String cuenta = prefs.getString("pago_cuenta", "");
+
+        if (banco.isEmpty() || cuenta.isEmpty()) {
+            Log.w(TAG, "metodo_pago_completo era true, pero los datos del banco/cuenta están vacíos.");
+            return;
+        }
+
+        Map<String, Object> metodoPagoData = new HashMap<>();
+        metodoPagoData.put("banco", banco);
+        metodoPagoData.put("numero_cuenta", cuenta);
+        metodoPagoData.put("predeterminado", true); // El primer método siempre es el predeterminado
+        metodoPagoData.put("fecha_registro", FieldValue.serverTimestamp());
+
+        db.collection("usuarios").document(uid).collection("metodos_pago")
+                .add(metodoPagoData)
+                .addOnSuccessListener(documentReference -> Log.d(TAG, "Método de pago guardado con ID: " + documentReference.getId()))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar método de pago", e));
     }
 }
