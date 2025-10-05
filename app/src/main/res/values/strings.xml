@@ -35,7 +35,7 @@
     <string name="peso_mascota_hint">Peso en kg</string>
     <string name="foto_principal_title">Foto Principal</string>
     <string name="foto_principal_desc">Agrega una foto clara de tu mascota</string>
-    <string name="elegir_galeria_button">Elegir de galería</string>
+    <string name="elegir_galeria_button">Elegir foto</string>
     <string name="tomar_foto_button">Tomar foto</string>
     <string name="guardar_button">Guardar</string>
     <string name="siguiente_button">Siguiente</string>

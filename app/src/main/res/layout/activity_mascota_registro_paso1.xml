@@ -123,46 +123,48 @@
             android:text="@string/tamano_mascota_label"
             android:textColor="@color/black" />
 
-        <RadioGroup
-            android:id="@+id/tamanoRadioGroup"
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/tamanoChipGroup"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:orientation="vertical">
+            app:singleSelection="true">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <com.google.android.material.chip.Chip
+                android:id="@+id/pequenoChip"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:text="@string/tamano_pequeno" />
 
-                <RadioButton
-                    android:id="@+id/pequenoRadioButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/tamano_pequeno" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/medianoChip"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tamano_mediano" />
 
-                <RadioButton
-                    android:id="@+id/medianoRadioButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/tamano_mediano" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/grandeChip"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tamano_grande" />
 
-                <RadioButton
-                    android:id="@+id/grandeRadioButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/tamano_grande" />
-            </LinearLayout>
-
-            <RadioButton
-                android:id="@+id/extraGrandeRadioButton"
+            <com.google.android.material.chip.Chip
+                android:id="@+id/extraGrandeChip"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/tamano_extra_grande" />
-        </RadioGroup>
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Peso"
+            android:textColor="@color/black" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/pesoTextField"
@@ -196,7 +198,7 @@
             android:id="@+id/fotoPrincipalImageView"
             android:layout_width="match_parent"
             android:layout_height="200dp"
-            android:scaleType="centerCrop"
+            android:scaleType="centerInside"
             android:src="@drawable/foto_principal_mascota"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.MaterialComponents.MediumComponent" />
 

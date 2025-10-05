@@ -169,7 +169,7 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         instrucciones.put("notas_adicionales", notasAdicionalesEditText.getText().toString().trim());
         mascota.put("instrucciones", instrucciones);
 
-        db.collection("dueños").document(duenoId)
+        db.collection("duenos").document(duenoId)
                 .collection("mascotas")
                 .add(mascota)
                 .addOnSuccessListener(documentReference -> {

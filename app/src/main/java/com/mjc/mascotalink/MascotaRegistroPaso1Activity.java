@@ -24,6 +24,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -35,7 +38,8 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     private ImageView arrowBack, fotoPrincipalImageView;
     private TextInputLayout nombreTextField, pesoTextField, fechaNacimientoTextField;
     private AutoCompleteTextView razaAutoComplete;
-    private RadioGroup sexoRadioGroup, tamanoRadioGroup;
+    private RadioGroup sexoRadioGroup;
+    private ChipGroup tamanoChipGroup;
     private Button siguienteButton, elegirGaleriaButton, tomarFotoButton;
     private TextInputEditText fechaNacimientoEditText;
 
@@ -55,7 +59,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         sexoRadioGroup = findViewById(R.id.sexoRadioGroup);
         fechaNacimientoTextField = findViewById(R.id.fechaNacimientoTextField);
         fechaNacimientoEditText = findViewById(R.id.fechaNacimientoEditText);
-        tamanoRadioGroup = findViewById(R.id.tamanoRadioGroup);
+        tamanoChipGroup = findViewById(R.id.tamanoChipGroup);
         pesoTextField = findViewById(R.id.pesoTextField);
         siguienteButton = findViewById(R.id.siguienteButton);
         elegirGaleriaButton = findViewById(R.id.elegirGaleriaButton);
@@ -105,7 +109,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         fechaNacimientoEditText.addTextChangedListener(textWatcher);
 
         sexoRadioGroup.setOnCheckedChangeListener((group, checkedId) -> validateInputs());
-        tamanoRadioGroup.setOnCheckedChangeListener((group, checkedId) -> validateInputs());
+        tamanoChipGroup.setOnCheckedChangeListener((group, checkedId) -> validateInputs());
     }
 
     private void setupRazaSpinner() {
@@ -157,7 +161,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
                 && !razaAutoComplete.getText().toString().equals(getString(R.string.raza_mascota_prompt))
                 && sexoRadioGroup.getCheckedRadioButtonId() != -1
                 && !fechaNacimientoEditText.getText().toString().trim().isEmpty()
-                && tamanoRadioGroup.getCheckedRadioButtonId() != -1
+                && tamanoChipGroup.getCheckedChipId() != View.NO_ID
                 && !pesoTextField.getEditText().getText().toString().trim().isEmpty()
                 && fotoUri != null;
         siguienteButton.setEnabled(allFilled);
@@ -221,9 +225,9 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        int selectedTamanoId = tamanoRadioGroup.getCheckedRadioButtonId();
-        RadioButton tamanoRadioButton = findViewById(selectedTamanoId);
-        intent.putExtra("tamano", tamanoRadioButton.getText().toString());
+        int selectedTamanoId = tamanoChipGroup.getCheckedChipId();
+        Chip tamanoChip = findViewById(selectedTamanoId);
+        intent.putExtra("tamano", tamanoChip.getText().toString());
 
         intent.putExtra("peso", Double.parseDouble(pesoTextField.getEditText().getText().toString()));
         intent.putExtra("foto_uri", fotoUri.toString());
