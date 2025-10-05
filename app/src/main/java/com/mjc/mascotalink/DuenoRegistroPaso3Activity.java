@@ -297,11 +297,19 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             Log.d(TAG, "Registro de dueño completado en Firestore.");
             guardarMetodoDePago(uid, prefs);
             prefs.edit().clear().apply(); // Limpiar datos temporales
-            Toast.makeText(this, "¡Registro completado!", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, MascotaRegistroPaso1Activity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            finish();
+
+            new AlertDialog.Builder(this)
+                .setTitle("¡Registro Exitoso!")
+                .setMessage("Tu cuenta ha sido creada y está en proceso de revisión. Recibirás una notificación cuando sea aprobada.")
+                .setPositiveButton("Entendido", (dialog, which) -> {
+                    Intent intent = new Intent(this, MascotaRegistroPaso1Activity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    finish();
+                })
+                .setCancelable(false)
+                .show();
+
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Error al guardar datos de dueño en Firestore", e);
             mostrarError("Error final al guardar tu perfil: " + e.getMessage());

@@ -20,9 +20,11 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.android.material.textfield.TextInputEditText;
 
+import android.content.ContentResolver;
+import android.webkit.MimeTypeMap;
+
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
@@ -89,11 +91,18 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         guardarButton.setEnabled(allFilled);
     }
 
+    private String getFileExtension(Uri uri) {
+        ContentResolver cR = getContentResolver();
+        MimeTypeMap mime = MimeTypeMap.getSingleton();
+        return mime.getExtensionFromMimeType(cR.getType(uri));
+    }
+
     private void guardarMascotaCompleta() {
         guardarButton.setEnabled(false); // Prevent double clicks
         String duenoId = mAuth.getCurrentUser().getUid();
         Intent intent = getIntent();
         String fotoUriString = intent.getStringExtra("foto_uri");
+        String petName = intent.getStringExtra("nombre");
 
         if (fotoUriString == null) {
             mostrarErrorDialog("No se encontró la imagen de la mascota. Por favor, vuelve al paso 1.");
@@ -102,11 +111,13 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         }
         Uri fotoUri = Uri.parse(fotoUriString);
 
-        StorageReference storageRef = storage.getReference();
-        StorageReference fotoRef = storageRef.child("fotos_mascotas/" + duenoId + "/" + UUID.randomUUID().toString());
+        String extension = getFileExtension(fotoUri);
+        String fileName = duenoId + "_" + (petName != null ? petName.replaceAll("\\s", "") : "") + "_mascota." + extension;
 
-        fotoRef.putFile(fotoUri)
-                .addOnSuccessListener(taskSnapshot -> fotoRef.getDownloadUrl().addOnSuccessListener(uri -> {
+        StorageReference storageRef = storage.getReference().child("foto_perfil_mascota/" + fileName);
+
+        storageRef.putFile(fotoUri)
+                .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
                     String fotoUrl = uri.toString();
                     crearDocumentoMascota(duenoId, intent, fotoUrl);
                 }))
@@ -184,8 +195,7 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
     }
 
     private void mostrarMensajeExito() {
-        Toast.makeText(this, getString(R.string.registro_exitoso_mascota), Toast.LENGTH_LONG).show();
-        Intent intent = new Intent(this, LoginActivity.class);
+        Intent intent = new Intent(this, MascotaRegistradaActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         finish();

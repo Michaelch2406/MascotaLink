@@ -90,4 +90,14 @@
     <string name="registro_exitoso_mascota">Mascota registrada con éxito</string>
     <string name="error_registro_mascota">Error al registrar mascota</string>
 
+    <string name="title_mascota_registrada">Mascota Registrada</string>
+    <string name="success_title">¡Mascota registrada con éxito!</string>
+    <string name="success_subtitle">¿Deseas registrar otra mascota?</string>
+    <string name="btn_add_another">Sí, añadir otra</string>
+    <string name="btn_go_home">No, ir a inicio</string>
+    <string name="cd_back">Volver</string>
+    <string name="cd_add_another">Añadir otra mascota</string>
+    <string name="cd_go_home">Ir al inicio</string>
+    <string name="cd_pet_avatar">Avatar de la mascota</string>
+
 </resources>
