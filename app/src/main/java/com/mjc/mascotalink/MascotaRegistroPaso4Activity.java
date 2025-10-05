@@ -185,7 +185,7 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
     private void mostrarMensajeExito() {
         Toast.makeText(this, getString(R.string.registro_exitoso_mascota), Toast.LENGTH_LONG).show();
-        Intent intent = new Intent(this, MainActivity.class);
+        Intent intent = new Intent(this, LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
         finish();
