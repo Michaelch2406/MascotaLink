@@ -3,15 +3,17 @@ package com.mjc.mascotalink;
 public class Pet {
     private String id;
     private String name;
+    private String breed;
     private String avatarUrl;
 
     public Pet() {
         // Constructor vacío requerido para Firestore
     }
 
-    public Pet(String id, String name, String avatarUrl) {
+    public Pet(String id, String name, String breed, String avatarUrl) {
         this.id = id;
         this.name = name;
+        this.breed = breed;
         this.avatarUrl = avatarUrl;
     }
 
@@ -29,6 +31,14 @@ public class Pet {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getBreed() {
+        return breed;
+    }
+
+    public void setBreed(String breed) {
+        this.breed = breed;
     }
 
     public String getAvatarUrl() {

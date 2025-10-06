@@ -229,26 +229,18 @@ public class LoginActivity extends AppCompatActivity {
         switch (rol) {
             case "PASEADOR":
                 if ("APROBADO".equals(estadoVerificacion)) {
-                    // Si está aprobado, va a la MainActivity
-                    intent = new Intent(this, MainActivity.class);
+                    intent = new Intent(this, PerfilPaseadorActivity.class);
                 } else if ("PENDIENTE".equals(estadoVerificacion)) {
                     mostrarMensaje("Tu perfil está en revisión. Te notificaremos cuando sea aprobado.");
-                    // Aquí podrías redirigir a una pantalla de "En Revisión" si la tuvieras
-                    // intent = new Intent(this, PaseadorPendienteActivity.class);
                 } else { // RECHAZADO u otro estado
                     mostrarMensaje("Tu perfil fue rechazado o está inactivo. Contacta a soporte.");
-                    // Aquí podrías redirigir a una pantalla de "Rechazado"
-                    // intent = new Intent(this, PaseadorRechazadoActivity.class);
                 }
                 break;
             case "DUENO":
-                mostrarMensaje("Bienvenido(a), dueño");
-                // Por ahora, los dueños también pueden ir a MainActivity o a su propia pantalla principal
-                // intent = new Intent(this, DuenoMainActivity.class);
+                intent = new Intent(this, PerfilDuenoActivity.class);
                 break;
             case "ADMIN":
-                mostrarMensaje("Bienvenido(a), admin");
-                // intent = new Intent(this, AdminDashboardActivity.class);
+                intent = new Intent(this, MainActivity.class);
                 break;
             default:
                 mostrarError("Rol de usuario desconocido.");

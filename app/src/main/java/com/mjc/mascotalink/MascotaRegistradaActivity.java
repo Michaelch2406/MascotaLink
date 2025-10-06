@@ -88,7 +88,7 @@ public class MascotaRegistradaActivity extends AppCompatActivity {
                             String id = document.getId();
                             String name = document.getString("nombre");
                             String avatarUrl = document.getString("foto_principal_url");
-                            petList.add(new Pet(id, name, avatarUrl));
+                            petList.add(new Pet(id, name, null, avatarUrl));
                         }
                         mascotaAdapter.notifyDataSetChanged();
                     } else {
