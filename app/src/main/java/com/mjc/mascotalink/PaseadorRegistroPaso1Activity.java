@@ -117,6 +117,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etFechaNac = findViewById(R.id.et_fecha_nacimiento);
         etDomicilio = findViewById(R.id.et_domicilio);
         etTelefono = findViewById(R.id.et_telefono);
+        etTelefono.setFilters(new android.text.InputFilter[] { new android.text.InputFilter.LengthFilter(10) });
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         tilPassword = findViewById(R.id.til_password);
@@ -180,6 +181,11 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
                 saveState();
                 updateButtonEnabled();
             }, now.get(Calendar.YEAR) - 18, now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH));
+
+            Calendar maxDate = Calendar.getInstance();
+            maxDate.add(Calendar.YEAR, -18);
+            dlg.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
+
             dlg.show();
         });
     }
@@ -605,7 +611,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
                 etCedula.getText().toString().matches("\\d{10}") &&
                 !TextUtils.isEmpty(etFechaNac.getText()) &&
                 !TextUtils.isEmpty(etDomicilio.getText()) &&
-                !TextUtils.isEmpty(etTelefono.getText()) &&
+                etTelefono.getText().toString().length() == 10 &&
                 Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString()).matches() &&
                 etPassword.getText().toString().length() >= 6;
     }

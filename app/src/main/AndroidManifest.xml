@@ -141,6 +141,11 @@
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
+            android:name=".DisponibilidadActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
             android:name=".PerfilDuenoActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
@@ -151,6 +156,11 @@
 
         <activity
             android:name=".MascotaRegistradaActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
+            android:name=".TiposPerrosActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
 

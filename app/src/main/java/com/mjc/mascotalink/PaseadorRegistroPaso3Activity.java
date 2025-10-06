@@ -78,8 +78,7 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     private void selectFile(String tipo) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("*/*");
-        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "application/pdf"});
+        intent.setType("application/pdf");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
 
         if ("antecedentes".equals(tipo)) {

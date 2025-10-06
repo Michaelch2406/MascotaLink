@@ -5,8 +5,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,6 +36,7 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private final ArrayList<Uri> localUris = new ArrayList<>();
     private ImageView img1, img2, img3;
     private ImageView ivQuizCompletedCheck;
+    private EditText etExperiencia, etMotivacion;
     private Button btnQuiz, btnGuardar;
     private TextView tvValidationMessages;
 
@@ -79,6 +83,8 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         btnQuiz = findViewById(R.id.btn_comenzar_quiz);
         btnGuardar = findViewById(R.id.btn_guardar_continuar);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
+        etExperiencia = findViewById(R.id.et_experiencia_general);
+        etMotivacion = findViewById(R.id.et_motivacion);
     }
 
     private void setupListeners() {
@@ -86,6 +92,21 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         findViewById(R.id.btn_camara).setOnClickListener(v -> abrirCamara());
         btnQuiz.setOnClickListener(v -> iniciarCuestionario());
         btnGuardar.setOnClickListener(v -> guardarYContinuar());
+
+        TextWatcher textWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                saveState();
+                verificarCompletitudPaso4();
+            }
+        };
+
+        etExperiencia.addTextChangedListener(textWatcher);
+        etMotivacion.addTextChangedListener(textWatcher);
     }
 
     private void abrirGaleria() {
@@ -110,7 +131,9 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
                 for (int i = 0; i < clipData.getItemCount(); i++) {
                     if (localUris.size() < 3) {
                         Uri sourceUri = clipData.getItemAt(i).getUri();
-                        Uri copiedUri = FileStorageHelper.copyFileToInternalStorage(this, sourceUri, "GALERIA_");
+                        // Use a more unique prefix to avoid overwriting files copied in the same second
+                        String uniquePrefix = "GALERIA_" + System.nanoTime() + "_";
+                        Uri copiedUri = FileStorageHelper.copyFileToInternalStorage(this, sourceUri, uniquePrefix);
                         if (copiedUri != null) {
                             localUris.add(copiedUri);
                         } else {
@@ -190,6 +213,12 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         if (!quizAprobado) {
             faltantes.add("• Completa y aprueba el cuestionario de conocimientos.");
         }
+        if (etExperiencia.getText().toString().trim().isEmpty()) {
+            faltantes.add("• Ingresa tu experiencia general.");
+        }
+        if (etMotivacion.getText().toString().trim().isEmpty()) {
+            faltantes.add("• Ingresa tu motivación.");
+        }
 
         // Actualizar UI del Quiz
         if (quizAprobado) {
@@ -231,11 +260,15 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
         List<String> uriStrings = localUris.stream().map(Uri::toString).collect(Collectors.toList());
         editor.putString("galeria_paseos_uris", String.join(",", uriStrings));
+        editor.putString("experiencia_general", etExperiencia.getText().toString());
+        editor.putString("motivacion", etMotivacion.getText().toString());
         editor.apply();
     }
 
     private void loadState() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        etExperiencia.setText(prefs.getString("experiencia_general", ""));
+        etMotivacion.setText(prefs.getString("motivacion", ""));
         String uriString = prefs.getString("galeria_paseos_uris", "");
         if (!uriString.isEmpty()) {
             localUris.clear();

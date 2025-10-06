@@ -236,16 +236,6 @@
                 style="@style/TextAppearance.Mascota.BodyMuted"
                 android:layout_marginBottom="12dp"/>
 
-            <!-- Helper text para contraseña -->
-            <TextView
-                android:id="@+id/tv_password_helper"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Mínimo 6 caracteres"
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="12dp"/>
-
             <!-- Contraseña -->
             <TextView
                 android:layout_width="wrap_content"
@@ -259,6 +249,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="100dp"
+                app:helperText="Mínimo 6 caracteres"
                 app:endIconMode="password_toggle"
                 app:endIconTint="#13A4EC"
                 app:boxBackgroundMode="filled"

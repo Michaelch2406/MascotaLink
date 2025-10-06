@@ -3,6 +3,7 @@ package com.mjc.mascotalink;
 import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import androidx.core.content.FileProvider;
 
@@ -94,21 +95,18 @@ public class FileStorageHelper {
     }
 
     private static String getExtensionFromUri(Context context, Uri uri) {
-        String mimeType = context.getContentResolver().getType(uri);
-        if (mimeType != null) {
-            if (mimeType.equals("image/jpeg")) return ".jpg";
-            if (mimeType.equals("image/png")) return ".png";
-            if (mimeType.equals("video/mp4")) return ".mp4";
-            if (mimeType.equals("application/pdf")) return ".pdf";
-        }
-        // Fallback to getting extension from path
-        String path = uri.getPath();
-        if (path != null) {
-            int lastDot = path.lastIndexOf('.');
-            if (lastDot >= 0) {
-                return path.substring(lastDot);
+        String extension = ".dat"; // Default extension
+        try {
+            String mimeType = context.getContentResolver().getType(uri);
+            if (mimeType != null) {
+                String ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+                if (ext != null) {
+                    extension = "." + ext;
+                }
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting extension from URI", e);
         }
-        return ".dat"; // Default extension
+        return extension;
     }
 }

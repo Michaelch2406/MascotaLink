@@ -1,6 +1,7 @@
 package com.mjc.mascotalink;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.RadioButton;
@@ -108,7 +109,7 @@ public class QuizActivity extends AppCompatActivity {
         boolean criticalPassed = criticalScore >= 6;
         boolean overall = passed && criticalPassed;
 
-        updateFirestoreScores(overall);
+        saveQuizResultsToPrefs(overall);
 
         Intent intent = new Intent(this, QuizResultsActivity.class);
         intent.putExtra("passed", overall);
@@ -120,28 +121,32 @@ public class QuizActivity extends AppCompatActivity {
         finish();
     }
 
-    private void updateFirestoreScores(boolean passed) {
-        if (mAuth.getCurrentUser() == null) return;
-        String uid = mAuth.getCurrentUser().getUid();
+    private void saveQuizResultsToPrefs(boolean passed) {
+        SharedPreferences prefs = getSharedPreferences("WizardPaseador", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
 
-        Map<String, Object> updates = new HashMap<>();
-        Map<String, Object> conocimientos = new HashMap<>();
-        conocimientos.put("comportamiento_canino_score", categoryScores.getOrDefault("comportamiento", 0) * 33);
-        conocimientos.put("primeros_auxilios_score", categoryScores.getOrDefault("primeros_auxilios", 0) * 17);
-        conocimientos.put("manejo_emergencia_score", categoryScores.getOrDefault("emergencias", 0) * 17);
+        // Max possible scores for each category based on QuestionBank
+        final int MAX_COMPORTAMIENTO = 3; // 3 questions * weight 1
+        final int MAX_PRIMEROS_AUXILIOS = 6; // 3 questions * weight 2
+        final int MAX_EMERGENCIAS = 6; // 3 questions * weight 2
 
-        updates.put("conocimientos", conocimientos);
-        updates.put("quiz_completado", true);
-        updates.put("quiz_aprobado", passed);
-        updates.put("quiz_score_total", totalScore);
-        updates.put("quiz_fecha", FieldValue.serverTimestamp());
+        double comportamientoScore = (categoryScores.getOrDefault("comportamiento", 0) / (double) MAX_COMPORTAMIENTO) * 100;
+        double primerosAuxiliosScore = (categoryScores.getOrDefault("primeros_auxilios", 0) / (double) MAX_PRIMEROS_AUXILIOS) * 100;
+        double emergenciasScore = (categoryScores.getOrDefault("emergencias", 0) / (double) MAX_EMERGENCIAS) * 100;
 
-        db.collection("paseadores").document(uid)
-                .set(updates, com.google.firebase.firestore.SetOptions.merge())
-                .addOnSuccessListener(v -> {})
-                .addOnFailureListener(e -> {
-                    // Log the error for debugging
-                    android.util.Log.e("Firestore", "Error updating quiz scores", e);
-                });
+        editor.putInt("score_comportamiento_canino", (int) Math.round(comportamientoScore));
+        editor.putInt("score_primeros_auxilios", (int) Math.round(primerosAuxiliosScore));
+        editor.putInt("score_manejo_emergencia", (int) Math.round(emergenciasScore));
+
+        editor.putBoolean("quiz_completado", true);
+        editor.putBoolean("quiz_aprobado", passed);
+        editor.putInt("quiz_score_total", totalScore);
+        editor.putLong("quiz_fecha", System.currentTimeMillis());
+        
+        // Increment attempt counter
+        int attempts = prefs.getInt("quiz_intentos", 0);
+        editor.putInt("quiz_intentos", attempts + 1);
+
+        editor.apply();
     }
 }

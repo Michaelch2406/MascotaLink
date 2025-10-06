@@ -36,6 +36,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -52,9 +53,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements OnMapReadyCallback {
@@ -532,8 +535,8 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
 
         // Sub-mapa: perfil_profesional
         Map<String, Object> perfilProfesional = new HashMap<>();
-        perfilProfesional.put("experiencia_general", ""); // Campo a ser llenado post-registro
-        perfilProfesional.put("motivacion", ""); // Campo a ser llenado post-registro
+        perfilProfesional.put("experiencia_general", prefs.getString("experiencia_general", ""));
+        perfilProfesional.put("motivacion", prefs.getString("motivacion", ""));
         perfilProfesional.put("video_presentacion_url", urls.get("video_presentacion_url"));
         perfilProfesional.put("galeria_paseos_urls", urls.get("galeria_paseos_urls"));
         paseadorData.put("perfil_profesional", perfilProfesional);
@@ -544,7 +547,10 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             batch.set(db.collection("paseadores").document(uid), paseadorData);
         }).addOnSuccessListener(aVoid -> {
             Log.d(TAG, "¡Registro completado y datos guardados en Firestore!");
-            guardarMetodoDePago(uid, getSharedPreferences(PREFS, MODE_PRIVATE));
+            SharedPreferences finalPrefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+            guardarMetodoDePago(uid, finalPrefs);
+            guardarDisponibilidad(uid, finalPrefs);
+            guardarZonasDeServicio(uid, finalPrefs);
             limpiarDatosTemporales();
             mostrarMensajeFinalRegistro();
         }).addOnFailureListener(e -> {
@@ -558,6 +564,74 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             btnGuardar.setEnabled(true);
             btnGuardar.setText("Reintentar Registro");
         });
+    }
+
+    private void guardarDisponibilidad(String uid, SharedPreferences prefs) {
+        if (!prefs.getBoolean("disponibilidad_completa", false)) {
+            return;
+        }
+        Set<String> dias = prefs.getStringSet("disponibilidad_dias", new HashSet<>());
+        String inicio = prefs.getString("disponibilidad_inicio", "");
+        String fin = prefs.getString("disponibilidad_fin", "");
+
+        if (dias.isEmpty() || inicio.isEmpty() || fin.isEmpty()) {
+            return;
+        }
+
+        Map<String, Object> disponibilidadData = new HashMap<>();
+        disponibilidadData.put("dias", new ArrayList<>(dias));
+        disponibilidadData.put("hora_inicio", inicio);
+        disponibilidadData.put("hora_fin", fin);
+        disponibilidadData.put("ultima_actualizacion", FieldValue.serverTimestamp());
+
+        db.collection("paseadores").document(uid).collection("disponibilidad")
+                .add(disponibilidadData)
+                .addOnSuccessListener(documentReference -> Log.d(TAG, "Disponibilidad guardada con ID: " + documentReference.getId()))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar disponibilidad", e));
+    }
+
+    private void guardarZonasDeServicio(String uid, SharedPreferences prefs) {
+        if (!prefs.getBoolean("zonas_servicio_completo", false)) {
+            return;
+        }
+        Set<String> zonasGuardadas = prefs.getStringSet("zonas_servicio", new HashSet<>());
+        if (zonasGuardadas.isEmpty()) {
+            // Also check the single zone from the map view in this activity
+            float lat = prefs.getFloat("zonaLat", 0);
+            float lng = prefs.getFloat("zonaLng", 0);
+            if (lat != 0 && lng != 0) {
+                 Map<String, Object> zonaData = new HashMap<>();
+                 zonaData.put("centro", new GeoPoint(lat, lng));
+                 zonaData.put("radio_km", 5.0); // Default radius from this activity
+                 zonaData.put("direccion", "Zona principal");
+                 db.collection("paseadores").document(uid).collection("zonas_servicio").add(zonaData);
+            }
+            return;
+        }
+
+        for (String zonaStr : zonasGuardadas) {
+            try {
+                String[] parts = zonaStr.split(",", 4);
+                if (parts.length >= 4) {
+                    double lat = Double.parseDouble(parts[0]);
+                    double lon = Double.parseDouble(parts[1]);
+                    float radio = Float.parseFloat(parts[2]);
+                    String direccion = parts[3];
+
+                    Map<String, Object> zonaData = new HashMap<>();
+                    zonaData.put("centro", new GeoPoint(lat, lon));
+                    zonaData.put("radio_km", radio);
+                    zonaData.put("direccion", direccion);
+
+                    db.collection("paseadores").document(uid).collection("zonas_servicio")
+                            .add(zonaData)
+                            .addOnSuccessListener(documentReference -> Log.d(TAG, "Zona de servicio guardada con ID: " + documentReference.getId()))
+                            .addOnFailureListener(e -> Log.e(TAG, "Error al guardar zona de servicio", e));
+                }
+            } catch (NumberFormatException e) {
+                Log.e(TAG, "Error al parsear zona de servicio desde SharedPreferences", e);
+            }
+        }
     }
 
 
