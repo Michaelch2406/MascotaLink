@@ -111,20 +111,40 @@
                 android:layout_marginBottom="16dp" />
 
             <!-- Mapa -->
-            <com.google.android.material.card.MaterialCardView
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                android:layout_marginBottom="16dp">
 
-                <fragment
-                    android:id="@+id/map"
-                    android:name="com.google.android.gms.maps.SupportMapFragment"
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
+                    android:layout_height="match_parent"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="4dp">
 
-            </com.google.android.material.card.MaterialCardView>
+                    <fragment
+                        android:id="@+id/map"
+                        android:name="com.google.android.gms.maps.SupportMapFragment"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <ImageView
+                    android:id="@+id/iv_my_location"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentTop="true"
+                    android:layout_margin="12dp"
+                    android:src="@drawable/ic_my_location"
+                    android:background="@drawable/bg_icon_container"
+                    android:padding="8dp"
+                    android:elevation="5dp"
+                    app:tint="@color/blue_primary"
+                    android:contentDescription="Mi ubicación" />
+
+            </RelativeLayout>
 
             <!-- Instrucciones para el mapa -->
             <TextView

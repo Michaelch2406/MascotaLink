@@ -52,6 +52,17 @@ service cloud.firestore {
       allow read, write: if isOwner(duenoId);
     }
 
+    // Subcolecciones bajo paseadores
+    match /paseadores/{userId}/disponibilidad/{disponibilidadId} {
+      allow read, create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    match /paseadores/{userId}/zonas_servicio/{zonaId} {
+      allow read, create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+
     // Servicios
     match /servicios/{servicioId} {
       // Solo el dueño o el paseador pueden leer un servicio específico.

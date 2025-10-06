@@ -29,7 +29,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import android.util.Log;
+
 public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
+
+    private static final String TAG = "PaseadorPaso4";
 
     private static final String PREFS = "WizardPaseador";
 
@@ -205,6 +209,10 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private void verificarCompletitudPaso4() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         boolean quizAprobado = prefs.getBoolean("quiz_aprobado", false);
+        String experiencia = etExperiencia.getText().toString().trim();
+        String motivacion = etMotivacion.getText().toString().trim();
+
+        Log.d(TAG, "verificarCompletitudPaso4: quizAprobado=" + quizAprobado + ", experiencia=" + experiencia + ", motivacion=" + motivacion);
 
         List<String> faltantes = new ArrayList<>();
         if (localUris.isEmpty()) {

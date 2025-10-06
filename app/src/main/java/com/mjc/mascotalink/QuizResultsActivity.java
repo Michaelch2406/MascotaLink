@@ -96,10 +96,9 @@ public class QuizResultsActivity extends AppCompatActivity {
 
         btnContinue.setOnClickListener(v -> {
             if (passed) {
-                // If passed, go to the next step of the registration
-                Intent intent = new Intent(this, PaseadorRegistroPaso5Activity.class);
-                startActivity(intent);
-                finish();
+                // If passed, return to PaseadorRegistroPaso4Activity
+                // The Paso4Activity will then check SharedPreferences and enable its continue button
+                finish(); // This will return to the previous activity in the stack (PaseadorRegistroPaso4Activity)
             } else {
                 // If failed, go back to the quiz to try again
                 Intent intent = new Intent(this, QuizActivity.class);

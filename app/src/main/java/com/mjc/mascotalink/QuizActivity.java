@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import android.util.Log;
+
 public class QuizActivity extends AppCompatActivity {
 
     private TextView tvQuestion, tvProgress;
@@ -140,6 +142,7 @@ public class QuizActivity extends AppCompatActivity {
 
         editor.putBoolean("quiz_completado", true);
         editor.putBoolean("quiz_aprobado", passed);
+        Log.d("QuizActivity", "Quiz aprobado guardado en SharedPreferences: " + passed);
         editor.putInt("quiz_score_total", totalScore);
         editor.putLong("quiz_fecha", System.currentTimeMillis());
         

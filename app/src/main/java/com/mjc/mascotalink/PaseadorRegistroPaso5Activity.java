@@ -60,7 +60,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements OnMapReadyCallback {
+public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
 
     private static final String TAG = "PaseadorPaso5";
     private static final String PREFS = "WizardPaseador";
@@ -71,12 +71,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
 
     private Button btnGuardar;
     private TextView tvValidationMessages;
-    private ImageView ivPagoCheck, ivDisponibilidadCheck, ivPerrosCheck;
-
-    private GoogleMap mMap;
-    private Circle zonaCircle;
-    private LatLng zonaCentro;
-    private double zonaRadioKm = 5.0; // Default radius
+    private ImageView ivPagoCheck, ivDisponibilidadCheck, ivPerrosCheck, ivZonasCheck;
 
     private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
@@ -99,10 +94,8 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         setContentView(R.layout.activity_paseador_registro_paso5);
 
         setupFirebase();
-        setupViews();
+        initViews();
         setupListeners();
-        setupMap();
-        setupPlacesAutocomplete(); // Add this call
         loadState();
     }
 
@@ -118,7 +111,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         storage = FirebaseStorage.getInstance();
     }
 
-    private void setupViews() {
+    private void initViews() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
@@ -127,6 +120,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         ivPagoCheck = findViewById(R.id.iv_pago_check);
         ivDisponibilidadCheck = findViewById(R.id.iv_disponibilidad_check);
         ivPerrosCheck = findViewById(R.id.iv_perros_check);
+        ivZonasCheck = findViewById(R.id.iv_zonas_check);
     }
 
     private void setupListeners() {
@@ -162,99 +156,16 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
             rowTiposPerros.setOnClickListener(v -> 
                 activityLauncher.launch(new Intent(this, TiposPerrosActivity.class)));
         }
+
+        View rowZonasServicio = findViewById(R.id.row_zonas_servicio);
+        if (rowZonasServicio != null) {
+            rowZonasServicio.setOnClickListener(v ->
+                activityLauncher.launch(new Intent(this, ZonasServicioActivity.class)));
+        }
         
         if (btnGuardar != null) {
             btnGuardar.setOnClickListener(v -> completarRegistro());
         }
-    }
-
-    private void setupMap() {
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_container);
-        if (mapFragment != null) {
-            mapFragment.getMapAsync(this);
-        } else {
-            mapFragment = SupportMapFragment.newInstance();
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.map_container, mapFragment)
-                    .commit();
-            mapFragment.getMapAsync(this);
-        }
-    }
-
-    private void setupPlacesAutocomplete() {
-        if (!Places.isInitialized()) {
-            try {
-                ApplicationInfo app = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
-                Bundle bundle = app.metaData;
-                String apiKey = bundle.getString("com.google.android.geo.API_KEY");
-
-                if (apiKey == null || apiKey.isEmpty()) {
-                    Toast.makeText(this, "Maps API Key not found in manifest", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                Places.initialize(getApplicationContext(), apiKey);
-            } catch (PackageManager.NameNotFoundException e) {
-                Log.e(TAG, "Failed to load meta-data, NameNotFound: " + e.getMessage());
-            }
-        }
-
-        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
-                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
-
-        if (autocompleteFragment != null) {
-            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.ADDRESS));
-            autocompleteFragment.setHint("Buscar dirección de servicio");
-            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-                @Override
-                public void onPlaceSelected(@NonNull Place place) {
-                    zonaCentro = place.getLatLng();
-                    saveState();
-                    dibujarCirculo();
-                    verificarCompletitudTotal();
-                }
-
-                @Override
-                public void onError(@NonNull com.google.android.gms.common.api.Status status) {
-                    Log.e(TAG, "An error occurred: " + status);
-                    Toast.makeText(PaseadorRegistroPaso5Activity.this, "Error en búsqueda: " + status.getStatusMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-    }
-
-    @Override
-    public void onMapReady(@NonNull GoogleMap googleMap) {
-        mMap = googleMap;
-        mMap.setOnMapClickListener(latLng -> {
-            zonaCentro = latLng;
-            saveState();
-            dibujarCirculo();
-            verificarCompletitudTotal();
-        });
-        
-        mMap.setOnMapLongClickListener(latLng -> {
-            androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
-            builder.setTitle("Configurar Zonas de Servicio")
-                   .setMessage("¿Quieres abrir el editor avanzado de zonas de servicio?\n\nEsto te permitirá configurar múltiples zonas con diferentes radios.")
-                   .setPositiveButton("Abrir Editor", (dialog, which) -> 
-                       activityLauncher.launch(new Intent(this, ZonasServicioActivity.class)))
-                   .setNegativeButton("Cancelar", null)
-                   .show();
-        });
-        
-        loadMapState();
-    }
-
-    private void dibujarCirculo() {
-        if (mMap == null || zonaCentro == null) return;
-        if (zonaCircle != null) zonaCircle.remove();
-        zonaCircle = mMap.addCircle(new CircleOptions()
-                .center(zonaCentro)
-                .radius(zonaRadioKm * 1000)
-                .strokeColor(Color.parseColor("#2680EB"))
-                .strokeWidth(2f)
-                .fillColor(Color.parseColor("#302680EB")));
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(zonaCentro, 12f));
     }
 
     private void grabarVideoPresentacion() {
@@ -327,7 +238,8 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         }
         
         boolean zonasServicioOk = prefs.getBoolean("zonas_servicio_completo", false);
-        if (!zonasServicioOk && zonaCentro == null) {
+        ivZonasCheck.setVisibility(zonasServicioOk ? View.VISIBLE : View.GONE);
+        if (!zonasServicioOk) {
             faltantes.add("• Falta configurar tus zonas de servicio.");
         }
 
@@ -566,74 +478,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         });
     }
 
-    private void guardarDisponibilidad(String uid, SharedPreferences prefs) {
-        if (!prefs.getBoolean("disponibilidad_completa", false)) {
-            return;
-        }
-        Set<String> dias = prefs.getStringSet("disponibilidad_dias", new HashSet<>());
-        String inicio = prefs.getString("disponibilidad_inicio", "");
-        String fin = prefs.getString("disponibilidad_fin", "");
-
-        if (dias.isEmpty() || inicio.isEmpty() || fin.isEmpty()) {
-            return;
-        }
-
-        Map<String, Object> disponibilidadData = new HashMap<>();
-        disponibilidadData.put("dias", new ArrayList<>(dias));
-        disponibilidadData.put("hora_inicio", inicio);
-        disponibilidadData.put("hora_fin", fin);
-        disponibilidadData.put("ultima_actualizacion", FieldValue.serverTimestamp());
-
-        db.collection("paseadores").document(uid).collection("disponibilidad")
-                .add(disponibilidadData)
-                .addOnSuccessListener(documentReference -> Log.d(TAG, "Disponibilidad guardada con ID: " + documentReference.getId()))
-                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar disponibilidad", e));
-    }
-
-    private void guardarZonasDeServicio(String uid, SharedPreferences prefs) {
-        if (!prefs.getBoolean("zonas_servicio_completo", false)) {
-            return;
-        }
-        Set<String> zonasGuardadas = prefs.getStringSet("zonas_servicio", new HashSet<>());
-        if (zonasGuardadas.isEmpty()) {
-            // Also check the single zone from the map view in this activity
-            float lat = prefs.getFloat("zonaLat", 0);
-            float lng = prefs.getFloat("zonaLng", 0);
-            if (lat != 0 && lng != 0) {
-                 Map<String, Object> zonaData = new HashMap<>();
-                 zonaData.put("centro", new GeoPoint(lat, lng));
-                 zonaData.put("radio_km", 5.0); // Default radius from this activity
-                 zonaData.put("direccion", "Zona principal");
-                 db.collection("paseadores").document(uid).collection("zonas_servicio").add(zonaData);
-            }
-            return;
-        }
-
-        for (String zonaStr : zonasGuardadas) {
-            try {
-                String[] parts = zonaStr.split(",", 4);
-                if (parts.length >= 4) {
-                    double lat = Double.parseDouble(parts[0]);
-                    double lon = Double.parseDouble(parts[1]);
-                    float radio = Float.parseFloat(parts[2]);
-                    String direccion = parts[3];
-
-                    Map<String, Object> zonaData = new HashMap<>();
-                    zonaData.put("centro", new GeoPoint(lat, lon));
-                    zonaData.put("radio_km", radio);
-                    zonaData.put("direccion", direccion);
-
-                    db.collection("paseadores").document(uid).collection("zonas_servicio")
-                            .add(zonaData)
-                            .addOnSuccessListener(documentReference -> Log.d(TAG, "Zona de servicio guardada con ID: " + documentReference.getId()))
-                            .addOnFailureListener(e -> Log.e(TAG, "Error al guardar zona de servicio", e));
-                }
-            } catch (NumberFormatException e) {
-                Log.e(TAG, "Error al parsear zona de servicio desde SharedPreferences", e);
-            }
-        }
-    }
-
 
     private void mostrarError(String msg) {
         new AlertDialog.Builder(this)
@@ -645,10 +489,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
 
     private void saveState() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        if (zonaCentro != null) {
-            editor.putFloat("zonaLat", (float) zonaCentro.latitude);
-            editor.putFloat("zonaLng", (float) zonaCentro.longitude);
-        }
+        // No longer saving map state here, as ZonasServicioActivity handles it
         editor.apply();
     }
 
@@ -660,15 +501,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
         }
     }
 
-    private void loadMapState() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        float lat = prefs.getFloat("zonaLat", 0);
-        float lng = prefs.getFloat("zonaLng", 0);
-        if (lat != 0 && lng != 0) {
-            zonaCentro = new LatLng(lat, lng);
-            dibujarCirculo();
-        }
-    }
+    // Removed loadMapState as ZonasServicioActivity handles it
 
     private void limpiarDatosTemporales() {
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().clear().apply();
@@ -712,5 +545,63 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity implements 
                 .add(metodoPagoData)
                 .addOnSuccessListener(documentReference -> Log.d(TAG, "Método de pago guardado con ID: " + documentReference.getId()))
                 .addOnFailureListener(e -> Log.e(TAG, "Error al guardar método de pago", e));
+    }
+
+    private void guardarDisponibilidad(String uid, SharedPreferences prefs) {
+        if (!prefs.getBoolean("disponibilidad_completa", false)) {
+            return;
+        }
+        Set<String> dias = prefs.getStringSet("disponibilidad_dias", new HashSet<>());
+        String inicio = prefs.getString("disponibilidad_inicio", "");
+        String fin = prefs.getString("disponibilidad_fin", "");
+
+        if (dias.isEmpty() || inicio.isEmpty() || fin.isEmpty()) {
+            return;
+        }
+
+        Map<String, Object> disponibilidadData = new HashMap<>();
+        disponibilidadData.put("dias", new ArrayList<>(dias));
+        disponibilidadData.put("hora_inicio", inicio);
+        disponibilidadData.put("hora_fin", fin);
+        disponibilidadData.put("ultima_actualizacion", FieldValue.serverTimestamp());
+
+        db.collection("paseadores").document(uid).collection("disponibilidad")
+                .add(disponibilidadData)
+                .addOnSuccessListener(documentReference -> Log.d(TAG, "Disponibilidad guardada con ID: " + documentReference.getId()))
+                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar disponibilidad", e));
+    }
+
+    private void guardarZonasDeServicio(String uid, SharedPreferences prefs) {
+        if (!prefs.getBoolean("zonas_servicio_completo", false)) {
+            return;
+        }
+        Set<String> zonasGuardadas = prefs.getStringSet("zonas_servicio", new HashSet<>());
+        if (zonasGuardadas.isEmpty()) {
+            return;
+        }
+
+        for (String zonaStr : zonasGuardadas) {
+            try {
+                String[] parts = zonaStr.split(",", 4);
+                if (parts.length >= 4) {
+                    double lat = Double.parseDouble(parts[0]);
+                    double lon = Double.parseDouble(parts[1]);
+                    float radio = Float.parseFloat(parts[2]);
+                    String direccion = parts[3];
+
+                    Map<String, Object> zonaData = new HashMap<>();
+                    zonaData.put("centro", new GeoPoint(lat, lon));
+                    zonaData.put("radio_km", radio);
+                    zonaData.put("direccion", direccion);
+
+                    db.collection("paseadores").document(uid).collection("zonas_servicio")
+                            .add(zonaData)
+                            .addOnSuccessListener(documentReference -> Log.d(TAG, "Zona de servicio guardada con ID: " + documentReference.getId()))
+                            .addOnFailureListener(e -> Log.e(TAG, "Error al guardar zona de servicio", e));
+                }
+            } catch (NumberFormatException e) {
+                Log.e(TAG, "Error al parsear zona de servicio desde SharedPreferences", e);
+            }
+        }
     }
 }
