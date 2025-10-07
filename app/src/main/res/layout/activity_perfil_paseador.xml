@@ -29,40 +29,56 @@
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
+            <ImageButton
+                android:id="@+id/btn_mensaje"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_messages"
+                android:layout_marginEnd="16dp"
+                app:tint="@color/icon_color" />
+
         </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <LinearLayout
-        android:id="@+id/bottom_bar"
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_reservar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="85dp"
+        android:src="@android:drawable/ic_input_add"
+        app:backgroundTint="@color/blue_primary" />
+
+
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB"
+        android:layout_above="@id/bottom_nav"/>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="@android:color/white"
-        android:orientation="horizontal"
-        android:padding="16dp">
+        android:background="#F7FAFC"
+        app:menu="@menu/menu_bottom_nav_new"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/icon_color"
+        app:itemTextColor="@color/icon_color"
+        app:itemActiveIndicatorStyle="@null"/>
 
-        <Button
-            android:id="@+id/btn_reservar"
-            style="@style/Widget.MaterialComponents.Button"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Reservar" />
 
-        <Button
-            android:id="@+id/btn_mensaje"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Mensaje" />
-    </LinearLayout>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/bottom_bar"
+        android:layout_above="@id/bottom_nav"
         android:layout_below="@id/app_bar">
 
         <LinearLayout
@@ -424,57 +440,109 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <TextView
+            <RelativeLayout
                 android:id="@+id/btn_editar_perfil"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
+                android:layout_marginTop="8dp"
+                android:background="#E7EEF2"
                 android:clickable="true"
-                android:drawablePadding="16dp"
                 android:focusable="true"
-                android:padding="16dp"
-                android:text="Editar perfil"
-                app:drawableStartCompat="@android:drawable/ic_menu_edit"
-                app:drawableTint="@color/gray_dark" />
+                android:padding="16dp">
 
-            <TextView
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Editar perfil"
+                    android:textColor="#111827" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#9CA3AF" />
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/btn_notificaciones"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
+                android:layout_marginTop="8dp"
+                android:background="#E7EEF2"
                 android:clickable="true"
-                android:drawablePadding="16dp"
                 android:focusable="true"
-                android:padding="16dp"
-                android:text="Configurar notificaciones"
-                app:drawableStartCompat="@android:drawable/ic_popup_reminder"
-                app:drawableTint="@color/gray_dark" />
+                android:padding="16dp">
 
-            <TextView
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Configurar notificaciones"
+                    android:textColor="#111827" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#9CA3AF" />
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/btn_metodos_pago"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
+                android:layout_marginTop="8dp"
+                android:background="#E7EEF2"
                 android:clickable="true"
-                android:drawablePadding="16dp"
                 android:focusable="true"
-                android:padding="16dp"
-                android:text="Métodos de pago"
-                app:drawableStartCompat="@android:drawable/ic_menu_myplaces"
-                app:drawableTint="@color/gray_dark" />
+                android:padding="16dp">
 
-            <TextView
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Métodos de pago"
+                    android:textColor="#111827" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#9CA3AF" />
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/btn_privacidad"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
+                android:layout_marginTop="8dp"
+                android:background="#E7EEF2"
                 android:clickable="true"
-                android:drawablePadding="16dp"
                 android:focusable="true"
-                android:padding="16dp"
-                android:text="Preferencias de privacidad"
-                app:drawableStartCompat="@android:drawable/ic_lock_lock"
-                app:drawableTint="@color/gray_dark" />
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Preferencias de privacidad"
+                    android:textColor="#111827" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#9CA3AF" />
+            </RelativeLayout>
 
             <!-- Soporte y Legal -->
             <TextView
@@ -486,31 +554,57 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <TextView
+            <RelativeLayout
                 android:id="@+id/btn_centro_ayuda"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
+                android:layout_marginTop="8dp"
+                android:background="#E7EEF2"
                 android:clickable="true"
-                android:drawablePadding="16dp"
                 android:focusable="true"
-                android:padding="16dp"
-                android:text="Centro de ayuda"
-                app:drawableStartCompat="@android:drawable/ic_menu_help"
-                app:drawableTint="@color/gray_dark" />
+                android:padding="16dp">
 
-            <TextView
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Centro de ayuda"
+                    android:textColor="#111827" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#9CA3AF" />
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/btn_terminos"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
+                android:layout_marginTop="8dp"
+                android:background="#E7EEF2"
                 android:clickable="true"
-                android:drawablePadding="16dp"
                 android:focusable="true"
-                android:padding="16dp"
-                android:text="Términos y condiciones"
-                app:drawableStartCompat="@android:drawable/ic_menu_info_details"
-                app:drawableTint="@color/gray_dark" />
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Términos y condiciones"
+                    android:textColor="#111827" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#9CA3AF" />
+            </RelativeLayout>
 
             <!-- Cerrar Sesión -->
             <Button

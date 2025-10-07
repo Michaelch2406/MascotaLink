@@ -36,7 +36,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private MascotaPerfilAdapter mascotaAdapter;
     private List<Pet> petList;
     private Button btnCerrarSesion;
-    private TextView btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
+    private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
 
 
     @Override
@@ -87,6 +87,26 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
         bottomNav.setSelectedItemId(R.id.menu_perfil);
+        bottomNav.setOnNavigationItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.menu_home) {
+                showToast("Próximamente: Inicio");
+                return true;
+            } else if (itemId == R.id.menu_search) {
+                showToast("Próximamente: Buscar");
+                return true;
+            } else if (itemId == R.id.menu_walks) {
+                showToast("Próximamente: Paseos");
+                return true;
+            } else if (itemId == R.id.menu_messages) {
+                showToast("Próximamente: Mensajes");
+                return true;
+            } else if (itemId == R.id.menu_perfil) {
+                // Ya estamos aquí
+                return true;
+            }
+            return false;
+        });
     }
 
     private void setupListeners() {

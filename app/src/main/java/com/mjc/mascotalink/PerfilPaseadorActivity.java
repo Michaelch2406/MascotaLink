@@ -5,9 +5,11 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
@@ -29,6 +31,8 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -60,8 +64,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private FrameLayout videoContainer;
     private TabLayout tabLayout;
     private Button btnCerrarSesion;
+    private ImageButton btnMensaje;
+    private FloatingActionButton fabReservar;
     private GoogleMap googleMap;
     private List<Circle> mapCircles = new ArrayList<>();
+    private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
 
 
     @Override
@@ -76,11 +83,40 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         setupListeners();
         setupTabs();
 
-        String paseadorId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
+        String paseadorId = getIntent().getStringExtra("paseadorId");
+        String currentUserId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
+
+        if (paseadorId == null && currentUserId != null) {
+            paseadorId = currentUserId;
+        }
+
         if (paseadorId != null) {
+            if (paseadorId.equals(currentUserId)) {
+                // Es el perfil del propio usuario, ocultar botones de acción
+                fabReservar.setVisibility(View.GONE);
+                btnMensaje.setVisibility(View.GONE);
+            } else {
+                // Es el perfil de otro paseador, verificar rol del usuario actual
+                if (currentUserId != null) {
+                    db.collection("usuarios").document(currentUserId).get().addOnSuccessListener(documentSnapshot -> {
+                        String userRole = documentSnapshot.getString("rol");
+                        if ("dueno".equals(userRole)) {
+                            fabReservar.setVisibility(View.VISIBLE);
+                            btnMensaje.setVisibility(View.VISIBLE);
+                        } else {
+                            fabReservar.setVisibility(View.GONE);
+                            btnMensaje.setVisibility(View.GONE);
+                        }
+                    });
+                } else {
+                    // No hay usuario logueado, ocultar
+                    fabReservar.setVisibility(View.GONE);
+                    btnMensaje.setVisibility(View.GONE);
+                }
+            }
             cargarPerfilCompleto(paseadorId);
         } else {
-            Toast.makeText(this, "Error: Usuario no autenticado.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error: No se pudo cargar el perfil.", Toast.LENGTH_SHORT).show();
             finish();
         }
     }
@@ -118,7 +154,17 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         barrasRatings = findViewById(R.id.barras_ratings);
 
         // Ajustes
+        btnEditarPerfil = findViewById(R.id.btn_editar_perfil);
+        btnNotificaciones = findViewById(R.id.btn_notificaciones);
+        btnMetodosPago = findViewById(R.id.btn_metodos_pago);
+        btnPrivacidad = findViewById(R.id.btn_privacidad);
+        btnCentroAyuda = findViewById(R.id.btn_centro_ayuda);
+        btnTerminos = findViewById(R.id.btn_terminos);
         btnCerrarSesion = findViewById(R.id.btn_cerrar_sesion);
+
+        // New buttons
+        fabReservar = findViewById(R.id.fab_reservar);
+        btnMensaje = findViewById(R.id.btn_mensaje);
 
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -126,11 +172,58 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
+
     }
 
+    @SuppressWarnings("unchecked")
     private void setupListeners() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+
+        fabReservar.setOnClickListener(v -> showToast("Próximamente: Reservar"));
+        btnMensaje.setOnClickListener(v -> showToast("Próximamente: Enviar Mensaje"));
+
+        fabReservar.setOnTouchListener(new View.OnTouchListener() {
+            private int lastAction;
+            private int initialX;
+            private int initialY;
+            private float initialTouchX;
+            private float initialTouchY;
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = v.getLeft();
+                        initialY = v.getTop();
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        lastAction = MotionEvent.ACTION_DOWN;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        v.setX(initialX + (event.getRawX() - initialTouchX));
+                        v.setY(initialY + (event.getRawY() - initialTouchY));
+                        lastAction = MotionEvent.ACTION_MOVE;
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (lastAction == MotionEvent.ACTION_DOWN) {
+                            v.performClick();
+                        }
+                        break;
+                    default:
+                        return false;
+                }
+                return true;
+            }
+        });
+
+        btnEditarPerfil.setOnClickListener(v -> showToast("Próximamente: Editar perfil"));
+        btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
+        btnMetodosPago.setOnClickListener(v -> showToast("Próximamente: Métodos de pago"));
+        btnPrivacidad.setOnClickListener(v -> showToast("Próximamente: Privacidad"));
+        btnCentroAyuda.setOnClickListener(v -> showToast("Próximamente: Centro de Ayuda"));
+        btnTerminos.setOnClickListener(v -> showToast("Próximamente: Términos y Condiciones"));
 
         btnCerrarSesion.setOnClickListener(v -> {
             // Limpiar preferencias de "recordar sesión"
@@ -141,6 +234,29 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
             finish();
+        });
+
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+        bottomNav.setSelectedItemId(R.id.menu_perfil);
+        bottomNav.setOnNavigationItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.menu_home) {
+                showToast("Próximamente: Inicio");
+                return true;
+            } else if (itemId == R.id.menu_search) {
+                showToast("Próximamente: Buscar");
+                return true;
+            } else if (itemId == R.id.menu_walks) {
+                showToast("Próximamente: Paseos");
+                return true;
+            } else if (itemId == R.id.menu_messages) {
+                showToast("Próximamente: Mensajes");
+                return true;
+            } else if (itemId == R.id.menu_perfil) {
+                // Ya estamos aquí
+                return true;
+            }
+            return false;
         });
     }
 
@@ -164,6 +280,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             @Override public void onTabUnselected(TabLayout.Tab tab) { }
             @Override public void onTabReselected(TabLayout.Tab tab) { }
         });
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     @SuppressWarnings("unchecked")
