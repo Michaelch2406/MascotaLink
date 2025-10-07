@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -11,32 +11,59 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#F7FAFC"
-        app:elevation="0dp"
-        android:stateListAnimator="@null">
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_arrow_back">
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@color/gray_dark">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center"
                 android:text="Paseador"
-                android:textSize="20sp"
-                android:textStyle="bold"
                 android:textColor="@android:color/black"
-                android:layout_gravity="center" />
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
         </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@android:color/white"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/btn_reservar"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Reservar" />
+
+        <Button
+            android:id="@+id/btn_mensaje"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Mensaje" />
+    </LinearLayout>
+
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:layout_above="@id/bottom_bar"
+        android:layout_below="@id/app_bar">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -61,30 +88,30 @@
                 android:id="@+id/tv_nombre"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sofia Ramirez"
-                android:textStyle="bold"
-                android:textSize="22sp"
-                android:textColor="@android:color/black"
                 android:layout_gravity="center"
-                android:layout_marginTop="16dp"/>
+                android:layout_marginTop="16dp"
+                android:text="Sofia Ramirez"
+                android:textColor="@android:color/black"
+                android:textSize="22sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tv_rol"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Paseador de perros"
-                android:textColor="#6B7280"
                 android:layout_gravity="center"
-                android:layout_marginTop="4dp"/>
+                android:layout_marginTop="4dp"
+                android:text="Paseador de perros"
+                android:textColor="#6B7280" />
 
             <!-- Badge verificado + precio -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:layout_gravity="center"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <ImageView
                     android:id="@+id/iv_verificado_badge"
@@ -97,19 +124,19 @@
                     android:id="@+id/tv_verificado"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
                     android:text="Verificado"
                     android:textColor="@color/blue_primary"
-                    android:textStyle="bold"
-                    android:layout_marginStart="4dp" />
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tv_precio"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
                     android:text="• $8/hora"
-                    android:textStyle="bold"
                     android:textColor="@color/green_success"
-                    android:layout_marginStart="16dp" />
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <com.google.android.material.tabs.TabLayout
@@ -124,7 +151,8 @@
             <FrameLayout
                 android:id="@+id/tab_content_container"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:paddingBottom="16dp">
 
                 <!-- Pestaña "Acerca de" -->
                 <LinearLayout
@@ -137,39 +165,41 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
                         android:text="Video de presentación"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
                         android:textColor="@android:color/black"
-                        android:layout_marginTop="16dp"/>
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <FrameLayout
                         android:id="@+id/video_container"
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
                         android:layout_marginTop="8dp">
+
                         <ImageView
                             android:id="@+id/iv_video_thumbnail"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="centerCrop"
                             android:src="@drawable/galeria_paseos_foto1" />
+
                         <ImageView
                             android:layout_width="60dp"
                             android:layout_height="60dp"
                             android:layout_gravity="center"
-                            android:src="@android:drawable/ic_media_play"/>
+                            android:src="@android:drawable/ic_media_play" />
                     </FrameLayout>
 
                     <!-- Acerca de mí -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
                         android:text="Acerca de mí"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
                         android:textColor="@android:color/black"
-                        android:layout_marginTop="24dp"/>
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_descripcion"
@@ -177,99 +207,105 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="4dp"
-                        android:text="Soy una amante de los animales con experiencia en el cuidado de perros de todos los tamaños y razas. Ofrezco paseos personalizados adaptados a las necesidades de cada perro, asegurando ejercicio, diversión y seguridad en cada salida."/>
+                        android:text="Soy una amante de los animales con experiencia en el cuidado de perros de todos los tamaños y razas. Ofrezco paseos personalizados adaptados a las necesidades de cada perro, asegurando ejercicio, diversión y seguridad en cada salida." />
 
                     <!-- Experiencia -->
                     <LinearLayout
-                        android:orientation="horizontal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp">
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
                         <TextView
                             android:id="@+id/tv_experiencia_anos"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Experiencia: 3 años"
-                            android:textStyle="bold"
-                            android:textColor="@color/gray_dark" />
+                            android:textColor="@color/gray_dark"
+                            android:textStyle="bold" />
+
                         <TextView
                             android:id="@+id/tv_experiencia_desde"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
                             android:text="• Desde 2022"
-                            android:textColor="@color/secondary"
-                            android:layout_marginStart="16dp" />
+                            android:textColor="@color/secondary" />
                     </LinearLayout>
 
                     <!-- Zona de servicio -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
                         android:text="Zona de servicio"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
                         android:textColor="@android:color/black"
-                        android:layout_marginTop="24dp"/>
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <androidx.fragment.app.FragmentContainerView
                         android:id="@+id/map_container"
                         android:name="com.google.android.gms.maps.SupportMapFragment"
                         android:layout_width="match_parent"
                         android:layout_height="180dp"
-                        android:layout_marginTop="8dp"/>
+                        android:layout_marginTop="8dp" />
 
                     <!-- Disponibilidad -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
                         android:text="Disponibilidad"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
                         android:textColor="@android:color/black"
-                        android:layout_marginTop="24dp"/>
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
                     <TextView
                         android:id="@+id/tv_disponibilidad"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Lunes a Viernes: 9 AM - 6 PM"/>
+                        android:text="Lunes a Viernes: 9 AM - 6 PM" />
 
                     <!-- Tipos de perros -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
                         android:text="Tipos de perros"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
                         android:textColor="@android:color/black"
-                        android:layout_marginTop="24dp"/>
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
                     <TextView
                         android:id="@+id/tv_tipos_perros"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Pequeños, Medianos, Grandes"/>
+                        android:text="Pequeños, Medianos, Grandes" />
 
                     <!-- Métricas -->
                     <LinearLayout
-                        android:orientation="horizontal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp">
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal">
+
                         <TextView
                             android:id="@+id/tv_paseos_completados"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="247 paseos completados"
-                            android:textStyle="bold"
-                            android:textColor="@color/gray_dark" />
+                            android:textColor="@color/gray_dark"
+                            android:textStyle="bold" />
+
                         <TextView
                             android:id="@+id/tv_tiempo_respuesta"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
                             android:text="• Respuesta: 15 min"
-                            android:textColor="@color/secondary"
-                            android:layout_marginStart="16dp" />
+                            android:textColor="@color/secondary" />
                     </LinearLayout>
 
                 </LinearLayout>
@@ -286,55 +322,58 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
                         android:text="Calificaciones"
-                        android:textStyle="bold"
-                        android:textSize="18sp"
                         android:textColor="@android:color/black"
-                        android:layout_marginTop="24dp"/>
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:layout_marginTop="8dp"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:gravity="center_horizontal">
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
                             <TextView
                                 android:id="@+id/tv_rating_valor"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textStyle="bold"
+                                android:text="4.8"
                                 android:textSize="48sp"
-                                android:text="4.8"/>
+                                android:textStyle="bold" />
+
                             <RatingBar
                                 android:id="@+id/rating_bar"
                                 style="?android:attr/ratingBarStyleSmall"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:numStars="5"
-                                android:stepSize="0.1"
-                                android:rating="4.8"/>
+                                android:rating="4.8"
+                                android:stepSize="0.1" />
+
                             <TextView
                                 android:id="@+id/tv_resenas_total"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:textColor="#6B7280"
                                 android:layout_marginTop="4dp"
-                                android:text="125 reviews"/>
+                                android:text="125 reviews"
+                                android:textColor="#6B7280" />
                         </LinearLayout>
 
                         <LinearLayout
                             android:id="@+id/barras_ratings"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="24dp"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginStart="24dp"/>
+                            android:orientation="vertical" />
                     </LinearLayout>
                     <!-- Aquí iría un RecyclerView para las reseñas individuales -->
                 </LinearLayout>
@@ -345,30 +384,4 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Botones de Acción -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:layout_gravity="bottom"
-        android:background="@android:color/white">
-
-        <Button
-            android:id="@+id/btn_reservar"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Reservar"
-            style="@style/Widget.MaterialComponents.Button"/>
-
-        <Button
-            android:id="@+id/btn_mensaje"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Mensaje"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_marginStart="16dp"/>
-    </LinearLayout>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</RelativeLayout>
