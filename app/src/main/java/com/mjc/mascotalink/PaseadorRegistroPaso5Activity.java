@@ -208,7 +208,31 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     private void mostrarPreviewVideo(Uri uri) {
         FrameLayout container = findViewById(R.id.video_preview_container);
         ImageView thumbnail = findViewById(R.id.video_thumbnail);
-        Glide.with(this).load(uri).centerCrop().into(thumbnail);
+
+        android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(this, uri);
+            android.graphics.Bitmap bitmap = retriever.getFrameAtTime(-1, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+
+            if (bitmap != null) {
+                Glide.with(this)
+                    .load(bitmap)
+                    .centerCrop()
+                    .into(thumbnail);
+            } else {
+                thumbnail.setImageResource(R.drawable.ic_launcher_background);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to retrieve video frame with MediaMetadataRetriever for URI: " + uri, e);
+            thumbnail.setImageResource(R.drawable.ic_launcher_background);
+        } finally {
+            try {
+                retriever.release();
+            } catch (java.io.IOException e) {
+                Log.e(TAG, "Error releasing MediaMetadataRetriever", e);
+            }
+        }
+
         container.setVisibility(View.VISIBLE);
     }
 

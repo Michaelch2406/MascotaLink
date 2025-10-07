@@ -186,11 +186,15 @@
                         android:layout_marginTop="12dp">
                         <TextView
                             android:id="@+id/tv_experiencia_anos"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="Experiencia: 3 años"
                             android:textStyle="bold"
                             android:textColor="@color/gray_dark" />
                         <TextView
                             android:id="@+id/tv_experiencia_desde"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="• Desde 2022"
                             android:textColor="@color/secondary"
                             android:layout_marginStart="16dp" />
@@ -253,11 +257,15 @@
                         android:layout_marginTop="16dp">
                         <TextView
                             android:id="@+id/tv_paseos_completados"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="247 paseos completados"
                             android:textStyle="bold"
                             android:textColor="@color/gray_dark" />
                         <TextView
                             android:id="@+id/tv_tiempo_respuesta"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="• Respuesta: 15 min"
                             android:textColor="@color/secondary"
                             android:layout_marginStart="16dp" />

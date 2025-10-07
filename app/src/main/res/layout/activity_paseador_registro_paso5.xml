@@ -210,9 +210,8 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_marginStart="8dp"
-                    android:layout_marginTop="20dp"
-                    android:src="@drawable/abc_btn_check_to_on_mtrl_015"
-                    app:tint="@color/colorSuccess"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/green_success"
                     android:visibility="gone"/>
             </LinearLayout>
             <TextView
@@ -260,9 +259,8 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_marginStart="8dp"
-                    android:layout_marginTop="20dp"
-                    android:src="@drawable/abc_btn_check_to_on_mtrl_015"
-                    app:tint="@color/colorSuccess"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/green_success"
                     android:visibility="gone"/>
             </LinearLayout>
             <TextView
