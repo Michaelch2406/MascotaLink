@@ -155,6 +155,16 @@
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
+            android:name=".EditarPerfilPaseadorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
+            android:name=".EditarPerfilCompletoDuenoActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
             android:name=".MascotaRegistradaActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
