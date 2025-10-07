@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -8,6 +8,7 @@
     tools:context=".PerfilDuenoActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#F7FAFC"
@@ -25,7 +26,8 @@
                 android:src="@drawable/ic_arrow_back"
                 android:layout_gravity="start"
                 android:layout_marginStart="16dp"
-                android:contentDescription="Atrás" />
+                android:contentDescription="Atrás"
+                app:tint="@color/gray_dark" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -40,10 +42,22 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        app:menu="@menu/menu_bottom_nav"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/bottom_nav_color"
+        app:itemTextColor="@color/bottom_nav_color"
+        app:itemActiveIndicatorStyle="@null"/>
+
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:layout_below="@id/app_bar"
+        android:layout_above="@id/bottom_nav">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -117,32 +131,6 @@
                 tools:listitem="@layout/item_mascota_perfil"
                 tools:itemCount="1"/>
 
-            <!-- Información de contacto -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="24dp">
-
-                <TextView
-                    android:text="Información de contacto"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:textColor="@android:color/black"/>
-
-                <TextView
-                    android:id="@+id/tv_email"
-                    android:text="isabella@email.com"
-                    android:textColor="#6B7280"
-                    android:layout_marginTop="8dp" />
-
-                <TextView
-                    android:id="@+id/tv_telefono"
-                    android:text="+593 99 123 4567"
-                    android:textColor="#6B7280"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-
             <!-- Historial de paseos -->
             <TextView
                 android:layout_width="match_parent"
@@ -168,69 +156,117 @@
                     android:padding="12dp"/>
             </LinearLayout>
 
-            <!-- Configuración -->
-            <LinearLayout
+            <!-- Ajustes y Cuenta -->
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="32dp">
+                android:layout_marginTop="32dp"
+                android:text="Ajustes y Cuenta"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:text="Configuración"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:textColor="@android:color/black"/>
+            <TextView
+                android:id="@+id/btn_editar_perfil"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:drawablePadding="16dp"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="Editar perfil"
+                app:drawableStartCompat="@android:drawable/ic_menu_edit"
+                app:drawableTint="@color/gray_dark" />
 
-                <TextView
-                    android:id="@+id/tv_editar_perfil"
-                    android:text="• Editar perfil"
-                    android:layout_marginTop="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:padding="8dp"/>
+            <TextView
+                android:id="@+id/btn_notificaciones"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:drawablePadding="16dp"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="Configurar notificaciones"
+                app:drawableStartCompat="@android:drawable/ic_popup_reminder"
+                app:drawableTint="@color/gray_dark" />
 
-                <TextView
-                    android:id="@+id/tv_notificaciones"
-                    android:text="• Notificaciones"
-                    android:layout_marginTop="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:padding="8dp"/>
+            <TextView
+                android:id="@+id/btn_metodos_pago"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:drawablePadding="16dp"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="Métodos de pago"
+                app:drawableStartCompat="@android:drawable/ic_menu_myplaces"
+                app:drawableTint="@color/gray_dark" />
 
-                <TextView
-                    android:id="@+id/tv_metodos_pago"
-                    android:text="• Métodos de pago"
-                    android:layout_marginTop="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:padding="8dp"/>
+            <TextView
+                android:id="@+id/btn_privacidad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:drawablePadding="16dp"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="Preferencias de privacidad"
+                app:drawableStartCompat="@android:drawable/ic_lock_lock"
+                app:drawableTint="@color/gray_dark" />
 
-                <TextView
-                    android:id="@+id/tv_cerrar_sesion"
-                    android:text="• Cerrar sesión"
-                    android:layout_marginTop="8dp"
-                    android:textColor="@color/error_red"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:padding="8dp"/>
-            </LinearLayout>
+            <!-- Soporte y Legal -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Soporte y Legal"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btn_centro_ayuda"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:drawablePadding="16dp"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="Centro de ayuda"
+                app:drawableStartCompat="@android:drawable/ic_menu_help"
+                app:drawableTint="@color/gray_dark" />
+
+            <TextView
+                android:id="@+id/btn_terminos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:drawablePadding="16dp"
+                android:focusable="true"
+                android:padding="16dp"
+                android:text="Términos y condiciones"
+                app:drawableStartCompat="@android:drawable/ic_menu_info_details"
+                app:drawableTint="@color/gray_dark" />
+
+            <!-- Cerrar Sesión -->
+            <Button
+                android:id="@+id/btn_cerrar_sesion"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"
+                android:text="Cerrar sesión"
+                android:textColor="@color/colorError" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_nav"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        app:menu="@menu/menu_bottom_nav"
-        app:labelVisibilityMode="labeled"
-        app:itemIconTint="@color/bottom_nav_color"
-        app:itemTextColor="@color/bottom_nav_color"
-        app:itemActiveIndicatorStyle="@null"/>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</RelativeLayout>

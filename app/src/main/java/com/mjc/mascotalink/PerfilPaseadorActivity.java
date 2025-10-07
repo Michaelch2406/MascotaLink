@@ -1,9 +1,12 @@
 package com.mjc.mascotalink;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -27,12 +30,13 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.tabs.TabLayout;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
-import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -49,12 +53,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private ImageView ivAvatar, ivVerificadoBadge, ivVideoThumbnail;
     private TextView tvNombre, tvRol, tvVerificado, tvPrecio, tvDescripcion, tvDisponibilidad, tvTiposPerros;
     private TextView tvExperienciaAnos, tvExperienciaDesde;
-    private TextView tvPaseosCompletados, tvTiempoRespuesta;
+    private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
     private TextView tvRatingValor, tvResenasTotal;
     private RatingBar ratingBar;
     private LinearLayout barrasRatings, llAcercaDe, llResenas;
     private FrameLayout videoContainer;
     private TabLayout tabLayout;
+    private Button btnCerrarSesion;
     private GoogleMap googleMap;
     private List<Circle> mapCircles = new ArrayList<>();
 
@@ -68,7 +73,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         db = FirebaseFirestore.getInstance();
 
         initViews();
-        setupToolbar();
+        setupListeners();
         setupTabs();
 
         String paseadorId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
@@ -99,14 +104,21 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         tvExperienciaDesde = findViewById(R.id.tv_experiencia_desde);
         tvDisponibilidad = findViewById(R.id.tv_disponibilidad);
         tvTiposPerros = findViewById(R.id.tv_tipos_perros);
+
+        // Estadisticas
         tvPaseosCompletados = findViewById(R.id.tv_paseos_completados);
         tvTiempoRespuesta = findViewById(R.id.tv_tiempo_respuesta);
+        tvUltimaConexion = findViewById(R.id.tv_ultima_conexion);
+        tvMiembroDesde = findViewById(R.id.tv_miembro_desde);
 
         // "Reseñas" views
         tvRatingValor = findViewById(R.id.tv_rating_valor);
         ratingBar = findViewById(R.id.rating_bar);
         tvResenasTotal = findViewById(R.id.tv_resenas_total);
         barrasRatings = findViewById(R.id.barras_ratings);
+
+        // Ajustes
+        btnCerrarSesion = findViewById(R.id.btn_cerrar_sesion);
 
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -116,9 +128,20 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
     }
 
-    private void setupToolbar() {
+    private void setupListeners() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+
+        btnCerrarSesion.setOnClickListener(v -> {
+            // Limpiar preferencias de "recordar sesión"
+            getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE).edit().clear().apply();
+
+            mAuth.signOut();
+            Intent intent = new Intent(PerfilPaseadorActivity.this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        });
     }
 
     private void setupTabs() {
@@ -143,6 +166,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
     }
 
+    @SuppressWarnings("unchecked")
     private void cargarPerfilCompleto(String paseadorId) {
         Task<DocumentSnapshot> usuarioTask = db.collection("usuarios").document(paseadorId).get();
         Task<DocumentSnapshot> paseadorTask = db.collection("paseadores").document(paseadorId).get();
@@ -165,6 +189,16 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     .placeholder(R.drawable.bg_avatar_circle)
                     .into(ivAvatar);
 
+            Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
+            if (fechaRegistro != null) {
+                tvMiembroDesde.setText(String.format("Se unió en %s", formatMiembroDesde(fechaRegistro)));
+            }
+
+            Timestamp ultimaConexion = usuarioDoc.getTimestamp("ultima_conexion");
+            if (ultimaConexion != null) {
+                tvUltimaConexion.setText(String.format("Últ. conexión: %s", formatUltimaConexion(ultimaConexion)));
+            }
+
             // Cargar datos de la colección 'paseadores'
             String verificacion = paseadorDoc.getString("verificacion_estado");
             if ("APROBADO".equalsIgnoreCase(verificacion)) {
@@ -183,7 +217,14 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
 
             Long paseos = paseadorDoc.getLong("num_servicios_completados");
-            tvPaseosCompletados.setText(String.format(Locale.getDefault(), "%d paseos completados", paseos != null ? paseos : 0));
+            tvPaseosCompletados.setText(String.format(Locale.getDefault(), "%d Paseos completados", paseos != null ? paseos : 0));
+
+            Long tiempoRespuesta = paseadorDoc.getLong("tiempo_respuesta_promedio_min");
+            if (tiempoRespuesta != null) {
+                tvTiempoRespuesta.setText(String.format(Locale.getDefault(), "Respuesta en %d min", tiempoRespuesta));
+            } else {
+                tvTiempoRespuesta.setText("Respuesta en -- min");
+            }
 
             Double rating = paseadorDoc.getDouble("calificacion_promedio");
             Long numResenas = paseadorDoc.getLong("num_resenas");
@@ -193,11 +234,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
             tvResenasTotal.setText(String.format(Locale.getDefault(), "%d reviews", numResenas != null ? numResenas : 0));
 
-
             // Cargar datos del mapa 'perfil_profesional'
             Map<String, Object> perfil = (Map<String, Object>) paseadorDoc.get("perfil_profesional");
             if (perfil != null) {
-                tvDescripcion.setText((String) perfil.get("motivacion")); // Usando 'motivacion' como se pide
+                tvDescripcion.setText((String) perfil.get("motivacion"));
 
                 String videoUrl = (String) perfil.get("video_presentacion_url");
                 Glide.with(this)
@@ -206,7 +246,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                         .placeholder(R.drawable.galeria_paseos_foto1)
                         .into(ivVideoThumbnail);
 
-                // Cargar experiencia
                 Long anosExp = (Long) perfil.get("anos_experiencia");
                 String inicioExp = (String) perfil.get("inicio_experiencia");
                 if (anosExp != null) {
@@ -274,7 +313,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 .addOnSuccessListener(querySnapshot -> {
                     if (googleMap == null) return;
                     if (querySnapshot.isEmpty()) {
-                        // Opcional: Mover mapa a una ubicación por defecto si no hay zonas
                         return;
                     }
 
@@ -295,17 +333,31 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                             boundsBuilder.include(latLng);
                         }
                     }
-                    LatLngBounds bounds = boundsBuilder.build();
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+                    try {
+                        LatLngBounds bounds = boundsBuilder.build();
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+                    } catch (IllegalStateException e) {
+                        Log.e(TAG, "No hay zonas de servicio para mostrar en el mapa.", e);
+                    }
 
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error al cargar zonas de servicio", e));
     }
 
+    private String formatMiembroDesde(Timestamp timestamp) {
+        return new SimpleDateFormat("MMMM yyyy", new Locale("es", "ES")).format(timestamp.toDate());
+    }
+
+    private String formatUltimaConexion(Timestamp timestamp) {
+        long ahora = System.currentTimeMillis();
+        long tiempoPasado = timestamp.toDate().getTime();
+        return DateUtils.getRelativeTimeSpanString(tiempoPasado, ahora, DateUtils.MINUTE_IN_MILLIS).toString();
+    }
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         this.googleMap = googleMap;
-        this.googleMap.getUiSettings().setAllGesturesEnabled(false); // Deshabilitar interacción con el mapa
+        this.googleMap.getUiSettings().setAllGesturesEnabled(false);
 
         String paseadorId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
         if (paseadorId == null) {
