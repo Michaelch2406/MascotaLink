@@ -120,6 +120,100 @@
                 android:textSize="16sp"
                 android:layout_marginTop="4dp"/>
 
+            <!-- Email -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:layout_marginTop="24dp"
+                android:text="Correo electrónico"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                android:gravity="center_vertical">
+                <EditText
+                    android:id="@+id/et_email_dueno"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Correo electrónico"
+                    android:inputType="textEmailAddress"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"
+                    android:enabled="false"/>
+                <ImageView
+                    android:id="@+id/iv_edit_email"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_edit"
+                    app:tint="@color/blue_primary"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Editar correo electrónico"/>
+                <ImageView
+                    android:id="@+id/iv_save_email"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/green_success"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    android:contentDescription="Guardar correo electrónico"/>
+            </LinearLayout>
+
+            <!-- Teléfono -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:layout_marginTop="12dp"
+                android:text="Número de teléfono"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                android:gravity="center_vertical">
+                <EditText
+                    android:id="@+id/et_telefono_dueno"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Número de teléfono"
+                    android:inputType="phone"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"
+                    android:enabled="false"/>
+                <ImageView
+                    android:id="@+id/iv_edit_telefono"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_edit"
+                    app:tint="@color/blue_primary"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Editar número de teléfono"/>
+                <ImageView
+                    android:id="@+id/iv_save_telefono"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/green_success"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    android:contentDescription="Guardar número de teléfono"/>
+            </LinearLayout>
+
             <!-- Mis Mascotas -->
             <TextView
                 android:layout_width="match_parent"

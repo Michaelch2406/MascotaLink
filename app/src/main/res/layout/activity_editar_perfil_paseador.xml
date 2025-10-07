@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC"
+    tools:context=".EditarPerfilPaseadorActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F7FAFC"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@color/gray_dark">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Editar Perfil Paseador"
+                android:textColor="@android:color/black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/app_bar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Nombre -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Nombre"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_nombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu nombre"
+                    android:inputType="textPersonName"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Apellido -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Apellido"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_apellido"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu apellido"
+                    android:inputType="textPersonName"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Motivación / Acerca de mí -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Acerca de mí (Motivación)"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_motivacion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Cuéntanos sobre ti y tu motivación"
+                    android:inputType="textMultiLine"
+                    android:minLines="3"
+                    android:gravity="top"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Video de presentación -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Video de presentación (URL)"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_video_url"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="URL del video"
+                    android:inputType="textUri"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Experiencia -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Años de experiencia"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_anos_experiencia"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ej: 3"
+                    android:inputType="number"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Inicio de experiencia"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_inicio_experiencia"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ej: 2020"
+                    android:inputType="number"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Tipos de perros -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Tipos de perros que paseas"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_tipos_perros"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ej: Pequeños, Medianos, Grandes"
+                    android:inputType="text"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Botón Guardar -->
+            <Button
+                android:id="@+id/btn_guardar_cambios"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Guardar Cambios"
+                style="@style/Widget.Mascota.PrimaryButton"/>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</RelativeLayout>

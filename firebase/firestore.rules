@@ -13,7 +13,6 @@ service cloud.firestore {
       allow write: if isOwner(userId) &&
                      (resource == null || (
                         request.resource.data.rol == resource.data.rol &&
-                        request.resource.data.email == resource.data.email &&
                         request.resource.data.cedula == resource.data.cedula
                      ));
       allow delete: if false;
@@ -36,7 +35,6 @@ service cloud.firestore {
       allow write: if isOwner(userId) &&
                      (resource == null || (
                         request.resource.data.rol == resource.data.rol &&
-                        request.resource.data.email == resource.data.email &&
                         request.resource.data.verificacion_estado == resource.data.verificacion_estado
                      ));
       allow delete: if false;

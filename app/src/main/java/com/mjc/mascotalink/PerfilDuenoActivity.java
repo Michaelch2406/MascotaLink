@@ -4,9 +4,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.app.AlertDialog;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -32,6 +34,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private ImageView ivAvatar, ivVerificado, ivBack;
     private TextView tvNombreCompleto, tvRol;
+    private EditText etEmailDueno, etTelefonoDueno;
+    private ImageView ivEditEmail, ivSaveEmail, ivEditTelefono, ivSaveTelefono;
+    private String originalEmail, originalTelefono;
     private RecyclerView rvMascotas;
     private MascotaPerfilAdapter mascotaAdapter;
     private List<Pet> petList;
@@ -62,12 +67,29 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentUser != null) {
+            cargarDatosDueno(currentUser.getUid());
+            cargarMascotas(currentUser.getUid());
+        }
+    }
+
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
         ivAvatar = findViewById(R.id.iv_avatar);
         ivVerificado = findViewById(R.id.iv_verificado);
         tvNombreCompleto = findViewById(R.id.tv_nombre_completo);
         tvRol = findViewById(R.id.tv_rol);
+
+        etEmailDueno = findViewById(R.id.et_email_dueno);
+        ivEditEmail = findViewById(R.id.iv_edit_email);
+        ivSaveEmail = findViewById(R.id.iv_save_email);
+
+        etTelefonoDueno = findViewById(R.id.et_telefono_dueno);
+        ivEditTelefono = findViewById(R.id.iv_edit_telefono);
+        ivSaveTelefono = findViewById(R.id.iv_save_telefono);
 
         rvMascotas = findViewById(R.id.rv_mascotas);
         rvMascotas.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
@@ -112,9 +134,81 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
 
-        btnEditarPerfil.setOnClickListener(v -> showToast("Próximamente: Editar perfil"));
+        // Email editing
+        ivEditEmail.setOnClickListener(v -> {
+            etEmailDueno.setEnabled(true);
+            ivEditEmail.setVisibility(View.GONE);
+            ivSaveEmail.setVisibility(View.VISIBLE);
+            etEmailDueno.requestFocus();
+        });
+
+        ivSaveEmail.setOnClickListener(v -> {
+            String newEmail = etEmailDueno.getText().toString();
+            if (!newEmail.isEmpty()) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Confirmar cambio de correo")
+                        .setMessage("¿Estás seguro de que quieres cambiar tu correo electrónico a " + newEmail + "?")
+                        .setPositiveButton("Sí", (dialog, which) -> {
+                            updateContactInfo("correo", newEmail);
+                            etEmailDueno.setEnabled(false);
+                            ivSaveEmail.setVisibility(View.GONE);
+                            ivEditEmail.setVisibility(View.VISIBLE);
+                        })
+                        .setNegativeButton("No", (dialog, which) -> {
+                            // Revertir cambios o simplemente cerrar el diálogo
+                            etEmailDueno.setText(originalEmail); // Revertir al valor original
+                            etEmailDueno.setEnabled(false);
+                            ivSaveEmail.setVisibility(View.GONE);
+                            ivEditEmail.setVisibility(View.VISIBLE);
+                        })
+                        .show();
+            } else {
+                showToast("El correo electrónico no puede estar vacío.");
+            }
+        });
+
+        // Phone editing
+        ivEditTelefono.setOnClickListener(v -> {
+            etTelefonoDueno.setEnabled(true);
+            ivEditTelefono.setVisibility(View.GONE);
+            ivSaveTelefono.setVisibility(View.VISIBLE);
+            etTelefonoDueno.requestFocus();
+        });
+
+        ivSaveTelefono.setOnClickListener(v -> {
+            String newTelefono = etTelefonoDueno.getText().toString();
+            if (!newTelefono.isEmpty()) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Confirmar cambio de teléfono")
+                        .setMessage("¿Estás seguro de que quieres cambiar tu número de teléfono a " + newTelefono + "?")
+                        .setPositiveButton("Sí", (dialog, which) -> {
+                            updateContactInfo("telefono", newTelefono);
+                            etTelefonoDueno.setEnabled(false);
+                            ivSaveTelefono.setVisibility(View.GONE);
+                            ivEditTelefono.setVisibility(View.VISIBLE);
+                        })
+                        .setNegativeButton("No", (dialog, which) -> {
+                            // Revertir cambios o simplemente cerrar el diálogo
+                            etTelefonoDueno.setText(originalTelefono); // Revertir al valor original
+                            etTelefonoDueno.setEnabled(false);
+                            ivSaveTelefono.setVisibility(View.GONE);
+                            ivEditTelefono.setVisibility(View.VISIBLE);
+                        })
+                        .show();
+            } else {
+                showToast("El número de teléfono no puede estar vacío.");
+            }
+        });
+
+        btnEditarPerfil.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilDuenoActivity.this, EditarPerfilCompletoDuenoActivity.class);
+            startActivity(intent);
+        });
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
-        btnMetodosPago.setOnClickListener(v -> showToast("Próximamente: Métodos de pago"));
+        btnMetodosPago.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilDuenoActivity.this, MetodoPagoActivity.class);
+            startActivity(intent);
+        });
         btnPrivacidad.setOnClickListener(v -> showToast("Próximamente: Privacidad"));
         btnCentroAyuda.setOnClickListener(v -> showToast("Próximamente: Centro de Ayuda"));
         btnTerminos.setOnClickListener(v -> showToast("Próximamente: Términos y Condiciones"));
@@ -137,7 +231,12 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 DocumentSnapshot document = task.getResult();
                 if (document.exists()) {
                     tvNombreCompleto.setText(document.getString("nombre_display"));
-                    tvRol.setText("Dueño de mascotas");
+                    tvRol.setText("Dueña de mascotas");
+
+                    etEmailDueno.setText(document.getString("correo"));
+                    etTelefonoDueno.setText(document.getString("telefono"));
+                    originalEmail = document.getString("correo");
+                    originalTelefono = document.getString("telefono");
 
                     String fotoUrl = document.getString("foto_perfil");
                     if (fotoUrl != null && !fotoUrl.isEmpty()) {
@@ -182,6 +281,15 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                         Toast.makeText(this, "Error al cargar las mascotas.", Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    private void updateContactInfo(String field, String value) {
+        if (currentUser != null) {
+            db.collection("usuarios").document(currentUser.getUid())
+                    .update(field, value)
+                    .addOnSuccessListener(aVoid -> showToast(field + " actualizado correctamente."))
+                    .addOnFailureListener(e -> showToast("Error al actualizar " + field + ": " + e.getMessage()));
+        }
     }
 
     private void showToast(String message) {

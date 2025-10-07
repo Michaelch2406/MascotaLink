@@ -121,6 +121,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String paseadorId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
+        if (paseadorId != null) {
+            cargarPerfilCompleto(paseadorId);
+        }
+    }
+
     private void initViews() {
         ivAvatar = findViewById(R.id.iv_avatar);
         tvNombre = findViewById(R.id.tv_nombre);
@@ -218,9 +227,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
         });
 
-        btnEditarPerfil.setOnClickListener(v -> showToast("Próximamente: Editar perfil"));
+        btnEditarPerfil.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
+            startActivity(intent);
+        });
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
-        btnMetodosPago.setOnClickListener(v -> showToast("Próximamente: Métodos de pago"));
+        btnMetodosPago.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
+            startActivity(intent);
+        });
         btnPrivacidad.setOnClickListener(v -> showToast("Próximamente: Privacidad"));
         btnCentroAyuda.setOnClickListener(v -> showToast("Próximamente: Centro de Ayuda"));
         btnTerminos.setOnClickListener(v -> showToast("Próximamente: Términos y Condiciones"));
