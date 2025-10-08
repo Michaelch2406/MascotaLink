@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
@@ -29,19 +30,15 @@ public class MetodoPagoActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
+    private String metodoPagoId; // To distinguish between Create and Update
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_metodo_pago);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
-
-        // Dynamic prefs scope
-        String passedPrefs = getIntent().getStringExtra("prefs");
-        if (passedPrefs != null && !passedPrefs.trim().isEmpty()) {
-            PREFS = passedPrefs.trim();
-        }
+        toolbar.setNavigationOnClickListener(v -> finish());
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -50,40 +47,61 @@ public class MetodoPagoActivity extends AppCompatActivity {
         etCuenta = findViewById(R.id.et_numero_cuenta);
         Button btnGuardar = findViewById(R.id.btn_guardar_metodo);
 
-        if (etBanco == null || etCuenta == null || btnGuardar == null) {
-            Toast.makeText(this, "Error: Elementos de la interfaz no encontrados", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
-
+        // Setup Bank AutoCompleteTextView
         String[] bancos = getResources().getStringArray(R.array.bancos);
         etBanco.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, bancos));
-        // Tipo de cuenta eliminado según requerimiento
 
-        loadState();
+        // Check mode: Create (from wizard) or Update (from profile)
+        metodoPagoId = getIntent().getStringExtra("metodo_pago_id");
+        if (metodoPagoId != null && !metodoPagoId.isEmpty()) {
+            // UPDATE MODE
+            setTitle("Editar Método de Pago");
+            loadMetodoPagoFromFirestore(metodoPagoId);
+        } else {
+            // CREATE MODE (for registration wizard)
+            setTitle("Añadir Método de Pago");
+            String passedPrefs = getIntent().getStringExtra("prefs");
+            if (passedPrefs != null && !passedPrefs.trim().isEmpty()) {
+                PREFS = passedPrefs.trim();
+            }
+            loadStateFromPrefs();
+        }
 
         btnGuardar.setOnClickListener(v -> guardarMetodoPago());
     }
 
-    private void loadState() {
+    private void loadMetodoPagoFromFirestore(String id) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "Error: No hay sesión para cargar los datos.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        String uid = user.getUid();
+        db.collection("usuarios").document(uid).collection("metodos_pago").document(id).get()
+            .addOnSuccessListener(document -> {
+                if (document.exists()) {
+                    String banco = document.getString("banco");
+                    String cuenta = document.getString("numero_cuenta");
+                    etBanco.setText(banco, false); // false to not filter
+                    etCuenta.setText(cuenta);
+                } else {
+                    Toast.makeText(this, "Error: No se encontró el método de pago.", Toast.LENGTH_LONG).show();
+                    finish();
+                }
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Error al cargar datos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                finish();
+            });
+    }
+
+    private void loadStateFromPrefs() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         String savedBank = prefs.getString("pago_banco", "");
-        etCuenta.setText(prefs.getString("pago_cuenta", ""));
-        // Tipo de cuenta eliminado; no se carga
-
-        if (!savedBank.isEmpty()) {
-            etBanco.setText(savedBank);
-        } else {
-            String[] bancos = getResources().getStringArray(R.array.bancos);
-            if (bancos.length > 0) etBanco.setText(bancos[0]);
-        }
-        // Sin tipo de cuenta
-
-        if (etBanco.getAdapter() instanceof ArrayAdapter) {
-            @SuppressWarnings("unchecked")
-            ArrayAdapter<String> adapter = (ArrayAdapter<String>) etBanco.getAdapter();
-            adapter.getFilter().filter(null);
-        }
+        String savedAccount = prefs.getString("pago_cuenta", "");
+        etBanco.setText(savedBank, false);
+        etCuenta.setText(savedAccount);
     }
 
     private void guardarMetodoPago() {
@@ -92,40 +110,60 @@ public class MetodoPagoActivity extends AppCompatActivity {
 
         if (!validateInputs(banco, cuenta)) return;
 
-        // SharedPreferences
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        editor.putBoolean("metodo_pago_completo", true);
-        editor.putString("pago_banco", banco);
-        editor.putString("pago_cuenta", cuenta);
-        // No se guarda tipo
-        editor.apply();
+        FirebaseUser user = mAuth.getCurrentUser();
 
-        // Firestore subcollection for current user if logged in
-        if (mAuth.getCurrentUser() != null) {
-            String uid = mAuth.getCurrentUser().getUid();
+        // UPDATE case (from profile)
+        if (metodoPagoId != null && !metodoPagoId.isEmpty()) {
+            if (user != null) {
+                String uid = user.getUid();
+                Map<String, Object> mp = new HashMap<>();
+                mp.put("banco", banco);
+                mp.put("numero_cuenta", cuenta);
+                mp.put("fecha_actualizacion", Timestamp.now());
+
+                db.collection("usuarios").document(uid).collection("metodos_pago").document(metodoPagoId)
+                    .update(mp)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Método de pago actualizado", Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);
+                        finish();
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(this, "Error al actualizar: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            } else {
+                Toast.makeText(this, "Error: No hay sesión de usuario para actualizar.", Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+
+        // CREATE case
+        if (user == null) {
+            // From REGISTRATION WIZARD (user not logged in yet) -> Save to SharedPreferences
+            SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+            editor.putBoolean("metodo_pago_completo", true);
+            editor.putString("pago_banco", banco);
+            editor.putString("pago_cuenta", cuenta);
+            editor.apply();
+
+            Toast.makeText(this, "Método de pago guardado", Toast.LENGTH_SHORT).show();
+            setResult(RESULT_OK);
+            finish();
+        } else {
+            // From PROFILE (logged-in user adding a NEW payment method) -> Save to Firestore
+            String uid = user.getUid();
             Map<String, Object> mp = new HashMap<>();
             mp.put("banco", banco);
             mp.put("numero_cuenta", cuenta);
-            // sin campo tipo
-            mp.put("predeterminado", true);
+            mp.put("predeterminado", false); // Set to false, logic for default should be handled elsewhere
             mp.put("fecha_registro", Timestamp.now());
 
             db.collection("usuarios").document(uid).collection("metodos_pago")
                 .add(mp)
                 .addOnSuccessListener(ref -> {
-                    Toast.makeText(this, "Método de pago guardado", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Nuevo método de pago añadido", Toast.LENGTH_SHORT).show();
                     setResult(RESULT_OK);
                     finish();
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Guardado local. Error en nube: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    setResult(RESULT_OK);
-                    finish();
-                });
-        } else {
-            Toast.makeText(this, "Método de pago guardado", Toast.LENGTH_SHORT).show();
-            setResult(RESULT_OK);
-            finish();
+                .addOnFailureListener(e -> Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show());
         }
     }
 
@@ -133,8 +171,14 @@ public class MetodoPagoActivity extends AppCompatActivity {
         etBanco.setError(null);
         etCuenta.setError(null);
 
-        if (TextUtils.isEmpty(banco)) { etBanco.setError("Debes seleccionar un banco"); return false; }
-        if (TextUtils.isEmpty(cuenta)) { etCuenta.setError("El número de cuenta es requerido"); return false; }
+        if (TextUtils.isEmpty(banco)) {
+            etBanco.setError("Debes seleccionar un banco");
+            return false;
+        }
+        if (TextUtils.isEmpty(cuenta)) {
+            etCuenta.setError("El número de cuenta es requerido");
+            return false;
+        }
         return true;
     }
 }

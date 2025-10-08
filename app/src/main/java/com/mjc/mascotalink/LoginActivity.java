@@ -174,9 +174,17 @@ public class LoginActivity extends AppCompatActivity {
                                         }
                                     })
                                     .addOnFailureListener(e -> mostrarError("Error al verificar estado del paseador: " + e.getMessage()));
-                        } else if ("DUENO".equalsIgnoreCase(rol)) {
-                            // Dueño no requiere verificación de estado adicional por ahora
-                            handleSessionAndRedirect(uid, rol, null);
+                        } else if ("DUEÑO".equalsIgnoreCase(rol)) {
+                            db.collection("duenos").document(uid).get()
+                                    .addOnSuccessListener(duenoDoc -> {
+                                        if (duenoDoc.exists()) {
+                                            String verificacionEstado = duenoDoc.getString("verificacion_estado");
+                                            handleSessionAndRedirect(uid, rol, verificacionEstado);
+                                        } else {
+                                            mostrarError("Error de consistencia de datos del dueño.");
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> mostrarError("Error al verificar estado del dueño: " + e.getMessage()));
                         } else { // Otros roles como ADMIN
                             handleSessionAndRedirect(uid, rol, null);
                         }
@@ -216,7 +224,13 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 break;
             case "DUEÑO":
-                intent = new Intent(this, PerfilDuenoActivity.class);
+                if ("APROBADO".equals(estadoVerificacion)) {
+                    intent = new Intent(this, PerfilDuenoActivity.class);
+                } else if ("PENDIENTE".equals(estadoVerificacion)) {
+                    mostrarMensaje("Tu perfil de dueño está en revisión. Te notificaremos cuando sea aprobado.");
+                } else {
+                    mostrarMensaje("Tu perfil de dueño fue rechazado o está inactivo. Contacta a soporte.");
+                }
                 break;
             case "ADMIN":
                 intent = new Intent(this, MainActivity.class);
