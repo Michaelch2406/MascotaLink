@@ -36,7 +36,7 @@ import java.util.Locale;
 public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
     private ImageView arrowBack, fotoPrincipalImageView;
-    private TextInputLayout nombreTextField, pesoTextField, fechaNacimientoTextField;
+    private TextInputLayout nombreTextField, pesoTextField, fechaNacimientoTextField, razaTextField;
     private AutoCompleteTextView razaAutoComplete;
     private RadioGroup sexoRadioGroup;
     private ChipGroup tamanoChipGroup;
@@ -55,6 +55,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         arrowBack = findViewById(R.id.arrow_back);
         fotoPrincipalImageView = findViewById(R.id.fotoPrincipalImageView);
         nombreTextField = findViewById(R.id.nombreTextField);
+        razaTextField = findViewById(R.id.razaTextField);
         razaAutoComplete = findViewById(R.id.razaAutoComplete);
         sexoRadioGroup = findViewById(R.id.sexoRadioGroup);
         fechaNacimientoTextField = findViewById(R.id.fechaNacimientoTextField);
@@ -177,8 +178,10 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         }
 
         if (razaAutoComplete.getText().toString().trim().isEmpty() || razaAutoComplete.getText().toString().equals(getString(R.string.raza_mascota_prompt))) {
-            Toast.makeText(this, "Selecciona una raza", Toast.LENGTH_SHORT).show();
+            razaTextField.setError("Debes seleccionar una raza");
             isValid = false;
+        } else {
+            razaTextField.setError(null);
         }
 
         if (fechaNacimientoEditText.getText().toString().trim().isEmpty()) {

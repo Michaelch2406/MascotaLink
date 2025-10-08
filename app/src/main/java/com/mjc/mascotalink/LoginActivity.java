@@ -158,7 +158,12 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String rol = documentSnapshot.getString("rol");
-                        if ("PASEADOR".equals(rol)) {
+                        if (rol == null) {
+                            mostrarError("Rol no definido para este usuario.");
+                            return;
+                        }
+
+                        if ("PASEADOR".equalsIgnoreCase(rol)) {
                             db.collection("paseadores").document(uid).get()
                                     .addOnSuccessListener(paseadorDoc -> {
                                         if (paseadorDoc.exists()) {
@@ -169,7 +174,10 @@ public class LoginActivity extends AppCompatActivity {
                                         }
                                     })
                                     .addOnFailureListener(e -> mostrarError("Error al verificar estado del paseador: " + e.getMessage()));
-                        } else {
+                        } else if ("DUENO".equalsIgnoreCase(rol)) {
+                            // Dueño no requiere verificación de estado adicional por ahora
+                            handleSessionAndRedirect(uid, rol, null);
+                        } else { // Otros roles como ADMIN
                             handleSessionAndRedirect(uid, rol, null);
                         }
                     } else {
@@ -195,7 +203,9 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         Intent intent = null;
-        switch (rol) {
+        String normalizedRol = rol.toUpperCase(); // Normalizar a mayúsculas
+
+        switch (normalizedRol) {
             case "PASEADOR":
                 if ("APROBADO".equals(estadoVerificacion)) {
                     intent = new Intent(this, PerfilPaseadorActivity.class);
@@ -205,14 +215,14 @@ public class LoginActivity extends AppCompatActivity {
                     mostrarMensaje("Tu perfil fue rechazado o está inactivo. Contacta a soporte.");
                 }
                 break;
-            case "DUENO":
+            case "DUEÑO":
                 intent = new Intent(this, PerfilDuenoActivity.class);
                 break;
             case "ADMIN":
                 intent = new Intent(this, MainActivity.class);
                 break;
             default:
-                mostrarError("Rol de usuario desconocido.");
+                mostrarError("Rol de usuario desconocido: '" + rol + "'"); // Mostrar el rol problemático
                 break;
         }
 

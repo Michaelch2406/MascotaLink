@@ -41,31 +41,14 @@
                 android:layout_marginBottom="16dp" />
 
             <!-- Buscador de direcciones -->
-            <com.google.android.material.textfield.TextInputLayout
+            <androidx.appcompat.widget.SearchView
+                android:id="@+id/search_view_direccion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:hint="Buscar dirección"
-                app:boxStrokeColor="@color/blue_primary"
-                app:hintTextColor="@color/blue_primary">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_direccion_busqueda"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="2" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <Button
-                android:id="@+id/btn_buscar_direccion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Buscar"
                 android:layout_marginBottom="16dp"
-                android:backgroundTint="@color/blue_primary"
-                android:textColor="@color/white" />
+                app:queryHint="Buscar dirección o barrio..."
+                app:iconifiedByDefault="false"
+                android:background="@drawable/edit_text_background" />
 
             <!-- Control de radio -->
             <TextView

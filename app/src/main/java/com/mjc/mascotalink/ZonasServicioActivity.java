@@ -10,10 +10,10 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.widget.SearchView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -50,8 +50,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     private static final LatLng ECUADOR_CENTER = new LatLng(-1.8312, -78.1834);
 
     private GoogleMap mMap;
-    private EditText etDireccionBusqueda;
-    private Button btnBuscarDireccion, btnAgregarZona, btnGuardarZonas;
+    private SearchView searchViewDireccion;
+    private Button btnAgregarZona, btnGuardarZonas;
     private Slider sliderRadio;
     private TextView tvRadio, tvValidationMessages;
     private ImageView ivMyLocation;
@@ -80,8 +80,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     }
 
     private void initViews() {
-        etDireccionBusqueda = findViewById(R.id.et_direccion_busqueda);
-        btnBuscarDireccion = findViewById(R.id.btn_buscar_direccion);
+        searchViewDireccion = findViewById(R.id.search_view_direccion);
         btnAgregarZona = findViewById(R.id.btn_agregar_zona);
         btnGuardarZonas = findViewById(R.id.btn_guardar_zonas);
         sliderRadio = findViewById(R.id.slider_radio);
@@ -101,10 +100,26 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             updateCurrentCircle();
         });
 
-        btnBuscarDireccion.setOnClickListener(v -> buscarDireccion());
+        setupSearchListener();
         btnAgregarZona.setOnClickListener(v -> agregarZona());
         btnGuardarZonas.setOnClickListener(v -> guardarZonas());
         ivMyLocation.setOnClickListener(v -> fetchCurrentLocation());
+    }
+
+    private void setupSearchListener() {
+        searchViewDireccion.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                buscarDireccion(query);
+                searchViewDireccion.clearFocus(); // Hide keyboard
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
     }
 
     private void setupLocationServices() {
@@ -208,7 +223,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
                 Address address = addresses.get(0);
                 String direccion = address.getAddressLine(0);
                 if (direccion != null) {
-                    etDireccionBusqueda.setText(direccion);
+                    searchViewDireccion.setQuery(direccion, false);
                 }
             }
         } catch (IOException e) {
@@ -216,10 +231,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         }
     }
 
-    private void buscarDireccion() {
-        String direccion = etDireccionBusqueda.getText().toString().trim();
+    private void buscarDireccion(String direccion) {
         if (TextUtils.isEmpty(direccion)) {
-            etDireccionBusqueda.setError("Ingresa una dirección");
             return;
         }
         try {
@@ -229,9 +242,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
                 LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
                 updateTemporaryMarker(latLng);
-                etDireccionBusqueda.setError(null);
             } else {
-                etDireccionBusqueda.setError("Dirección no encontrada");
+                Toast.makeText(this, "Dirección no encontrada", Toast.LENGTH_SHORT).show();
             }
         } catch (IOException e) {
             Toast.makeText(this, "Error al buscar la dirección", Toast.LENGTH_SHORT).show();
@@ -243,7 +255,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             Toast.makeText(this, "Selecciona una ubicación en el mapa", Toast.LENGTH_SHORT).show();
             return;
         }
-        String direccion = etDireccionBusqueda.getText().toString().trim();
+        String direccion = searchViewDireccion.getQuery().toString().trim();
         if (TextUtils.isEmpty(direccion)) {
             direccion = "Zona de servicio";
         }
@@ -264,7 +276,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             currentCircle = null;
         }
         btnAgregarZona.setEnabled(false);
-        etDireccionBusqueda.setText("");
+        searchViewDireccion.setQuery("", false);
         Toast.makeText(this, "Zona agregada correctamente", Toast.LENGTH_SHORT).show();
         btnGuardarZonas.setEnabled(!zonasSeleccionadas.isEmpty());
     }

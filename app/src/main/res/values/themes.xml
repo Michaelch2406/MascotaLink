@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.MascotaLink" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.MascotaLink" parent="Theme.Material3.Light.NoActionBar">
         <!-- Brand colors -->
         <item name="colorPrimary">#13A4EC</item>
         <item name="colorOnPrimary">#FFFFFF</item>

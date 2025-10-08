@@ -258,6 +258,15 @@
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
+                    <TextView
+                        android:id="@+id/tv_zonas_servicio_nombres"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/gray_dark"
+                        android:textSize="16sp"
+                        tools:text="La Carolina, La Floresta, Cumbayá" />
+
                     <androidx.fragment.app.FragmentContainerView
                         android:id="@+id/map_container"
                         android:name="com.google.android.gms.maps.SupportMapFragment"

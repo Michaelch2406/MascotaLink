@@ -27,7 +27,11 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import android.location.Address;
+import android.location.Geocoder;
 import com.google.android.gms.maps.model.LatLngBounds;
+import java.io.IOException;
+
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -40,8 +44,13 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -55,7 +64,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
     // Views
     private ImageView ivAvatar, ivVerificadoBadge, ivVideoThumbnail;
-    private TextView tvNombre, tvRol, tvVerificado, tvPrecio, tvDescripcion, tvDisponibilidad, tvTiposPerros;
+    private TextView tvNombre, tvRol, tvVerificado, tvPrecio, tvDescripcion, tvDisponibilidad, tvTiposPerros, tvZonasServicioNombres;
     private TextView tvExperienciaAnos, tvExperienciaDesde;
     private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
     private TextView tvRatingValor, tvResenasTotal;
@@ -149,6 +158,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         tvExperienciaDesde = findViewById(R.id.tv_experiencia_desde);
         tvDisponibilidad = findViewById(R.id.tv_disponibilidad);
         tvTiposPerros = findViewById(R.id.tv_tipos_perros);
+        tvZonasServicioNombres = findViewById(R.id.tv_zonas_servicio_nombres);
 
         // Estadisticas
         tvPaseosCompletados = findViewById(R.id.tv_paseos_completados);
@@ -381,18 +391,17 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                         .placeholder(R.drawable.galeria_paseos_foto1)
                         .into(ivVideoThumbnail);
 
-                Long anosExp = (Long) perfil.get("anos_experiencia");
-                String inicioExp = (String) perfil.get("inicio_experiencia");
-                if (anosExp != null) {
-                    tvExperienciaAnos.setText(String.format(Locale.getDefault(), "Experiencia: %d años", anosExp));
+                Timestamp inicioExpTimestamp = (Timestamp) perfil.get("fecha_inicio_experiencia");
+                if (inicioExpTimestamp != null) {
+                    Date startDate = inicioExpTimestamp.toDate();
+                    LocalDate localStartDate = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                    LocalDate currentDate = LocalDate.now();
+                    int years = Period.between(localStartDate, currentDate).getYears();
+                    tvExperienciaAnos.setText(String.format(Locale.getDefault(), "Experiencia: %d años", years));
                 } else {
                     tvExperienciaAnos.setVisibility(View.GONE);
                 }
-                if (inicioExp != null && !inicioExp.isEmpty()) {
-                    tvExperienciaDesde.setText("• Desde " + inicioExp);
-                } else {
-                    tvExperienciaDesde.setVisibility(View.GONE);
-                }
+                tvExperienciaDesde.setVisibility(View.GONE); // Ocultar siempre el campo antiguo
             }
 
             // Cargar datos del mapa 'manejo_perros'
@@ -448,10 +457,14 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 .addOnSuccessListener(querySnapshot -> {
                     if (googleMap == null) return;
                     if (querySnapshot.isEmpty()) {
+                        tvZonasServicioNombres.setText("No especificadas");
                         return;
                     }
 
                     LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+                    List<String> nombresZonas = new ArrayList<>();
+                    Geocoder geocoder = new Geocoder(this, new Locale("es", "ES"));
+
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         GeoPoint centro = doc.getGeoPoint("centro");
                         Double radioKm = doc.getDouble("radio_km");
@@ -466,8 +479,31 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                                     .strokeColor(Color.argb(128, 0, 150, 136))
                                     .fillColor(Color.argb(64, 0, 150, 136)));
                             boundsBuilder.include(latLng);
+
+                            try {
+                                List<Address> addresses = geocoder.getFromLocation(centro.getLatitude(), centro.getLongitude(), 1);
+                                if (addresses != null && !addresses.isEmpty()) {
+                                    Address address = addresses.get(0);
+                                    String nombreZona = address.getSubLocality(); // Barrio o sector
+                                    if (nombreZona == null) {
+                                        nombreZona = address.getLocality(); // Ciudad
+                                    }
+                                    if (nombreZona != null && !nombresZonas.contains(nombreZona)) {
+                                        nombresZonas.add(nombreZona);
+                                    }
+                                }
+                            } catch (IOException e) {
+                                Log.e(TAG, "Error en Geocoder al obtener nombre de la zona", e);
+                            }
                         }
                     }
+
+                    if (!nombresZonas.isEmpty()) {
+                        tvZonasServicioNombres.setText(android.text.TextUtils.join(", ", nombresZonas));
+                    } else {
+                        tvZonasServicioNombres.setText("Nombres no disponibles");
+                    }
+
                     try {
                         LatLngBounds bounds = boundsBuilder.build();
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
@@ -476,7 +512,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     }
 
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Error al cargar zonas de servicio", e));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar zonas de servicio", e);
+                    tvZonasServicioNombres.setText("Error al cargar zonas");
+                });
     }
 
     private String formatMiembroDesde(Timestamp timestamp) {

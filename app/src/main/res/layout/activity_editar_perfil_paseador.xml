@@ -93,6 +93,79 @@
                     android:textColorHint="#9CA3AF"/>
             </LinearLayout>
 
+            <!-- Correo Electrónico -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Correo Electrónico"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#D1D5DB"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Tu correo electrónico"
+                    android:inputType="textEmailAddress"
+                    android:background="@android:color/transparent"
+                    android:textColor="#4B5563"
+                    android:textColorHint="#9CA3AF"
+                    android:enabled="false"/>
+            </LinearLayout>
+
+            <!-- Teléfono -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Teléfono"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_telefono"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu teléfono"
+                    android:inputType="phone"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
+            <!-- Domicilio -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Domicilio"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E7EEF2"
+                android:padding="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp">
+                <EditText
+                    android:id="@+id/et_domicilio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ingresa tu domicilio"
+                    android:inputType="textPostalAddress"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"/>
+            </LinearLayout>
+
             <!-- Motivación / Acerca de mí -->
             <TextView
                 android:layout_width="wrap_content"
@@ -124,49 +197,55 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 style="@style/TextAppearance.Mascota.Label"
-                android:text="Video de presentación (URL)"/>
+                android:text="Video de presentación"/>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="8dp"
+                android:background="#E7EEF2">
+
+                <VideoView
+                    android:id="@+id/video_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center" />
+
+                <ProgressBar
+                    android:id="@+id/video_progress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone"/>
+            </FrameLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
+                android:orientation="horizontal"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_video_url"
-                    android:layout_width="match_parent"
+
+                <Button
+                    android:id="@+id/btn_subir_video"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:hint="URL del video"
-                    android:inputType="textUri"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
+                    android:layout_weight="1"
+                    android:text="Subir Video"
+                    style="@style/Widget.Mascota.PrimaryButton"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/btn_grabar_video"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Grabar Nuevo"
+                    style="@style/Widget.Mascota.PrimaryButton"
+                    android:layout_marginStart="8dp"/>
             </LinearLayout>
 
-            <!-- Experiencia -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Años de experiencia"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_anos_experiencia"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ej: 3"
-                    android:inputType="number"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-
+            <!-- Inicio de Experiencia -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -180,15 +259,20 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="12dp">
                 <EditText
-                    android:id="@+id/et_inicio_experiencia"
+                    android:id="@+id/et_inicio_experiencia_picker"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Ej: 2020"
-                    android:inputType="number"
+                    android:hint="Selecciona una fecha"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:drawableEnd="@android:drawable/ic_menu_my_calendar"
+                    android:drawableTint="@color/gray_dark"
                     android:background="@android:color/transparent"
                     android:textColor="#111827"
                     android:textColorHint="#9CA3AF"/>
             </LinearLayout>
+
+
 
             <!-- Tipos de perros -->
             <TextView
@@ -196,23 +280,35 @@
                 android:layout_height="wrap_content"
                 style="@style/TextAppearance.Mascota.Label"
                 android:text="Tipos de perros que paseas"/>
-            <LinearLayout
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/cg_tipos_perros"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_tipos_perros"
-                    android:layout_width="match_parent"
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_pequenos"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:hint="Ej: Pequeños, Medianos, Grandes"
-                    android:inputType="text"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
+                    android:text="Pequeños"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_medianos"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Medianos"/>
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_grandes"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Grandes"/>
+
+            </com.google.android.material.chip.ChipGroup>
 
             <!-- Botón Guardar -->
             <Button
