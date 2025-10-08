@@ -21,6 +21,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private List<Pet> petList;
     private Button btnCerrarSesion;
     private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
+    private String metodoPagoId; // Variable to store the payment method ID
 
 
     @Override
@@ -57,9 +59,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         setupListeners();
 
         if (currentUser != null) {
-            cargarDatosDueno(currentUser.getUid());
-            // Asumiendo que las mascotas están en una subcolección del documento de usuario
-            cargarMascotas(currentUser.getUid());
+            String uid = currentUser.getUid();
+            cargarDatosDueno(uid);
+            cargarMascotas(uid);
+            cargarMetodoPagoPredeterminado(uid);
         } else {
             // Handle user not logged in
             startActivity(new Intent(this, LoginActivity.class));
@@ -71,8 +74,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (currentUser != null) {
-            cargarDatosDueno(currentUser.getUid());
-            cargarMascotas(currentUser.getUid());
+            String uid = currentUser.getUid();
+            cargarDatosDueno(uid);
+            cargarMascotas(uid);
+            cargarMetodoPagoPredeterminado(uid);
         }
     }
 
@@ -207,6 +212,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
         btnMetodosPago.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, MetodoPagoActivity.class);
+            // Pass the payment method ID to the activity
+            if (metodoPagoId != null && !metodoPagoId.isEmpty()) {
+                intent.putExtra("metodo_pago_id", metodoPagoId);
+            }
             startActivity(intent);
         });
         btnPrivacidad.setOnClickListener(v -> showToast("Próximamente: Privacidad"));
@@ -279,6 +288,26 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                         mascotaAdapter.notifyDataSetChanged();
                     } else {
                         Toast.makeText(this, "Error al cargar las mascotas.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void cargarMetodoPagoPredeterminado(String uid) {
+        db.collection("usuarios").document(uid).collection("metodos_pago")
+                .whereEqualTo("predeterminado", true).limit(1).get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        // Get the first default payment method
+                        metodoPagoId = queryDocumentSnapshots.getDocuments().get(0).getId();
+                    } else {
+                        // Optional: If no default, maybe fetch the most recent one?
+                        db.collection("usuarios").document(uid).collection("metodos_pago")
+                                .orderBy("fecha_registro", Query.Direction.DESCENDING).limit(1).get()
+                                .addOnSuccessListener(snapshots -> {
+                                    if (!snapshots.isEmpty()) {
+                                        metodoPagoId = snapshots.getDocuments().get(0).getId();
+                                    }
+                                });
                     }
                 });
     }

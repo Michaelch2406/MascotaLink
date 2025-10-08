@@ -43,6 +43,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.Query;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -78,6 +79,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private GoogleMap googleMap;
     private List<Circle> mapCircles = new ArrayList<>();
     private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
+    private String metodoPagoId; // Variable to store the payment method ID
 
 
     @Override
@@ -124,6 +126,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 }
             }
             cargarPerfilCompleto(paseadorId);
+            cargarMetodoPagoPredeterminado(paseadorId);
         } else {
             Toast.makeText(this, "Error: No se pudo cargar el perfil.", Toast.LENGTH_SHORT).show();
             finish();
@@ -136,6 +139,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         String paseadorId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
         if (paseadorId != null) {
             cargarPerfilCompleto(paseadorId);
+            cargarMetodoPagoPredeterminado(paseadorId);
         }
     }
 
@@ -244,6 +248,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
         btnMetodosPago.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
+            if (metodoPagoId != null && !metodoPagoId.isEmpty()) {
+                intent.putExtra("metodo_pago_id", metodoPagoId);
+            }
             startActivity(intent);
         });
         btnPrivacidad.setOnClickListener(v -> showToast("Próximamente: Privacidad"));
@@ -309,6 +316,24 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    private void cargarMetodoPagoPredeterminado(String uid) {
+        db.collection("usuarios").document(uid).collection("metodos_pago")
+                .whereEqualTo("predeterminado", true).limit(1).get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        metodoPagoId = queryDocumentSnapshots.getDocuments().get(0).getId();
+                    } else {
+                        db.collection("usuarios").document(uid).collection("metodos_pago")
+                                .orderBy("fecha_registro", Query.Direction.DESCENDING).limit(1).get()
+                                .addOnSuccessListener(snapshots -> {
+                                    if (!snapshots.isEmpty()) {
+                                        metodoPagoId = snapshots.getDocuments().get(0).getId();
+                                    }
+                                });
+                    }
+                });
     }
 
     @SuppressWarnings("unchecked")
