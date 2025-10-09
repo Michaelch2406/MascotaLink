@@ -3,6 +3,8 @@ package com.mjc.mascotalink;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.Editable;
@@ -13,69 +15,49 @@ import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.util.Patterns;
-import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.common.api.Status;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.firebase.Timestamp;
-import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 
-
-import com.google.firebase.storage.FirebaseStorage;
-
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
-import android.widget.ImageView;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
 
 public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private static final String TAG = "Paso1Paseador";
     private static final String PREFS = "WizardPaseador";
 
-    private FirebaseAuth mAuth;
-    private FirebaseStorage storage;
-
-    private EditText etNombre, etApellido, etCedula, etFechaNac, etDomicilio, etTelefono, etEmail, etPassword;
+    private EditText etNombre, etApellido, etCedula, etFechaNac, etTelefono, etEmail, etPassword;
     private TextInputLayout tilPassword;
     private CheckBox cbAceptaTerminos;
     private Button btnContinuar;
-    private ProgressBar progressBar;
-    private ImageView ivGeolocate;
 
-    private FusedLocationProviderClient fusedLocationClient;
-    private ActivityResultLauncher<String> requestPermissionLauncher;
+    // Variables para el domicilio
+    private String domicilio;
+    private GeoPoint domicilioLatLng;
+    private AutocompleteSupportFragment autocompleteFragment;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
@@ -87,24 +69,18 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
 
-        mAuth = FirebaseAuth.getInstance();
-        storage = FirebaseStorage.getInstance();
-
         bindViews();
-        setupLocationServices();
+        setupPlacesAutocomplete();
         wireDatePicker();
         loadSavedState();
         setupWatchers();
         configurarTerminosYCondiciones();
 
         btnContinuar.setOnClickListener(v -> onContinuar());
-        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
 
-        // Configurar enlace para ir al login
         findViewById(R.id.tv_login_link).setOnClickListener(v -> {
-            Intent intent = new Intent(this, LoginActivity.class);
-            startActivity(intent);
-            finish(); // Cerrar esta actividad para evitar que el usuario regrese con el botón atrás
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
         });
 
         updateButtonEnabled();
@@ -115,62 +91,41 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etApellido = findViewById(R.id.et_apellido);
         etCedula = findViewById(R.id.et_cedula);
         etFechaNac = findViewById(R.id.et_fecha_nacimiento);
-        etDomicilio = findViewById(R.id.et_domicilio);
         etTelefono = findViewById(R.id.et_telefono);
-        etTelefono.setFilters(new android.text.InputFilter[] { new android.text.InputFilter.LengthFilter(10) });
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         tilPassword = findViewById(R.id.til_password);
         cbAceptaTerminos = findViewById(R.id.cb_acepta_terminos);
         btnContinuar = findViewById(R.id.btn_continuar);
-        ivGeolocate = findViewById(R.id.iv_geolocate);
-        progressBar = new ProgressBar(this);
     }
 
-    private void setupLocationServices() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isGranted) {
-                fetchLocationAndFillAddress();
-            } else {
-                Toast.makeText(this, "Permiso de ubicación denegado.", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
+    private void setupPlacesAutocomplete() {
+        // Initialization is now done in MyApplication.java
+        autocompleteFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment_domicilio);
 
-    private void onGeolocateClick() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fetchLocationAndFillAddress();
-        } else {
-            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+        if (autocompleteFragment != null) {
+            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG));
+            autocompleteFragment.setHint("Empieza a escribir tu dirección...");
+            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(@NonNull Place place) {
+                    domicilio = place.getAddress();
+                    if (place.getLatLng() != null) {
+                        domicilioLatLng = new GeoPoint(place.getLatLng().latitude, place.getLatLng().longitude);
+                    }
+                    Log.i(TAG, "Place Selected: " + domicilio);
+                    saveState();
+                    updateButtonEnabled();
+                }
+
+                @Override
+                public void onError(@NonNull Status status) {
+                    Log.e(TAG, "An error occurred during place selection: " + status);
+                }
+            });
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private void fetchLocationAndFillAddress() {
-        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show();
-        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
-            if (location != null) {
-                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-                try {
-                    List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                    if (addresses != null && !addresses.isEmpty()) {
-                        Address address = addresses.get(0);
-                        String addressLine = address.getAddressLine(0);
-                        etDomicilio.setText(addressLine);
-                        Toast.makeText(this, "Dirección autocompletada.", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(this, "No se pudo encontrar una dirección.", Toast.LENGTH_SHORT).show();
-                    }
-                } catch (IOException e) {
-                    Log.e(TAG, "Servicio de geocodificación no disponible", e);
-                    Toast.makeText(this, "Error al obtener la dirección.", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                Toast.makeText(this, "No se pudo obtener la ubicación. Asegúrate de que el GPS esté activado.", Toast.LENGTH_LONG).show();
-            }
-        });
-    }
     private void wireDatePicker() {
         etFechaNac.setInputType(InputType.TYPE_NULL);
         etFechaNac.setOnClickListener(v -> {
@@ -191,61 +146,42 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void setupWatchers() {
-        TextWatcher watcher = new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(Editable s) { saveState(); updateButtonEnabled(); }
-        };
-        
-        // Watcher especial para email que limpia errores de "email ya registrado"
-        TextWatcher emailWatcher = new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Limpiar error de email duplicado cuando el usuario empiece a escribir
-                if (etEmail.getError() != null && etEmail.getError().toString().contains("ya está registrado")) {
-                    etEmail.setError(null);
-                }
+        TextWatcher textWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
-            @Override public void afterTextChanged(Editable s) { saveState(); updateButtonEnabled(); }
-        };
-        
-        // Watcher especial para contraseña
-        TextWatcher passwordWatcher = new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Limpiar error de contraseña débil cuando el usuario empiece a escribir
-                if (tilPassword.getError() != null && tilPassword.getError().toString().contains("débil")) {
-                    tilPassword.setError(null);
-                }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
             }
-            @Override public void afterTextChanged(Editable s) { saveState(); updateButtonEnabled(); }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                saveState();
+                updateButtonEnabled();
+            }
         };
-        
-        etNombre.addTextChangedListener(watcher);
-        etApellido.addTextChangedListener(watcher);
-        etCedula.addTextChangedListener(watcher);
-        etFechaNac.addTextChangedListener(watcher);
-        etDomicilio.addTextChangedListener(watcher);
-        etTelefono.addTextChangedListener(watcher);
-        etEmail.addTextChangedListener(emailWatcher);
-        etPassword.addTextChangedListener(passwordWatcher);
+
+        etNombre.addTextChangedListener(textWatcher);
+        etApellido.addTextChangedListener(textWatcher);
+        etCedula.addTextChangedListener(textWatcher);
+        etFechaNac.addTextChangedListener(textWatcher);
+        etTelefono.addTextChangedListener(textWatcher);
+        etEmail.addTextChangedListener(textWatcher);
+        etPassword.addTextChangedListener(textWatcher);
     }
 
     private void configurarTerminosYCondiciones() {
-        // Texto con enlace clickeable
         String textoTerminos = "Acepto los <a href='#'>Términos y Condiciones</a> y la <a href='#'>Política de Privacidad</a>";
         cbAceptaTerminos.setText(Html.fromHtml(textoTerminos, Html.FROM_HTML_MODE_LEGACY));
         cbAceptaTerminos.setMovementMethod(LinkMovementMethod.getInstance());
-        
-        // Listener para habilitar/deshabilitar botón
+
         cbAceptaTerminos.setOnCheckedChangeListener((buttonView, isChecked) -> {
             validarCamposYHabilitarBoton();
         });
-        
-        // Hacer el texto clickeable para mostrar términos completos
+
         cbAceptaTerminos.setOnClickListener(v -> {
             if (!cbAceptaTerminos.isChecked()) {
-                // Si no está marcado, mostrar diálogo antes de marcar
                 mostrarDialogoTerminos();
             }
         });
@@ -253,255 +189,131 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private void mostrarDialogoTerminos() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        
-        // Crear ScrollView para texto largo
         ScrollView scrollView = new ScrollView(this);
         TextView textView = new TextView(this);
         textView.setPadding(50, 50, 50, 50);
-        textView.setTextSize(14);
         textView.setText(getTextoTerminosCompleto());
         scrollView.addView(textView);
-        
+
         builder.setTitle("Términos y Condiciones")
-            .setView(scrollView)
-            .setPositiveButton("Aceptar", (dialog, which) -> {
-                cbAceptaTerminos.setChecked(true);
-                validarCamposYHabilitarBoton();
-            })
-            .setNegativeButton("Cancelar", (dialog, which) -> {
-                cbAceptaTerminos.setChecked(false);
-            })
-            .setCancelable(false)
-            .show();
+                .setView(scrollView)
+                .setPositiveButton("Aceptar", (dialog, which) -> {
+                    cbAceptaTerminos.setChecked(true);
+                    validarCamposYHabilitarBoton();
+                })
+                .setNegativeButton("Cancelar", (dialog, which) -> cbAceptaTerminos.setChecked(false))
+                .setCancelable(false)
+                .show();
     }
-    
+
     private String getTextoTerminosCompleto() {
         return "TÉRMINOS Y CONDICIONES DE USO - MascotaLink\n\n" +
-               "1. ACEPTACIÓN DE TÉRMINOS\n" +
-               "Al registrarte como paseador en MascotaLink, aceptas cumplir con estos términos y condiciones.\n\n" +
-               "2. RESPONSABILIDADES DEL PASEADOR\n" +
-               "- Cuidar la seguridad y bienestar de las mascotas bajo tu responsabilidad\n" +
-               "- Seguir las instrucciones específicas del dueño de la mascota\n" +
-               "- Reportar cualquier incidente o emergencia inmediatamente\n" +
-               "- Mantener actualizados tus documentos de verificación\n\n" +
-               "3. VERIFICACIÓN Y DOCUMENTOS\n" +
-               "- Proporcionar documentación veraz y actualizada\n" +
-               "- Someterte al proceso de verificación de antecedentes\n" +
-               "- Mantener vigentes los certificados médicos requeridos\n\n" +
-               "4. CÓDIGO DE CONDUCTA\n" +
-               "- Tratar a las mascotas con respeto y cuidado\n" +
-               "- Comunicarte de manera profesional con los dueños\n" +
-               "- Seguir todas las normas de seguridad establecidas\n\n" +
-               "5. PRIVACIDAD Y DATOS\n" +
-               "- Proteger la información personal de los clientes\n" +
-               "- No compartir datos de contacto fuera de la plataforma\n" +
-               "- Respetar la privacidad de los hogares visitados\n\n" +
-               "6. TERMINACIÓN DEL SERVICIO\n" +
-               "MascotaLink se reserva el derecho de suspender o terminar el acceso del paseador en caso de incumplimiento de estos términos.\n\n" +
-               "Al marcar esta casilla, confirmas que has leído, entendido y aceptas cumplir con todos estos términos y condiciones.\n\n" +
-               "Fecha de última actualización: Septiembre 2025";
+                "1. ACEPTACIÓN DE TÉRMINOS\n" +
+                "Al registrarte como paseador en MascotaLink, aceptas cumplir con estos términos y condiciones.\n\n" +
+                "2. RESPONSABILIDADES DEL PASEADOR\n" +
+                "- Cuidar la seguridad y bienestar de las mascotas bajo tu responsabilidad\n" +
+                "- Seguir las instrucciones específicas del dueño de la mascota\n" +
+                "- Reportar cualquier incidente o emergencia inmediatamente\n" +
+                "- Mantener actualizados tus documentos de verificación\n\n" +
+                "3. VERIFICACIÓN Y DOCUMENTOS\n" +
+                "- Proporcionar documentación veraz y actualizada\n" +
+                "- Someterte al proceso de verificación de antecedentes\n" +
+                "- Mantener vigentes los certificados médicos requeridos\n\n" +
+                "4. CÓDIGO DE CONDUCTA\n" +
+                "- Tratar a las mascotas con respeto y cuidado\n" +
+                "- Comunicarte de manera profesional con los dueños\n" +
+                "- Seguir todas las normas de seguridad establecidas\n\n" +
+                "5. PRIVACIDAD Y DATOS\n" +
+                "- Proteger la información personal de los clientes\n" +
+                "- No compartir datos de contacto fuera de la plataforma\n" +
+                "- Respetar la privacidad de los hogares visitados\n\n" +
+                "6. TERMINACIÓN DEL SERVICIO\n" +
+                "MascotaLink se reserva el derecho de suspender o terminar el acceso del paseador en caso de incumplimiento de estos términos.\n\n" +
+                "Al marcar esta casilla, confirmas que has leído, entendido y aceptas cumplir con todos estos términos y condiciones.\n\n" +
+                "Fecha de última actualización: Septiembre 2025";
     }
 
     private void onContinuar() {
         if (!cbAceptaTerminos.isChecked()) {
-            Toast.makeText(this, "Debes aceptar los términos y condiciones para continuar", 
-                          Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Debes aceptar los términos y condiciones para continuar", Toast.LENGTH_SHORT).show();
             return;
         }
-        
+
         if (!validarCamposPantalla1()) {
             Toast.makeText(this, "⚠️ Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Guardar datos localmente y continuar
         guardarDatosCompletos();
         Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
-        
-        // Navegar a la siguiente pantalla
-        Intent intent = new Intent(this, PaseadorRegistroPaso2Activity.class);
-        startActivity(intent);
+
+        startActivity(new Intent(this, PaseadorRegistroPaso2Activity.class));
     }
-    
+
     private void guardarDatosCompletos() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        
-        // Guardar todos los datos del paso 1
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
         editor.putString("nombre", etNombre.getText().toString().trim());
         editor.putString("apellido", etApellido.getText().toString().trim());
         editor.putString("cedula", etCedula.getText().toString().trim());
         editor.putString("fecha_nacimiento", etFechaNac.getText().toString().trim());
-        editor.putString("domicilio", etDomicilio.getText().toString().trim());
+        editor.putString("domicilio", domicilio); // <-- Cambio aquí
+        if (domicilioLatLng != null) {
+            editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
+            editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
+        }
         editor.putString("telefono", etTelefono.getText().toString().trim());
         editor.putString("email", etEmail.getText().toString().trim());
         editor.putString("password", etPassword.getText().toString().trim());
-        
-        // Marcar que el paso 1 está completo y términos aceptados
         editor.putBoolean("paso1_completo", true);
         editor.putBoolean("acepto_terminos", true);
-        editor.putLong("timestamp_paso1", System.currentTimeMillis());
-        editor.putLong("fecha_aceptacion_terminos", System.currentTimeMillis());
-        
         editor.apply();
-        
         Log.d(TAG, "Datos del paso 1 guardados localmente");
     }
-    
-    private String obtenerMensajeErrorVerificacion(Exception exception) {
-        if (exception == null) {
-            return "⚠️ Error desconocido al verificar el correo electrónico";
-        }
-        
-        String mensaje = exception.getMessage();
-        if (mensaje == null) {
-            return "⚠️ Error desconocido al verificar el correo electrónico";
-        }
-        
-        Log.e(TAG, "Error verificación: " + mensaje);
-        
-        // Traducir errores comunes de verificación de email
-        if (mensaje.contains("invalid-email")) {
-            etEmail.setError("⚠️ Formato de correo inválido");
-            etEmail.requestFocus();
-            return "⚠️ El formato del correo electrónico no es válido.";
-        } else if (mensaje.contains("network") || mensaje.contains("timeout")) {
-            return "⚠️ Error de conexión. Verifica tu internet e inténtalo nuevamente.";
-        } else if (mensaje.contains("too-many-requests")) {
-            return "⚠️ Demasiados intentos. Espera unos minutos antes de intentar nuevamente.";
-        } else if (mensaje.contains("UNAVAILABLE") || mensaje.contains("INTERNAL")) {
-            return "⚠️ Servicio temporalmente no disponible. Inténtalo nuevamente en unos minutos.";
-        } else {
-            // Por ahora, permitir continuar si hay un error de verificación
-            Log.w(TAG, "Error de verificación no crítico, permitiendo continuar: " + mensaje);
-            guardarDatosCompletos();
-            Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, PaseadorRegistroPaso2Activity.class);
-            startActivity(intent);
-            return null; // No mostrar error
-        }
-    }
-
-    // Los documentos de Firebase se crearán solo al final del proceso en el Paso 3
-    // Estos métodos se han movido al PaseadorRegistroPaso3Activity
 
     private Date parseFecha() {
         String f = etFechaNac.getText().toString().trim();
-        try { return sdf.parse(f); } catch (ParseException e) { return null; }
+        try {
+            return sdf.parse(f);
+        } catch (ParseException e) {
+            return null;
+        }
     }
 
     private boolean validarCamposPantalla1() {
         boolean ok = true;
-        
-        // Validar nombre
-        String nombre = etNombre.getText().toString().trim();
-        if (TextUtils.isEmpty(nombre)) {
+
+        if (TextUtils.isEmpty(etNombre.getText().toString().trim())) {
             etNombre.setError("⚠️ El nombre es obligatorio");
             ok = false;
-        } else if (nombre.length() < 2) {
-            etNombre.setError("⚠️ El nombre debe tener al menos 2 caracteres");
-            ok = false;
-        } else if (!nombre.matches("[A-Za-zÁÉÍÓÚáéíóúÑñ ]+")) {
-            etNombre.setError("⚠️ Solo se permiten letras y espacios");
-            ok = false;
-        } else {
-            etNombre.setError(null);
         }
-
-        // Validar apellido
-        String apellido = etApellido.getText().toString().trim();
-        if (TextUtils.isEmpty(apellido)) {
+        if (TextUtils.isEmpty(etApellido.getText().toString().trim())) {
             etApellido.setError("⚠️ El apellido es obligatorio");
             ok = false;
-        } else if (apellido.length() < 2) {
-            etApellido.setError("⚠️ El apellido debe tener al menos 2 caracteres");
-            ok = false;
-        } else if (!apellido.matches("[A-Za-zÁÉÍÓÚáéíóúÑñ ]+")) {
-            etApellido.setError("⚠️ Solo se permiten letras y espacios");
-            ok = false;
-        } else {
-            etApellido.setError(null);
         }
-
-        // Validar cédula
-        String cedula = etCedula.getText().toString().trim();
-        if (TextUtils.isEmpty(cedula)) {
-            etCedula.setError("⚠️ La cédula es obligatoria");
+        if (!validarCedulaEcuador(etCedula.getText().toString().trim())) {
+            etCedula.setError("⚠️ Cédula ecuatoriana inválida");
             ok = false;
-        } else if (cedula.length() != 10) {
-            etCedula.setError("⚠️ La cédula debe tener exactamente 10 dígitos");
-            ok = false;
-        } else if (!cedula.matches("\\d{10}")) {
-            etCedula.setError("⚠️ La cédula solo debe contener números");
-            ok = false;
-        } else if (!validarCedulaEcuador(cedula)) {
-            etCedula.setError("⚠️ Cédula ecuatoriana inválida. Verifica el dígito verificador");
-            ok = false;
-        } else {
-            etCedula.setError(null);
         }
-
-        // Validar fecha de nacimiento
         Date fecha = parseFecha();
-        if (fecha == null) {
-            etFechaNac.setError("⚠️ Selecciona tu fecha de nacimiento");
+        if (fecha == null || !validarEdad(fecha)) {
+            etFechaNac.setError("⚠️ Debes ser mayor de 18 años");
             ok = false;
-        } else if (!validarEdad(fecha)) {
-            etFechaNac.setError("⚠️ Debes ser mayor de 18 años para registrarte como paseador");
-            ok = false;
-        } else {
-            etFechaNac.setError(null);
         }
-
-        // Validar domicilio
-        String domicilio = etDomicilio.getText().toString().trim();
-        if (TextUtils.isEmpty(domicilio)) {
-            etDomicilio.setError("⚠️ El domicilio es obligatorio");
+        if (TextUtils.isEmpty(domicilio)) { // <-- Cambio aquí
+            Toast.makeText(this, "El domicilio es obligatorio", Toast.LENGTH_SHORT).show();
             ok = false;
-        } else if (domicilio.length() < 10) {
-            etDomicilio.setError("⚠️ Ingresa una dirección más detallada (mínimo 10 caracteres)");
-            ok = false;
-        } else {
-            etDomicilio.setError(null);
         }
-
-        // Validar teléfono
-        String telefono = etTelefono.getText().toString().trim();
-        if (TextUtils.isEmpty(telefono)) {
-            etTelefono.setError("⚠️ El teléfono es obligatorio");
+        if (!etTelefono.getText().toString().trim().matches("^(\\+593[0-9]{9}|09[0-9]{8})$")) {
+            etTelefono.setError("⚠️ Formato inválido. Usa: 09XXXXXXXX o +593XXXXXXXXX");
             ok = false;
-        } else if (!telefono.matches("^(\\+593[0-9]{9}|09[0-9]{8})$")) {
-            etTelefono.setError("⚠️ Formato inválido. Usa: +593XXXXXXXXX o 09XXXXXXXX");
-            ok = false;
-        } else {
-            etTelefono.setError(null);
         }
-
-        // Validar email
-        String email = etEmail.getText().toString().trim();
-        if (TextUtils.isEmpty(email)) {
-            etEmail.setError("⚠️ El correo electrónico es obligatorio");
+        if (!Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString().trim()).matches()) {
+            etEmail.setError("⚠️ Formato de correo inválido");
             ok = false;
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            etEmail.setError("⚠️ Formato de correo inválido. Ejemplo: usuario@dominio.com");
-            ok = false;
-        } else {
-            etEmail.setError(null);
         }
-
-        // Validar contraseña
-        String pass = etPassword.getText().toString().trim();
-        if (TextUtils.isEmpty(pass)) {
-            tilPassword.setError("⚠️ La contraseña es obligatoria");
-            ok = false;
-        } else if (pass.length() < 6) {
+        if (etPassword.getText().toString().trim().length() < 6) {
             tilPassword.setError("⚠️ La contraseña debe tener al menos 6 caracteres");
             ok = false;
-        } else if (!pass.matches(".*[A-Za-z].*")) {
-            tilPassword.setError("⚠️ La contraseña debe contener al menos una letra");
-            ok = false;
-        } else {
-            tilPassword.setError(null);
         }
 
         return ok;
@@ -510,70 +322,42 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     private boolean validarEdad(Date nacimiento) {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.YEAR, -18);
-        Date min = cal.getTime();
-        return nacimiento.before(min);
+        return nacimiento.before(cal.getTime());
     }
 
     private boolean validarCedulaEcuador(String cedula) {
-        if (cedula == null || !cedula.matches("\\d{10}")) {
-            return false;
-        }
-        
+        if (!cedula.matches("\\d{10}")) return false;
         try {
-            // Validar provincia (primeros 2 dígitos)
             int provincia = Integer.parseInt(cedula.substring(0, 2));
-            if (provincia < 1 || provincia > 24) {
-                return false;
-            }
-            
-            // Validar tercer dígito (debe ser menor a 6 para personas naturales)
-            int tercerDigito = Character.getNumericValue(cedula.charAt(2));
-            if (tercerDigito >= 6) {
-                return false;
-            }
-            
-            // Algoritmo de validación del dígito verificador
+            if (provincia < 1 || provincia > 24) return false;
             int[] coeficientes = {2, 1, 2, 1, 2, 1, 2, 1, 2};
             int suma = 0;
-            
             for (int i = 0; i < 9; i++) {
-                int digito = Character.getNumericValue(cedula.charAt(i));
-                int producto = digito * coeficientes[i];
-                
-                // Si el producto es mayor o igual a 10, restar 9
-                if (producto >= 10) {
-                    producto -= 9;
-                }
-                
-                suma += producto;
+                int producto = Character.getNumericValue(cedula.charAt(i)) * coeficientes[i];
+                suma += (producto >= 10) ? producto - 9 : producto;
             }
-            
-            // Calcular dígito verificador
-            int residuo = suma % 10;
-            int digitoVerificador = (residuo == 0) ? 0 : (10 - residuo);
-            
-            // Comparar con el último dígito de la cédula
-            int ultimoDigito = Character.getNumericValue(cedula.charAt(9));
-            
-            return digitoVerificador == ultimoDigito;
-            
+            int digitoVerificador = (suma % 10 == 0) ? 0 : (10 - (suma % 10));
+            return digitoVerificador == Character.getNumericValue(cedula.charAt(9));
         } catch (NumberFormatException e) {
             return false;
         }
     }
 
     private void saveState() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        prefs.edit()
-                .putString("nombre", etNombre.getText().toString())
-                .putString("apellido", etApellido.getText().toString())
-                .putString("cedula", etCedula.getText().toString())
-                .putString("fecha", etFechaNac.getText().toString())
-                .putString("domicilio", etDomicilio.getText().toString())
-                .putString("telefono", etTelefono.getText().toString())
-                .putString("email", etEmail.getText().toString())
-                .putString("password", etPassword.getText().toString())
-                .apply();
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        editor.putString("nombre", etNombre.getText().toString());
+        editor.putString("apellido", etApellido.getText().toString());
+        editor.putString("cedula", etCedula.getText().toString());
+        editor.putString("fecha", etFechaNac.getText().toString());
+        editor.putString("domicilio", domicilio);
+        if (domicilioLatLng != null) {
+            editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
+            editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
+        }
+        editor.putString("telefono", etTelefono.getText().toString());
+        editor.putString("email", etEmail.getText().toString());
+        editor.putString("password", etPassword.getText().toString());
+        editor.apply();
     }
 
     private void loadSavedState() {
@@ -582,64 +366,42 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etApellido.setText(prefs.getString("apellido", ""));
         etCedula.setText(prefs.getString("cedula", ""));
         etFechaNac.setText(prefs.getString("fecha", ""));
-        etDomicilio.setText(prefs.getString("domicilio", ""));
+        domicilio = prefs.getString("domicilio", "");
+        float lat = prefs.getFloat("domicilio_lat", 0);
+        float lng = prefs.getFloat("domicilio_lng", 0);
+        if(lat != 0 && lng != 0) {
+            domicilioLatLng = new GeoPoint(lat, lng);
+        }
+        if (autocompleteFragment != null && !TextUtils.isEmpty(domicilio)) {
+            autocompleteFragment.setText(domicilio);
+        }
         etTelefono.setText(prefs.getString("telefono", ""));
         etEmail.setText(prefs.getString("email", ""));
         etPassword.setText(prefs.getString("password", ""));
     }
 
     private void validarCamposYHabilitarBoton() {
-        // Validar que todos los campos estén completos Y términos aceptados
         boolean camposCompletos = validarTodosLosCampos();
         boolean terminosAceptados = cbAceptaTerminos.isChecked();
-        
         btnContinuar.setEnabled(camposCompletos && terminosAceptados);
-        
-        // Cambiar color del botón según estado
-        if (btnContinuar.isEnabled()) {
-            btnContinuar.setBackgroundTintList(ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.blue_primary)));
-        } else {
-            btnContinuar.setBackgroundTintList(ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.gray_disabled)));
-        }
+        btnContinuar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this,
+                btnContinuar.isEnabled() ? R.color.blue_primary : R.color.gray_disabled)));
     }
-    
+
     private boolean validarTodosLosCampos() {
         return !TextUtils.isEmpty(etNombre.getText()) &&
                 !TextUtils.isEmpty(etApellido.getText()) &&
-                etCedula.getText().toString().matches("\\d{10}") &&
+                validarCedulaEcuador(etCedula.getText().toString()) &&
                 !TextUtils.isEmpty(etFechaNac.getText()) &&
-                !TextUtils.isEmpty(etDomicilio.getText()) &&
-                etTelefono.getText().toString().length() == 10 &&
+                !TextUtils.isEmpty(domicilio) && // <-- Cambio aquí
+                etTelefono.getText().toString().matches("^(\\+593[0-9]{9}|09[0-9]{8})$") &&
                 Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString()).matches() &&
                 etPassword.getText().toString().length() >= 6;
     }
-    
-    // Método de compatibilidad para mantener las llamadas existentes
+
     private void updateButtonEnabled() {
         validarCamposYHabilitarBoton();
     }
 
-    private void showLoading(boolean show) {
-        // botón deshabilitado mientras se crea cuenta
-        btnContinuar.setEnabled(!show);
-    }
-    
-    private void mostrarError(String msg) {
-        if (msg == null || msg.trim().isEmpty()) {
-            return; // No mostrar errores vacíos
-        }
-        
-        // Si el mensaje es muy largo, usar AlertDialog en lugar de Toast
-        if (msg.length() > 100 || msg.contains("\n")) {
-            new AlertDialog.Builder(this)
-                .setTitle("⚠️ Error")
-                .setMessage(msg)
-                .setPositiveButton("Entendido", null)
-                .show();
-        } else {
-            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-        }
-    }
+
 }

@@ -1,48 +1,44 @@
 package com.mjc.mascotalink;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
-import android.content.ContentResolver;
-import android.webkit.MimeTypeMap;
-
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class DuenoRegistroPaso3Activity extends AppCompatActivity {
@@ -54,13 +50,13 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseStorage storage;
 
-    private EditText addressEditText;
     private SwitchMaterial messagesSwitch;
     private Button saveButton;
-    private ImageView ivGeolocate;
 
-    private FusedLocationProviderClient fusedLocationClient;
-    private ActivityResultLauncher<String> requestPermissionLauncher;
+    // Variables para la dirección de recogida (Paso 3)
+    private String direccionRecogida;
+    private GeoPoint ubicacionRecogida;
+    private AutocompleteSupportFragment autocompleteFragment;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -69,8 +65,8 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
 
         setupFirebase();
         setupViews();
-        setupLocationServices();
         setupListeners();
+        setupPlacesAutocomplete();
         loadDataFromPrefs();
     }
 
@@ -84,89 +80,82 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        addressEditText = findViewById(R.id.addressEditText);
         messagesSwitch = findViewById(R.id.messagesSwitch);
         saveButton = findViewById(R.id.saveButton);
-        ivGeolocate = findViewById(R.id.iv_geolocate);
 
         Button paymentMethodButton = findViewById(R.id.paymentMethodButton);
         paymentMethodButton.setOnClickListener(v -> {
-            saveDataToPrefs();
+            saveDataToPrefs(); // Guardar estado actual antes de cambiar de actividad
             Intent intent = new Intent(this, MetodoPagoActivity.class);
             intent.putExtra("prefs", PREFS_DUENO);
             startActivity(intent);
         });
     }
 
-    private void setupLocationServices() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isGranted) {
-                fetchLocationAndFillAddress();
-            } else {
-                Toast.makeText(this, "Permiso de ubicación denegado.", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     private void setupListeners() {
         saveButton.setOnClickListener(v -> completarRegistroDueno());
-        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
     }
 
-    private void onGeolocateClick() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fetchLocationAndFillAddress();
-        } else {
-            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-    }
+    private void setupPlacesAutocomplete() {
+        // Initialization is now done in MyApplication.java
+        autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment_address);
 
-    @SuppressLint("MissingPermission")
-    private void fetchLocationAndFillAddress() {
-        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show();
-        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
-            if (location != null) {
-                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-                try {
-                    List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                    if (addresses != null && !addresses.isEmpty()) {
-                        Address address = addresses.get(0);
-                        String addressLine = address.getAddressLine(0);
-                        addressEditText.setText(addressLine);
-                        Toast.makeText(this, "Dirección autocompletada.", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(this, "No se pudo encontrar una dirección.", Toast.LENGTH_SHORT).show();
+        if (autocompleteFragment != null) {
+            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG));
+            autocompleteFragment.setHint("Actualizar dirección de recogida...");
+            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(@NonNull Place place) {
+                    direccionRecogida = place.getAddress();
+                    if (place.getLatLng() != null) {
+                        ubicacionRecogida = new GeoPoint(place.getLatLng().latitude, place.getLatLng().longitude);
                     }
-                } catch (IOException e) {
-                    Log.e(TAG, "Servicio de geocodificación no disponible", e);
-                    Toast.makeText(this, "Error al obtener la dirección.", Toast.LENGTH_SHORT).show();
+                    Log.i(TAG, "Place Updated: " + direccionRecogida);
                 }
-            } else {
-                Toast.makeText(this, "No se pudo obtener la ubicación. Asegúrate de que el GPS esté activado.", Toast.LENGTH_LONG).show();
-            }
-        });
+
+                @Override
+                public void onError(@NonNull Status status) {
+                    Log.e(TAG, "An error occurred: " + status);
+                }
+            });
+        }
     }
 
     private void loadDataFromPrefs() {
         SharedPreferences prefs = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE);
-        addressEditText.setText(prefs.getString("direccion_recogida", ""));
+        // Cargar la dirección del paso 1 como valor inicial
+        direccionRecogida = prefs.getString("domicilio", "");
+        float lat = prefs.getFloat("domicilio_lat", 0);
+        float lng = prefs.getFloat("domicilio_lng", 0);
+        if (lat != 0 && lng != 0) {
+            ubicacionRecogida = new GeoPoint(lat, lng);
+        }
+
+        if (autocompleteFragment != null && !TextUtils.isEmpty(direccionRecogida)) {
+            autocompleteFragment.setText(direccionRecogida);
+        }
+
         messagesSwitch.setChecked(prefs.getBoolean("acepta_mensajes", true));
     }
 
     private void saveDataToPrefs() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE).edit();
-        editor.putString("direccion_recogida", addressEditText.getText().toString().trim());
+        // Guardar la dirección de recogida (potencialmente actualizada) y sus coordenadas
+        editor.putString("direccion_recogida", direccionRecogida);
+        if (ubicacionRecogida != null) {
+            editor.putFloat("ubicacion_recogida_lat", (float) ubicacionRecogida.getLatitude());
+            editor.putFloat("ubicacion_recogida_lng", (float) ubicacionRecogida.getLongitude());
+        }
         editor.putBoolean("acepta_mensajes", messagesSwitch.isChecked());
         editor.apply();
     }
 
     private void completarRegistroDueno() {
-        saveDataToPrefs();
-        String address = addressEditText.getText().toString().trim();
-        if (TextUtils.isEmpty(address)) {
-            addressEditText.setError("La dirección es requerida");
-            addressEditText.requestFocus();
+        saveDataToPrefs(); // Guardar los últimos cambios antes de registrar
+
+        if (TextUtils.isEmpty(direccionRecogida)) {
+            Toast.makeText(this, "La dirección de recogida es requerida", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -230,7 +219,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             String extension = getFileExtension(uri);
             String folder = key.equals("foto_perfil") ? "foto_de_perfil" : "selfie";
             String fileName = key + "." + extension;
-            
+
             StorageReference ref = storage.getReference().child(folder + "/" + userFolder + "/" + fileName);
 
             uploadTasks.add(
@@ -271,7 +260,12 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         usuarioData.put("cedula", prefs.getString("cedula", ""));
         usuarioData.put("correo", prefs.getString("correo", ""));
         usuarioData.put("telefono", prefs.getString("telefono", ""));
-        usuarioData.put("direccion", prefs.getString("direccion", ""));
+        usuarioData.put("direccion", prefs.getString("domicilio", "")); // Dirección principal del Paso 1
+        float lat = prefs.getFloat("domicilio_lat", 0);
+        float lng = prefs.getFloat("domicilio_lng", 0);
+        if (lat != 0 && lng != 0) {
+            usuarioData.put("direccion_coordenadas", new GeoPoint(lat, lng)); // Coordenadas del Paso 1
+        }
         usuarioData.put("fecha_registro", FieldValue.serverTimestamp());
         usuarioData.put("activo", true);
         usuarioData.put("foto_perfil", urls.get("foto_perfil_url"));
@@ -282,7 +276,8 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
 
         // 2. Documento para la colección 'duenos'
         Map<String, Object> duenoData = new HashMap<>();
-        duenoData.put("direccion_recogida", prefs.getString("direccion_recogida", ""));
+        duenoData.put("direccion_recogida", direccionRecogida); // Dirección de recogida de este paso (Paso 3)
+        duenoData.put("ubicacion_recogida", ubicacionRecogida); // Coordenadas de recogida de este paso (Paso 3)
         duenoData.put("acepta_terminos", prefs.getBoolean("acepta_terminos", false));
         duenoData.put("verificacion_estado", "PENDIENTE");
         duenoData.put("verificacion_fecha", FieldValue.serverTimestamp());

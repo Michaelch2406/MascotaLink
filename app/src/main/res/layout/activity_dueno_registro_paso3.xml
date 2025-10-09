@@ -55,33 +55,17 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
 
-            <RelativeLayout
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/edit_text_background"
                 android:layout_marginBottom="24dp">
-
-                <EditText
-                    android:id="@+id/addressEditText"
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/autocomplete_fragment_address"
+                    android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Seleccionar/actualizar dirección"
-                    android:inputType="textPostalAddress"
-                    android:background="@android:color/transparent"
-                    android:padding="12dp"
-                    android:layout_toStartOf="@+id/iv_geolocate" />
-
-                <ImageView
-                    android:id="@+id/iv_geolocate"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_my_location"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginEnd="12dp"
-                    android:contentDescription="Obtener ubicación actual"
-                    app:tint="#13A4EC" />
-            </RelativeLayout>
+                    android:layout_height="wrap_content" />
+            </FrameLayout>
 
             <!-- Método de Pago -->
             <TextView

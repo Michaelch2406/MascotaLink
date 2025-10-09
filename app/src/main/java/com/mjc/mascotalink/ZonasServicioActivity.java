@@ -3,17 +3,18 @@ package com.mjc.mascotalink;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.widget.SearchView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -22,6 +23,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -34,11 +36,16 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.slider.Slider;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -46,11 +53,11 @@ import java.util.Set;
 
 public class ZonasServicioActivity extends AppCompatActivity implements OnMapReadyCallback {
 
+    private static final String TAG = "ZonasServicioActivity";
     private static final String PREFS = "WizardPaseador";
     private static final LatLng ECUADOR_CENTER = new LatLng(-1.8312, -78.1834);
 
     private GoogleMap mMap;
-    private SearchView searchViewDireccion;
     private Button btnAgregarZona, btnGuardarZonas;
     private Slider sliderRadio;
     private TextView tvRadio, tvValidationMessages;
@@ -59,7 +66,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     private Marker currentMarker;
     private Circle currentCircle;
     private List<ZonaServicio> zonasSeleccionadas = new ArrayList<>();
-    private Geocoder geocoder;
+    private String selectedAddressName;
+
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
@@ -71,27 +79,20 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        geocoder = new Geocoder(this, Locale.getDefault());
-
         initViews();
+        setupPlacesAutocomplete();
         setupLocationServices();
         setupMap();
         loadSavedZones();
     }
 
     private void initViews() {
-        searchViewDireccion = findViewById(R.id.search_view_direccion);
         btnAgregarZona = findViewById(R.id.btn_agregar_zona);
         btnGuardarZonas = findViewById(R.id.btn_guardar_zonas);
         sliderRadio = findViewById(R.id.slider_radio);
         tvRadio = findViewById(R.id.tv_radio);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
         ivMyLocation = findViewById(R.id.iv_my_location);
-
-        sliderRadio.setValueFrom(0.5f);
-        sliderRadio.setValueTo(5.0f);
-        sliderRadio.setValue(2.0f);
-        sliderRadio.setStepSize(0.5f);
 
         updateRadioText();
 
@@ -100,26 +101,37 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             updateCurrentCircle();
         });
 
-        setupSearchListener();
         btnAgregarZona.setOnClickListener(v -> agregarZona());
         btnGuardarZonas.setOnClickListener(v -> guardarZonas());
         ivMyLocation.setOnClickListener(v -> fetchCurrentLocation());
     }
 
-    private void setupSearchListener() {
-        searchViewDireccion.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                buscarDireccion(query);
-                searchViewDireccion.clearFocus(); // Hide keyboard
-                return true;
-            }
+    private void setupPlacesAutocomplete() {
+        // Initialization is now done in MyApplication.java
+        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment_zonas);
 
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                return false;
-            }
-        });
+        if (autocompleteFragment != null) {
+            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG));
+            autocompleteFragment.setHint("Buscar dirección o barrio...");
+            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(@NonNull Place place) {
+                    selectedAddressName = place.getAddress();
+                    if (place.getLatLng() != null) {
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(place.getLatLng(), 15f));
+                        updateTemporaryMarker(place.getLatLng());
+                    }
+                    Log.i(TAG, "Place Selected: " + selectedAddressName);
+                }
+
+                @Override
+                public void onError(@NonNull Status status) {
+                    Log.e(TAG, "An error occurred during place selection: " + status);
+                    Toast.makeText(ZonasServicioActivity.this, "Error al buscar: " + status.getStatusMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     private void setupLocationServices() {
@@ -184,7 +196,16 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
 
     private void onMapClick(LatLng latLng) {
         updateTemporaryMarker(latLng);
-        obtenerDireccion(latLng);
+        // Intentar obtener nombre de la calle para el texto de búsqueda
+        try {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                selectedAddressName = addresses.get(0).getAddressLine(0);
+            }
+        } catch (IOException e) {
+            selectedAddressName = "Ubicación seleccionada";
+        }
     }
 
     private void updateTemporaryMarker(LatLng latLng) {
@@ -211,101 +232,70 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         currentCircle = mMap.addCircle(new CircleOptions()
                 .center(currentMarker.getPosition())
                 .radius(radio)
-                .strokeColor(0x880000FF)
+                .strokeColor(Color.BLUE)
                 .fillColor(0x220000FF)
                 .strokeWidth(2));
     }
 
-    private void obtenerDireccion(LatLng latLng) {
-        try {
-            List<Address> addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
-            if (addresses != null && !addresses.isEmpty()) {
-                Address address = addresses.get(0);
-                String direccion = address.getAddressLine(0);
-                if (direccion != null) {
-                    searchViewDireccion.setQuery(direccion, false);
-                }
-            }
-        } catch (IOException e) {
-            // Error silencioso
-        }
-    }
-
-    private void buscarDireccion(String direccion) {
-        if (TextUtils.isEmpty(direccion)) {
-            return;
-        }
-        try {
-            List<Address> addresses = geocoder.getFromLocationName(direccion, 1);
-            if (addresses != null && !addresses.isEmpty()) {
-                Address address = addresses.get(0);
-                LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
-                updateTemporaryMarker(latLng);
-            } else {
-                Toast.makeText(this, "Dirección no encontrada", Toast.LENGTH_SHORT).show();
-            }
-        } catch (IOException e) {
-            Toast.makeText(this, "Error al buscar la dirección", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void agregarZona() {
         if (currentMarker == null) {
-            Toast.makeText(this, "Selecciona una ubicación en el mapa", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Selecciona una ubicación en el mapa o búscala", Toast.LENGTH_SHORT).show();
             return;
         }
-        String direccion = searchViewDireccion.getQuery().toString().trim();
-        if (TextUtils.isEmpty(direccion)) {
-            direccion = "Zona de servicio";
-        }
+
+        String direccion = (selectedAddressName != null && !selectedAddressName.isEmpty()) ? selectedAddressName : "Zona de servicio";
         float radio = sliderRadio.getValue();
         LatLng posicion = currentMarker.getPosition();
         ZonaServicio zona = new ZonaServicio(posicion.latitude, posicion.longitude, radio, direccion);
+
         if (verificarSolapamiento(zona)) {
-            Toast.makeText(this, "Ya existe una zona de servicio cerca de esta ubicación", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "La nueva zona se superpone con una existente", Toast.LENGTH_SHORT).show();
             return;
         }
+
         zonasSeleccionadas.add(zona);
+        currentMarker.setTag(zona); // Asociar el objeto zona con el marcador
         currentMarker.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
         currentMarker.setTitle(direccion);
-        currentMarker.setTag(zona);
+
+        // Hacer el círculo permanente
+        mMap.addCircle(new CircleOptions()
+                .center(posicion)
+                .radius(radio * 1000)
+                .strokeColor(Color.GREEN)
+                .fillColor(0x2200FF00)
+                .strokeWidth(2));
+
+        // Limpiar estado temporal
         currentMarker = null;
         if (currentCircle != null) {
             currentCircle.remove();
             currentCircle = null;
         }
+        selectedAddressName = "";
         btnAgregarZona.setEnabled(false);
-        searchViewDireccion.setQuery("", false);
-        Toast.makeText(this, "Zona agregada correctamente", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Zona agregada", Toast.LENGTH_SHORT).show();
         btnGuardarZonas.setEnabled(!zonasSeleccionadas.isEmpty());
     }
 
     private boolean verificarSolapamiento(ZonaServicio nuevaZona) {
-        for (ZonaServicio zona : zonasSeleccionadas) {
-            double distancia = calcularDistancia(nuevaZona.latitud, nuevaZona.longitud, zona.latitud, zona.longitud);
-            double sumaRadios = (nuevaZona.radio + zona.radio) * 1000;
-            if (distancia < sumaRadios) {
-                return true;
+        for (ZonaServicio zonaExistente : zonasSeleccionadas) {
+            float[] results = new float[1];
+            android.location.Location.distanceBetween(
+                    nuevaZona.latitud, nuevaZona.longitud,
+                    zonaExistente.latitud, zonaExistente.longitud,
+                    results);
+            float distancia = results[0];
+            if (distancia < (nuevaZona.radio + zonaExistente.radio) * 1000) {
+                return true; // Hay solapamiento
             }
         }
         return false;
     }
 
-    private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371;
-        double latDistance = Math.toRadians(lat2 - lat1);
-        double lonDistance = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c * 1000;
-    }
-
     private void eliminarZona(ZonaServicio zona) {
         zonasSeleccionadas.remove(zona);
-        displaySavedZones();
+        displaySavedZones(); // Redibujar todo
         btnGuardarZonas.setEnabled(!zonasSeleccionadas.isEmpty());
         Toast.makeText(this, "Zona eliminada", Toast.LENGTH_SHORT).show();
     }
@@ -321,8 +311,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         editor.putBoolean("zonas_servicio_completo", true);
         Set<String> zonasSet = new HashSet<>();
         for (ZonaServicio zona : zonasSeleccionadas) {
-            String zonaStr = zona.latitud + "," + zona.longitud + "," + zona.radio + "," + zona.direccion;
-            zonasSet.add(zonaStr);
+            zonasSet.add(zona.toString());
         }
         editor.putStringSet("zonas_servicio", zonasSet);
         editor.apply();
@@ -336,17 +325,9 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         Set<String> zonasGuardadas = prefs.getStringSet("zonas_servicio", new HashSet<>());
         zonasSeleccionadas.clear();
         for (String zonaStr : zonasGuardadas) {
-            try {
-                String[] parts = zonaStr.split(",", 4);
-                if (parts.length >= 4) {
-                    double lat = Double.parseDouble(parts[0]);
-                    double lon = Double.parseDouble(parts[1]);
-                    float radio = Float.parseFloat(parts[2]);
-                    String direccion = parts[3];
-                    zonasSeleccionadas.add(new ZonaServicio(lat, lon, radio, direccion));
-                }
-            } catch (NumberFormatException e) {
-                // Ignorar entradas inválidas
+            ZonaServicio zona = ZonaServicio.fromString(zonaStr);
+            if (zona != null) {
+                zonasSeleccionadas.add(zona);
             }
         }
         btnGuardarZonas.setEnabled(!zonasSeleccionadas.isEmpty());
@@ -367,7 +348,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             mMap.addCircle(new CircleOptions()
                     .center(posicion)
                     .radius(zona.radio * 1000)
-                    .strokeColor(0x8800FF00)
+                    .strokeColor(Color.GREEN)
                     .fillColor(0x2200FF00)
                     .strokeWidth(2));
         }
@@ -384,6 +365,28 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             this.longitud = longitud;
             this.radio = radio;
             this.direccion = direccion;
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return latitud + "," + longitud + "," + radio + "," + direccion;
+        }
+
+        public static ZonaServicio fromString(String str) {
+            try {
+                String[] parts = str.split(",", 4);
+                if (parts.length >= 4) {
+                    double lat = Double.parseDouble(parts[0]);
+                    double lon = Double.parseDouble(parts[1]);
+                    float rad = Float.parseFloat(parts[2]);
+                    String dir = parts[3];
+                    return new ZonaServicio(lat, lon, rad, dir);
+                }
+            } catch (NumberFormatException e) {
+                return null;
+            }
+            return null;
         }
     }
 }

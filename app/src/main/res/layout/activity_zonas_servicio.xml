@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="#F7FAFC"
     tools:context=".ZonasServicioActivity">
 
     <!-- Toolbar -->
@@ -12,11 +13,12 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/blue_primary"
+        android:background="@android:color/transparent"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="@color/white"
+        app:navigationIconTint="#111827"
         app:title="Zonas de Servicio"
-        app:titleTextColor="@color/white" />
+        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"
+        app:titleTextColor="#111827" />
 
     <!-- Contenido principal -->
     <ScrollView
@@ -41,14 +43,17 @@
                 android:layout_marginBottom="16dp" />
 
             <!-- Buscador de direcciones -->
-            <androidx.appcompat.widget.SearchView
-                android:id="@+id/search_view_direccion"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:queryHint="Buscar dirección o barrio..."
-                app:iconifiedByDefault="false"
-                android:background="@drawable/edit_text_background" />
+                android:background="@drawable/edit_text_background">
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/autocomplete_fragment_zonas"
+                    android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </FrameLayout>
 
             <!-- Control de radio -->
             <TextView

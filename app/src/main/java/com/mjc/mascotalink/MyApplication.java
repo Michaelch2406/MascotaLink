@@ -1,8 +1,11 @@
 package com.mjc.mascotalink;
 
 import android.app.Application;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.util.Log;
 
+import com.google.android.libraries.places.api.Places;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.appcheck.FirebaseAppCheck;
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory;
@@ -49,6 +52,22 @@ public class MyApplication extends Application {
             Log.d(TAG, "FirebaseStorage emulator connected to " + host + ":9199");
         } catch (IllegalStateException e) {
             Log.w(TAG, "FirebaseStorage emulator already set up.");
+        }
+
+        // Initialize Google Places SDK
+        try {
+            ApplicationInfo app = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
+            String apiKey = app.metaData.getString("com.google.android.geo.API_KEY");
+            if (apiKey != null && !apiKey.isEmpty()) {
+                if (!Places.isInitialized()) {
+                    Places.initialize(getApplicationContext(), apiKey);
+                    Log.d(TAG, "Google Places SDK initialized.");
+                }
+            } else {
+                Log.e(TAG, "Google Places API Key not found in manifest.");
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Failed to load meta-data, NameNotFound: " + e.getMessage());
         }
     }
 }
