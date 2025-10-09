@@ -55,17 +55,43 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
 
-            <FrameLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/edit_text_background"
+                android:padding="12dp"
                 android:layout_marginBottom="24dp">
-                <androidx.fragment.app.FragmentContainerView
-                    android:id="@+id/autocomplete_fragment_address"
-                    android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+
+                <EditText
+                    android:id="@+id/addressEditText"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </FrameLayout>
+                    android:layout_height="wrap_content"
+                    android:hint="Toca para buscar la dirección"
+                    android:background="@android:color/transparent"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@+id/iv_geolocate"
+                    android:focusable="false" />
+
+                <ImageView
+                    android:id="@+id/iv_geolocate"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_my_location"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:contentDescription="Obtener ubicación actual"
+                    app:tint="#13A4EC" />
+
+                <ProgressBar
+                    android:id="@+id/pb_geolocate"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:visibility="gone" />
+
+            </RelativeLayout>
 
             <!-- Método de Pago -->
             <TextView

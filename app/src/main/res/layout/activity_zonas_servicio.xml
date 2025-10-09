@@ -43,17 +43,43 @@
                 android:layout_marginBottom="16dp" />
 
             <!-- Buscador de direcciones -->
-            <FrameLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/edit_text_background">
-                <androidx.fragment.app.FragmentContainerView
-                    android:id="@+id/autocomplete_fragment_zonas"
-                    android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+                android:background="@drawable/edit_text_background"
+                android:padding="12dp">
+
+                <EditText
+                    android:id="@+id/et_direccion_zona"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </FrameLayout>
+                    android:layout_height="wrap_content"
+                    android:hint="Toca para buscar una zona"
+                    android:background="@android:color/transparent"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@+id/iv_geolocate_zona"
+                    android:focusable="false" />
+
+                <ImageView
+                    android:id="@+id/iv_geolocate_zona"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_my_location"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:contentDescription="Obtener ubicación actual para zona"
+                    app:tint="#13A4EC" />
+
+                <ProgressBar
+                    android:id="@+id/pb_geolocate_zona"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:visibility="gone" />
+
+            </RelativeLayout>
 
             <!-- Control de radio -->
             <TextView

@@ -1,11 +1,15 @@
 package com.mjc.mascotalink;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.location.Address;
+import android.location.Geocoder;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.Html;
@@ -15,13 +19,18 @@ import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -29,19 +38,23 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.common.api.Status;
-import com.google.android.libraries.places.api.Places;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.AutocompleteActivity;
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.GeoPoint;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
@@ -49,15 +62,19 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     private static final String TAG = "Paso1Paseador";
     private static final String PREFS = "WizardPaseador";
 
-    private EditText etNombre, etApellido, etCedula, etFechaNac, etTelefono, etEmail, etPassword;
+    private EditText etNombre, etApellido, etCedula, etFechaNac, etDomicilio, etTelefono, etEmail, etPassword;
     private TextInputLayout tilPassword;
     private CheckBox cbAceptaTerminos;
     private Button btnContinuar;
+    private ImageView ivGeolocate;
+    private ProgressBar pbGeolocate;
 
-    // Variables para el domicilio
     private String domicilio;
     private GeoPoint domicilioLatLng;
-    private AutocompleteSupportFragment autocompleteFragment;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
+    private ActivityResultLauncher<Intent> autocompleteLauncher;
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
@@ -67,22 +84,14 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         setContentView(R.layout.activity_paseador_registro_paso1);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setNavigationOnClickListener(v -> finish());
 
         bindViews();
-        setupPlacesAutocomplete();
-        wireDatePicker();
-        loadSavedState();
-        setupWatchers();
+        setupListeners();
+        setupLocationServices();
+        setupAutocompleteLauncher();
         configurarTerminosYCondiciones();
-
-        btnContinuar.setOnClickListener(v -> onContinuar());
-
-        findViewById(R.id.tv_login_link).setOnClickListener(v -> {
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-        });
-
+        loadSavedState(); // Cargar al final para que el texto del domicilio se setee
         updateButtonEnabled();
     }
 
@@ -91,95 +100,145 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etApellido = findViewById(R.id.et_apellido);
         etCedula = findViewById(R.id.et_cedula);
         etFechaNac = findViewById(R.id.et_fecha_nacimiento);
+        etDomicilio = findViewById(R.id.et_domicilio);
         etTelefono = findViewById(R.id.et_telefono);
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
         tilPassword = findViewById(R.id.til_password);
         cbAceptaTerminos = findViewById(R.id.cb_acepta_terminos);
         btnContinuar = findViewById(R.id.btn_continuar);
+        ivGeolocate = findViewById(R.id.iv_geolocate);
+        pbGeolocate = findViewById(R.id.pb_geolocate);
     }
 
-    private void setupPlacesAutocomplete() {
-        // Initialization is now done in MyApplication.java
-        autocompleteFragment = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment_domicilio);
+    private void setupListeners() {
+        btnContinuar.setOnClickListener(v -> onContinuar());
+        etFechaNac.setOnClickListener(v -> openDatePicker());
+        etDomicilio.setOnClickListener(v -> launchAutocomplete());
+        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
 
-        if (autocompleteFragment != null) {
-            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG));
-            autocompleteFragment.setHint("Empieza a escribir tu dirección...");
-            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-                @Override
-                public void onPlaceSelected(@NonNull Place place) {
-                    domicilio = place.getAddress();
-                    if (place.getLatLng() != null) {
-                        domicilioLatLng = new GeoPoint(place.getLatLng().latitude, place.getLatLng().longitude);
-                    }
-                    Log.i(TAG, "Place Selected: " + domicilio);
-                    saveState();
-                    updateButtonEnabled();
-                }
+        findViewById(R.id.tv_login_link).setOnClickListener(v -> {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+        });
 
-                @Override
-                public void onError(@NonNull Status status) {
-                    Log.e(TAG, "An error occurred during place selection: " + status);
-                }
-            });
-        }
+        TextWatcher watcher = new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) { saveState(); updateButtonEnabled(); }
+        };
+
+        etNombre.addTextChangedListener(watcher);
+        etApellido.addTextChangedListener(watcher);
+        etCedula.addTextChangedListener(watcher);
+        etTelefono.addTextChangedListener(watcher);
+        etEmail.addTextChangedListener(watcher);
+        etPassword.addTextChangedListener(watcher);
+        cbAceptaTerminos.setOnCheckedChangeListener((v, isChecked) -> updateButtonEnabled());
     }
 
-    private void wireDatePicker() {
-        etFechaNac.setInputType(InputType.TYPE_NULL);
-        etFechaNac.setOnClickListener(v -> {
-            Calendar now = Calendar.getInstance();
-            DatePickerDialog dlg = new DatePickerDialog(this, (view, y, m, d) -> {
-                String txt = String.format(Locale.getDefault(), "%02d/%02d/%04d", d, m + 1, y);
-                etFechaNac.setText(txt);
-                saveState();
-                updateButtonEnabled();
-            }, now.get(Calendar.YEAR) - 18, now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH));
-
-            Calendar maxDate = Calendar.getInstance();
-            maxDate.add(Calendar.YEAR, -18);
-            dlg.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
-
-            dlg.show();
+    private void setupLocationServices() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) {
+                fetchLocationAndFillAddress();
+            } else {
+                Toast.makeText(this, "Permiso de ubicación denegado.", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
-    private void setupWatchers() {
-        TextWatcher textWatcher = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+    private void setupAutocompleteLauncher() {
+        autocompleteLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                        Place place = Autocomplete.getPlaceFromIntent(result.getData());
+                        domicilio = place.getAddress();
+                        if (place.getLatLng() != null) {
+                            domicilioLatLng = new GeoPoint(place.getLatLng().latitude, place.getLatLng().longitude);
+                        }
+                        etDomicilio.setText(domicilio);
+                        saveState();
+                        updateButtonEnabled();
+                    } else if (result.getResultCode() == AutocompleteActivity.RESULT_ERROR) {
+                        Status status = Autocomplete.getStatusFromIntent(result.getData());
+                        Log.e(TAG, "Autocomplete error: " + status.getStatusMessage());
+                    }
+                });
+    }
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
+    private void launchAutocomplete() {
+        List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.ADDRESS, Place.Field.LAT_LNG);
+        Intent intent = new Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
+                .setCountry("EC")
+                .build(this);
+        autocompleteLauncher.launch(intent);
+    }
 
-            @Override
-            public void afterTextChanged(Editable s) {
-                saveState();
-                updateButtonEnabled();
-            }
-        };
+    private void onGeolocateClick() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fetchLocationAndFillAddress();
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+    }
 
-        etNombre.addTextChangedListener(textWatcher);
-        etApellido.addTextChangedListener(textWatcher);
-        etCedula.addTextChangedListener(textWatcher);
-        etFechaNac.addTextChangedListener(textWatcher);
-        etTelefono.addTextChangedListener(textWatcher);
-        etEmail.addTextChangedListener(textWatcher);
-        etPassword.addTextChangedListener(textWatcher);
+    @SuppressLint("MissingPermission")
+    private void fetchLocationAndFillAddress() {
+        showGeolocateLoading(true);
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                try {
+                    Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                    List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                    if (addresses != null && !addresses.isEmpty()) {
+                        String addressLine = addresses.get(0).getAddressLine(0);
+                        domicilio = addressLine;
+                        domicilioLatLng = new GeoPoint(location.getLatitude(), location.getLongitude());
+                        etDomicilio.setText(domicilio);
+                        saveState();
+                        updateButtonEnabled();
+                        Toast.makeText(this, "Dirección autocompletada.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "No se pudo encontrar una dirección.", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Geocoder service not available", e);
+                }
+            }
+            showGeolocateLoading(false);
+        }).addOnFailureListener(e -> {
+            showGeolocateLoading(false);
+            Toast.makeText(this, "No se pudo obtener la ubicación.", Toast.LENGTH_LONG).show();
+        });
+    }
+
+    private void showGeolocateLoading(boolean isLoading) {
+        pbGeolocate.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        ivGeolocate.setVisibility(isLoading ? View.INVISIBLE : View.VISIBLE);
+    }
+
+    private void openDatePicker() {
+        etFechaNac.setInputType(InputType.TYPE_NULL);
+        Calendar now = Calendar.getInstance();
+        DatePickerDialog dlg = new DatePickerDialog(this, (view, y, m, d) -> {
+            String txt = String.format(Locale.getDefault(), "%02d/%02d/%04d", d, m + 1, y);
+            etFechaNac.setText(txt);
+            saveState();
+            updateButtonEnabled();
+        }, now.get(Calendar.YEAR) - 18, now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH));
+
+        Calendar maxDate = Calendar.getInstance();
+        maxDate.add(Calendar.YEAR, -18);
+        dlg.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
+        dlg.show();
     }
 
     private void configurarTerminosYCondiciones() {
         String textoTerminos = "Acepto los <a href='#'>Términos y Condiciones</a> y la <a href='#'>Política de Privacidad</a>";
         cbAceptaTerminos.setText(Html.fromHtml(textoTerminos, Html.FROM_HTML_MODE_LEGACY));
         cbAceptaTerminos.setMovementMethod(LinkMovementMethod.getInstance());
-
-        cbAceptaTerminos.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            validarCamposYHabilitarBoton();
-        });
-
         cbAceptaTerminos.setOnClickListener(v -> {
             if (!cbAceptaTerminos.isChecked()) {
                 mostrarDialogoTerminos();
@@ -188,22 +247,16 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void mostrarDialogoTerminos() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        ScrollView scrollView = new ScrollView(this);
-        TextView textView = new TextView(this);
-        textView.setPadding(50, 50, 50, 50);
-        textView.setText(getTextoTerminosCompleto());
-        scrollView.addView(textView);
-
-        builder.setTitle("Términos y Condiciones")
-                .setView(scrollView)
-                .setPositiveButton("Aceptar", (dialog, which) -> {
-                    cbAceptaTerminos.setChecked(true);
-                    validarCamposYHabilitarBoton();
-                })
-                .setNegativeButton("Cancelar", (dialog, which) -> cbAceptaTerminos.setChecked(false))
-                .setCancelable(false)
-                .show();
+        new AlertDialog.Builder(this)
+            .setTitle("Términos y Condiciones")
+            .setMessage(getTextoTerminosCompleto())
+            .setPositiveButton("Aceptar", (dialog, which) -> {
+                cbAceptaTerminos.setChecked(true);
+                updateButtonEnabled();
+            })
+            .setNegativeButton("Cancelar", (dialog, which) -> cbAceptaTerminos.setChecked(false))
+            .setCancelable(false)
+            .show();
     }
 
     private String getTextoTerminosCompleto() {
@@ -234,19 +287,11 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void onContinuar() {
-        if (!cbAceptaTerminos.isChecked()) {
-            Toast.makeText(this, "Debes aceptar los términos y condiciones para continuar", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         if (!validarCamposPantalla1()) {
             Toast.makeText(this, "⚠️ Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
             return;
         }
-
         guardarDatosCompletos();
-        Toast.makeText(this, "✅ Datos guardados. Continuando...", Toast.LENGTH_SHORT).show();
-
         startActivity(new Intent(this, PaseadorRegistroPaso2Activity.class));
     }
 
@@ -256,7 +301,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         editor.putString("apellido", etApellido.getText().toString().trim());
         editor.putString("cedula", etCedula.getText().toString().trim());
         editor.putString("fecha_nacimiento", etFechaNac.getText().toString().trim());
-        editor.putString("domicilio", domicilio); // <-- Cambio aquí
+        editor.putString("domicilio", domicilio);
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
@@ -265,57 +310,22 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         editor.putString("email", etEmail.getText().toString().trim());
         editor.putString("password", etPassword.getText().toString().trim());
         editor.putBoolean("paso1_completo", true);
-        editor.putBoolean("acepto_terminos", true);
+        editor.putBoolean("acepto_terminos", cbAceptaTerminos.isChecked());
         editor.apply();
-        Log.d(TAG, "Datos del paso 1 guardados localmente");
-    }
-
-    private Date parseFecha() {
-        String f = etFechaNac.getText().toString().trim();
-        try {
-            return sdf.parse(f);
-        } catch (ParseException e) {
-            return null;
-        }
     }
 
     private boolean validarCamposPantalla1() {
         boolean ok = true;
-
-        if (TextUtils.isEmpty(etNombre.getText().toString().trim())) {
-            etNombre.setError("⚠️ El nombre es obligatorio");
-            ok = false;
-        }
-        if (TextUtils.isEmpty(etApellido.getText().toString().trim())) {
-            etApellido.setError("⚠️ El apellido es obligatorio");
-            ok = false;
-        }
-        if (!validarCedulaEcuador(etCedula.getText().toString().trim())) {
-            etCedula.setError("⚠️ Cédula ecuatoriana inválida");
-            ok = false;
-        }
-        Date fecha = parseFecha();
-        if (fecha == null || !validarEdad(fecha)) {
-            etFechaNac.setError("⚠️ Debes ser mayor de 18 años");
-            ok = false;
-        }
-        if (TextUtils.isEmpty(domicilio)) { // <-- Cambio aquí
-            Toast.makeText(this, "El domicilio es obligatorio", Toast.LENGTH_SHORT).show();
-            ok = false;
-        }
-        if (!etTelefono.getText().toString().trim().matches("^(\\+593[0-9]{9}|09[0-9]{8})$")) {
-            etTelefono.setError("⚠️ Formato inválido. Usa: 09XXXXXXXX o +593XXXXXXXXX");
-            ok = false;
-        }
-        if (!Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString().trim()).matches()) {
-            etEmail.setError("⚠️ Formato de correo inválido");
-            ok = false;
-        }
-        if (etPassword.getText().toString().trim().length() < 6) {
-            tilPassword.setError("⚠️ La contraseña debe tener al menos 6 caracteres");
-            ok = false;
-        }
-
+        if (TextUtils.isEmpty(etNombre.getText().toString().trim())) ok = false;
+        if (TextUtils.isEmpty(etApellido.getText().toString().trim())) ok = false;
+        if (!validarCedulaEcuador(etCedula.getText().toString().trim())) ok = false;
+        Date fecha = parseFecha(etFechaNac.getText().toString().trim());
+        if (fecha == null || !validarEdad(fecha)) ok = false;
+        if (TextUtils.isEmpty(domicilio)) ok = false;
+        if (!etTelefono.getText().toString().trim().matches("^(\\+593[0-9]{9}|09[0-9]{8})$")) ok = false;
+        if (!Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString().trim()).matches()) ok = false;
+        if (etPassword.getText().toString().trim().length() < 6) ok = false;
+        if (!cbAceptaTerminos.isChecked()) ok = false;
         return ok;
     }
 
@@ -348,7 +358,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         editor.putString("nombre", etNombre.getText().toString());
         editor.putString("apellido", etApellido.getText().toString());
         editor.putString("cedula", etCedula.getText().toString());
-        editor.putString("fecha", etFechaNac.getText().toString());
+        editor.putString("fecha_nacimiento", etFechaNac.getText().toString());
         editor.putString("domicilio", domicilio);
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
@@ -365,43 +375,32 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etNombre.setText(prefs.getString("nombre", ""));
         etApellido.setText(prefs.getString("apellido", ""));
         etCedula.setText(prefs.getString("cedula", ""));
-        etFechaNac.setText(prefs.getString("fecha", ""));
+        etFechaNac.setText(prefs.getString("fecha_nacimiento", ""));
         domicilio = prefs.getString("domicilio", "");
+        etDomicilio.setText(domicilio);
         float lat = prefs.getFloat("domicilio_lat", 0);
         float lng = prefs.getFloat("domicilio_lng", 0);
         if(lat != 0 && lng != 0) {
             domicilioLatLng = new GeoPoint(lat, lng);
         }
-        if (autocompleteFragment != null && !TextUtils.isEmpty(domicilio)) {
-            autocompleteFragment.setText(domicilio);
-        }
         etTelefono.setText(prefs.getString("telefono", ""));
         etEmail.setText(prefs.getString("email", ""));
         etPassword.setText(prefs.getString("password", ""));
-    }
-
-    private void validarCamposYHabilitarBoton() {
-        boolean camposCompletos = validarTodosLosCampos();
-        boolean terminosAceptados = cbAceptaTerminos.isChecked();
-        btnContinuar.setEnabled(camposCompletos && terminosAceptados);
-        btnContinuar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this,
-                btnContinuar.isEnabled() ? R.color.blue_primary : R.color.gray_disabled)));
-    }
-
-    private boolean validarTodosLosCampos() {
-        return !TextUtils.isEmpty(etNombre.getText()) &&
-                !TextUtils.isEmpty(etApellido.getText()) &&
-                validarCedulaEcuador(etCedula.getText().toString()) &&
-                !TextUtils.isEmpty(etFechaNac.getText()) &&
-                !TextUtils.isEmpty(domicilio) && // <-- Cambio aquí
-                etTelefono.getText().toString().matches("^(\\+593[0-9]{9}|09[0-9]{8})$") &&
-                Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString()).matches() &&
-                etPassword.getText().toString().length() >= 6;
+        cbAceptaTerminos.setChecked(prefs.getBoolean("acepto_terminos", false));
     }
 
     private void updateButtonEnabled() {
-        validarCamposYHabilitarBoton();
+        boolean camposCompletos = validarCamposPantalla1();
+        btnContinuar.setEnabled(camposCompletos);
+        btnContinuar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, 
+                camposCompletos ? R.color.blue_primary : R.color.gray_disabled)));
     }
 
-
+    private Date parseFecha(String fechaStr) {
+        try {
+            return sdf.parse(fechaStr);
+        } catch (ParseException e) {
+            return null;
+        }
+    }
 }

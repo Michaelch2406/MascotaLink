@@ -147,19 +147,46 @@
                 android:layout_height="wrap_content"
                 style="@style/TextAppearance.Mascota.Label"
                 android:text="Domicilio"/>
-            <FrameLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="#E7EEF2"
+                android:padding="12dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp"
-                android:padding="4dp">
-                <androidx.fragment.app.FragmentContainerView
-                    android:id="@+id/autocomplete_fragment_domicilio"
-                    android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+                android:layout_marginBottom="12dp">
+
+                <EditText
+                    android:id="@+id/et_domicilio"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </FrameLayout>
+                    android:layout_height="wrap_content"
+                    android:hint="Toca para buscar tu dirección"
+                    android:background="@android:color/transparent"
+                    android:textColor="#111827"
+                    android:textColorHint="#9CA3AF"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@+id/iv_geolocate"
+                    android:focusable="false" />
+
+                <ImageView
+                    android:id="@+id/iv_geolocate"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_my_location"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:contentDescription="Obtener ubicación actual"
+                    app:tint="#13A4EC" />
+
+                <ProgressBar
+                    android:id="@+id/pb_geolocate"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:visibility="gone" />
+
+            </RelativeLayout>
 
             <!-- Número de teléfono -->
             <TextView
@@ -180,6 +207,7 @@
                     android:layout_height="wrap_content"
                     android:hint="Ingresa tu número"
                     android:inputType="phone"
+                    android:maxLength="10"
                     android:background="@android:color/transparent"
                     android:textColor="#111827"
                     android:textColorHint="#9CA3AF"/>

@@ -1,10 +1,14 @@
 package com.mjc.mascotalink;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.Html;
@@ -13,49 +17,64 @@ import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.common.api.Status;
-import com.google.android.libraries.places.api.Places;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.net.PlacesClient;
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.AutocompleteActivity;
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.GeoPoint;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class DuenoRegistroPaso1Activity extends AppCompatActivity {
 
     private static final String TAG = "DuenoRegistroPaso1";
-    private EditText etNombre, etApellido, etFechaNacimiento, etTelefono, etCorreo, etCedula;
+    private EditText etNombre, etApellido, etFechaNacimiento, etTelefono, etCorreo, etCedula, etDomicilio;
     private TextInputLayout tilPassword;
     private TextInputEditText etPassword;
     private CheckBox cbTerminos;
     private Button btnRegistrarse;
+    private ImageView ivGeolocate;
+    private ProgressBar pbGeolocate;
 
-    // Variables para el domicilio
     private String domicilio;
     private GeoPoint domicilioLatLng;
 
+    private FusedLocationProviderClient fusedLocationClient;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
+    private ActivityResultLauncher<Intent> autocompleteLauncher;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -64,9 +83,10 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
 
         setupViews();
         setupListeners();
-        setupPlacesAutocomplete(); // Nuevo método para el autocompletado
+        setupLocationServices();
+        setupAutocompleteLauncher();
         configurarTerminosYCondiciones();
-        actualizarBoton(); // Initial check
+        actualizarBoton();
     }
 
     private void setupViews() {
@@ -79,15 +99,20 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         etTelefono = findViewById(R.id.et_telefono);
         etCorreo = findViewById(R.id.et_correo);
         etCedula = findViewById(R.id.et_cedula);
+        etDomicilio = findViewById(R.id.et_domicilio);
         tilPassword = findViewById(R.id.til_password);
         etPassword = findViewById(R.id.et_password);
         cbTerminos = findViewById(R.id.cb_terminos);
         btnRegistrarse = findViewById(R.id.btn_registrarse);
+        ivGeolocate = findViewById(R.id.iv_geolocate);
+        pbGeolocate = findViewById(R.id.pb_geolocate);
     }
 
     private void setupListeners() {
         btnRegistrarse.setOnClickListener(v -> intentarRegistro());
         etFechaNacimiento.setOnClickListener(v -> mostrarDatePicker());
+        etDomicilio.setOnClickListener(v -> launchAutocomplete());
+        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
 
         TextWatcher textWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -105,35 +130,89 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         cbTerminos.setOnCheckedChangeListener((buttonView, isChecked) -> actualizarBoton());
     }
 
-    private void setupPlacesAutocomplete() {
-        // Initialization is now done in MyApplication.java
+    private void setupLocationServices() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) {
+                fetchLocationAndFillAddress();
+            } else {
+                toast("Permiso de ubicación denegado.");
+            }
+        });
+    }
 
-        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
-                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment_domicilio);
-
-        if (autocompleteFragment != null) {
-            autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG));
-            autocompleteFragment.setHint("Empieza a escribir tu dirección...");
-            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-                @Override
-                public void onPlaceSelected(@NonNull Place place) {
-                    domicilio = place.getAddress();
-                    if (place.getLatLng() != null) {
-                        domicilioLatLng = new GeoPoint(place.getLatLng().latitude, place.getLatLng().longitude);
+    private void setupAutocompleteLauncher() {
+        autocompleteLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                        Place place = Autocomplete.getPlaceFromIntent(result.getData());
+                        Log.i(TAG, "Place: " + place.getName() + ", " + place.getId() + ", " + place.getAddress());
+                        domicilio = place.getAddress();
+                        if (place.getLatLng() != null) {
+                            domicilioLatLng = new GeoPoint(place.getLatLng().latitude, place.getLatLng().longitude);
+                        }
+                        etDomicilio.setText(domicilio);
+                        actualizarBoton();
+                    } else if (result.getResultCode() == AutocompleteActivity.RESULT_ERROR) {
+                        Status status = Autocomplete.getStatusFromIntent(result.getData());
+                        Log.e(TAG, status.getStatusMessage());
+                        toast("Error en autocompletado: " + status.getStatusMessage());
                     }
-                    Log.i(TAG, "Place: " + domicilio + ", " + domicilioLatLng);
-                    actualizarBoton(); // Validar de nuevo cuando se selecciona una dirección
-                }
+                });
+    }
 
-                @Override
-                public void onError(@NonNull Status status) {
-                    Log.e(TAG, "An error occurred: " + status);
-                    toast("Error al buscar dirección: " + status.getStatusMessage());
-                }
-            });
+    private void launchAutocomplete() {
+        List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG);
+        Intent intent = new Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
+                .setCountry("EC") // Opcional: Limitar a un país
+                .build(this);
+        autocompleteLauncher.launch(intent);
+    }
+
+    private void onGeolocateClick() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fetchLocationAndFillAddress();
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private void fetchLocationAndFillAddress() {
+        showGeolocateLoading(true);
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                try {
+                    List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                    if (addresses != null && !addresses.isEmpty()) {
+                        Address address = addresses.get(0);
+                        String addressLine = address.getAddressLine(0);
+                        domicilio = addressLine;
+                        domicilioLatLng = new GeoPoint(location.getLatitude(), location.getLongitude());
+                        etDomicilio.setText(addressLine);
+                        actualizarBoton();
+                        toast("Dirección autocompletada.");
+                    } else {
+                        toast("No se pudo encontrar una dirección para esta ubicación.");
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Servicio de geocodificación no disponible", e);
+                    toast("Error al obtener la dirección.");
+                }
+            }
+            showGeolocateLoading(false);
+        }).addOnFailureListener(e -> {
+            showGeolocateLoading(false);
+            toast("No se pudo obtener la ubicación. Asegúrate de que el GPS esté activado.");
+        });
+    }
+
+    private void showGeolocateLoading(boolean isLoading) {
+        pbGeolocate.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        ivGeolocate.setVisibility(isLoading ? View.INVISIBLE : View.VISIBLE);
+    }
 
     private void mostrarDatePicker() {
         final Calendar calendario = Calendar.getInstance();
@@ -172,7 +251,7 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
 
     private boolean camposEstanLlenos() {
         return !isEmpty(etNombre) && !isEmpty(etApellido) && !isEmpty(etFechaNacimiento)
-                && !TextUtils.isEmpty(domicilio) // <-- Cambio aquí
+                && !TextUtils.isEmpty(domicilio)
                 && !isEmpty(etCedula) && !isEmpty(etTelefono)
                 && !isEmpty(etCorreo) && etPassword.getText() != null && !etPassword.getText().toString().isEmpty();
     }
@@ -212,7 +291,6 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
             etCedula.setError(null);
         }
 
-        // Validar domicilio
         if (TextUtils.isEmpty(domicilio)) {
             toast("La dirección es obligatoria. Por favor, selecciónala de la lista.");
             ok = false;
@@ -299,7 +377,7 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         editor.putString("fecha_nacimiento", etFechaNacimiento.getText().toString().trim());
         editor.putString("telefono", etTelefono.getText().toString().trim());
         editor.putString("correo", etCorreo.getText().toString().trim());
-        editor.putString("domicilio", domicilio); // <-- Cambio aquí
+        editor.putString("domicilio", domicilio);
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());

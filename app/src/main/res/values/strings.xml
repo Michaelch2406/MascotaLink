@@ -14,10 +14,22 @@
 
     <string-array name="bancos">
         <item>Banco Pichincha</item>
-        <item>Produbanco</item>
-        <item>Banco Guayaquil</item>
         <item>Banco del Pacífico</item>
+        <item>Banco Guayaquil</item>
+        <item>Produbanco</item>
+        <item>Banco Internacional</item>
         <item>Banco Bolivariano</item>
+        <item>Banco Solidario</item>
+        <item>Banco de Machala</item>
+        <item>Banco del Austro</item>
+        <item>Banco de Loja</item>
+        <item>Banco ProCredit</item>
+        <item>Banco General Rumiñahui</item>
+        <item>Banco de Fomento</item>
+        <item>Cooperativa de Ahorro y Crédito JEP</item>
+        <item>Cooperativa de Ahorro y Crédito Atuntaqui</item>
+        <item>Cooperativa de Ahorro y Crédito Jardín Azuayo</item>
+        <item>Otra</item>
     </string-array>
     <string name="title_activity_mascota_registro_paso1">Registra tu mascota</string>
     <string name="info_basica_title">Información básica de tu perro</string>
