@@ -1,0 +1,62 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Avatar -->
+    <View
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:background="@drawable/bg_avatar_circle_skeleton" />
+
+    <!-- Nombre -->
+    <View
+        android:layout_width="200dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="16dp"
+        android:background="@color/skeleton_color" />
+
+    <!-- Rol -->
+    <View
+        android:layout_width="140dp"
+        android:layout_height="16dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/skeleton_color_light" />
+
+    <!-- Email -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="24dp"
+        android:background="@color/skeleton_color_light" />
+
+    <!-- Telefono -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="16dp"
+        android:background="@color/skeleton_color_light" />
+
+    <!-- Mis Mascotas Label -->
+    <View
+        android:layout_width="150dp"
+        android:layout_height="20dp"
+        android:layout_gravity="start"
+        android:layout_marginTop="32dp"
+        android:background="@color/skeleton_color" />
+
+    <!-- Mascotas RecyclerView Skeleton -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <include layout="@layout/item_skeleton_mascota_perfil" />
+        <include layout="@layout/item_skeleton_mascota_perfil" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -9,6 +9,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.app.AlertDialog;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,12 +24,14 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PerfilDuenoActivity extends AppCompatActivity {
 
+    private static final String TAG = "PerfilDuenoActivity";
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private FirebaseUser currentUser;
@@ -36,7 +39,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private ImageView ivAvatar, ivVerificado, ivBack;
     private TextView tvNombreCompleto, tvRol;
     private EditText etEmailDueno, etTelefonoDueno;
-    private ImageView ivEditEmail, ivSaveEmail, ivEditTelefono, ivSaveTelefono;
+    private ImageView ivEditEmail, ivSaveEmail, ivEditTelefono, ivSaveTelefono, ivEditMascotas;
     private String originalEmail, originalTelefono;
     private RecyclerView rvMascotas;
     private MascotaPerfilAdapter mascotaAdapter;
@@ -44,6 +47,14 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private Button btnCerrarSesion;
     private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
     private String metodoPagoId; // Variable to store the payment method ID
+    private View skeletonLayout;
+    private androidx.core.widget.NestedScrollView scrollViewContent;
+    private boolean isContentVisible = false;
+
+    // Listeners for real-time updates
+    private ListenerRegistration duenoListener;
+    private ListenerRegistration mascotasListener;
+    private ListenerRegistration metodoPagoListener;
 
 
     @Override
@@ -70,16 +81,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (currentUser != null) {
-            String uid = currentUser.getUid();
-            cargarDatosDueno(uid);
-            cargarMascotas(uid);
-            cargarMetodoPagoPredeterminado(uid);
-        }
-    }
 
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
@@ -95,6 +96,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         etTelefonoDueno = findViewById(R.id.et_telefono_dueno);
         ivEditTelefono = findViewById(R.id.iv_edit_telefono);
         ivSaveTelefono = findViewById(R.id.iv_save_telefono);
+        ivEditMascotas = findViewById(R.id.iv_edit_mascotas);
 
         rvMascotas = findViewById(R.id.rv_mascotas);
         rvMascotas.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
@@ -110,6 +112,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnCentroAyuda = findViewById(R.id.btn_centro_ayuda);
         btnTerminos = findViewById(R.id.btn_terminos);
         btnCerrarSesion = findViewById(R.id.btn_cerrar_sesion);
+        skeletonLayout = findViewById(R.id.skeleton_layout);
+        scrollViewContent = findViewById(R.id.scroll_view_content);
 
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
@@ -205,6 +209,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             }
         });
 
+        ivEditMascotas.setOnClickListener(v -> showToast("Próximamente: Gestionar Mascotas"));
+
         btnEditarPerfil.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, EditarPerfilCompletoDuenoActivity.class);
             startActivity(intent);
@@ -235,81 +241,104 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     }
 
     private void cargarDatosDueno(String uid) {
-        db.collection("usuarios").document(uid).get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                DocumentSnapshot document = task.getResult();
-                if (document.exists()) {
-                    tvNombreCompleto.setText(document.getString("nombre_display"));
-                    tvRol.setText("Dueña de mascotas");
-
-                    etEmailDueno.setText(document.getString("correo"));
-                    etTelefonoDueno.setText(document.getString("telefono"));
-                    originalEmail = document.getString("correo");
-                    originalTelefono = document.getString("telefono");
-
-                    String fotoUrl = document.getString("foto_perfil");
-                    if (fotoUrl != null && !fotoUrl.isEmpty()) {
-                        Glide.with(this).load(fotoUrl).circleCrop().into(ivAvatar);
-                    }
-
-                    // Suponiendo que el estado de verificación también está en el doc de usuario
-                    String verificacion = document.getString("verificacion_estado");
-                    if ("APROBADO".equals(verificacion)) {
-                        ivVerificado.setVisibility(View.VISIBLE);
-                    } else {
-                        ivVerificado.setVisibility(View.GONE);
-                    }
-                }
-            } else {
+        if (duenoListener != null) duenoListener.remove();
+        duenoListener = db.collection("usuarios").document(uid).addSnapshotListener((document, e) -> {
+            if (e != null) {
+                Log.w(TAG, "Listen failed.", e);
                 Toast.makeText(this, "Error al cargar el perfil.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (document != null && document.exists()) {
+                tvNombreCompleto.setText(document.getString("nombre_display"));
+                tvRol.setText("Dueña de mascotas");
+
+                etEmailDueno.setText(document.getString("correo"));
+                etTelefonoDueno.setText(document.getString("telefono"));
+                originalEmail = document.getString("correo");
+                originalTelefono = document.getString("telefono");
+
+                String fotoUrl = document.getString("foto_perfil");
+                if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                    Glide.with(this).load(fotoUrl).circleCrop().into(ivAvatar);
+                }
+
+                String verificacion = document.getString("verificacion_estado");
+                if ("APROBADO".equals(verificacion)) {
+                    ivVerificado.setVisibility(View.VISIBLE);
+                } else {
+                    ivVerificado.setVisibility(View.GONE);
+                }
+                showContent();
+            } else {
+                Log.d(TAG, "Current data: null");
             }
         });
     }
 
     private void cargarMascotas(String uid) {
-        // La ruta correcta es la subcolección 'mascotas' dentro del documento del dueño en la colección 'duenos'
-        db.collection("duenos").document(uid).collection("mascotas")
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        petList.clear();
-                        if (task.getResult().isEmpty()) {
-                            // Opcional: mostrar un mensaje de que no hay mascotas
-                        } else {
-                            for (QueryDocumentSnapshot document : task.getResult()) {
-                                Pet pet = new Pet();
-                                pet.setId(document.getId());
-                                pet.setName(document.getString("nombre"));
-                                pet.setBreed(document.getString("raza"));
-                                pet.setAvatarUrl(document.getString("foto_principal_url"));
-                                petList.add(pet);
-                            }
-                        }
-                        mascotaAdapter.notifyDataSetChanged();
-                    } else {
+        if (mascotasListener != null) mascotasListener.remove();
+        mascotasListener = db.collection("duenos").document(uid).collection("mascotas")
+                .addSnapshotListener((value, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Listen failed.", e);
                         Toast.makeText(this, "Error al cargar las mascotas.", Toast.LENGTH_SHORT).show();
+                        return;
                     }
+
+                    petList.clear();
+                    if (value == null || value.isEmpty()) {
+                        // Opcional: mostrar un mensaje de que no hay mascotas
+                    } else {
+                        for (QueryDocumentSnapshot doc : value) {
+                            Pet pet = new Pet();
+                            pet.setId(doc.getId());
+                            pet.setName(doc.getString("nombre"));
+                            pet.setBreed(doc.getString("raza"));
+                            pet.setAvatarUrl(doc.getString("foto_principal_url"));
+                            petList.add(pet);
+                        }
+                    }
+                    mascotaAdapter.notifyDataSetChanged();
+                    showContent();
                 });
     }
 
     private void cargarMetodoPagoPredeterminado(String uid) {
-        db.collection("usuarios").document(uid).collection("metodos_pago")
-                .whereEqualTo("predeterminado", true).limit(1).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        // Get the first default payment method
-                        metodoPagoId = queryDocumentSnapshots.getDocuments().get(0).getId();
-                    } else {
-                        // Optional: If no default, maybe fetch the most recent one?
-                        db.collection("usuarios").document(uid).collection("metodos_pago")
-                                .orderBy("fecha_registro", Query.Direction.DESCENDING).limit(1).get()
-                                .addOnSuccessListener(snapshots -> {
-                                    if (!snapshots.isEmpty()) {
-                                        metodoPagoId = snapshots.getDocuments().get(0).getId();
-                                    }
-                                });
-                    }
-                });
+        if (metodoPagoListener != null) metodoPagoListener.remove();
+        Query query = db.collection("usuarios").document(uid).collection("metodos_pago")
+                .whereEqualTo("predeterminado", true).limit(1);
+
+        metodoPagoListener = query.addSnapshotListener((queryDocumentSnapshots, e) -> {
+            if (e != null) {
+                Log.w(TAG, "Listen failed.", e);
+                return;
+            }
+
+            if (queryDocumentSnapshots != null && !queryDocumentSnapshots.isEmpty()) {
+                metodoPagoId = queryDocumentSnapshots.getDocuments().get(0).getId();
+            } else {
+                // Si no hay predeterminado, busca el más reciente en tiempo real también
+                db.collection("usuarios").document(uid).collection("metodos_pago")
+                        .orderBy("fecha_registro", Query.Direction.DESCENDING).limit(1)
+                        .addSnapshotListener((snapshots, error) -> {
+                            if (error != null) {
+                                Log.w(TAG, "Listen failed for recent payment method.", error);
+                                return;
+                            }
+                            if (snapshots != null && !snapshots.isEmpty()) {
+                                metodoPagoId = snapshots.getDocuments().get(0).getId();
+                            }
+                        });
+            }
+        });
+    }
+
+    private void showContent() {
+        if (!isContentVisible) {
+            isContentVisible = true;
+            skeletonLayout.setVisibility(View.GONE);
+            scrollViewContent.setVisibility(View.VISIBLE);
+        }
     }
 
     private void updateContactInfo(String field, String value) {
@@ -323,5 +352,19 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (duenoListener != null) {
+            duenoListener.remove();
+        }
+        if (mascotasListener != null) {
+            mascotasListener.remove();
+        }
+        if (metodoPagoListener != null) {
+            metodoPagoListener.remove();
+        }
     }
 }

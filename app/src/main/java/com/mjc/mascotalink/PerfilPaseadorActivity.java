@@ -44,6 +44,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -76,10 +77,21 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private Button btnCerrarSesion;
     private ImageButton btnMensaje;
     private FloatingActionButton fabReservar;
+    private ImageView ivEditMain, ivEditDescripcion, ivEditZonas, ivEditDisponibilidad, ivEditTiposPerros;
     private GoogleMap googleMap;
     private List<Circle> mapCircles = new ArrayList<>();
     private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
     private String metodoPagoId; // Variable to store the payment method ID
+    private View skeletonLayout;
+    private androidx.core.widget.NestedScrollView scrollViewContent;
+    private boolean isContentVisible = false;
+
+    // Listeners for real-time updates
+    private ListenerRegistration usuarioListener;
+    private ListenerRegistration paseadorListener;
+    private ListenerRegistration disponibilidadListener;
+    private ListenerRegistration zonasListener;
+    private ListenerRegistration metodoPagoListener;
 
 
     @Override
@@ -136,11 +148,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     @Override
     protected void onResume() {
         super.onResume();
-        String paseadorId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
-        if (paseadorId != null) {
-            cargarPerfilCompleto(paseadorId);
-            cargarMetodoPagoPredeterminado(paseadorId);
-        }
+
     }
 
     private void initViews() {
@@ -189,12 +197,22 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         fabReservar = findViewById(R.id.fab_reservar);
         btnMensaje = findViewById(R.id.btn_mensaje);
 
+        // Edit Icons
+        ivEditMain = findViewById(R.id.iv_edit_main);
+        ivEditDescripcion = findViewById(R.id.iv_edit_descripcion);
+        ivEditZonas = findViewById(R.id.iv_edit_zonas);
+        ivEditDisponibilidad = findViewById(R.id.iv_edit_disponibilidad);
+        ivEditTiposPerros = findViewById(R.id.iv_edit_tipos_perros);
+
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map_container);
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
+
+        skeletonLayout = findViewById(R.id.skeleton_layout);
+        scrollViewContent = findViewById(R.id.scroll_view_content);
 
     }
 
@@ -205,6 +223,31 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
         fabReservar.setOnClickListener(v -> showToast("Próximamente: Reservar"));
         btnMensaje.setOnClickListener(v -> showToast("Próximamente: Enviar Mensaje"));
+
+        ivEditMain.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
+            startActivity(intent);
+        });
+
+        ivEditDescripcion.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
+            startActivity(intent);
+        });
+
+        ivEditTiposPerros.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
+            startActivity(intent);
+        });
+
+        ivEditZonas.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, ZonasServicioActivity.class);
+            startActivity(intent);
+        });
+
+        ivEditDisponibilidad.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, DisponibilidadActivity.class);
+            startActivity(intent);
+        });
 
         fabReservar.setOnTouchListener(new View.OnTouchListener() {
             private int lastAction;
@@ -319,142 +362,179 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     private void cargarMetodoPagoPredeterminado(String uid) {
-        db.collection("usuarios").document(uid).collection("metodos_pago")
-                .whereEqualTo("predeterminado", true).limit(1).get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        metodoPagoId = queryDocumentSnapshots.getDocuments().get(0).getId();
-                    } else {
-                        db.collection("usuarios").document(uid).collection("metodos_pago")
-                                .orderBy("fecha_registro", Query.Direction.DESCENDING).limit(1).get()
-                                .addOnSuccessListener(snapshots -> {
-                                    if (!snapshots.isEmpty()) {
-                                        metodoPagoId = snapshots.getDocuments().get(0).getId();
-                                    }
-                                });
-                    }
-                });
+        if (metodoPagoListener != null) metodoPagoListener.remove();
+        Query query = db.collection("usuarios").document(uid).collection("metodos_pago")
+                .whereEqualTo("predeterminado", true).limit(1);
+
+        metodoPagoListener = query.addSnapshotListener((queryDocumentSnapshots, e) -> {
+            if (e != null) {
+                Log.w(TAG, "Listen failed.", e);
+                return;
+            }
+
+            if (queryDocumentSnapshots != null && !queryDocumentSnapshots.isEmpty()) {
+                metodoPagoId = queryDocumentSnapshots.getDocuments().get(0).getId();
+            } else {
+                // Si no hay predeterminado, busca el más reciente en tiempo real también
+                db.collection("usuarios").document(uid).collection("metodos_pago")
+                        .orderBy("fecha_registro", Query.Direction.DESCENDING).limit(1)
+                        .addSnapshotListener((snapshots, error) -> {
+                            if (error != null) {
+                                Log.w(TAG, "Listen failed for recent payment method.", error);
+                                return;
+                            }
+                            if (snapshots != null && !snapshots.isEmpty()) {
+                                metodoPagoId = snapshots.getDocuments().get(0).getId();
+                            }
+                        });
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")
     private void cargarPerfilCompleto(String paseadorId) {
-        Task<DocumentSnapshot> usuarioTask = db.collection("usuarios").document(paseadorId).get();
-        Task<DocumentSnapshot> paseadorTask = db.collection("paseadores").document(paseadorId).get();
-
-        Tasks.whenAllSuccess(usuarioTask, paseadorTask).addOnSuccessListener(results -> {
-            DocumentSnapshot usuarioDoc = (DocumentSnapshot) results.get(0);
-            DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
-
-            if (!usuarioDoc.exists() || !paseadorDoc.exists()) {
-                Toast.makeText(this, "Perfil no encontrado o incompleto.", Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "No se encontró el documento de usuario o paseador para el UID: " + paseadorId);
+        // Listener for the 'usuarios' document
+        usuarioListener = db.collection("usuarios").document(paseadorId).addSnapshotListener((usuarioDoc, e) -> {
+            if (e != null) {
+                Log.e(TAG, "Error al escuchar documento de usuario", e);
                 return;
             }
 
-            // Cargar datos de la colección 'usuarios'
-            tvNombre.setText(usuarioDoc.getString("nombre_display"));
-            Glide.with(this)
-                    .load(usuarioDoc.getString("foto_perfil"))
-                    .circleCrop()
-                    .placeholder(R.drawable.bg_avatar_circle)
-                    .into(ivAvatar);
-
-            Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
-            if (fechaRegistro != null) {
-                tvMiembroDesde.setText(String.format("Se unió en %s", formatMiembroDesde(fechaRegistro)));
-            }
-
-            Timestamp ultimaConexion = usuarioDoc.getTimestamp("ultima_conexion");
-            if (ultimaConexion != null) {
-                tvUltimaConexion.setText(String.format("Últ. conexión: %s", formatUltimaConexion(ultimaConexion)));
-            }
-
-            // Cargar datos de la colección 'paseadores'
-            String verificacion = paseadorDoc.getString("verificacion_estado");
-            if ("APROBADO".equalsIgnoreCase(verificacion)) {
-                ivVerificadoBadge.setVisibility(View.VISIBLE);
-                tvVerificado.setVisibility(View.VISIBLE);
-            } else {
-                ivVerificadoBadge.setVisibility(View.GONE);
-                tvVerificado.setVisibility(View.GONE);
-            }
-
-            Double precio = paseadorDoc.getDouble("precio_hora");
-            if (precio != null) {
-                tvPrecio.setText(String.format(Locale.getDefault(), "• $%.0f/hora", precio));
-            } else {
-                tvPrecio.setVisibility(View.GONE);
-            }
-
-            Long paseos = paseadorDoc.getLong("num_servicios_completados");
-            tvPaseosCompletados.setText(String.format(Locale.getDefault(), "%d Paseos completados", paseos != null ? paseos : 0));
-
-            Long tiempoRespuesta = paseadorDoc.getLong("tiempo_respuesta_promedio_min");
-            if (tiempoRespuesta != null) {
-                tvTiempoRespuesta.setText(String.format(Locale.getDefault(), "Respuesta en %d min", tiempoRespuesta));
-            } else {
-                tvTiempoRespuesta.setText("Respuesta en -- min");
-            }
-
-            Double rating = paseadorDoc.getDouble("calificacion_promedio");
-            Long numResenas = paseadorDoc.getLong("num_resenas");
-            if (rating != null) {
-                tvRatingValor.setText(String.format(Locale.getDefault(), "%.1f", rating));
-                ratingBar.setRating(rating.floatValue());
-            }
-            tvResenasTotal.setText(String.format(Locale.getDefault(), "%d reviews", numResenas != null ? numResenas : 0));
-
-            // Cargar datos del mapa 'perfil_profesional'
-            Map<String, Object> perfil = (Map<String, Object>) paseadorDoc.get("perfil_profesional");
-            if (perfil != null) {
-                tvDescripcion.setText((String) perfil.get("motivacion"));
-
-                String videoUrl = (String) perfil.get("video_presentacion_url");
+            if (usuarioDoc != null && usuarioDoc.exists()) {
+                tvNombre.setText(usuarioDoc.getString("nombre_display"));
                 Glide.with(this)
-                        .load(videoUrl)
-                        .centerCrop()
-                        .placeholder(R.drawable.galeria_paseos_foto1)
-                        .into(ivVideoThumbnail);
+                        .load(usuarioDoc.getString("foto_perfil"))
+                        .circleCrop()
+                        .placeholder(R.drawable.bg_avatar_circle)
+                        .into(ivAvatar);
 
-                Timestamp inicioExpTimestamp = (Timestamp) perfil.get("fecha_inicio_experiencia");
-                if (inicioExpTimestamp != null) {
-                    Date startDate = inicioExpTimestamp.toDate();
-                    LocalDate localStartDate = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-                    LocalDate currentDate = LocalDate.now();
-                    int years = Period.between(localStartDate, currentDate).getYears();
-                    tvExperienciaAnos.setText(String.format(Locale.getDefault(), "Experiencia: %d años", years));
-                } else {
-                    tvExperienciaAnos.setVisibility(View.GONE);
+                Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
+                if (fechaRegistro != null) {
+                    tvMiembroDesde.setText(String.format("Se unió en %s", formatMiembroDesde(fechaRegistro)));
                 }
-                tvExperienciaDesde.setVisibility(View.GONE); // Ocultar siempre el campo antiguo
+
+                Timestamp ultimaConexion = usuarioDoc.getTimestamp("ultima_conexion");
+                if (ultimaConexion != null) {
+                    tvUltimaConexion.setText(String.format("Últ. conexión: %s", formatUltimaConexion(ultimaConexion)));
+                }
+                showContent();
+            } else {
+                Log.d(TAG, "El documento de usuario no existe o está vacío");
+            }
+        });
+
+        // Listener for the 'paseadores' document
+        paseadorListener = db.collection("paseadores").document(paseadorId).addSnapshotListener((paseadorDoc, e) -> {
+            if (e != null) {
+                Log.e(TAG, "Error al escuchar documento de paseador", e);
+                Toast.makeText(this, "Error al cargar el perfil.", Toast.LENGTH_SHORT).show();
+                return;
             }
 
-            // Cargar datos del mapa 'manejo_perros'
-            Map<String, Object> manejo = (Map<String, Object>) paseadorDoc.get("manejo_perros");
-            if (manejo != null) {
-                List<String> tamanos = (List<String>) manejo.get("tamanos");
-                if (tamanos != null && !tamanos.isEmpty()) {
-                    tvTiposPerros.setText(android.text.TextUtils.join(", ", tamanos));
+            if (paseadorDoc != null && paseadorDoc.exists()) {
+                // Cargar datos de la colección 'paseadores'
+                String verificacion = paseadorDoc.getString("verificacion_estado");
+                if ("APROBADO".equalsIgnoreCase(verificacion)) {
+                    ivVerificadoBadge.setVisibility(View.VISIBLE);
+                    tvVerificado.setVisibility(View.VISIBLE);
                 } else {
-                    tvTiposPerros.setText("No especificado");
+                    ivVerificadoBadge.setVisibility(View.GONE);
+                    tvVerificado.setVisibility(View.GONE);
                 }
+
+                Double precio = paseadorDoc.getDouble("precio_hora");
+                if (precio != null) {
+                    tvPrecio.setText(String.format(Locale.getDefault(), "• $%.0f/hora", precio));
+                    tvPrecio.setVisibility(View.VISIBLE);
+                } else {
+                    tvPrecio.setVisibility(View.GONE);
+                }
+
+                Long paseos = paseadorDoc.getLong("num_servicios_completados");
+                tvPaseosCompletados.setText(String.format(Locale.getDefault(), "%d Paseos completados", paseos != null ? paseos : 0));
+
+                Long tiempoRespuesta = paseadorDoc.getLong("tiempo_respuesta_promedio_min");
+                if (tiempoRespuesta != null) {
+                    tvTiempoRespuesta.setText(String.format(Locale.getDefault(), "Respuesta en %d min", tiempoRespuesta));
+                } else {
+                    tvTiempoRespuesta.setText("Respuesta en -- min");
+                }
+
+                Double rating = paseadorDoc.getDouble("calificacion_promedio");
+                Long numResenas = paseadorDoc.getLong("num_resenas");
+                if (rating != null) {
+                    tvRatingValor.setText(String.format(Locale.getDefault(), "%.1f", rating));
+                    ratingBar.setRating(rating.floatValue());
+                }
+                tvResenasTotal.setText(String.format(Locale.getDefault(), "%d reviews", numResenas != null ? numResenas : 0));
+
+                // Cargar datos del mapa 'perfil_profesional'
+                Map<String, Object> perfil = (Map<String, Object>) paseadorDoc.get("perfil_profesional");
+                if (perfil != null) {
+                    tvDescripcion.setText((String) perfil.get("motivacion"));
+
+                    String videoUrl = (String) perfil.get("video_presentacion_url");
+                    Glide.with(this)
+                            .load(videoUrl)
+                            .centerCrop()
+                            .placeholder(R.drawable.galeria_paseos_foto1)
+                            .into(ivVideoThumbnail);
+
+                    Timestamp inicioExpTimestamp = (Timestamp) perfil.get("fecha_inicio_experiencia");
+                    if (inicioExpTimestamp != null) {
+                        Date startDate = inicioExpTimestamp.toDate();
+                        LocalDate localStartDate = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                        LocalDate currentDate = LocalDate.now();
+                        int years = Period.between(localStartDate, currentDate).getYears();
+                        tvExperienciaAnos.setText(String.format(Locale.getDefault(), "Experiencia: %d años", years));
+                        tvExperienciaAnos.setVisibility(View.VISIBLE);
+                    } else {
+                        tvExperienciaAnos.setVisibility(View.GONE);
+                    }
+                    tvExperienciaDesde.setVisibility(View.GONE); // Ocultar siempre el campo antiguo
+                }
+
+                // Cargar datos del mapa 'manejo_perros'
+                Map<String, Object> manejo = (Map<String, Object>) paseadorDoc.get("manejo_perros");
+                if (manejo != null) {
+                    List<String> tamanos = (List<String>) manejo.get("tamanos");
+                    if (tamanos != null && !tamanos.isEmpty()) {
+                        tvTiposPerros.setText(android.text.TextUtils.join(", ", tamanos));
+                    } else {
+                        tvTiposPerros.setText("No especificado");
+                    }
+                }
+
+                // Cargar sub-colecciones
+                cargarDisponibilidad(paseadorId);
+                cargarZonasServicio(paseadorId);
+                showContent();
+            } else {
+                Toast.makeText(this, "Perfil de paseador no encontrado o incompleto.", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "No se encontró el documento de paseador para el UID: " + paseadorId);
             }
-
-            // Cargar sub-colecciones
-            cargarDisponibilidad(paseadorId);
-            cargarZonasServicio(paseadorId);
-
-        }).addOnFailureListener(e -> {
-            Toast.makeText(this, "Error al cargar el perfil.", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "Error al buscar documentos de perfil", e);
         });
     }
 
+    private void showContent() {
+        if (!isContentVisible) {
+            isContentVisible = true;
+            skeletonLayout.setVisibility(View.GONE);
+            scrollViewContent.setVisibility(View.VISIBLE);
+            // Optionally, add a fade-in animation here
+        }
+    }
+
     private void cargarDisponibilidad(String paseadorId) {
-        db.collection("paseadores").document(paseadorId).collection("disponibilidad")
-                .limit(1).get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (querySnapshot.isEmpty()) {
+        if (disponibilidadListener != null) disponibilidadListener.remove();
+        disponibilidadListener = db.collection("paseadores").document(paseadorId).collection("disponibilidad")
+                .limit(1).addSnapshotListener((querySnapshot, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Error al cargar disponibilidad", e);
+                        tvDisponibilidad.setText("Error al cargar");
+                        return;
+                    }
+                    if (querySnapshot == null || querySnapshot.isEmpty()) {
                         tvDisponibilidad.setText("No especificada");
                         return;
                     }
@@ -469,19 +549,22 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     } else {
                         tvDisponibilidad.setText("No especificada");
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al cargar disponibilidad", e);
-                    tvDisponibilidad.setText("Error al cargar");
                 });
     }
 
     private void cargarZonasServicio(String paseadorId) {
-        db.collection("paseadores").document(paseadorId).collection("zonas_servicio")
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
+        if (zonasListener != null) zonasListener.remove();
+        zonasListener = db.collection("paseadores").document(paseadorId).collection("zonas_servicio")
+                .addSnapshotListener((querySnapshot, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Error al cargar zonas de servicio", e);
+                        tvZonasServicioNombres.setText("Error al cargar zonas");
+                        return;
+                    }
                     if (googleMap == null) return;
-                    if (querySnapshot.isEmpty()) {
+                    googleMap.clear(); // Limpiar círculos anteriores para reflejar cambios
+
+                    if (querySnapshot == null || querySnapshot.isEmpty()) {
                         tvZonasServicioNombres.setText("No especificadas");
                         return;
                     }
@@ -517,8 +600,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                                         nombresZonas.add(nombreZona);
                                     }
                                 }
-                            } catch (IOException e) {
-                                Log.e(TAG, "Error en Geocoder al obtener nombre de la zona", e);
+                            } catch (IOException ex) {
+                                Log.e(TAG, "Error en Geocoder al obtener nombre de la zona", ex);
                             }
                         }
                     }
@@ -530,16 +613,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     }
 
                     try {
-                        LatLngBounds bounds = boundsBuilder.build();
-                        googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
-                    } catch (IllegalStateException e) {
-                        Log.e(TAG, "No hay zonas de servicio para mostrar en el mapa.", e);
+                        if(querySnapshot.size() > 0) {
+                           LatLngBounds bounds = boundsBuilder.build();
+                           googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+                        }
+                    } catch (IllegalStateException ex) {
+                        Log.e(TAG, "No hay zonas de servicio para mostrar en el mapa.", ex);
                     }
-
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al cargar zonas de servicio", e);
-                    tvZonasServicioNombres.setText("Error al cargar zonas");
                 });
     }
 
@@ -562,6 +642,27 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         if (paseadorId == null) {
              LatLng quito = new LatLng(-0.180653, -78.467834);
              this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(quito, 12));
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Remove all listeners to prevent memory leaks
+        if (usuarioListener != null) {
+            usuarioListener.remove();
+        }
+        if (paseadorListener != null) {
+            paseadorListener.remove();
+        }
+        if (disponibilidadListener != null) {
+            disponibilidadListener.remove();
+        }
+        if (zonasListener != null) {
+            zonasListener.remove();
+        }
+        if (metodoPagoListener != null) {
+            metodoPagoListener.remove();
         }
     }
 }

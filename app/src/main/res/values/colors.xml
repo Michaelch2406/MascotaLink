@@ -18,4 +18,8 @@
     <color name="gray_dark">#374151</color>
     <color name="red_error">#DC2626</color>
     <color name="green_accent">#10B981</color>
+
+    <!-- Skeleton Loading Colors -->
+    <color name="skeleton_color">#E0E0E0</color>
+    <color name="skeleton_color_light">#F5F5F5</color>
 </resources>

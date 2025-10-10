@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.MediaController;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
@@ -31,6 +32,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -38,6 +40,7 @@ import com.google.firebase.storage.StorageReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -97,6 +100,8 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
 
         cgTiposPerros = findViewById(R.id.cg_tipos_perros);
         inicioExperienciaCalendar = Calendar.getInstance();
+
+
     }
 
     private void setupToolbar() {
@@ -128,10 +133,18 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                 if (perfilProfesional != null) {
                     etMotivacion.setText((String) perfilProfesional.get("motivacion"));
 
-                    Timestamp inicioExpTimestamp = (Timestamp) perfilProfesional.get("fecha_inicio_experiencia");
-                    if (inicioExpTimestamp != null) {
-                        inicioExperienciaCalendar.setTime(inicioExpTimestamp.toDate());
-                        updateInicioExperienciaLabel();
+                    String inicioExpStr = (String) perfilProfesional.get("experiencia_general");
+                    if (inicioExpStr != null && !inicioExpStr.isEmpty()) {
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", new Locale("es", "ES"));
+                            Date date = sdf.parse(inicioExpStr);
+                            if (date != null) {
+                                inicioExperienciaCalendar.setTime(date);
+                                updateInicioExperienciaLabel();
+                            }
+                        } catch (java.text.ParseException e) {
+                            e.printStackTrace();
+                        }
                     }
 
                     String videoUrl = (String) perfilProfesional.get("video_presentacion_url");
@@ -163,6 +176,8 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                 validateFields();
             }
         });
+
+
     }
 
     private final ActivityResultLauncher<Intent> videoPickerLauncher = registerForActivityResult(
@@ -223,6 +238,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         });
 
         etInicioExperienciaPicker.setOnClickListener(v -> showDatePickerDialog());
+
 
         btnGuardarCambios.setOnClickListener(v -> savePaseadorData());
     }
@@ -309,16 +325,21 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         userUpdates.put("apellido", etApellido.getText().toString().trim());
         userUpdates.put("telefono", etTelefono.getText().toString().trim());
         userUpdates.put("direccion", etDomicilio.getText().toString().trim());
+        userUpdates.put("nombre_display", etNombre.getText().toString().trim() + " " + etApellido.getText().toString().trim());
 
-        db.collection("usuarios").document(currentUserId).set(userUpdates, SetOptions.merge())
+        db.collection("usuarios").document(currentUserId).update(userUpdates)
                 .addOnFailureListener(e -> Toast.makeText(EditarPerfilPaseadorActivity.this, "Error al actualizar datos de usuario.", Toast.LENGTH_SHORT).show());
 
-        Map<String, Object> perfilProfesionalUpdates = new HashMap<>();
-        perfilProfesionalUpdates.put("motivacion", etMotivacion.getText().toString().trim());
-        perfilProfesionalUpdates.put("fecha_inicio_experiencia", new Timestamp(inicioExperienciaCalendar.getTime()));
+        Map<String, Object> paseadorUpdates = new HashMap<>();
+        paseadorUpdates.put("perfil_profesional.motivacion", etMotivacion.getText().toString().trim());
+
+        String myFormat = "MMMM yyyy";
+        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, new Locale("es", "ES"));
+        String fechaFormateada = sdf.format(inicioExperienciaCalendar.getTime());
+        paseadorUpdates.put("perfil_profesional.experiencia_general", fechaFormateada);
 
         if (videoUrl != null) {
-            perfilProfesionalUpdates.put("video_presentacion_url", videoUrl.toString());
+            paseadorUpdates.put("perfil_profesional.video_presentacion_url", videoUrl.toString());
         }
 
         List<String> tamanosList = new ArrayList<>();
@@ -326,17 +347,11 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             Chip chip = findViewById(id);
             tamanosList.add(chip.getText().toString());
         }
-        Map<String, Object> manejoPerrosUpdates = new HashMap<>();
-        manejoPerrosUpdates.put("tamanos", tamanosList);
+        paseadorUpdates.put("manejo_perros.tamanos", tamanosList);
 
-        Map<String, Object> paseadorUpdates = new HashMap<>();
-        paseadorUpdates.put("perfil_profesional", perfilProfesionalUpdates);
-        paseadorUpdates.put("manejo_perros", manejoPerrosUpdates);
 
-        db.collection("paseadores").document(currentUserId).set(paseadorUpdates, SetOptions.merge())
+        db.collection("paseadores").document(currentUserId).update(paseadorUpdates)
                 .addOnSuccessListener(aVoid -> {
-                    // Only finish activity if this method was responsible for the full save.
-                    // If service is uploading, the activity finishes itself earlier.
                     if (videoUrl != null) {
                         Toast.makeText(EditarPerfilPaseadorActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
                         finish();

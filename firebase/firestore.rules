@@ -32,11 +32,7 @@ service cloud.firestore {
 
     match /paseadores/{userId} {
       allow read: if request.auth != null;
-      allow write: if isOwner(userId) &&
-                     (resource == null || (
-                        request.resource.data.rol == resource.data.rol &&
-                        request.resource.data.verificacion_estado == resource.data.verificacion_estado
-                     ));
+      allow write: if isOwner(userId);
       allow delete: if false;
     }
 
