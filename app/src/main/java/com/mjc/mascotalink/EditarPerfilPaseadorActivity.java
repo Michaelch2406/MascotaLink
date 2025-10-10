@@ -25,6 +25,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -51,7 +53,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
-    private String currentUserId;
+    private String currentUserId, cedula;
 
     private EditText etNombre, etApellido, etEmail, etTelefono, etDomicilio, etMotivacion, etInicioExperienciaPicker;
     private VideoView video_preview;
@@ -123,6 +125,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                 etTelefono.setText(userDoc.getString("telefono"));
                 etDomicilio.setText(userDoc.getString("direccion"));
                 etEmail.setText(mAuth.getCurrentUser().getEmail());
+                cedula = userDoc.getString("cedula"); // Store cedula
                 validateFields();
             }
         });
@@ -289,37 +292,29 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         }
         if (currentUserId == null) return;
 
-        // Disable button to prevent multiple clicks
         btnGuardarCambios.setEnabled(false);
         Toast.makeText(this, "Guardando cambios...", Toast.LENGTH_SHORT).show();
 
-        // If there is a new video, start the background upload service
         if (newVideoUri != null) {
+            String nombre = etNombre.getText().toString().trim();
+            String apellido = etApellido.getText().toString().trim();
+            String folderName = currentUserId + "_" + (cedula != null ? cedula : "") + "_" + nombre + "_" + apellido;
+            String fullStoragePath = "video_presentacion/" + folderName + "/video_presentacion.mp4";
+
             Intent serviceIntent = new Intent(this, FileUploadService.class);
             serviceIntent.setAction(FileUploadService.ACTION_UPLOAD);
             serviceIntent.putExtra(FileUploadService.EXTRA_FILE_URI, newVideoUri);
-            serviceIntent.putExtra(FileUploadService.EXTRA_USER_ID, currentUserId);
-            serviceIntent.putExtra(FileUploadService.EXTRA_STORAGE_PATH, "videos_presentacion");
+            serviceIntent.putExtra(FileUploadService.EXTRA_FULL_STORAGE_PATH, fullStoragePath);
             serviceIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_COLLECTION, "paseadores");
             serviceIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_DOCUMENT, currentUserId);
-            serviceIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_FIELD, "video_presentacion_url");
+            serviceIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_FIELD, "perfil_profesional.video_presentacion_url");
             ContextCompat.startForegroundService(this, serviceIntent);
-            Toast.makeText(this, "La subida del video continuará en segundo plano.", Toast.LENGTH_LONG).show();
         }
 
-        // Update other Firestore data immediately
-        updateFirestore(null); // Pass null because the service will handle the video URL update
-
-        // Finish the activity after starting service and triggering text data update
-        finish();
+        updateFirestore();
     }
 
-    private void uploadVideoAndUpdateFirestore(Uri videoToUpload) {
-        // This method is now obsolete, the service handles uploads.
-        // Kept for reference, can be deleted later.
-    }
-
-    private void updateFirestore(@Nullable Uri videoUrl) {
+    private void updateFirestore() {
         Map<String, Object> userUpdates = new HashMap<>();
         userUpdates.put("nombre", etNombre.getText().toString().trim());
         userUpdates.put("apellido", etApellido.getText().toString().trim());
@@ -327,8 +322,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         userUpdates.put("direccion", etDomicilio.getText().toString().trim());
         userUpdates.put("nombre_display", etNombre.getText().toString().trim() + " " + etApellido.getText().toString().trim());
 
-        db.collection("usuarios").document(currentUserId).update(userUpdates)
-                .addOnFailureListener(e -> Toast.makeText(EditarPerfilPaseadorActivity.this, "Error al actualizar datos de usuario.", Toast.LENGTH_SHORT).show());
+        Task<Void> userTask = db.collection("usuarios").document(currentUserId).update(userUpdates);
 
         Map<String, Object> paseadorUpdates = new HashMap<>();
         paseadorUpdates.put("perfil_profesional.motivacion", etMotivacion.getText().toString().trim());
@@ -338,10 +332,6 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         String fechaFormateada = sdf.format(inicioExperienciaCalendar.getTime());
         paseadorUpdates.put("perfil_profesional.experiencia_general", fechaFormateada);
 
-        if (videoUrl != null) {
-            paseadorUpdates.put("perfil_profesional.video_presentacion_url", videoUrl.toString());
-        }
-
         List<String> tamanosList = new ArrayList<>();
         for (int id : cgTiposPerros.getCheckedChipIds()) {
             Chip chip = findViewById(id);
@@ -349,17 +339,14 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         }
         paseadorUpdates.put("manejo_perros.tamanos", tamanosList);
 
+        Task<Void> paseadorTask = db.collection("paseadores").document(currentUserId).update(paseadorUpdates);
 
-        db.collection("paseadores").document(currentUserId).update(paseadorUpdates)
-                .addOnSuccessListener(aVoid -> {
-                    if (videoUrl != null) {
-                        Toast.makeText(EditarPerfilPaseadorActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(EditarPerfilPaseadorActivity.this, "Error al actualizar perfil de paseador: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    btnGuardarCambios.setEnabled(true);
-                });
+        Tasks.whenAllSuccess(userTask, paseadorTask).addOnSuccessListener(list -> {
+            Toast.makeText(EditarPerfilPaseadorActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
+            finish();
+        }).addOnFailureListener(e -> {
+            Toast.makeText(EditarPerfilPaseadorActivity.this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            btnGuardarCambios.setEnabled(true);
+        });
     }
 }

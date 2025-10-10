@@ -26,11 +26,10 @@ public class FileUploadService extends Service {
     private static final String TAG = "FileUploadService";
     public static final String ACTION_UPLOAD = "com.mjc.mascotalink.ACTION_UPLOAD";
     public static final String EXTRA_FILE_URI = "file_uri";
-    public static final String EXTRA_USER_ID = "user_id";
-    public static final String EXTRA_STORAGE_PATH = "storage_path";
+    public static final String EXTRA_FULL_STORAGE_PATH = "full_storage_path"; // Changed from storage_path + user_id
     public static final String EXTRA_FIRESTORE_COLLECTION = "firestore_collection";
     public static final String EXTRA_FIRESTORE_DOCUMENT = "firestore_document";
-    public static final String EXTRA_FIRESTORE_FIELD = "firestore_field";
+    public static final String EXTRA_FIRESTORE_FIELD = "firestore_field"; // The exact field to update, e.g., "perfil_profesional.video_presentacion_url"
 
     private static final String CHANNEL_ID = "FileUploadChannel";
     private static final int NOTIFICATION_ID = 1;
@@ -48,23 +47,22 @@ public class FileUploadService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_UPLOAD.equals(intent.getAction())) {
             Uri fileUri = intent.getParcelableExtra(EXTRA_FILE_URI);
-            String userId = intent.getStringExtra(EXTRA_USER_ID);
-            String storagePath = intent.getStringExtra(EXTRA_STORAGE_PATH);
+            String fullStoragePath = intent.getStringExtra(EXTRA_FULL_STORAGE_PATH);
             String firestoreCollection = intent.getStringExtra(EXTRA_FIRESTORE_COLLECTION);
             String firestoreDocument = intent.getStringExtra(EXTRA_FIRESTORE_DOCUMENT);
             String firestoreField = intent.getStringExtra(EXTRA_FIRESTORE_FIELD);
 
-            if (fileUri != null && userId != null) {
+            if (fileUri != null && fullStoragePath != null && firestoreCollection != null && firestoreDocument != null && firestoreField != null) {
                 startForeground(NOTIFICATION_ID, createNotification(0));
-                uploadFile(fileUri, userId, storagePath, firestoreCollection, firestoreDocument, firestoreField, startId);
+                uploadFile(fileUri, fullStoragePath, firestoreCollection, firestoreDocument, firestoreField, startId);
             }
         }
         return START_NOT_STICKY;
     }
 
-    private void uploadFile(Uri fileUri, String userId, String storagePath, String firestoreCollection, String firestoreDocument, String firestoreField, int startId) {
-        StorageReference storageRef = FirebaseStorage.getInstance().getReference()
-                .child(storagePath + "/" + userId + "/" + System.currentTimeMillis());
+    private void uploadFile(Uri fileUri, String fullStoragePath, String firestoreCollection, String firestoreDocument, String firestoreField, int startId) {
+        // Use the exact path provided by the activity
+        StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(fullStoragePath);
 
         storageRef.putFile(fileUri)
                 .addOnProgressListener(snapshot -> {
@@ -72,26 +70,22 @@ public class FileUploadService extends Service {
                     notificationManager.notify(NOTIFICATION_ID, createNotification((int) progress));
                 })
                 .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                    // Update the single, specific field in Firestore
                     updateFirestoreUrl(uri.toString(), firestoreCollection, firestoreDocument, firestoreField);
                     stopSelf(startId);
                 }))
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Upload failed", e);
-                    // Optionally, show a failure notification
                     stopSelf(startId);
                 });
     }
 
     private void updateFirestoreUrl(String downloadUrl, String collection, String document, String field) {
-        Map<String, Object> data = new HashMap<>();
-        Map<String, Object> nestedData = new HashMap<>();
-        nestedData.put(field, downloadUrl);
-        data.put("perfil_profesional", nestedData); // Assuming the field is always in perfil_profesional
-
+        // This is now a simple, safe update of a single field.
         FirebaseFirestore.getInstance().collection(collection).document(document)
-                .set(data, SetOptions.merge())
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Firestore updated successfully"))
-                .addOnFailureListener(e -> Log.e(TAG, "Firestore update failed", e));
+                .update(field, downloadUrl)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Firestore updated successfully with video URL."))
+                .addOnFailureListener(e -> Log.e(TAG, "Firestore update with video URL failed", e));
     }
 
     private Notification createNotification(int progress) {
