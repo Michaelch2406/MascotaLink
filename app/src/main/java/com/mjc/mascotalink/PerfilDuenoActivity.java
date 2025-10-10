@@ -212,7 +212,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         ivEditMascotas.setOnClickListener(v -> showToast("Próximamente: Gestionar Mascotas"));
 
         btnEditarPerfil.setOnClickListener(v -> {
-            Intent intent = new Intent(PerfilDuenoActivity.this, EditarPerfilCompletoDuenoActivity.class);
+            Intent intent = new Intent(PerfilDuenoActivity.this, EditarPerfilDuenoActivity.class);
             startActivity(intent);
         });
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));

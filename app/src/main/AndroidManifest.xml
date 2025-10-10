@@ -167,7 +167,7 @@
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
-            android:name=".EditarPerfilCompletoDuenoActivity"
+            android:name=".EditarPerfilDuenoActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
 

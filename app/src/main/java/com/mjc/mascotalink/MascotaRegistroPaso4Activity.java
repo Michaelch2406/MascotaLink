@@ -29,7 +29,7 @@ import java.util.Map;
 public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
     private ImageView arrowBack;
-    private TextInputEditText rutinaPaseoEditText, tipoCorreaArnesEditText, recompensasEditText, instruccionesEmergenciaEditText, accesoViviendaEditText, notasAdicionalesEditText;
+    private TextInputEditText rutinaPaseoEditText, tipoCorreaArnesEditText, recompensasEditText, instruccionesEmergenciaEditText, notasAdicionalesEditText;
     private Button guardarButton;
 
     private FirebaseFirestore db;
@@ -50,7 +50,6 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         tipoCorreaArnesEditText = findViewById(R.id.tipoCorreaArnesEditText);
         recompensasEditText = findViewById(R.id.recompensasEditText);
         instruccionesEmergenciaEditText = findViewById(R.id.instruccionesEmergenciaEditText);
-        accesoViviendaEditText = findViewById(R.id.accesoViviendaEditText);
         notasAdicionalesEditText = findViewById(R.id.notasAdicionalesEditText);
         guardarButton = findViewById(R.id.guardarButton);
 
@@ -77,7 +76,6 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         tipoCorreaArnesEditText.addTextChangedListener(textWatcher);
         recompensasEditText.addTextChangedListener(textWatcher);
         instruccionesEmergenciaEditText.addTextChangedListener(textWatcher);
-        accesoViviendaEditText.addTextChangedListener(textWatcher);
         notasAdicionalesEditText.addTextChangedListener(textWatcher);
     }
 
@@ -86,7 +84,6 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
                 && !tipoCorreaArnesEditText.getText().toString().trim().isEmpty()
                 && !recompensasEditText.getText().toString().trim().isEmpty()
                 && !instruccionesEmergenciaEditText.getText().toString().trim().isEmpty()
-                && !accesoViviendaEditText.getText().toString().trim().isEmpty()
                 && !notasAdicionalesEditText.getText().toString().trim().isEmpty();
         guardarButton.setEnabled(allFilled);
     }
@@ -176,7 +173,6 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         instrucciones.put("tipo_correa_arnes", tipoCorreaArnesEditText.getText().toString().trim());
         instrucciones.put("recompensas", recompensasEditText.getText().toString().trim());
         instrucciones.put("instrucciones_emergencia", instruccionesEmergenciaEditText.getText().toString().trim());
-        instrucciones.put("acceso_vivienda", accesoViviendaEditText.getText().toString().trim());
         instrucciones.put("notas_adicionales", notasAdicionalesEditText.getText().toString().trim());
         mascota.put("instrucciones", instrucciones);
 
