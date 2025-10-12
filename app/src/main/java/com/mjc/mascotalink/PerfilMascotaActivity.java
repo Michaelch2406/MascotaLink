@@ -35,7 +35,7 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
-    private ImageView ivBack, ivAvatarMascota;
+    private ImageView ivBack, ivAvatarMascota, ivEditMascota;
     private TextView tvNombreMascota, tvDescripcionMascota;
     private TextView tvRaza, tvSexo, tvEdad, tvTamano, tvPeso, tvEsterilizado;
     private RecyclerView rvGaleria;
@@ -76,6 +76,7 @@ public class PerfilMascotaActivity extends AppCompatActivity {
 
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
+        ivEditMascota = findViewById(R.id.iv_edit_mascota);
         ivAvatarMascota = findViewById(R.id.iv_avatar_mascota);
         tvNombreMascota = findViewById(R.id.tv_nombre_mascota);
         tvDescripcionMascota = findViewById(R.id.tv_descripcion_mascota);
@@ -122,6 +123,13 @@ public class PerfilMascotaActivity extends AppCompatActivity {
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
+
+        ivEditMascota.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilMascotaActivity.this, EditarPerfilMascotaActivity.class);
+            intent.putExtra("dueno_id", duenoId);
+            intent.putExtra("mascota_id", mascotaId);
+            startActivity(intent);
+        });
 
         btnSalud.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilMascotaActivity.this, MascotaSaludActivity.class);

@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC"
+    tools:context=".EditarPerfilMascotaActivity">
+
+    <!-- Header -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F7FAFC"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize">
+
+            <ImageView
+                android:id="@+id/iv_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_arrow_back"
+                android:layout_gravity="start"
+                android:layout_marginStart="16dp"
+                android:contentDescription="Atrás"
+                app:tint="@color/gray_dark" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Editar Mascota"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:layout_gravity="center" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Bottom Navigation for visual consistency -->
+    <View
+        android:id="@+id/bottom_nav_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB"
+        android:layout_above="@id/bottom_nav"/>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#F7FAFC"
+        app:menu="@menu/menu_bottom_nav_new"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/icon_color"
+        app:itemTextColor="@color/icon_color"
+        app:itemActiveIndicatorStyle="@null"/>
+
+    <!-- Content -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/app_bar"
+        android:layout_above="@id/bottom_nav_divider">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Foto Principal -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/iv_avatar_mascota"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center_horizontal"
+                android:padding="4dp"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                app:strokeColor="#FFB08A"
+                app:strokeWidth="4dp"
+                android:clickable="true"
+                android:focusable="true"
+                tools:src="@tools:sample/avatars" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cambiar foto"
+                android:layout_gravity="center_horizontal"
+                android:textColor="@color/blue_primary"
+                android:layout_marginTop="4dp"/>
+
+
+            <!-- Información Básica -->
+            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Información Básica" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Nombre">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_nombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Raza">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_raza"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sexo"/>
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipgroup_sexo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:singleSelection="true">
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Macho"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hembra"/>
+            </com.google.android.material.chip.ChipGroup>
+
+            <TextView
+                android:id="@+id/tv_fecha_nacimiento"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Fecha de Nacimiento"
+                android:padding="16dp"
+                android:drawableEnd="@drawable/ic_calendar"
+                android:gravity="center_vertical"/>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Tamaño"/>
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipgroup_tamano"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:singleSelection="true">
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pequeño"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mediano"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Grande"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Extra Grande"/>
+            </com.google.android.material.chip.ChipGroup>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Peso (kg)"
+                app:suffixText="kg">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_peso"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_esterilizado"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Esterilizado"
+                android:layout_marginTop="8dp"/>
+
+            <!-- Salud -->
+            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Salud" />
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_vacunas"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Vacunas al día"/>
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_desparasitacion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Desparasitación al día"/>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Condiciones médicas existentes">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_condiciones_medicas"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:inputType="textMultiLine"
+                    android:minLines="3"/>
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Medicamentos actuales">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_medicamentos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:inputType="textMultiLine"
+                    android:minLines="3"/>
+            </com.google.android.material.textfield.TextInputLayout>
+            <TextView
+                android:id="@+id/tv_ultima_visita_vet"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Última visita al veterinario"
+                android:padding="16dp"
+                android:drawableEnd="@drawable/ic_calendar"
+                android:gravity="center_vertical"/>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Nombre del veterinario">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_veterinario_nombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Teléfono del veterinario">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_veterinario_telefono"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="phone"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Comportamiento -->
+            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Comportamiento" />
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Nivel de Energía"/>
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipgroup_energia"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:singleSelection="true">
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bajo"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Moderado"/>
+                <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alto"/>
+            </com.google.android.material.chip.ChipGroup>
+            
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Comportamiento con personas">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_con_personas"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Comportamiento con otros perros">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_con_otros_perros"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Comportamiento con otros animales">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_con_otros_animales"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Hábitos con la correa">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_habitos_correa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Comandos que conoce">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_comandos_conocidos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Miedos o fobias">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_miedos_fobias"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Manías o hábitos particulares">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_manias_habitos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Instrucciones -->
+            <TextView style="@style/TextAppearance.Mascota.CardTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Instrucciones para el Paseador" />
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Rutina de paseo">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_rutina_paseo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Tipo de correa o arnés">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_tipo_correa_arnes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Recompensas o premios">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_recompensas"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Instrucciones de emergencia">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_instrucciones_emergencia"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Notas adicionales">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_notas_adicionales"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Botón Guardar -->
+            <Button
+                android:id="@+id/btn_guardar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Guardar Cambios"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"
+                android:enabled="false"
+                style="@style/Widget.MaterialComponents.Button"/>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</RelativeLayout>

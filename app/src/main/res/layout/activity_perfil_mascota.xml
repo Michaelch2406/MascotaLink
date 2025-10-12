@@ -39,6 +39,16 @@
                 android:textColor="@android:color/black"
                 android:layout_gravity="center" />
 
+            <ImageView
+                android:id="@+id/iv_edit_mascota"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@android:drawable/ic_menu_edit"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"
+                android:contentDescription="Editar Mascota"
+                app:tint="@color/blue_primary" />
+
         </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
