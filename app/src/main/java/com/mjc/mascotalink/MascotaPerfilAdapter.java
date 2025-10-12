@@ -1,6 +1,7 @@
 package com.mjc.mascotalink;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,6 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.google.firebase.auth.FirebaseAuth;
 import java.util.List;
 
 public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdapter.ViewHolder> {
@@ -39,6 +41,17 @@ public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdap
                 .placeholder(R.drawable.foto_principal_mascota)
                 .circleCrop()
                 .into(holder.ivMascota);
+
+        // Set click listener for the entire item
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, PerfilMascotaActivity.class);
+            // Get current user ID
+            String duenoId = FirebaseAuth.getInstance().getCurrentUser() != null ?
+                    FirebaseAuth.getInstance().getCurrentUser().getUid() : null;
+            intent.putExtra("dueno_id", duenoId);
+            intent.putExtra("mascota_id", pet.getId());
+            context.startActivity(intent);
+        });
     }
 
     @Override

@@ -181,6 +181,26 @@
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
 
+        <activity
+            android:name=".PerfilMascotaActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
+            android:name=".MascotaSaludActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
+            android:name=".MascotaComportamientoActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
+            android:name=".MascotaInstruccionesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MascotaLink" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

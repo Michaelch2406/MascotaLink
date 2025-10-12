@@ -1,46 +1,9 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="384dp"
-    android:height="416dp"
-    android:viewportWidth="384"
-    android:viewportHeight="416">
-
-    <!-- Fondo -->
-    <rect
-        android:fillColor="#E0E0E0"
-        android:x="0"
-        android:y="0"
-        android:width="384"
-        android:height="416"/>
-
-    <!-- Icono de jeringa -->
+    android:height="24dp"
+    android:width="24dp"
+    android:viewportHeight="24"
+    android:viewportWidth="24">
     <path
         android:fillColor="#0D171C"
-        android:pathData="M96,48
-            L112,64
-            L272,224
-            L240,256
-            L280,296
-            L320,256
-            L360,296
-            L336,320
-            L376,360
-            L360,376
-            L320,336
-            L280,376
-            L240,336
-            L112,208
-            L96,224
-            Z
-            M128,192
-            L160,160
-            L224,224
-            L192,256
-            L128,192
-            Z
-            M272,240
-            L304,208
-            L320,224
-            L288,256
-            L272,240
-            Z"/>
+        android:pathData="M22,2V5H20V2H18V5H16V2H14V5H12V2H10V5C10,6.1 10.9,7 12,7H13.59L4.41,16.17C3.63,16.95 3.63,18.22 4.41,19L5,19.59C5.78,20.37 7.05,20.37 7.83,19.59L17,10.41V12C17,13.1 17.9,14 19,14H22V12H19V10H22V8H19V5H22V2M7.12,18.17L5.83,16.88L13.95,8.76L15.24,10.05L7.12,18.17Z"/>
 </vector>
