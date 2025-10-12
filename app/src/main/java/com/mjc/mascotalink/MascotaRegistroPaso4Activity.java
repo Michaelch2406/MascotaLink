@@ -1,11 +1,13 @@
 package com.mjc.mascotalink;
 
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -13,18 +15,17 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.android.material.textfield.TextInputEditText;
-
-import android.content.ContentResolver;
-import android.webkit.MimeTypeMap;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
@@ -35,6 +36,10 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private FirebaseStorage storage;
+
+    // New member variables for owner's name and surname
+    private String duenoNombre;
+    private String duenoApellido;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +60,7 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
         setupListeners();
         validateInputs();
+        loadDuenoDataAndProceed(); // Load owner data before enabling save
     }
 
     private void setupListeners() {
@@ -85,7 +91,31 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
                 && !recompensasEditText.getText().toString().trim().isEmpty()
                 && !instruccionesEmergenciaEditText.getText().toString().trim().isEmpty()
                 && !notasAdicionalesEditText.getText().toString().trim().isEmpty();
-        guardarButton.setEnabled(allFilled);
+        // Only enable if owner data is loaded too
+        guardarButton.setEnabled(allFilled && duenoNombre != null && duenoApellido != null);
+    }
+
+    private void loadDuenoDataAndProceed() {
+        String currentDuenoId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
+        if (currentDuenoId == null) {
+            Toast.makeText(this, "Error: Usuario no autenticado.", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        db.collection("usuarios").document(currentDuenoId).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                duenoNombre = documentSnapshot.getString("nombre");
+                duenoApellido = documentSnapshot.getString("apellido");
+                validateInputs(); // Re-validate after owner data is loaded
+            } else {
+                Toast.makeText(this, "Error: Datos del dueño no encontrados.", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Error al cargar datos del dueño: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            finish();
+        });
     }
 
     private String getFileExtension(Uri uri) {
@@ -96,7 +126,7 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
     private void guardarMascotaCompleta() {
         guardarButton.setEnabled(false); // Prevent double clicks
-        String duenoId = mAuth.getCurrentUser().getUid();
+        String duenoId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
         Intent intent = getIntent();
         String fotoUriString = intent.getStringExtra("foto_uri");
         String petName = intent.getStringExtra("nombre");
@@ -109,7 +139,14 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         Uri fotoUri = Uri.parse(fotoUriString);
 
         String extension = getFileExtension(fotoUri);
-        String fileName = duenoId + "_" + (petName != null ? petName.replaceAll("\\s", "") : "") + "_mascota." + extension;
+        
+        // New file name format
+        String sanitizedDuenoNombre = duenoNombre != null ? duenoNombre.replaceAll("\\s", "") : "";
+        String sanitizedDuenoApellido = duenoApellido != null ? duenoApellido.replaceAll("\\s", "") : "";
+        String sanitizedPetName = petName != null ? petName.replaceAll("\\s", "") : "";
+
+        String fileName = String.format(Locale.ROOT, "%s_%s_%s_%s_mascota.%s",
+                duenoId, sanitizedDuenoNombre, sanitizedDuenoApellido, sanitizedPetName, extension);
 
         StorageReference storageRef = storage.getReference().child("foto_perfil_mascota/" + fileName);
 
