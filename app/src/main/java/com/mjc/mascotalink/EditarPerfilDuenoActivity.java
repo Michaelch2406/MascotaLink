@@ -1,6 +1,7 @@
 package com.mjc.mascotalink;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -11,8 +12,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -22,13 +22,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 
 import java.util.HashMap;
@@ -42,8 +42,9 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
     private String currentUserId, cedula;
 
     private ShapeableImageView ivAvatar;
-    private EditText etNombre, etApellido, etTelefono, etDomicilio;
-    private Button btnGuardarCambios, btnSubirFoto, btnTomarFoto;
+    private TextView tvCambiarFoto;
+    private TextInputEditText etNombre, etApellido, etTelefono, etDomicilio;
+    private Button btnGuardarCambios;
 
     private Uri newPhotoUri;
     private Uri cameraPhotoUri; // To store URI when taking photo with camera
@@ -70,18 +71,19 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
 
     private void initViews() {
         ivAvatar = findViewById(R.id.iv_avatar);
+        tvCambiarFoto = findViewById(R.id.tv_cambiar_foto);
         etNombre = findViewById(R.id.et_nombre);
         etApellido = findViewById(R.id.et_apellido);
         etTelefono = findViewById(R.id.et_telefono);
         etDomicilio = findViewById(R.id.et_domicilio);
         btnGuardarCambios = findViewById(R.id.btn_guardar_cambios);
-        btnSubirFoto = findViewById(R.id.btn_subir_foto);
-        btnTomarFoto = findViewById(R.id.btn_tomar_foto);
     }
 
     private void setupToolbar() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        // Use iv_back for navigation
+        View ivBack = findViewById(R.id.iv_back);
+        ivBack.setOnClickListener(v -> finish());
     }
 
     private void loadDuenoData() {
@@ -147,22 +149,34 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
         etTelefono.addTextChangedListener(textWatcher);
         etDomicilio.addTextChangedListener(textWatcher);
 
-        btnSubirFoto.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            photoPickerLauncher.launch(intent);
-        });
-
-        btnTomarFoto.setOnClickListener(v -> {
-            ContentValues values = new ContentValues();
-            values.put(MediaStore.Images.Media.TITLE, "New Picture");
-            values.put(MediaStore.Images.Media.DESCRIPTION, "From Camera");
-            cameraPhotoUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraPhotoUri);
-            cameraLauncher.launch(intent);
-        });
+        View.OnClickListener photoClickListener = v -> showPhotoOptionsDialog();
+        ivAvatar.setOnClickListener(photoClickListener);
+        tvCambiarFoto.setOnClickListener(photoClickListener);
 
         btnGuardarCambios.setOnClickListener(v -> saveDuenoData());
+    }
+
+    private void showPhotoOptionsDialog() {
+        String[] options = {"Tomar foto", "Elegir de la galería", "Cancelar"};
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Cambiar foto de perfil");
+        builder.setItems(options, (dialog, which) -> {
+            if (options[which].equals("Tomar foto")) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Images.Media.TITLE, "New Picture");
+                values.put(MediaStore.Images.Media.DESCRIPTION, "From Camera");
+                cameraPhotoUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraPhotoUri);
+                cameraLauncher.launch(intent);
+            } else if (options[which].equals("Elegir de la galería")) {
+                Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                photoPickerLauncher.launch(intent);
+            } else if (options[which].equals("Cancelar")) {
+                dialog.dismiss();
+            }
+        });
+        builder.show();
     }
 
     private void validateFields() {
@@ -216,14 +230,14 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
         userUpdates.put("direccion", etDomicilio.getText().toString().trim());
         userUpdates.put("nombre_display", etNombre.getText().toString().trim() + " " + etApellido.getText().toString().trim());
 
-        Task<Void> userTask = db.collection("usuarios").document(currentUserId).update(userUpdates);
-
-        Tasks.whenAllSuccess(userTask).addOnSuccessListener(list -> {
-            Toast.makeText(EditarPerfilDuenoActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
-            finish();
-        }).addOnFailureListener(e -> {
-            Toast.makeText(EditarPerfilDuenoActivity.this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            btnGuardarCambios.setEnabled(true);
-        });
+        db.collection("usuarios").document(currentUserId).set(userUpdates, SetOptions.merge())
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(EditarPerfilDuenoActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(EditarPerfilDuenoActivity.this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                btnGuardarCambios.setEnabled(true);
+            });
     }
 }

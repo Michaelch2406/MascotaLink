@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -45,7 +46,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private MascotaPerfilAdapter mascotaAdapter;
     private List<Pet> petList;
     private Button btnCerrarSesion;
-    private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
+    private ImageView ivEditPerfil;
+    private View btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
     private String metodoPagoId; // Variable to store the payment method ID
     private View skeletonLayout;
     private androidx.core.widget.NestedScrollView scrollViewContent;
@@ -84,6 +86,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
+        ivEditPerfil = findViewById(R.id.iv_edit_perfil);
         ivAvatar = findViewById(R.id.iv_avatar);
         ivVerificado = findViewById(R.id.iv_verificado);
         tvNombreCompleto = findViewById(R.id.tv_nombre_completo);
@@ -105,7 +108,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         rvMascotas.setAdapter(mascotaAdapter);
 
         // Ajustes Views
-        btnEditarPerfil = findViewById(R.id.btn_editar_perfil);
+        ivEditPerfil = findViewById(R.id.iv_edit_perfil);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
@@ -211,7 +214,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         ivEditMascotas.setOnClickListener(v -> showToast("Próximamente: Gestionar Mascotas"));
 
-        btnEditarPerfil.setOnClickListener(v -> {
+        ivEditPerfil.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, EditarPerfilDuenoActivity.class);
             startActivity(intent);
         });

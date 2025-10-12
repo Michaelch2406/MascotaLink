@@ -17,15 +17,23 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:navigationIconTint="@color/gray_dark">
+            android:layout_height="?attr/actionBarSize">
+
+            <ImageView
+                android:id="@+id/iv_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_arrow_back"
+                android:layout_gravity="start"
+                android:layout_marginStart="16dp"
+                android:contentDescription="Atrás"
+                app:tint="@color/gray_dark" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="Editar Perfil Dueño"
+                android:text="Editar Perfil"
                 android:textColor="@android:color/black"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -37,7 +45,7 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/app_bar">
+        android:layout_below="@+id/app_bar">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -56,142 +64,76 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
                 app:strokeColor="#FFB08A"
                 app:strokeWidth="4dp"
+                android:clickable="true"
+                android:focusable="true"
                 tools:src="@tools:sample/avatars" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-
-                <Button
-                    android:id="@+id/btn_subir_foto"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Subir Foto"
-                    style="@style/Widget.Mascota.PrimaryButton"
-                    android:layout_marginEnd="8dp"/>
-
-                <Button
-                    android:id="@+id/btn_tomar_foto"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Tomar Foto"
-                    style="@style/Widget.Mascota.PrimaryButton"
-                    android:layout_marginStart="8dp"/>
-            </LinearLayout>
-
-            <!-- Nombre -->
             <TextView
-                style="@style/TextAppearance.Mascota.Label"
+                android:id="@+id/tv_cambiar_foto"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Nombre" />
+                android:text="Cambiar foto"
+                android:layout_gravity="center_horizontal"
+                android:textColor="@color/blue_primary"
+                android:layout_marginTop="4dp"/>
 
-            <LinearLayout
+            <!-- Campos de Texto -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:padding="12dp">
-
-                <EditText
+                android:layout_marginTop="16dp"
+                android:hint="Nombre">
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_nombre"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:hint="Ingresa tu nombre"
-                    android:inputType="textPersonName"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF" />
-            </LinearLayout>
+                    android:inputType="textPersonName" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Apellido -->
-            <TextView
-                style="@style/TextAppearance.Mascota.Label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Apellido" />
-
-            <LinearLayout
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
                 android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:padding="12dp">
-
-                <EditText
+                android:hint="Apellido">
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_apellido"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:hint="Ingresa tu apellido"
-                    android:inputType="textPersonName"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF" />
-            </LinearLayout>
+                    android:inputType="textPersonName" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Teléfono -->
-            <TextView
-                style="@style/TextAppearance.Mascota.Label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Teléfono" />
-
-            <LinearLayout
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
                 android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:padding="12dp">
-
-                <EditText
+                android:hint="Teléfono">
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_telefono"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:hint="Ingresa tu teléfono"
-                    android:inputType="phone"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF" />
-            </LinearLayout>
+                    android:inputType="phone" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Domicilio -->
-            <TextView
-                style="@style/TextAppearance.Mascota.Label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Domicilio" />
-
-            <LinearLayout
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
                 android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:padding="12dp">
-
-                <EditText
+                android:hint="Domicilio">
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_domicilio"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:hint="Ingresa tu domicilio"
-                    android:inputType="textPostalAddress"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF" />
-            </LinearLayout>
+                    android:inputType="textPostalAddress" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Guardar Cambios Button -->
             <Button
                 android:id="@+id/btn_guardar_cambios"
-                style="@style/Widget.Mascota.PrimaryButton"
+                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
