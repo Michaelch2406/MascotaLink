@@ -54,7 +54,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
     private ImageView ivBack, ivAvatarMascota;
     private TextInputEditText etNombre, etRaza, etPeso;
     private ChipGroup chipGroupSexo, chipGroupTamano, chipGroupEnergia;
-    private TextView tvFechaNacimiento, tvUltimaVisitaVet;
+    private TextInputEditText etFechaNacimiento, etUltimaVisitaVet;
     private SwitchMaterial switchEsterilizado, switchVacunas, switchDesparasitacion;
     private TextInputEditText etCondicionesMedicas, etMedicamentos, etVeterinarioNombre, etVeterinarioTelefono;
     private TextInputEditText etConPersonas, etConOtrosPerros, etConOtrosAnimales, etHabitosCorrea, etComandosConocidos, etMiedosFobias, etManiasHabitos;
@@ -95,7 +95,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         etNombre = findViewById(R.id.et_nombre);
         etRaza = findViewById(R.id.et_raza);
         chipGroupSexo = findViewById(R.id.chipgroup_sexo);
-        tvFechaNacimiento = findViewById(R.id.tv_fecha_nacimiento);
+        etFechaNacimiento = findViewById(R.id.et_fecha_nacimiento);
         chipGroupTamano = findViewById(R.id.chipgroup_tamano);
         etPeso = findViewById(R.id.et_peso);
         switchEsterilizado = findViewById(R.id.switch_esterilizado);
@@ -105,7 +105,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         switchDesparasitacion = findViewById(R.id.switch_desparasitacion);
         etCondicionesMedicas = findViewById(R.id.et_condiciones_medicas);
         etMedicamentos = findViewById(R.id.et_medicamentos);
-        tvUltimaVisitaVet = findViewById(R.id.tv_ultima_visita_vet);
+        etUltimaVisitaVet = findViewById(R.id.et_ultima_visita_vet);
         etVeterinarioNombre = findViewById(R.id.et_veterinario_nombre);
         etVeterinarioTelefono = findViewById(R.id.et_veterinario_telefono);
 
@@ -136,8 +136,8 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         ivAvatarMascota.setOnClickListener(v -> openFileChooser());
 
         // Date Pickers
-        tvFechaNacimiento.setOnClickListener(v -> showDatePickerDialog(fechaNacimientoCalendar, tvFechaNacimiento));
-        tvUltimaVisitaVet.setOnClickListener(v -> showDatePickerDialog(ultimaVisitaVetCalendar, tvUltimaVisitaVet));
+        etFechaNacimiento.setOnClickListener(v -> showDatePickerDialog(fechaNacimientoCalendar, etFechaNacimiento));
+        etUltimaVisitaVet.setOnClickListener(v -> showDatePickerDialog(ultimaVisitaVetCalendar, etUltimaVisitaVet));
 
         // Validation listener
         TextWatcher textWatcher = new TextWatcher() {
@@ -155,18 +155,19 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         etRaza.addTextChangedListener(textWatcher);
     }
 
-    private void showDatePickerDialog(Calendar calendar, TextView textView) {
+    private void showDatePickerDialog(Calendar calendar, TextInputEditText editText) {
         DatePickerDialog datePickerDialog = new DatePickerDialog(
                 this,
                 (view, year, month, dayOfMonth) -> {
                     calendar.set(year, month, dayOfMonth);
                     SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM 'de' yyyy", new Locale("es", "ES"));
-                    textView.setText(sdf.format(calendar.getTime()));
+                    editText.setText(sdf.format(calendar.getTime()));
                     validateForm();
                 },
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH));
+        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
         datePickerDialog.show();
     }
 
@@ -194,7 +195,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
                             Timestamp ts = document.getTimestamp("fecha_nacimiento");
                             if (ts != null) {
                                 fechaNacimientoCalendar.setTime(ts.toDate());
-                                updateDateInView(tvFechaNacimiento, fechaNacimientoCalendar.getTime());
+                                updateDateInView(etFechaNacimiento, fechaNacimientoCalendar.getTime());
                             }
                         }
 
@@ -217,7 +218,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
                                     Timestamp ts = (Timestamp) salud.get("ultima_visita_vet");
                                     if (ts != null) {
                                         ultimaVisitaVetCalendar.setTime(ts.toDate());
-                                        updateDateInView(tvUltimaVisitaVet, ultimaVisitaVetCalendar.getTime());
+                                        updateDateInView(etUltimaVisitaVet, ultimaVisitaVetCalendar.getTime());
                                     }
                                 }
                             }
@@ -377,8 +378,8 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         return null;
     }
 
-    private void updateDateInView(TextView textView, Date date) {
+    private void updateDateInView(TextInputEditText editText, Date date) {
         SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM 'de' yyyy", new Locale("es", "ES"));
-        textView.setText(sdf.format(date));
+        editText.setText(sdf.format(date));
     }
 }
