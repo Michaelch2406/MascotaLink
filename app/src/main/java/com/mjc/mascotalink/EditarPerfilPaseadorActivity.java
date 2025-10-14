@@ -60,10 +60,20 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
     private ProgressBar video_progress;
     private Button btnGuardarCambios, btnSubirVideo, btnGrabarVideo;
     private ChipGroup cgTiposPerros;
+    private com.google.android.material.imageview.ShapeableImageView ivAvatarPaseador;
 
-    private Uri videoUri;
-    private Uri newVideoUri;
+    private Uri videoUri, newVideoUri, newAvatarUri;
     private Calendar inicioExperienciaCalendar;
+
+    private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    newAvatarUri = result.getData().getData();
+                    ivAvatarPaseador.setImageURI(newAvatarUri);
+                    validateFields(); 
+                }
+            });
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -102,6 +112,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
 
         cgTiposPerros = findViewById(R.id.cg_tipos_perros);
         inicioExperienciaCalendar = Calendar.getInstance();
+        ivAvatarPaseador = findViewById(R.id.iv_avatar_paseador);
 
 
     }
@@ -126,6 +137,15 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                 etDomicilio.setText(userDoc.getString("direccion"));
                 etEmail.setText(mAuth.getCurrentUser().getEmail());
                 cedula = userDoc.getString("cedula"); // Store cedula
+
+                String fotoUrl = userDoc.getString("foto_perfil");
+                if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                    com.bumptech.glide.Glide.with(this)
+                            .load(fotoUrl)
+                            .circleCrop()
+                            .into(ivAvatarPaseador);
+                }
+
                 validateFields();
             }
         });
@@ -241,9 +261,15 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         });
 
         etInicioExperienciaPicker.setOnClickListener(v -> showDatePickerDialog());
+        ivAvatarPaseador.setOnClickListener(v -> openImagePicker());
 
 
         btnGuardarCambios.setOnClickListener(v -> savePaseadorData());
+    }
+
+    private void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        imagePickerLauncher.launch(intent);
     }
 
     private void validateFields() {
@@ -295,20 +321,34 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         btnGuardarCambios.setEnabled(false);
         Toast.makeText(this, "Guardando cambios...", Toast.LENGTH_SHORT).show();
 
-        if (newVideoUri != null) {
-            String nombre = etNombre.getText().toString().trim();
-            String apellido = etApellido.getText().toString().trim();
-            String folderName = currentUserId + "_" + (cedula != null ? cedula : "") + "_" + nombre + "_" + apellido;
-            String fullStoragePath = "video_presentacion/" + folderName + "/video_presentacion.mp4";
+        String nombre = etNombre.getText().toString().trim();
+        String apellido = etApellido.getText().toString().trim();
+        String folderName = currentUserId + "_" + (cedula != null ? cedula : "") + "_" + nombre + "_" + apellido;
 
-            Intent serviceIntent = new Intent(this, FileUploadService.class);
-            serviceIntent.setAction(FileUploadService.ACTION_UPLOAD);
-            serviceIntent.putExtra(FileUploadService.EXTRA_FILE_URI, newVideoUri);
-            serviceIntent.putExtra(FileUploadService.EXTRA_FULL_STORAGE_PATH, fullStoragePath);
-            serviceIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_COLLECTION, "paseadores");
-            serviceIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_DOCUMENT, currentUserId);
-            serviceIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_FIELD, "perfil_profesional.video_presentacion_url");
-            ContextCompat.startForegroundService(this, serviceIntent);
+        // Iniciar la subida del video en segundo plano si hay uno nuevo
+        if (newVideoUri != null) {
+            String videoPath = "video_presentacion/" + folderName + "/video_presentacion.mp4";
+            Intent videoIntent = new Intent(this, FileUploadService.class);
+            videoIntent.setAction(FileUploadService.ACTION_UPLOAD);
+            videoIntent.putExtra(FileUploadService.EXTRA_FILE_URI, newVideoUri);
+            videoIntent.putExtra(FileUploadService.EXTRA_FULL_STORAGE_PATH, videoPath);
+            videoIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_COLLECTION, "paseadores");
+            videoIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_DOCUMENT, currentUserId);
+            videoIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_FIELD, "perfil_profesional.video_presentacion_url");
+            ContextCompat.startForegroundService(this, videoIntent);
+        }
+
+        // Iniciar la subida del avatar en segundo plano si hay uno nuevo
+        if (newAvatarUri != null) {
+            String avatarPath = "foto_de_perfil/" + folderName + "/foto_perfil.jpg";
+            Intent avatarIntent = new Intent(this, FileUploadService.class);
+            avatarIntent.setAction(FileUploadService.ACTION_UPLOAD);
+            avatarIntent.putExtra(FileUploadService.EXTRA_FILE_URI, newAvatarUri);
+            avatarIntent.putExtra(FileUploadService.EXTRA_FULL_STORAGE_PATH, avatarPath);
+            avatarIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_COLLECTION, "usuarios");
+            avatarIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_DOCUMENT, currentUserId);
+            avatarIntent.putExtra(FileUploadService.EXTRA_FIRESTORE_FIELD, "foto_perfil");
+            ContextCompat.startForegroundService(this, avatarIntent);
         }
 
         updateFirestore();
@@ -322,7 +362,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         userUpdates.put("direccion", etDomicilio.getText().toString().trim());
         userUpdates.put("nombre_display", etNombre.getText().toString().trim() + " " + etApellido.getText().toString().trim());
 
-        Task<Void> userTask = db.collection("usuarios").document(currentUserId).update(userUpdates);
+        Task<Void> userTask = db.collection("usuarios").document(currentUserId).set(userUpdates, SetOptions.merge());
 
         Map<String, Object> paseadorUpdates = new HashMap<>();
         paseadorUpdates.put("perfil_profesional.motivacion", etMotivacion.getText().toString().trim());
@@ -339,13 +379,13 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         }
         paseadorUpdates.put("manejo_perros.tamanos", tamanosList);
 
-        Task<Void> paseadorTask = db.collection("paseadores").document(currentUserId).update(paseadorUpdates);
+        Task<Void> paseadorTask = db.collection("paseadores").document(currentUserId).set(paseadorUpdates, SetOptions.merge());
 
         Tasks.whenAllSuccess(userTask, paseadorTask).addOnSuccessListener(list -> {
             Toast.makeText(EditarPerfilPaseadorActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
-            finish();
+            finish(); // Volver a la pantalla de perfil
         }).addOnFailureListener(e -> {
-            Toast.makeText(EditarPerfilPaseadorActivity.this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(EditarPerfilPaseadorActivity.this, "Error al guardar datos: " + e.getMessage(), Toast.LENGTH_LONG).show();
             btnGuardarCambios.setEnabled(true);
         });
     }

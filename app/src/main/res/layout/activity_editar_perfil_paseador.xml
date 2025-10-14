@@ -34,301 +34,296 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/app_bar">
-
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- Nombre -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Nombre"/>
+            android:layout_height="match_parent"
+            android:layout_below="@id/app_bar">
+    
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_nombre"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ingresa tu nombre"
-                    android:inputType="textPersonName"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-
-            <!-- Apellido -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Apellido"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_apellido"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ingresa tu apellido"
-                    android:inputType="textPersonName"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-
-            <!-- Correo Electrónico -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Correo Electrónico"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#D1D5DB"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_email"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Tu correo electrónico"
-                    android:inputType="textEmailAddress"
-                    android:background="@android:color/transparent"
-                    android:textColor="#4B5563"
-                    android:textColorHint="#9CA3AF"
-                    android:enabled="false"/>
-            </LinearLayout>
-
-            <!-- Teléfono -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Teléfono"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_telefono"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ingresa tu teléfono"
-                    android:inputType="phone"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-
-            <!-- Domicilio -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Domicilio"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_domicilio"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ingresa tu domicilio"
-                    android:inputType="textPostalAddress"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-
-            <!-- Motivación / Acerca de mí -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Acerca de mí (Motivación)"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_motivacion"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Cuéntanos sobre ti y tu motivación"
-                    android:inputType="textMultiLine"
-                    android:minLines="3"
-                    android:gravity="top"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-
-            <!-- Video de presentación -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Video de presentación"/>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2">
-
-                <VideoView
-                    android:id="@+id/video_preview"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center" />
-
-                <ProgressBar
-                    android:id="@+id/video_progress"
+                android:orientation="vertical"
+                android:padding="16dp">
+    
+                <!-- Foto Principal -->
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/iv_avatar_paseador"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center_horizontal"
+                    android:padding="4dp"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                    app:strokeColor="#FFB08A"
+                    app:strokeWidth="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    tools:src="@tools:sample/avatars" />
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:visibility="gone"/>
-            </FrameLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-
-                <Button
-                    android:id="@+id/btn_subir_video"
-                    android:layout_width="0dp"
+                    android:text="Cambiar foto"
+                    android:layout_gravity="center_horizontal"
+                    android:textColor="@color/blue_primary"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"/>
+    
+                <!-- Nombre -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Subir Video"
-                    style="@style/Widget.Mascota.PrimaryButton"
-                    android:layout_marginEnd="8dp"/>
-
-                <Button
-                    android:id="@+id/btn_grabar_video"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Grabar Nuevo"
-                    style="@style/Widget.Mascota.PrimaryButton"
-                    android:layout_marginStart="8dp"/>
-            </LinearLayout>
-
-            <!-- Inicio de Experiencia -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Inicio de experiencia"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp">
-                <EditText
-                    android:id="@+id/et_inicio_experiencia_picker"
+                    android:text="Nombre" />
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Selecciona una fecha"
-                    android:focusable="false"
-                    android:clickable="true"
-                    android:drawableEnd="@android:drawable/ic_menu_my_calendar"
-                    android:drawableTint="@color/gray_dark"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
+                    android:layout_marginTop="4dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_nombre"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Ingresa tu nombre"
+                        android:inputType="textPersonName" />
+                </com.google.android.material.textfield.TextInputLayout>
+    
+                <!-- Apellido -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Apellido" />
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_apellido"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Ingresa tu apellido"
+                        android:inputType="textPersonName" />
+                </com.google.android.material.textfield.TextInputLayout>
+    
+                <!-- Correo Electrónico -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Correo Electrónico" />
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:enabled="false">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Tu correo electrónico"
+                        android:inputType="textEmailAddress" />
+                </com.google.android.material.textfield.TextInputLayout>
+    
+                <!-- Teléfono -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Teléfono" />
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_telefono"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Ingresa tu teléfono"
+                        android:inputType="phone" />
+                </com.google.android.material.textfield.TextInputLayout>
+    
+                <!-- Domicilio -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Domicilio" />
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_domicilio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Ingresa tu domicilio"
+                        android:inputType="textPostalAddress" />
+                </com.google.android.material.textfield.TextInputLayout>
+    
+                <!-- Motivación / Acerca de mí -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Acerca de mí (Motivación)" />
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_motivacion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top"
+                        android:hint="Cuéntanos sobre ti y tu motivación"
+                        android:inputType="textMultiLine"
+                        android:minLines="4" />
+                </com.google.android.material.textfield.TextInputLayout>
+    
+                <!-- Video de presentación -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Video de presentación" />
+    
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#E7EEF2">
+    
+                    <VideoView
+                        android:id="@+id/video_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="center" />
+    
+                    <ProgressBar
+                        android:id="@+id/video_progress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:visibility="gone" />
+                </FrameLayout>
+    
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="12dp"
+                    android:orientation="horizontal">
+    
+                    <Button
+                        android:id="@+id/btn_subir_video"
+                        style="@style/Widget.Mascota.PrimaryButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:text="Subir Video" />
+    
+                    <Button
+                        android:id="@+id/btn_grabar_video"
+                        style="@style/Widget.Mascota.PrimaryButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="Grabar Nuevo" />
+                </LinearLayout>
+    
+                <!-- Inicio de Experiencia -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Inicio de experiencia" />
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layout_inicio_experiencia"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:endIconMode="custom"
+                    app:endIconTint="@color/gray_dark">
+    
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_inicio_experiencia_picker"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:cursorVisible="false"
+                        android:focusable="false"
+                        android:hint="Selecciona una fecha" />
+                </com.google.android.material.textfield.TextInputLayout>
+    
+                <!-- Tipos de perros -->
+                <TextView
+                    style="@style/TextAppearance.Mascota.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Tipos de perros que paseas" />
+    
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/cg_tipos_perros"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:chipSpacingHorizontal="8dp">
+    
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_pequenos"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pequeños" />
+    
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_medianos"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Medianos" />
+    
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_grandes"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Grandes" />
+    
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_gigantes"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Gigantes" />
+    
+                </com.google.android.material.chip.ChipGroup>
+    
+                <Button
+                    android:id="@+id/btn_guardar_cambios"
+                    style="@style/Widget.Mascota.PrimaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="16dp"
+                    android:text="Guardar Cambios" />
+    
             </LinearLayout>
-
-
-
-            <!-- Tipos de perros -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.Label"
-                android:text="Tipos de perros que paseas"/>
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/cg_tipos_perros"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            app:chipSpacingHorizontal="8dp">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_pequenos"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Pequeños" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_medianos"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Medianos" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_grandes"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Grandes" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_gigantes"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Gigantes" />
-
-        </com.google.android.material.chip.ChipGroup>
-
-
-
-        <Button
-            android:id="@+id/btn_guardar_cambios"
-            style="@style/Widget.Mascota.PrimaryButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp"
-            android:text="Guardar Cambios" />
-
-    </LinearLayout>
-</ScrollView>
-
+        </ScrollView>
 </RelativeLayout>

@@ -77,10 +77,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private Button btnCerrarSesion;
     private ImageButton btnMensaje;
     private FloatingActionButton fabReservar;
-    private ImageView ivEditMain, ivEditDescripcion, ivEditZonas, ivEditDisponibilidad, ivEditTiposPerros;
+    private ImageView ivEditZonas, ivEditDisponibilidad, ivEditPerfil;
     private GoogleMap googleMap;
     private List<Circle> mapCircles = new ArrayList<>();
-    private View btnEditarPerfil, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
+    private View btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
     private String metodoPagoId; // Variable to store the payment method ID
     private View skeletonLayout;
     private androidx.core.widget.NestedScrollView scrollViewContent;
@@ -185,7 +185,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         barrasRatings = findViewById(R.id.barras_ratings);
 
         // Ajustes
-        btnEditarPerfil = findViewById(R.id.btn_editar_perfil);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
@@ -196,13 +195,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         // New buttons
         fabReservar = findViewById(R.id.fab_reservar);
         btnMensaje = findViewById(R.id.btn_mensaje);
+        ivEditPerfil = findViewById(R.id.iv_edit_perfil);
 
         // Edit Icons
-        ivEditMain = findViewById(R.id.iv_edit_main);
-        ivEditDescripcion = findViewById(R.id.iv_edit_descripcion);
         ivEditZonas = findViewById(R.id.iv_edit_zonas);
         ivEditDisponibilidad = findViewById(R.id.iv_edit_disponibilidad);
-        ivEditTiposPerros = findViewById(R.id.iv_edit_tipos_perros);
 
         // Map
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -224,17 +221,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         fabReservar.setOnClickListener(v -> showToast("Próximamente: Reservar"));
         btnMensaje.setOnClickListener(v -> showToast("Próximamente: Enviar Mensaje"));
 
-        ivEditMain.setOnClickListener(v -> {
-            Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
-            startActivity(intent);
-        });
-
-        ivEditDescripcion.setOnClickListener(v -> {
-            Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
-            startActivity(intent);
-        });
-
-        ivEditTiposPerros.setOnClickListener(v -> {
+        ivEditPerfil.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
             startActivity(intent);
         });
@@ -249,45 +236,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             startActivity(intent);
         });
 
-        fabReservar.setOnTouchListener(new View.OnTouchListener() {
-            private int lastAction;
-            private int initialX;
-            private int initialY;
-            private float initialTouchX;
-            private float initialTouchY;
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        initialX = v.getLeft();
-                        initialY = v.getTop();
-                        initialTouchX = event.getRawX();
-                        initialTouchY = event.getRawY();
-                        lastAction = MotionEvent.ACTION_DOWN;
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        v.setX(initialX + (event.getRawX() - initialTouchX));
-                        v.setY(initialY + (event.getRawY() - initialTouchY));
-                        lastAction = MotionEvent.ACTION_MOVE;
-                        break;
-                    case MotionEvent.ACTION_UP:
-                        if (lastAction == MotionEvent.ACTION_DOWN) {
-                            v.performClick();
-                        }
-                        break;
-                    default:
-                        return false;
-                }
-                return true;
-            }
-        });
-
-        btnEditarPerfil.setOnClickListener(v -> {
-            Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
-            startActivity(intent);
-        });
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
         btnMetodosPago.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
