@@ -71,7 +71,6 @@ public class PerfilMascotaActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
-        cargarDatosMascota();
     }
 
     private void initViews() {
@@ -246,8 +245,14 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStart() {
+        super.onStart();
+        cargarDatosMascota();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
         if (mascotaListener != null) {
             mascotaListener.remove();
         }

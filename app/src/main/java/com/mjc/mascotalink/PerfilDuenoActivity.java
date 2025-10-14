@@ -71,12 +71,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         initViews();
         setupListeners();
 
-        if (currentUser != null) {
-            String uid = currentUser.getUid();
-            cargarDatosDueno(uid);
-            cargarMascotas(uid);
-            cargarMetodoPagoPredeterminado(uid);
-        } else {
+        if (currentUser == null) {
             // Handle user not logged in
             startActivity(new Intent(this, LoginActivity.class));
             finish();
@@ -358,8 +353,19 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStart() {
+        super.onStart();
+        if (currentUser != null) {
+            String uid = currentUser.getUid();
+            cargarDatosDueno(uid);
+            cargarMascotas(uid);
+            cargarMetodoPagoPredeterminado(uid);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
         if (duenoListener != null) {
             duenoListener.remove();
         }
