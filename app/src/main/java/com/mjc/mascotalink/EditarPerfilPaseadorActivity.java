@@ -362,7 +362,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         userUpdates.put("direccion", etDomicilio.getText().toString().trim());
         userUpdates.put("nombre_display", etNombre.getText().toString().trim() + " " + etApellido.getText().toString().trim());
 
-        Task<Void> userTask = db.collection("usuarios").document(currentUserId).set(userUpdates, SetOptions.merge());
+        Task<Void> userTask = db.collection("usuarios").document(currentUserId).update(userUpdates);
 
         Map<String, Object> paseadorUpdates = new HashMap<>();
         paseadorUpdates.put("perfil_profesional.motivacion", etMotivacion.getText().toString().trim());
@@ -379,7 +379,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         }
         paseadorUpdates.put("manejo_perros.tamanos", tamanosList);
 
-        Task<Void> paseadorTask = db.collection("paseadores").document(currentUserId).set(paseadorUpdates, SetOptions.merge());
+        Task<Void> paseadorTask = db.collection("paseadores").document(currentUserId).update(paseadorUpdates);
 
         Tasks.whenAllSuccess(userTask, paseadorTask).addOnSuccessListener(list -> {
             Toast.makeText(EditarPerfilPaseadorActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();

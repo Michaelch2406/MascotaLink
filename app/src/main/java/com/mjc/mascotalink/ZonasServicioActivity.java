@@ -45,6 +45,8 @@ import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.slider.Slider;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -77,17 +79,26 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private ActivityResultLauncher<Intent> autocompleteLauncher;
 
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+    private String currentUserId;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_zonas_servicio);
+
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+        if (mAuth.getCurrentUser() != null) {
+            currentUserId = mAuth.getCurrentUser().getUid();
+        }
 
         initViews();
         setupListeners();
         setupLocationServices();
         setupAutocompleteLauncher();
         setupMap();
-        loadSavedZones();
     }
 
     private void initViews() {
@@ -239,7 +250,31 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             }
             return false;
         });
-        displaySavedZones();
+        loadZonasFromFirestore();
+    }
+
+    private void loadZonasFromFirestore() {
+        if (currentUserId == null) return;
+
+        db.collection("paseadores").document(currentUserId).collection("zonas_servicio")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    zonasSeleccionadas.clear();
+                    for (com.google.firebase.firestore.QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        com.google.firebase.firestore.GeoPoint centro = document.getGeoPoint("centro");
+                        Double radioKm = document.getDouble("radio_km");
+                        String nombre = document.getString("nombre");
+
+                        if (centro != null && radioKm != null && nombre != null) {
+                            zonasSeleccionadas.add(new ZonaServicio(centro.getLatitude(), centro.getLongitude(), radioKm.floatValue(), nombre));
+                        }
+                    }
+                    displaySavedZones();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error al cargar zonas de servicio.", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error loading zones from Firestore", e);
+                });
     }
 
     private void onMapClick(LatLng latLng) {
@@ -324,33 +359,47 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     }
 
     private void guardarZonas() {
-        if (zonasSeleccionadas.isEmpty()) {
-            Toast.makeText(this, "Debes agregar al menos una zona de servicio", Toast.LENGTH_SHORT).show();
+        if (currentUserId == null) {
+            Toast.makeText(this, "Error: Usuario no identificado.", Toast.LENGTH_SHORT).show();
             return;
         }
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        Set<String> zonasSet = new HashSet<>();
-        for (ZonaServicio zona : zonasSeleccionadas) {
-            zonasSet.add(zona.toString());
-        }
-        editor.putStringSet("zonas_servicio", zonasSet);
-        editor.putBoolean("zonas_servicio_completo", true);
-        editor.apply();
-        Toast.makeText(this, "Zonas de servicio guardadas", Toast.LENGTH_SHORT).show();
-        setResult(RESULT_OK);
-        finish();
-    }
 
-    private void loadSavedZones() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        Set<String> zonasGuardadas = prefs.getStringSet("zonas_servicio", new HashSet<>());
-        zonasSeleccionadas.clear();
-        for (String zonaStr : zonasGuardadas) {
-            ZonaServicio zona = ZonaServicio.fromString(zonaStr);
-            if (zona != null) {
-                zonasSeleccionadas.add(zona);
+        btnGuardarZonas.setEnabled(false);
+
+        com.google.firebase.firestore.CollectionReference zonasRef = db.collection("paseadores").document(currentUserId).collection("zonas_servicio");
+
+        zonasRef.get().addOnSuccessListener(queryDocumentSnapshots -> {
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
+
+            // Delete all old zones
+            for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                batch.delete(doc.getReference());
             }
-        }
+
+            // Add all new zones
+            for (ZonaServicio zona : zonasSeleccionadas) {
+                com.google.firebase.firestore.DocumentReference newZoneRef = zonasRef.document();
+                java.util.Map<String, Object> zonaData = new java.util.HashMap<>();
+                zonaData.put("nombre", zona.direccion);
+                zonaData.put("radio_km", zona.radio);
+                zonaData.put("centro", new com.google.firebase.firestore.GeoPoint(zona.latitud, zona.longitud));
+                zonaData.put("activo", true);
+                batch.set(newZoneRef, zonaData);
+            }
+
+            batch.commit().addOnSuccessListener(aVoid -> {
+                Toast.makeText(this, "Zonas de servicio guardadas con éxito", Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK);
+                finish();
+            }).addOnFailureListener(e -> {
+                Toast.makeText(this, "Error al guardar las zonas: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                btnGuardarZonas.setEnabled(true);
+            });
+
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Error al consultar zonas anteriores: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            btnGuardarZonas.setEnabled(true);
+        });
     }
 
     private void displaySavedZones() {

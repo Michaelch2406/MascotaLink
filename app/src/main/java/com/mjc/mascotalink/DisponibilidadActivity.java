@@ -16,6 +16,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,23 +28,32 @@ import java.util.Set;
 
 public class DisponibilidadActivity extends AppCompatActivity {
 
-    private static final String PREFS = "WizardPaseador";
-
     private final String[] diasSemana = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
     private final List<CheckBox> checkBoxes = new ArrayList<>();
 
     private EditText etHoraInicio, etHoraFin;
     private TextView tvValidationMessages;
+    private Button btnGuardar;
+
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+    private String currentUserId;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_disponibilidad);
 
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+        if (mAuth.getCurrentUser() != null) {
+            currentUserId = mAuth.getCurrentUser().getUid();
+        }
+
         setupToolbar();
         setupViews();
         setupTimePickers();
-        loadState();
+        loadDisponibilidadFromFirestore();
     }
 
     private void setupToolbar() {
@@ -125,32 +136,76 @@ public class DisponibilidadActivity extends AppCompatActivity {
             return;
         }
 
-        saveState(diasSeleccionados, inicio, fin);
-        Toast.makeText(this, "Disponibilidad guardada", Toast.LENGTH_SHORT).show();
-        setResult(RESULT_OK);
-        finish();
-    }
-
-    private void saveState(List<String> diasSeleccionados, String inicio, String fin) {
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        editor.putBoolean("disponibilidad_completa", true);
-        editor.putStringSet("disponibilidad_dias", new HashSet<>(diasSeleccionados));
-        editor.putString("disponibilidad_inicio", inicio);
-        editor.putString("disponibilidad_fin", fin);
-        editor.apply();
-    }
-
-    private void loadState() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        etHoraInicio.setText(prefs.getString("disponibilidad_inicio", "09:00"));
-        etHoraFin.setText(prefs.getString("disponibilidad_fin", "17:00"));
-
-        Set<String> diasGuardados = prefs.getStringSet("disponibilidad_dias", new HashSet<>());
-        for (int i = 0; i < diasSemana.length; i++) {
-            if (diasGuardados.contains(diasSemana[i])) {
-                checkBoxes.get(i).setChecked(true);
-            }
+        if (currentUserId == null) {
+            Toast.makeText(this, "Error: No se pudo identificar al usuario.", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        // Create data map
+        java.util.Map<String, Object> disponibilidadData = new java.util.HashMap<>();
+        disponibilidadData.put("dias", diasSeleccionados);
+        disponibilidadData.put("hora_inicio", inicio);
+        disponibilidadData.put("hora_fin", fin);
+        disponibilidadData.put("activo", true);
+
+        com.google.firebase.firestore.CollectionReference disponibilidadRef = db.collection("paseadores").document(currentUserId).collection("disponibilidad");
+
+        // Batch write: delete old docs and add the new one
+        disponibilidadRef.get().addOnSuccessListener(queryDocumentSnapshots -> {
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
+            for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                batch.delete(doc.getReference());
+            }
+            batch.set(disponibilidadRef.document(), disponibilidadData);
+
+            batch.commit().addOnSuccessListener(aVoid -> {
+                Toast.makeText(this, "Disponibilidad guardada con éxito", Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK);
+                finish();
+            }).addOnFailureListener(e -> {
+                Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            });
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Error al consultar disponibilidad anterior: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        });
+    }
+
+    private void loadDisponibilidadFromFirestore() {
+        if (currentUserId == null) {
+            // Set default values if no user is logged in
+            etHoraInicio.setText("09:00");
+            etHoraFin.setText("17:00");
+            return;
+        }
+
+        db.collection("paseadores").document(currentUserId).collection("disponibilidad")
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        com.google.firebase.firestore.DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
+                        etHoraInicio.setText(doc.getString("hora_inicio"));
+                        etHoraFin.setText(doc.getString("hora_fin"));
+                        List<String> diasGuardados = (List<String>) doc.get("dias");
+                        if (diasGuardados != null) {
+                            for (int i = 0; i < diasSemana.length; i++) {
+                                if (diasGuardados.contains(diasSemana[i])) {
+                                    checkBoxes.get(i).setChecked(true);
+                                }
+                            }
+                        }
+                    } else {
+                        // Set default values if no availability is set in Firestore
+                        etHoraInicio.setText("09:00");
+                        etHoraFin.setText("17:00");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error al cargar disponibilidad", Toast.LENGTH_SHORT).show();
+                    // Set default values on failure
+                    etHoraInicio.setText("09:00");
+                    etHoraFin.setText("17:00");
+                });
     }
 
     private boolean validateInputs(List<String> dias, String inicio, String fin) {

@@ -85,6 +85,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private View skeletonLayout;
     private androidx.core.widget.NestedScrollView scrollViewContent;
     private boolean isContentVisible = false;
+    private String paseadorId;
 
     // Listeners for real-time updates
     private ListenerRegistration usuarioListener;
@@ -106,7 +107,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         setupListeners();
         setupTabs();
 
-        String paseadorId = getIntent().getStringExtra("paseadorId");
+        paseadorId = getIntent().getStringExtra("paseadorId");
         String currentUserId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
 
         if (paseadorId == null && currentUserId != null) {
@@ -137,8 +138,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     btnMensaje.setVisibility(View.GONE);
                 }
             }
-            cargarPerfilCompleto(paseadorId);
-            cargarMetodoPagoPredeterminado(paseadorId);
         } else {
             Toast.makeText(this, "Error: No se pudo cargar el perfil.", Toast.LENGTH_SHORT).show();
             finish();
@@ -146,9 +145,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-
+    protected void onStart() {
+        super.onStart();
+        if (paseadorId != null) {
+            cargarPerfilCompleto(paseadorId);
+            cargarMetodoPagoPredeterminado(paseadorId);
+        }
     }
 
     private void initViews() {
@@ -594,8 +596,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
         // Remove all listeners to prevent memory leaks
         if (usuarioListener != null) {
             usuarioListener.remove();

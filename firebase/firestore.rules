@@ -48,13 +48,11 @@ service cloud.firestore {
 
     // Subcolecciones bajo paseadores
     match /paseadores/{userId}/disponibilidad/{disponibilidadId} {
-      allow read, create, update: if isOwner(userId);
-      allow delete: if false;
+      allow read, create, update, delete: if isOwner(userId);
     }
 
     match /paseadores/{userId}/zonas_servicio/{zonaId} {
-      allow read, create, update: if isOwner(userId);
-      allow delete: if false;
+      allow read, create, update, delete: if isOwner(userId);
     }
 
     // Servicios
