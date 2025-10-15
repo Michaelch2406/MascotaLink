@@ -285,9 +285,13 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         String email = prefs.getString("email", "");
         String password = prefs.getString("password", "");
+        String nombre = prefs.getString("nombre", "");
+        String apellido = prefs.getString("apellido", "");
+        String cedula = prefs.getString("cedula", "");
 
-        if (email.isEmpty() || password.isEmpty()) {
-            mostrarError("El correo y la contraseña no pueden estar vacíos. Por favor, vuelve al paso 1.");
+        // Validación de seguridad para prevenir crashes
+        if (email.isEmpty() || password.isEmpty() || nombre.isEmpty() || apellido.isEmpty() || cedula.isEmpty()) {
+            mostrarError("Faltan datos críticos de los pasos anteriores. Por favor, retrocede y completa toda la información.");
             btnGuardar.setEnabled(true);
             btnGuardar.setText("Reintentar Registro");
             return;

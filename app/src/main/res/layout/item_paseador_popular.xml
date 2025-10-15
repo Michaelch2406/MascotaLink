@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="150dp"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="12dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:gravity="center_horizontal">
+
+        <!-- Avatar del paseador -->
+        <ImageView
+            android:id="@+id/iv_avatar_popular"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="@drawable/bg_avatar_circle"
+            android:scaleType="centerCrop"
+            android:src="@drawable/paseador_mascota"/>
+
+        <!-- Nombre del paseador -->
+        <TextView
+            android:id="@+id/tv_nombre_popular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Sofía R."
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:textColor="#111827"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <!-- Calificación -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="★"
+                android:textSize="12sp"
+                android:textColor="#FFC107"/>
+
+            <TextView
+                android:id="@+id/tv_calificacion_popular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="4.9"
+                android:textSize="12sp"
+                android:textColor="#111827"/>
+
+            <TextView
+                android:id="@+id/tv_resenas_popular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="(123)"
+                android:textSize="12sp"
+                android:textColor="#6B7280"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

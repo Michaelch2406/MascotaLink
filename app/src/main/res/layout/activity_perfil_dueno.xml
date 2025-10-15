@@ -338,32 +338,6 @@
             </RelativeLayout>
 
             <RelativeLayout
-                android:id="@+id/btn_notificaciones"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="Configurar notificaciones"
-                    android:textColor="#111827" />
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="#9CA3AF" />
-            </RelativeLayout>
-
-            <RelativeLayout
                 android:id="@+id/btn_metodos_pago"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

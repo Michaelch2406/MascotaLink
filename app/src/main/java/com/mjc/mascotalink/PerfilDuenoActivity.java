@@ -122,7 +122,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 showToast("Próximamente: Inicio");
                 return true;
             } else if (itemId == R.id.menu_search) {
-                showToast("Próximamente: Buscar");
+                Intent intent = new Intent(this, BusquedaPaseadoresActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.menu_walks) {
                 showToast("Próximamente: Paseos");

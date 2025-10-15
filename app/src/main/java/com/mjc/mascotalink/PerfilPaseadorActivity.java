@@ -269,7 +269,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 showToast("Próximamente: Inicio");
                 return true;
             } else if (itemId == R.id.menu_search) {
-                showToast("Próximamente: Buscar");
+                Intent intent = new Intent(this, BusquedaPaseadoresActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.menu_walks) {
                 showToast("Próximamente: Paseos");
@@ -460,8 +462,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 cargarZonasServicio(paseadorId);
                 showContent();
             } else {
-                Toast.makeText(this, "Perfil de paseador no encontrado o incompleto.", Toast.LENGTH_SHORT).show();
                 Log.e(TAG, "No se encontró el documento de paseador para el UID: " + paseadorId);
+                new android.app.AlertDialog.Builder(this)
+                        .setTitle("Perfil no disponible")
+                        .setMessage("El perfil de este paseador ya no se encuentra disponible o está incompleto.")
+                        .setPositiveButton("Aceptar", (dialog, which) -> finish())
+                        .setCancelable(false)
+                        .show();
             }
         });
     }
