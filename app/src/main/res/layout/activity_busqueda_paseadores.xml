@@ -1,251 +1,216 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F7FAFC">
 
-    <!-- Header Superior -->
+    <!-- Header -->
     <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/app_bar"
-        android:layout_width="match_parent"
+        android:id="@+id/appBarLayout"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="#F7FAFC"
-        app:elevation="0dp">
+        app:elevation="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <com.google.android.material.appbar.MaterialToolbar
+        <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:navigationIconTint="@color/gray_dark">
+            android:layout_height="?attr/actionBarSize">
+
+            <ImageView
+                android:id="@+id/back_arrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_arrow_back" 
+                android:layout_gravity="start" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
                 android:text="Paseos"
                 android:textColor="@android:color/black"
                 android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:layout_gravity="center"/>
 
             <ImageView
-                android:id="@+id/iv_settings"
+                android:id="@+id/settings_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_marginEnd="16dp"
                 android:src="@drawable/ic_settings"
-                app:tint="@color/gray_dark"
-                android:contentDescription="Configuración"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="8dp"/>
-
-        </com.google.android.material.appbar.MaterialToolbar>
-
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp"/>
+        </androidx.appcompat.widget.Toolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Contenido principal con ScrollView -->
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/scroll_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/app_bar"
-        android:layout_above="@id/bottom_nav"
-        android:fillViewport="true">
+    <!-- Contenedor principal que maneja los estados -->
+    <FrameLayout
+        android:id="@+id/main_content_frame"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- Estado de Carga -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_gravity="center"
+            android:visibility="gone"
+            tools:visibility="visible"/>
 
-            <!-- Barra de Búsqueda -->
-            <androidx.cardview.widget.CardView
+        <!-- Estado de Éxito (Contenido principal) -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/content_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            tools:visibility="gone">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp">
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <androidx.appcompat.widget.SearchView
                     android:id="@+id/search_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:queryHint="Buscar paseadores"
-                    app:iconifiedByDefault="false"
-                    app:searchIcon="@drawable/ic_search"/>
+                    android:background="@drawable/edit_text_background"
+                    app:queryHint="Buscar paseadores"/>
 
-            </androidx.cardview.widget.CardView>
-
-            <!-- Chips de Filtros -->
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp">
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chip_group_filtros"
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    app:singleSelection="false">
+                    android:text="Paseadores Populares"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black"
+                    android:layout_marginTop="24dp"/>
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_cerca"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Cerca de mí"
-                        app:chipBackgroundColor="#E7EEF2"
-                        app:chipStrokeWidth="0dp"/>
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recycler_paseadores_populares"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    tools:listitem="@layout/item_paseador_popular" 
+                    tools:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_disponible"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Disponible ahora"
-                        app:chipBackgroundColor="#E7EEF2"
-                        app:chipStrokeWidth="0dp"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_mejor_calificados"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Mejor calificados"
-                        app:chipBackgroundColor="#E7EEF2"
-                        app:chipStrokeWidth="0dp"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_economico"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Precio económico"
-                        app:chipBackgroundColor="#E7EEF2"
-                        app:chipStrokeWidth="0dp"/>
-
-                </com.google.android.material.chip.ChipGroup>
-            </HorizontalScrollView>
-
-            <!-- Sección Paseadores Populares -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="12dp"
-                android:text="Paseadores Populares"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:textColor="#111827"/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_populares"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:clipToPadding="false"
-                android:orientation="horizontal"/>
-
-            <!-- Sección Paseadores Cercanos -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="12dp"
-                android:text="Paseadores Cercanos"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:textColor="#111827"/>
-
-            <!-- Mapa integrado -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Paseadores Cercanos"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black"
+                    android:layout_marginTop="24dp"/>
 
                 <fragment
                     android:id="@+id/map_fragment"
                     android:name="com.google.android.gms.maps.SupportMapFragment"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"/>
+                    android:layout_height="250dp"
+                    android:layout_marginTop="8dp"/>
 
-            </androidx.cardview.widget.CardView>
+                <!-- Aquí irían las otras secciones como los resultados de búsqueda -->
 
-            <!-- Sección Resultados de Búsqueda -->
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Estado Vacío -->
+        <LinearLayout
+            android:id="@+id/emptyStateView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:visibility="gone">
+            
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_dog" 
+                app:tint="#CCCCCC"/>
+
             <TextView
-                android:id="@+id/tv_resultados_titulo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="12dp"
-                android:text="Todos los Paseadores"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:textColor="#111827"/>
-
-            <!-- RecyclerView para resultados -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_resultados"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"/>
-
-            <!-- ProgressBar para cargar más -->
-            <ProgressBar
-                android:id="@+id/pb_loading"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_margin="16dp"
-                android:visibility="gone"/>
-
-            <!-- Mensaje de no resultados -->
-            <TextView
-                android:id="@+id/tv_no_resultados"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_margin="32dp"
-                android:text="No se encontraron paseadores"
-                android:textColor="#6B7280"
-                android:visibility="gone"/>
-
+                android:text="No se encontraron paseadores" 
+                android:layout_marginTop="16dp"/>
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
 
-    <!-- Bottom Navigation -->
+        <!-- Estado de Error -->
+        <LinearLayout
+            android:id="@+id/errorStateView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_check_circle" 
+                app:tint="#E57373"/>
+
+            <TextView
+                android:id="@+id/error_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ocurrió un error al cargar los datos"
+                android:layout_marginTop="16dp"/>
+            
+            <Button
+                android:id="@+id/retryButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reintentar"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <!-- RecyclerView para los resultados de búsqueda (inicialmente oculto) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_resultados_busqueda"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            tools:listitem="@layout/item_paseador_resultado"/>
+
+    </FrameLayout>
+
     <View
-        android:layout_width="match_parent"
+        android:id="@+id/bottom_nav_divider"
+        android:layout_width="0dp"
         android:layout_height="1dp"
         android:background="#E5E7EB"
-        android:layout_above="@id/bottom_nav"/>
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_nav"
-        android:layout_width="match_parent"
+        android:id="@+id/bottom_navigation"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
         android:background="#F7FAFC"
-        app:menu="@menu/menu_bottom_nav_new"
-        app:labelVisibilityMode="labeled"
+        app:itemActiveIndicatorStyle="@null"
         app:itemIconTint="@color/icon_color"
         app:itemTextColor="@color/icon_color"
-        app:itemActiveIndicatorStyle="@null"/>
+        app:labelVisibilityMode="labeled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:menu="@menu/menu_bottom_nav_new" />
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

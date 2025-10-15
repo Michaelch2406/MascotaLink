@@ -1,151 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="16dp"
-    android:layout_marginStart="16dp"
-    android:layout_marginEnd="16dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp"
-    android:background="@drawable/bg_round_12"
-    android:elevation="2dp"
-    android:clickable="true"
-    android:focusable="true">
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp">
 
-    <!-- Sección Izquierda: Avatar y Estado -->
-    <FrameLayout
-        android:layout_width="64dp"
-        android:layout_height="64dp">
-        
-        <ImageView
-            android:id="@+id/iv_avatar_paseador"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Avatar del Paseador -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/paseador_avatar"
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:background="@drawable/bg_avatar_circle"
             android:scaleType="centerCrop"
-            android:src="@drawable/paseador_mascota"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" 
+            tools:src="@drawable/selfie" />
 
-        <!-- Indicador de disponibilidad -->
-        <View
-            android:id="@+id/view_disponibilidad"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="4dp"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/bg_avatar_circle"
-            android:backgroundTint="@color/green_success"/>
-    </FrameLayout>
-
-    <!-- Sección Central: Información del Paseador -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp">
-
-        <!-- Nombre completo -->
+        <!-- Nombre del Paseador -->
         <TextView
-            android:id="@+id/tv_nombre_paseador"
-            android:layout_width="wrap_content"
+            android:id="@+id/paseador_nombre"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Carlos Mendoza"
-            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@android:color/black"
             android:textSize="16sp"
-            android:textColor="#111827"/>
+            android:textStyle="bold"
+            app:layout_constraintStart_toEndOf="@id/paseador_avatar"
+            app:layout_constraintTop_toTopOf="@id/paseador_avatar"
+            app:layout_constraintEnd_toStartOf="@id/guideline_vertical"
+            tools:text="Alejandro Martinez" />
 
-        <!-- Zona de servicio -->
+        <!-- Zona de Servicio -->
         <TextView
-            android:id="@+id/tv_zona_servicio"
-            android:layout_width="wrap_content"
+            android:id="@+id/paseador_zona"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Zona: Quito Centro, La Carolina"
+            android:drawableStart="@drawable/ic_my_location" 
+            android:drawablePadding="4dp"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:textSize="12sp"
-            android:textColor="#6B7280"/>
+            app:drawableTint="#888888"
+            app:layout_constraintStart_toStartOf="@id/paseador_nombre"
+            app:layout_constraintTop_toBottomOf="@id/paseador_nombre"
+            app:layout_constraintEnd_toEndOf="@id/paseador_nombre"
+            tools:text="Quito Centro, La Carolina" />
 
-        <!-- Experiencia -->
-        <TextView
-            android:id="@+id/tv_experiencia"
+        <!-- Guía para separar la sección derecha -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_vertical"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="3 años de experiencia"
-            android:textSize="12sp"
-            android:textColor="#6B7280"/>
-    </LinearLayout>
-
-    <!-- Sección Derecha: Calificación y Precio -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="end">
+            android:orientation="vertical"
+            app:layout_constraintGuide_end="90dp" />
 
         <!-- Calificación -->
-        <LinearLayout
+        <TextView
+            android:id="@+id/paseador_calificacion"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:drawableStart="@drawable/ic_corazon" 
+            android:drawablePadding="4dp"
+            android:gravity="center_vertical"
+            android:textStyle="bold"
+            app:drawableTint="@color/colorPrimary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="4.9" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="★"
-                android:textSize="14sp"
-                android:textColor="#FFC107"/>
-
-            <TextView
-                android:id="@+id/tv_calificacion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="4.8"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="#111827"/>
-        </LinearLayout>
-
-        <!-- Número de reseñas -->
+        <!-- Tarifa -->
         <TextView
-            android:id="@+id/tv_numero_resenas"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="(123)"
-            android:textSize="12sp"
-            android:textColor="#6B7280"/>
-
-        <!-- Precio -->
-        <TextView
-            android:id="@+id/tv_precio"
+            android:id="@+id/paseador_tarifa"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="$15/hora"
-            android:textSize="14sp"
+            android:background="@drawable/button_outline_background"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:textColor="@color/colorPrimaryDark"
+            android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="@color/green_success"/>
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/paseador_calificacion"
+            tools:text="$8.50/hora" />
 
-        <!-- Chip de disponibilidad -->
-        <TextView
-            android:id="@+id/chip_disponibilidad"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:text="Disponible"
-            android:textSize="10sp"
-            android:textColor="@android:color/white"
-            android:background="@drawable/bg_round_12"
-            android:backgroundTint="@color/green_success"/>
-    </LinearLayout>
-
-</LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

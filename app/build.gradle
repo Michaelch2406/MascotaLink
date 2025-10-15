@@ -76,7 +76,7 @@ dependencies {
 
     // Google Play Services (Maps + Location para zonas y geoubicación)
     implementation 'com.google.android.gms:play-services-maps:19.2.0'
-    implementation 'com.google.maps.android:android-maps-utils:3.16.2'
+    implementation 'com.google.maps.android:android-maps-utils:3.19.0'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
         // FirebaseUI Auth (opcional, facilita login/registro con providers)
@@ -85,6 +85,12 @@ dependencies {
     // Image loading / caching
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     implementation 'de.hdodenhof:circleimageview:3.1.0' // Para vistas de imagen circulares
+
+    // TESTING Y VALIDACIÓN
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:4.5.1'
+    testImplementation 'androidx.arch.core:core-testing:2.1.0'
+
 
     annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5' // si usas Java (Glide requiere annotation processor)
     implementation libs.appcompat

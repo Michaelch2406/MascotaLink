@@ -19,6 +19,10 @@
     <color name="red_error">#DC2626</color>
     <color name="green_accent">#10B981</color>
 
+    <!-- Theme main colors -->
+    <color name="colorPrimary">#13A4EC</color>
+    <color name="colorPrimaryDark">#374151</color>
+
     <!-- Skeleton Loading Colors -->
     <color name="skeleton_color">#E0E0E0</color>
     <color name="skeleton_color_light">#F5F5F5</color>
