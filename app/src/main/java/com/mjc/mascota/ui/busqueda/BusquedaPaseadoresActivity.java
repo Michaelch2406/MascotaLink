@@ -86,6 +86,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         setupRecyclerViews();
         setupSearch();
         setupPagination();
+        setupToolbar();
         checkUserSessionAndRole();
 
         retryButton.setOnClickListener(v -> {
@@ -187,6 +188,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 }
                 return true;
             }
+        });
+    }
+
+    private void setupToolbar() {
+        findViewById(R.id.back_arrow).setOnClickListener(v -> finish());
+        findViewById(R.id.settings_icon).setOnClickListener(v -> {
+            Toast.makeText(this, "Próximamente: Ajustes", Toast.LENGTH_SHORT).show();
         });
     }
 
