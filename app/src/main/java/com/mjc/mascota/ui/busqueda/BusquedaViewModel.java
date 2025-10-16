@@ -35,7 +35,11 @@ public class BusquedaViewModel extends ViewModel {
     private Runnable debounceRunnable;
 
     public BusquedaViewModel() {
-        this.repository = new PaseadorRepository();
+        this(new PaseadorRepository());
+    }
+
+    public BusquedaViewModel(PaseadorRepository repository) {
+        this.repository = repository;
         loadPaseadoresPopulares();
     }
 

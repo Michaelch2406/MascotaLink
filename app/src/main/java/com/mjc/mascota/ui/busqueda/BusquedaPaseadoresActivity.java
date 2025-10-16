@@ -122,7 +122,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             .addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {
                     String rol = documentSnapshot.getString("rol");
-                    if ("DUENO".equals(rol)) {
+                    if ("DUEÑO".equals(rol)) {
                         setupObservers();
                     } else {
                         Toast.makeText(this, "Acceso no autorizado para este rol.", Toast.LENGTH_LONG).show();
@@ -368,4 +368,5 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         }
                     }
                 }
+
                 

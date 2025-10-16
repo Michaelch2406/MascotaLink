@@ -440,7 +440,9 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         usuarioData.put("activo", true);
         usuarioData.put("fecha_registro", FieldValue.serverTimestamp());
         usuarioData.put("perfil_ref", db.collection("paseadores").document(uid));
-        usuarioData.put("nombre_display", prefs.getString("nombre", "") + " " + prefs.getString("apellido", ""));
+        String nombreDisplay = prefs.getString("nombre", "") + " " + prefs.getString("apellido", "");
+        usuarioData.put("nombre_display", nombreDisplay);
+        usuarioData.put("nombre_lowercase", nombreDisplay.toLowerCase());
         usuarioData.put("cedula", prefs.getString("cedula", ""));
 
         // --- 2. Construir el documento para la colección 'paseadores' ---

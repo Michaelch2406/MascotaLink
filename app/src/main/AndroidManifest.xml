@@ -207,7 +207,7 @@
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
-            android:name=".BusquedaPaseadoresActivity"
+            android:name="com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity"
             android:exported="false"
             android:theme="@style/Theme.MascotaLink" />
 

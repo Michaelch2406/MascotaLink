@@ -45,6 +45,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;

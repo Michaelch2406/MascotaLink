@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.mjc.mascota.modelo.PaseadorResultado;
 
 import java.util.List;
 
@@ -48,7 +49,7 @@ public class PaseadorPopularAdapter extends RecyclerView.Adapter<PaseadorPopular
 
         // Calificación
         holder.tvCalificacion.setText(String.format("%.1f", paseador.getCalificacion()));
-        holder.tvResenas.setText("(" + paseador.getNumeroResenas() + ")");
+        holder.tvResenas.setText("(" + paseador.getTotalResenas() + ")");
 
         // Click listener
         holder.itemView.setOnClickListener(v -> {

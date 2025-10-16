@@ -336,7 +336,9 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         usuarioData.put("fecha_registro", FieldValue.serverTimestamp());
         usuarioData.put("activo", true);
         usuarioData.put("foto_perfil", urls.get("foto_perfil_url"));
-        usuarioData.put("nombre_display", prefs.getString("nombre", "") + " " + prefs.getString("apellido", ""));
+        String nombreDisplay = prefs.getString("nombre", "") + " " + prefs.getString("apellido", "");
+        usuarioData.put("nombre_display", nombreDisplay);
+        usuarioData.put("nombre_lowercase", nombreDisplay.toLowerCase());
         usuarioData.put("perfil_ref", db.collection("duenos").document(uid));
         usuarioData.put("rol", "DUEÑO");
         usuarioData.put("selfie_url", urls.get("selfie_url"));

@@ -224,11 +224,16 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
 
     private void updateFirestore() {
         Map<String, Object> userUpdates = new HashMap<>();
-        userUpdates.put("nombre", etNombre.getText().toString().trim());
-        userUpdates.put("apellido", etApellido.getText().toString().trim());
+        String nombre = etNombre.getText().toString().trim();
+        String apellido = etApellido.getText().toString().trim();
+        String nombreDisplay = nombre + " " + apellido;
+
+        userUpdates.put("nombre", nombre);
+        userUpdates.put("apellido", apellido);
         userUpdates.put("telefono", etTelefono.getText().toString().trim());
         userUpdates.put("direccion", etDomicilio.getText().toString().trim());
-        userUpdates.put("nombre_display", etNombre.getText().toString().trim() + " " + etApellido.getText().toString().trim());
+        userUpdates.put("nombre_display", nombreDisplay);
+        userUpdates.put("nombre_lowercase", nombreDisplay.toLowerCase());
 
         db.collection("usuarios").document(currentUserId).set(userUpdates, SetOptions.merge())
             .addOnSuccessListener(aVoid -> {

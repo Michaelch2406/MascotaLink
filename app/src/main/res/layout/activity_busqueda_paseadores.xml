@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout 
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -27,7 +27,7 @@
                 android:id="@+id/back_arrow"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_arrow_back" 
+                android:src="@drawable/ic_arrow_back"
                 android:layout_gravity="start" />
 
             <TextView
@@ -104,7 +104,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:orientation="horizontal"
-                    tools:listitem="@layout/item_paseador_popular" 
+                    tools:listitem="@layout/item_paseador_popular"
                     tools:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
 
                 <TextView
@@ -137,17 +137,17 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:visibility="gone">
-            
+
             <ImageView
                 android:layout_width="80dp"
                 android:layout_height="80dp"
-                android:src="@drawable/ic_dog" 
+                android:src="@drawable/ic_dog"
                 app:tint="#CCCCCC"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="No se encontraron paseadores" 
+                android:text="No se encontraron paseadores"
                 android:layout_marginTop="16dp"/>
         </LinearLayout>
 
@@ -164,7 +164,7 @@
             <ImageView
                 android:layout_width="80dp"
                 android:layout_height="80dp"
-                android:src="@drawable/ic_check_circle" 
+                android:src="@drawable/ic_check_circle"
                 app:tint="#E57373"/>
 
             <TextView
@@ -173,7 +173,7 @@
                 android:layout_height="wrap_content"
                 android:text="Ocurrió un error al cargar los datos"
                 android:layout_marginTop="16dp"/>
-            
+
             <Button
                 android:id="@+id/retryButton"
                 android:layout_width="wrap_content"
