@@ -72,7 +72,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
     private TextView tvRatingValor, tvResenasTotal;
     private RatingBar ratingBar;
-    private LinearLayout barrasRatings, llAcercaDe, llResenas;
+    private LinearLayout barrasRatings, llAcercaDe, llResenas, ajustes_section, soporte_section;
     private FrameLayout videoContainer;
     private TabLayout tabLayout;
     private Button btnCerrarSesion;
@@ -127,6 +127,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 ivEditPerfil.setVisibility(View.VISIBLE);
                 ivEditZonas.setVisibility(View.VISIBLE);
                 ivEditDisponibilidad.setVisibility(View.VISIBLE);
+                ajustes_section.setVisibility(View.VISIBLE);
+                soporte_section.setVisibility(View.VISIBLE);
+                btnCerrarSesion.setVisibility(View.VISIBLE);
             } else if (isOwnerViewing) {
                 // Dueño viendo el perfil de un paseador
                 fabReservar.setVisibility(View.VISIBLE);
@@ -134,6 +137,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 ivEditPerfil.setVisibility(View.GONE);
                 ivEditZonas.setVisibility(View.GONE);
                 ivEditDisponibilidad.setVisibility(View.GONE);
+                ajustes_section.setVisibility(View.GONE);
+                soporte_section.setVisibility(View.GONE);
+                btnCerrarSesion.setVisibility(View.GONE);
             } else {
                 // Otro caso (ej. no logueado, o un paseador viendo a otro)
                 fabReservar.setVisibility(View.GONE);
@@ -197,6 +203,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         btnCentroAyuda = findViewById(R.id.btn_centro_ayuda);
         btnTerminos = findViewById(R.id.btn_terminos);
         btnCerrarSesion = findViewById(R.id.btn_cerrar_sesion);
+        ajustes_section = findViewById(R.id.ajustes_section);
+        soporte_section = findViewById(R.id.soporte_section);
 
         // New buttons
         fabReservar = findViewById(R.id.fab_reservar);

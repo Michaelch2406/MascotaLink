@@ -514,154 +514,168 @@
             </FrameLayout>
 
             <!-- Ajustes y Cuenta -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Ajustes y Cuenta"
-                android:textColor="@android:color/black"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <RelativeLayout
-                android:id="@+id/btn_notificaciones"
+            <LinearLayout
+                android:id="@+id/ajustes_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="16dp">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="Configurar notificaciones"
-                    android:textColor="#111827" />
+                    android:layout_marginTop="24dp"
+                    android:text="Ajustes y Cuenta"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="#9CA3AF" />
-            </RelativeLayout>
-
-            <RelativeLayout
-                android:id="@+id/btn_metodos_pago"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:id="@+id/btn_notificaciones"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="Métodos de pago"
-                    android:textColor="#111827" />
+                    android:layout_marginTop="8dp"
+                    android:background="#E7EEF2"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="#9CA3AF" />
-            </RelativeLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:text="Configurar notificaciones"
+                        android:textColor="#111827" />
 
-            <RelativeLayout
-                android:id="@+id/btn_privacidad"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="16dp">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="#9CA3AF" />
+                </RelativeLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:id="@+id/btn_metodos_pago"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="Preferencias de privacidad"
-                    android:textColor="#111827" />
+                    android:layout_marginTop="8dp"
+                    android:background="#E7EEF2"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="#9CA3AF" />
-            </RelativeLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:text="Métodos de pago"
+                        android:textColor="#111827" />
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="#9CA3AF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/btn_privacidad"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="#E7EEF2"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:text="Preferencias de privacidad"
+                        android:textColor="#111827" />
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="#9CA3AF" />
+                </RelativeLayout>
+            </LinearLayout>
 
             <!-- Soporte y Legal -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Soporte y Legal"
-                android:textColor="@android:color/black"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <RelativeLayout
-                android:id="@+id/btn_centro_ayuda"
+            <LinearLayout
+                android:id="@+id/soporte_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="16dp">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="Centro de ayuda"
-                    android:textColor="#111827" />
+                    android:layout_marginTop="24dp"
+                    android:text="Soporte y Legal"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="#9CA3AF" />
-            </RelativeLayout>
-
-            <RelativeLayout
-                android:id="@+id/btn_terminos"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#E7EEF2"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:id="@+id/btn_centro_ayuda"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:text="Términos y condiciones"
-                    android:textColor="#111827" />
+                    android:layout_marginTop="8dp"
+                    android:background="#E7EEF2"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/ic_arrow_forward"
-                    app:tint="#9CA3AF" />
-            </RelativeLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:text="Centro de ayuda"
+                        android:textColor="#111827" />
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="#9CA3AF" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/btn_terminos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="#E7EEF2"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:text="Términos y condiciones"
+                        android:textColor="#111827" />
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="#9CA3AF" />
+                </RelativeLayout>
+            </LinearLayout>
 
             <!-- Cerrar Sesión -->
             <Button
