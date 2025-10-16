@@ -109,6 +109,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         setupTabs();
 
         paseadorId = getIntent().getStringExtra("paseadorId");
+        String viewerRole = getIntent().getStringExtra("viewerRole");
         String currentUserId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
 
         if (paseadorId == null && currentUserId != null) {
@@ -116,28 +117,30 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
 
         if (paseadorId != null) {
-            if (paseadorId.equals(currentUserId)) {
-                // Es el perfil del propio usuario, ocultar botones de acción
+            boolean isOwnerViewing = "DUEÑO".equalsIgnoreCase(viewerRole);
+            boolean isOwnProfile = paseadorId.equals(currentUserId);
+
+            if (isOwnProfile) {
+                // Paseador viendo su propio perfil
                 fabReservar.setVisibility(View.GONE);
                 btnMensaje.setVisibility(View.GONE);
+                ivEditPerfil.setVisibility(View.VISIBLE);
+                ivEditZonas.setVisibility(View.VISIBLE);
+                ivEditDisponibilidad.setVisibility(View.VISIBLE);
+            } else if (isOwnerViewing) {
+                // Dueño viendo el perfil de un paseador
+                fabReservar.setVisibility(View.VISIBLE);
+                btnMensaje.setVisibility(View.VISIBLE);
+                ivEditPerfil.setVisibility(View.GONE);
+                ivEditZonas.setVisibility(View.GONE);
+                ivEditDisponibilidad.setVisibility(View.GONE);
             } else {
-                // Es el perfil de otro paseador, verificar rol del usuario actual
-                if (currentUserId != null) {
-                    db.collection("usuarios").document(currentUserId).get().addOnSuccessListener(documentSnapshot -> {
-                        String userRole = documentSnapshot.getString("rol");
-                        if ("dueno".equals(userRole)) {
-                            fabReservar.setVisibility(View.VISIBLE);
-                            btnMensaje.setVisibility(View.VISIBLE);
-                        } else {
-                            fabReservar.setVisibility(View.GONE);
-                            btnMensaje.setVisibility(View.GONE);
-                        }
-                    });
-                } else {
-                    // No hay usuario logueado, ocultar
-                    fabReservar.setVisibility(View.GONE);
-                    btnMensaje.setVisibility(View.GONE);
-                }
+                // Otro caso (ej. no logueado, o un paseador viendo a otro)
+                fabReservar.setVisibility(View.GONE);
+                btnMensaje.setVisibility(View.GONE);
+                ivEditPerfil.setVisibility(View.GONE);
+                ivEditZonas.setVisibility(View.GONE);
+                ivEditDisponibilidad.setVisibility(View.GONE);
             }
         } else {
             Toast.makeText(this, "Error: No se pudo cargar el perfil.", Toast.LENGTH_SHORT).show();

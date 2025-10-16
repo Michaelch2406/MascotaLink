@@ -149,7 +149,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             // Acción al hacer click: ir al perfil del paseador
             Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
             intent.putExtra("paseadorId", paseador.getId());
-            intent.putExtra("viewerRole", "DUENO"); // Informar que un dueño está viendo el perfil
+            intent.putExtra("viewerRole", "DUEÑO"); // Informar que un dueño está viendo el perfil
             startActivity(intent);
         });
 
@@ -157,7 +157,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         recyclerViewResultados.setLayoutManager(new LinearLayoutManager(this));
         resultadosAdapter = new PaseadorResultadoAdapter();
         recyclerViewResultados.setAdapter(resultadosAdapter);
-        // Aquí también se configuraría el click listener para este adapter
+        resultadosAdapter.setOnItemClickListener(paseador -> {
+            // Acción al hacer click: ir al perfil del paseador
+            Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
+            intent.putExtra("paseadorId", paseador.getId());
+            intent.putExtra("viewerRole", "DUEÑO"); // Informar que un dueño está viendo el perfil
+            startActivity(intent);
+        });
     }
 
     private void setupSearch() {
