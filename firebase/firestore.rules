@@ -38,16 +38,19 @@ service cloud.firestore {
 
     // Mascotas dentro de duenos
     match /duenos/{duenoId}/mascotas/{mascotaId} {
-      allow read, write: if isOwner(duenoId);
+      allow read: if request.auth != null;
+      allow write: if isOwner(duenoId);
     }
 
     // Subcolecciones bajo paseadores
     match /paseadores/{userId}/disponibilidad/{disponibilidadId} {
-      allow read, create, update, delete: if isOwner(userId);
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId);
     }
 
     match /paseadores/{userId}/zonas_servicio/{zonaId} {
-      allow read, create, update, delete: if isOwner(userId);
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId);
     }
 
     // Servicios

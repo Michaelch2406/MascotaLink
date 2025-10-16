@@ -45,7 +45,7 @@
         <!-- Zona de Servicio -->
         <TextView
             android:id="@+id/paseador_zona"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:drawableStart="@drawable/ic_my_location" 
@@ -56,7 +56,6 @@
             app:drawableTint="#888888"
             app:layout_constraintStart_toStartOf="@id/paseador_nombre"
             app:layout_constraintTop_toBottomOf="@id/paseador_nombre"
-            app:layout_constraintEnd_toEndOf="@id/paseador_nombre"
             tools:text="Quito Centro, La Carolina" />
 
         <!-- Guía para separar la sección derecha -->

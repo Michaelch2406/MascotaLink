@@ -44,34 +44,36 @@ public class PaseadorRepository {
             if (value == null || value.isEmpty()) {
                 liveData.setValue(new UiState.Empty<>());
             } else {
-                // Tenemos la lista de usuarios, ahora necesitamos los detalles de 'paseadores'
-                combineUserDataWithPaseadorData(value, liveData);
+                combineUserDataWithPaseadorData(value).observeForever(liveData::setValue);
             }
         });
         listeners.add(listener);
         return liveData;
     }
 
-    private void combineUserDataWithPaseadorData(QuerySnapshot userSnapshots, MutableLiveData<UiState<List<PaseadorResultado>>> liveData) {
+    private LiveData<UiState<List<PaseadorResultado>>> combineUserDataWithPaseadorData(QuerySnapshot userSnapshots) {
+        MutableLiveData<UiState<List<PaseadorResultado>>> liveData = new MutableLiveData<>();
         List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
         for (DocumentSnapshot userDoc : userSnapshots) {
-            // Para cada usuario, creamos una tarea para obtener su perfil de paseador
             tasks.add(db.collection("paseadores").document(userDoc.getId()).get());
         }
 
-        // Cuando todas las tareas de obtener perfiles de paseador terminen
         Tasks.whenAllSuccess(tasks).addOnSuccessListener(paseadorDocs -> {
             ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+            if (paseadorDocs.isEmpty()) {
+                liveData.setValue(new UiState.Empty<>());
+                return;
+            }
+
+            List<Task<QuerySnapshot>> zonaTasks = new ArrayList<>();
             for (int i = 0; i < userSnapshots.size(); i++) {
                 DocumentSnapshot userDoc = userSnapshots.getDocuments().get(i);
                 DocumentSnapshot paseadorDoc = (DocumentSnapshot) paseadorDocs.get(i);
 
                 if (!paseadorDoc.exists()) {
-                    Log.w(TAG, "Inconsistencia de datos: Usuario " + userDoc.getId() + " tiene rol PASEADOR pero no tiene perfil en 'paseadores'.");
-                    continue; // Saltar este usuario inconsistente
+                    continue;
                 }
 
-                // Construir el objeto de resultado de forma segura
                 PaseadorResultado resultado = new PaseadorResultado();
                 resultado.setId(userDoc.getId());
                 resultado.setNombre(getStringSafely(userDoc, "nombre_display", "N/A"));
@@ -80,7 +82,6 @@ public class PaseadorRepository {
                 resultado.setTotalResenas(getLongSafely(paseadorDoc, "num_servicios_completados", 0L).intValue());
                 resultado.setTarifaPorHora(getDoubleSafely(paseadorDoc, "tarifa_por_hora", 0.0));
                 
-                // Calcular años de experiencia de forma segura
                 com.google.firebase.Timestamp ts = paseadorDoc.getTimestamp("fecha_inicio_experiencia");
                 if (ts != null) {
                     long diff = System.currentTimeMillis() - ts.toDate().getTime();
@@ -90,17 +91,29 @@ public class PaseadorRepository {
                 }
 
                 resultados.add(resultado);
+
+                zonaTasks.add(db.collection("paseadores").document(paseadorDoc.getId()).collection("zonas_servicio").limit(1).get());
             }
 
-            if (resultados.isEmpty()) {
-                liveData.setValue(new UiState.Empty<>());
-            } else {
+            Tasks.whenAllSuccess(zonaTasks).addOnSuccessListener(zonaSnapshots -> {
+                for (int i = 0; i < zonaSnapshots.size(); i++) {
+                    QuerySnapshot zonaSnapshot = (QuerySnapshot) zonaSnapshots.get(i);
+                    if (!zonaSnapshot.isEmpty()) {
+                        resultados.get(i).setZonaPrincipal(zonaSnapshot.getDocuments().get(0).getString("direccion"));
+                    } else {
+                        resultados.get(i).setZonaPrincipal("Sin zona especificada");
+                    }
+                }
                 liveData.setValue(new UiState.Success<>(resultados));
-            }
+            }).addOnFailureListener(e -> {
+                liveData.setValue(new UiState.Success<>(resultados));
+            });
+
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Error al combinar datos de paseadores", e);
             liveData.setValue(new UiState.Error<>("No se pudieron cargar los perfiles completos."));
         });
+        return liveData;
     }
 
     // --- Métodos Helper de Seguridad --- //
@@ -135,17 +148,15 @@ public class PaseadorRepository {
         }
     }
 
-    public LiveData<UiState<QuerySnapshot>> buscarPaseadores(String query, DocumentSnapshot lastVisible) {
-        MutableLiveData<UiState<QuerySnapshot>> liveData = new MutableLiveData<>();
+    public LiveData<UiState<PaseadorSearchResult>> buscarPaseadores(String query, DocumentSnapshot lastVisible) {
+        MutableLiveData<UiState<PaseadorSearchResult>> liveData = new MutableLiveData<>();
         liveData.setValue(new UiState.Loading<>());
 
-        // Normalizar el query para búsqueda case-insensitive
         String queryNormalizado = query.toLowerCase();
 
         Query firestoreQuery = db.collection("usuarios")
                 .whereEqualTo("rol", "PASEADOR")
                 .whereEqualTo("activo", true)
-                // ASUNCIÓN: Se debe tener un campo normalizado en minúsculas para búsquedas case-insensitive eficientes.
                 .whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
                 .whereLessThanOrEqualTo("nombre_lowercase", queryNormalizado + "\uf8ff")
                 .orderBy("nombre_lowercase")
@@ -160,8 +171,14 @@ public class PaseadorRepository {
                 if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
                     liveData.setValue(new UiState.Empty<>());
                 } else {
-                    // Devolvemos los snapshots para que el ViewModel gestione la paginación
-                    liveData.setValue(new UiState.Success<>(queryDocumentSnapshots));
+                    DocumentSnapshot newLastVisible = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
+                    combineUserDataWithPaseadorData(queryDocumentSnapshots).observeForever(uiState -> {
+                        if (uiState instanceof UiState.Success) {
+                            liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(((UiState.Success<List<PaseadorResultado>>) uiState).getData(), newLastVisible)));
+                        } else {
+                            liveData.setValue((UiState) uiState);
+                        }
+                    });
                 }
             })
             .addOnFailureListener(e -> {

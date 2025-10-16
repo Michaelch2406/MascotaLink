@@ -56,7 +56,7 @@ public class BusquedaViewModelTest {
     @Test
     public void onSearchQueryChanged_whenRepositoryReturnsEmpty_postsEmptyState() {
         // Arrange: Configurar el mock para que devuelva un estado Vacío
-        MutableLiveData<UiState<QuerySnapshot>> emptyLiveData = new MutableLiveData<>();
+        MutableLiveData<UiState<PaseadorSearchResult>> emptyLiveData = new MutableLiveData<>();
         emptyLiveData.setValue(new UiState.Empty<>());
         when(mockRepository.buscarPaseadores(anyString(), any())).thenReturn(emptyLiveData);
 
@@ -73,7 +73,7 @@ public class BusquedaViewModelTest {
     @Test
     public void onSearchQueryChanged_whenRepositoryFails_postsErrorState() {
         // Arrange: Configurar el mock para que devuelva un estado de Error
-        MutableLiveData<UiState<QuerySnapshot>> errorLiveData = new MutableLiveData<>();
+        MutableLiveData<UiState<PaseadorSearchResult>> errorLiveData = new MutableLiveData<>();
         String errorMessage = "Error de Firestore";
         errorLiveData.setValue(new UiState.Error<>(errorMessage));
         when(mockRepository.buscarPaseadores(anyString(), any())).thenReturn(errorLiveData);
@@ -95,15 +95,13 @@ public class BusquedaViewModelTest {
         // El ViewModel solo debe recibir y postear los datos ya limpios.
         
         // Arrange
-        QuerySnapshot mockSnapshot = mock(QuerySnapshot.class);
-        DocumentSnapshot mockDoc = mock(DocumentSnapshot.class);
-        when(mockSnapshot.getDocuments()).thenReturn(Collections.singletonList(mockDoc));
-        // El mockDoc no tiene campos, por lo que el Repository usará valores por defecto
-        when(mockDoc.getId()).thenReturn("user123");
-        when(mockDoc.getString("nombre_display")).thenReturn(null); // Simula campo nulo
+        PaseadorResultado mockPaseador = new PaseadorResultado();
+        mockPaseador.setId("user123");
+        mockPaseador.setNombre("N/A"); // Valor por defecto esperado
 
-        MutableLiveData<UiState<QuerySnapshot>> successLiveData = new MutableLiveData<>();
-        successLiveData.setValue(new UiState.Success<>(mockSnapshot));
+        PaseadorSearchResult searchResult = new PaseadorSearchResult(Collections.singletonList(mockPaseador), null);
+        MutableLiveData<UiState<PaseadorSearchResult>> successLiveData = new MutableLiveData<>();
+        successLiveData.setValue(new UiState.Success<>(searchResult));
         when(mockRepository.buscarPaseadores(anyString(), any())).thenReturn(successLiveData);
 
         // Act

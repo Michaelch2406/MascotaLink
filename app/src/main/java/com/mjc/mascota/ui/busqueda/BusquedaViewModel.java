@@ -68,7 +68,6 @@ public class BusquedaViewModel extends ViewModel {
 
     private void executeSearch(String query, boolean isPaginating) {
         if (!isPaginating) {
-            // Es una búsqueda nueva
             currentQuery = query;
             lastVisibleDocument = null;
             isLastPage = false;
@@ -77,33 +76,16 @@ public class BusquedaViewModel extends ViewModel {
 
         isLoadingMore = true;
 
-        // El repositorio nos da el QuerySnapshot, lo transformamos aquí
-        LiveData<UiState<QuerySnapshot>> rawResult = repository.buscarPaseadores(query, lastVisibleDocument);
-        
-        // Observamos el resultado del repositorio para procesarlo
-        rawResult.observeForever(new androidx.lifecycle.Observer<UiState<QuerySnapshot>>() {
+        repository.buscarPaseadores(query, lastVisibleDocument).observeForever(new androidx.lifecycle.Observer<UiState<PaseadorSearchResult>>() {
             @Override
-            public void onChanged(UiState<QuerySnapshot> uiState) {
-                rawResult.removeObserver(this); // Observar solo una vez
+            public void onChanged(UiState<PaseadorSearchResult> uiState) {
                 if (uiState instanceof UiState.Success) {
-                    QuerySnapshot snapshot = ((UiState.Success<QuerySnapshot>) uiState).getData();
-                    List<DocumentSnapshot> documents = snapshot.getDocuments();
+                    PaseadorSearchResult searchResult = ((UiState.Success<PaseadorSearchResult>) uiState).getData();
+                    lastVisibleDocument = searchResult.lastVisible;
+                    List<PaseadorResultado> newResults = searchResult.resultados;
 
-                    if (!documents.isEmpty()) {
-                        lastVisibleDocument = documents.get(documents.size() - 1);
-                    }
-                    if (documents.size() < 15) { // 15 es el límite por página
+                    if (newResults.size() < 15) {
                         isLastPage = true;
-                    }
-
-                    // Aquí necesitaríamos la misma lógica de combinación de datos que en el repo
-                    // Por simplicidad, vamos a simular la conversión
-                    List<PaseadorResultado> newResults = new ArrayList<>();
-                    for(DocumentSnapshot doc : documents) {
-                        PaseadorResultado res = new PaseadorResultado();
-                        res.setId(doc.getId());
-                        res.setNombre(doc.getString("nombre_display"));
-                        newResults.add(res);
                     }
 
                     if (isPaginating) {
@@ -123,7 +105,7 @@ public class BusquedaViewModel extends ViewModel {
                     }
                     isLastPage = true;
                 } else if (uiState instanceof UiState.Error) {
-                    _searchResults.setValue(new UiState.Error<>(((UiState.Error<QuerySnapshot>) uiState).getMessage()));
+                    _searchResults.setValue(new UiState.Error<>(((UiState.Error<PaseadorSearchResult>) uiState).getMessage()));
                 }
                 isLoadingMore = false;
             }
