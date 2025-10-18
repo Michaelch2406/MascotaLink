@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="LockedOrientationActivity">
 
     <!-- Features -->
     <!-- required="false" evita filtrar dispositivos sin cámara en Play Store -->
@@ -55,6 +56,7 @@
         <activity
             android:name=".SplashActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -64,151 +66,186 @@
         </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".LoginActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".ForgotPasswordActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".SeleccionRolActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".PaseadorRegistroPaso1Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".DuenoRegistroPaso1Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".DuenoRegistroPaso2Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".DuenoRegistroPaso3Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MascotaRegistroPaso1Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MascotaRegistroPaso2Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MascotaRegistroPaso3Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MascotaRegistroPaso4Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PaseadorRegistroPaso2Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PaseadorRegistroPaso3Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PaseadorRegistroPaso4Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".QuizActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".QuizResultsActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PaseadorRegistroPaso5Activity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MetodoPagoActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".SelfieActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".VideoRecordActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".ZonasServicioActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".DisponibilidadActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".PerfilDuenoActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PerfilPaseadorActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".EditarPerfilPaseadorActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".EditarPerfilDuenoActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".MascotaRegistradaActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".TiposPerrosActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".PerfilMascotaActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".MascotaSaludActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".MascotaComportamientoActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".MascotaInstruccionesActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".EditarPerfilMascotaActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name="com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
 
         <provider

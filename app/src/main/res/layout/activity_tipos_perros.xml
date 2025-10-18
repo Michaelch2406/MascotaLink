@@ -29,8 +29,8 @@
                 android:layout_width="150dp"
                 android:layout_height="75dp"
                 android:layout_marginBottom="24dp"
-                android:src="@drawable/mascotalink_logo_principal"
-                android:contentDescription="MascotaLink Logo" />
+                android:src="@drawable/walki_logo_principal"
+                android:contentDescription="Walki Logo" />
 
             <!-- Título -->
             <TextView

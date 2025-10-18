@@ -79,7 +79,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         retryButton = findViewById(R.id.retryButton);
         recyclerViewPopulares = findViewById(R.id.recycler_paseadores_populares);
         // Suponiendo que el layout tiene un segundo RecyclerView para los resultados
-        recyclerViewResultados = findViewById(R.id.recycler_resultados_busqueda); 
+        recyclerViewResultados = findViewById(R.id.recycler_resultados_busqueda);
         searchView = findViewById(R.id.search_view);
         contentScrollView = findViewById(R.id.content_scroll_view);
 
@@ -87,7 +87,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         setupSearch();
         setupPagination();
         setupToolbar();
-        checkUserSessionAndRole();
+
 
         retryButton.setOnClickListener(v -> {
             // Reintentar la última acción que falló
@@ -112,6 +112,27 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Se comprueba la sesión y el rol del usuario cada vez que la actividad se vuelve visible.
+        // Esto asegura que si el usuario cierra sesión y vuelve a entrar, o si su rol cambia,
+        // la UI reaccione correctamente sin necesidad de reiniciar la app.
+        checkUserSessionAndRole();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Se quitan los observadores cuando la actividad ya no es visible.
+        // Esto previene cualquier actualización de la UI en segundo plano y evita posibles memory leaks,
+        // aunque LiveData ya es consciente del ciclo de vida. Es una buena práctica ser explícito.
+        if (viewModel != null) {
+            viewModel.getPaseadoresPopularesState().removeObservers(this);
+            viewModel.searchResults.removeObservers(this);
+        }
+    }
+
     private void checkUserSessionAndRole() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
@@ -124,6 +145,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 if (documentSnapshot.exists()) {
                     String rol = documentSnapshot.getString("rol");
                     if ("DUEÑO".equals(rol)) {
+                        // El rol es correcto, procedemos a configurar los observadores
+                        // para recibir las actualizaciones de datos.
                         setupObservers();
                     } else {
                         Toast.makeText(this, "Acceso no autorizado para este rol.", Toast.LENGTH_LONG).show();

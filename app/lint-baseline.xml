@@ -544,16 +544,16 @@
 
     <issue
         id="IconLocation"
-        message="Found bitmap drawable `res/drawable/mascotalink_logo_principal.png` in densityless folder">
+        message="Found bitmap drawable `res/drawable/walki_logo_principal.png` in densityless folder">
         <location
-            file="src/main/res/drawable/mascotalink_logo_principal.png"/>
+            file="src/main/res/drawable/walki_logo_principal.png"/>
     </issue>
 
     <issue
         id="IconLocation"
-        message="Found bitmap drawable `res/drawable/mascotalink_logo_secundario.png` in densityless folder">
+        message="Found bitmap drawable `res/drawable/walki_logo_secundario.png` in densityless folder">
         <location
-            file="src/main/res/drawable/mascotalink_logo_secundario.png"/>
+            file="src/main/res/drawable/walki_logo_secundario.png"/>
     </issue>
 
     <issue

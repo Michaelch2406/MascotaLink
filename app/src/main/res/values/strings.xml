@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MascotaLink</string>
+    <string name="app_name">Walki</string>
 
     <string-array name="dias_semana">
         <item>Lunes</item>

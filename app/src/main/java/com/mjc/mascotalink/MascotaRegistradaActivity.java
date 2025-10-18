@@ -37,6 +37,13 @@ public class MascotaRegistradaActivity extends AppCompatActivity {
 
         setupViews();
         setupRecyclerView();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Se cargan las mascotas cada vez que la pantalla se vuelve visible
+        // para asegurar que la lista esté siempre actualizada.
         fetchMascotas();
     }
 
