@@ -9,6 +9,8 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.mjc.mascota.modelo.PaseadorResultado;
 
+import com.mjc.mascota.modelo.Filtros;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,7 +63,7 @@ public class BusquedaViewModelTest {
         // Arrange
         MutableLiveData<UiState<PaseadorSearchResult>> emptyLiveData = new MutableLiveData<>();
         emptyLiveData.setValue(new UiState.Empty<>());
-        when(mockRepository.buscarPaseadores(anyString(), any())).thenReturn(emptyLiveData);
+        when(mockRepository.buscarPaseadores(anyString(), any(), any(Filtros.class))).thenReturn(emptyLiveData);
 
         // Act
         viewModel.onSearchQueryChanged("query");
@@ -77,7 +79,7 @@ public class BusquedaViewModelTest {
         MutableLiveData<UiState<PaseadorSearchResult>> errorLiveData = new MutableLiveData<>();
         String errorMessage = "Error";
         errorLiveData.setValue(new UiState.Error<>(errorMessage));
-        when(mockRepository.buscarPaseadores(anyString(), any())).thenReturn(errorLiveData);
+        when(mockRepository.buscarPaseadores(anyString(), any(), any(Filtros.class))).thenReturn(errorLiveData);
 
         // Act
         viewModel.onSearchQueryChanged("query");
@@ -94,7 +96,7 @@ public class BusquedaViewModelTest {
         PaseadorSearchResult searchResult = new PaseadorSearchResult(Collections.emptyList(), null);
         MutableLiveData<UiState<PaseadorSearchResult>> successLiveData = new MutableLiveData<>();
         successLiveData.setValue(new UiState.Success<>(searchResult));
-        when(mockRepository.buscarPaseadores(anyString(), any())).thenReturn(successLiveData);
+        when(mockRepository.buscarPaseadores(anyString(), any(), any(Filtros.class))).thenReturn(successLiveData);
 
         // Act
         viewModel.onSearchQueryChanged("query");

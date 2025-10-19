@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.mjc.mascota.modelo.Filtros;
+
 public class PaseadorRepository {
 
     private static final String TAG = "PaseadorRepository";
@@ -37,7 +39,7 @@ public class PaseadorRepository {
         ListenerRegistration listener = query.addSnapshotListener((value, error) -> {
             if (error != null) {
                 Log.e(TAG, "Error al obtener IDs de paseadores populares", error);
-                liveData.setValue(new UiState.Error<>("Error al cargar los datos."));
+                liveData.setValue(new UiState.Error<>("Error al cargar los paseadores populares."));
                 return;
             }
 
@@ -82,11 +84,12 @@ public class PaseadorRepository {
                 resultado.setTotalResenas(getLongSafely(paseadorDoc, "num_servicios_completados", 0L).intValue());
                 resultado.setTarifaPorHora(getDoubleSafely(paseadorDoc, "tarifa_por_hora", 0.0));
                 
-                com.google.firebase.Timestamp ts = paseadorDoc.getTimestamp("fecha_inicio_experiencia");
-                if (ts != null) {
-                    long diff = System.currentTimeMillis() - ts.toDate().getTime();
-                    resultado.setAnosExperiencia((int) TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS) / 365);
-                } else {
+                String experienciaStr = getStringSafely(paseadorDoc, "experiencia_general", "0");
+                try {
+                    // Extraer solo los números de la cadena
+                    String numeros = experienciaStr.replaceAll("[^0-9]", "");
+                    resultado.setAnosExperiencia(Integer.parseInt(numeros));
+                } catch (NumberFormatException e) {
                     resultado.setAnosExperiencia(0);
                 }
 
@@ -110,9 +113,106 @@ public class PaseadorRepository {
             });
 
         }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error al combinar datos de paseadores", e);
-            liveData.setValue(new UiState.Error<>("No se pudieron cargar los perfiles completos."));
+            Log.e(TAG, "Error al combinar datos de paseadores populares", e);
+            liveData.setValue(new UiState.Error<>("No se pudieron cargar los perfiles completos de paseadores populares."));
         });
+        return liveData;
+    }
+
+    public LiveData<UiState<PaseadorSearchResult>> buscarPaseadores(String query, DocumentSnapshot lastVisible, Filtros filtros) {
+        MutableLiveData<UiState<PaseadorSearchResult>> liveData = new MutableLiveData<>();
+        liveData.setValue(new UiState.Loading<>());
+
+        Query firestoreQuery = db.collection("paseadores_search").whereEqualTo("activo", true);
+
+        // Aplicar filtro de texto
+        if (query != null && !query.isEmpty()) {
+            String queryNormalizado = query.toLowerCase();
+            firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
+                                           .whereLessThanOrEqualTo("nombre_lowercase", queryNormalizado + "\uf8ff");
+        }
+
+        // Aplicar filtros del diálogo
+        if (filtros != null) {
+            if (filtros.getMinCalificacion() > 0) {
+                firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("calificacion_promedio", filtros.getMinCalificacion());
+            }
+            if (filtros.getMinPrecio() > 0) {
+                firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("tarifa_por_hora", filtros.getMinPrecio());
+            }
+            if (filtros.getMaxPrecio() < 100) {
+                firestoreQuery = firestoreQuery.whereLessThanOrEqualTo("tarifa_por_hora", filtros.getMaxPrecio());
+            }
+            if (filtros.getTamanosMascota() != null && !filtros.getTamanosMascota().isEmpty()) {
+                firestoreQuery = firestoreQuery.whereArrayContainsAny("tipos_perro_aceptados", filtros.getTamanosMascota());
+            }
+
+            // Aplicar ordenamiento
+            String orden = filtros.getOrden();
+            if (orden != null) {
+                switch (orden) {
+                    case "Precio (menor a mayor)":
+                        firestoreQuery = firestoreQuery.orderBy("tarifa_por_hora", Query.Direction.ASCENDING);
+                        break;
+                    case "Precio (mayor a menor)":
+                        firestoreQuery = firestoreQuery.orderBy("tarifa_por_hora", Query.Direction.DESCENDING);
+                        break;
+                    case "Calificación (mejor a peor)":
+                        firestoreQuery = firestoreQuery.orderBy("calificacion_promedio", Query.Direction.DESCENDING);
+                        break;
+                    default: // Por defecto, si no hay texto, ordenar por nombre
+                        if (query == null || query.isEmpty()) {
+                           firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
+                        }
+                        break;
+                }
+            }
+        } else if (query == null || query.isEmpty()){
+             firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
+        }
+
+        firestoreQuery = firestoreQuery.limit(15);
+
+        if (lastVisible != null) {
+            firestoreQuery = firestoreQuery.startAfter(lastVisible);
+        }
+
+        firestoreQuery.get()
+            .addOnSuccessListener(snapshots -> {
+                if (snapshots == null || snapshots.isEmpty()) {
+                    Log.d(TAG, "Búsqueda no arrojó resultados para query: " + query);
+                    liveData.setValue(new UiState.Empty<>());
+                    return;
+                }
+
+                Log.d(TAG, "Búsqueda exitosa para query: " + query + ", encontrados: " + snapshots.size());
+
+                DocumentSnapshot newLastVisible = snapshots.getDocuments().get(snapshots.size() - 1);
+                ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+
+                for (DocumentSnapshot doc : snapshots) {
+                    PaseadorResultado resultado = new PaseadorResultado();
+                    resultado.setId(doc.getId());
+                    resultado.setNombre(getStringSafely(doc, "nombre_display", "N/A"));
+                    resultado.setFotoUrl(getStringSafely(doc, "foto_perfil", null));
+                    resultado.setCalificacion(getDoubleSafely(doc, "calificacion_promedio", 0.0));
+                    resultado.setTotalResenas(getLongSafely(doc, "num_servicios_completados", 0L).intValue());
+                    resultado.setTarifaPorHora(getDoubleSafely(doc, "tarifa_por_hora", 0.0));
+                    resultado.setAnosExperiencia(getLongSafely(doc, "anos_experiencia", 0L).intValue());
+                    // La zona principal ahora se debe obtener por separado si no está en la colección de búsqueda
+                    // Por ahora, la dejaremos fuera para simplificar.
+                    resultado.setZonaPrincipal("Sin zona especificada"); 
+                    resultados.add(resultado);
+                }
+
+                liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible)));
+
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error en la búsqueda de paseadores para query: " + query, e);
+                liveData.setValue(new UiState.Error<>("Error al realizar la búsqueda."));
+            });
+
         return liveData;
     }
 
@@ -125,8 +225,7 @@ public class PaseadorRepository {
         } catch (Exception e) {
             Log.w(TAG, "Error al leer el campo '" + field + "' como String.", e);
             return defaultValue;
-        }
-    }
+        }    }
 
     private Double getDoubleSafely(DocumentSnapshot doc, String field, Double defaultValue) {
         try {
@@ -146,47 +245,6 @@ public class PaseadorRepository {
             Log.w(TAG, "Error al leer el campo '" + field + "' como Long.", e);
             return defaultValue;
         }
-    }
-
-    public LiveData<UiState<PaseadorSearchResult>> buscarPaseadores(String query, DocumentSnapshot lastVisible) {
-        MutableLiveData<UiState<PaseadorSearchResult>> liveData = new MutableLiveData<>();
-        liveData.setValue(new UiState.Loading<>());
-
-        String queryNormalizado = query.toLowerCase();
-
-        Query firestoreQuery = db.collection("usuarios")
-                .whereEqualTo("rol", "PASEADOR")
-                .whereEqualTo("activo", true)
-                .whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
-                .whereLessThanOrEqualTo("nombre_lowercase", queryNormalizado + "\uf8ff")
-                .orderBy("nombre_lowercase")
-                .limit(15);
-
-        if (lastVisible != null) {
-            firestoreQuery = firestoreQuery.startAfter(lastVisible);
-        }
-
-        firestoreQuery.get()
-            .addOnSuccessListener(queryDocumentSnapshots -> {
-                if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
-                    liveData.setValue(new UiState.Empty<>());
-                } else {
-                    DocumentSnapshot newLastVisible = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
-                    combineUserDataWithPaseadorData(queryDocumentSnapshots).observeForever(uiState -> {
-                        if (uiState instanceof UiState.Success) {
-                            liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(((UiState.Success<List<PaseadorResultado>>) uiState).getData(), newLastVisible)));
-                        } else {
-                            liveData.setValue((UiState) uiState);
-                        }
-                    });
-                }
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error en la búsqueda de paseadores", e);
-                liveData.setValue(new UiState.Error<>("Error al realizar la búsqueda."));
-            });
-
-        return liveData;
     }
 
     public void cleanupListeners() {

@@ -30,6 +30,16 @@
                 android:textStyle="bold" />
 
             <ImageButton
+                android:id="@+id/btn_favorito"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_corazon"
+                android:layout_marginEnd="16dp"
+                app:tint="@color/icon_color" />
+
+            <ImageButton
                 android:id="@+id/iv_edit_perfil"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -111,18 +121,20 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Avatar y datos principales -->
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/iv_avatar"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:layout_gravity="center"
-                android:padding="4dp"
-                android:scaleType="centerCrop"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                app:strokeColor="#FFB08A"
-                app:strokeWidth="4dp"
-                tools:src="@tools:sample/avatars" />
+            <!-- Galería de Fotos Deslizable -->
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/view_pager_galeria"
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_gravity="center" />
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tab_layout_dots"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:tabBackground="@drawable/tab_selector"
+                app:tabGravity="center"
+                app:tabIndicatorHeight="0dp" />
 
             <TextView
                 android:id="@+id/tv_nombre"
@@ -508,7 +520,12 @@
                             android:layout_weight="1"
                             android:orientation="vertical" />
                     </LinearLayout>
-                    <!-- Aquí iría un RecyclerView para las reseñas individuales -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recycler_view_resenas"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:nestedScrollingEnabled="false" />
                 </LinearLayout>
 
             </FrameLayout>

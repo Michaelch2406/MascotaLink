@@ -16,7 +16,13 @@ import com.mjc.mascota.modelo.PaseadorResultado;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mjc.mascota.modelo.Filtros;
+
+import android.util.Log;
+
 public class BusquedaViewModel extends ViewModel {
+
+    private static final String TAG = "BusquedaViewModel";
 
     private final PaseadorRepository repository;
     private LiveData<UiState<List<PaseadorResultado>>> paseadoresPopularesState;
@@ -24,6 +30,9 @@ public class BusquedaViewModel extends ViewModel {
     // --- Lógica de Búsqueda y Paginación ---
     private final MutableLiveData<UiState<List<PaseadorResultado>>> _searchResults = new MutableLiveData<>();
     public final LiveData<UiState<List<PaseadorResultado>>> searchResults = _searchResults;
+
+    private final MutableLiveData<Filtros> _filtros = new MutableLiveData<>(new Filtros());
+    public final LiveData<Filtros> filtros = _filtros;
 
     private String currentQuery = "";
     private DocumentSnapshot lastVisibleDocument = null;
@@ -56,17 +65,31 @@ public class BusquedaViewModel extends ViewModel {
     }
 
     public void onSearchQueryChanged(String query) {
+        Log.d(TAG, "onSearchQueryChanged: " + query);
         debounceHandler.removeCallbacks(debounceRunnable);
-        debounceRunnable = () -> executeSearch(query, false);
+        debounceRunnable = () -> executeSearch(query, false, _filtros.getValue());
         debounceHandler.postDelayed(debounceRunnable, 500); // 500ms de delay
     }
 
-    public void loadMore() {
-        if (isLoadingMore || isLastPage) return;
-        executeSearch(currentQuery, true);
+    public void aplicarFiltros(Filtros nuevosFiltros) {
+        Log.d(TAG, "aplicarFiltros: " + nuevosFiltros.toString());
+        _filtros.setValue(nuevosFiltros);
+        executeSearch(currentQuery, false, nuevosFiltros);
     }
 
-    private void executeSearch(String query, boolean isPaginating) {
+    public void limpiarFiltros() {
+        Log.d(TAG, "limpiarFiltros");
+        _filtros.setValue(new Filtros());
+        executeSearch(currentQuery, false, new Filtros());
+    }
+
+    public void loadMore() {
+        Log.d(TAG, "loadMore");
+        if (isLoadingMore || isLastPage) return;
+        executeSearch(currentQuery, true, _filtros.getValue());
+    }
+
+    private void executeSearch(String query, boolean isPaginating, Filtros filtros) {
         if (!isPaginating) {
             currentQuery = query;
             lastVisibleDocument = null;
@@ -76,7 +99,7 @@ public class BusquedaViewModel extends ViewModel {
 
         isLoadingMore = true;
 
-        repository.buscarPaseadores(query, lastVisibleDocument).observeForever(new androidx.lifecycle.Observer<UiState<PaseadorSearchResult>>() {
+        repository.buscarPaseadores(query, lastVisibleDocument, filtros).observeForever(new androidx.lifecycle.Observer<UiState<PaseadorSearchResult>>() {
             @Override
             public void onChanged(UiState<PaseadorSearchResult> uiState) {
                 if (uiState instanceof UiState.Success) {

@@ -84,7 +84,8 @@ dependencies {
 
     // Image loading / caching
     implementation 'com.github.bumptech.glide:glide:4.16.0'
-    implementation 'de.hdodenhof:circleimageview:3.1.0' // Para vistas de imagen circulares
+    implementation 'de.hdodenhof:circleimageview:3.1.0'
+    implementation libs.swiperefreshlayout// Para vistas de imagen circulares
 
     // TESTING Y VALIDACIÓN
     testImplementation 'junit:junit:4.13.2'

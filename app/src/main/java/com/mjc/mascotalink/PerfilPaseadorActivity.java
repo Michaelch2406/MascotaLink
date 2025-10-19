@@ -40,11 +40,13 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 
 import java.io.IOException;
@@ -58,6 +60,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import androidx.core.widget.NestedScrollView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
+
+import com.google.android.material.tabs.TabLayoutMediator;
+import com.mjc.mascota.ui.perfil.GaleriaPerfilAdapter;
+
+import com.google.firebase.storage.FirebaseStorage;
+import com.mjc.mascota.ui.perfil.ResenaAdapter;
+
 public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "PerfilPaseadorActivity";
@@ -66,7 +79,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private FirebaseFirestore db;
 
     // Views
-    private ImageView ivAvatar, ivVerificadoBadge, ivVideoThumbnail;
+    private ViewPager2 viewPagerGaleria;
+    private TabLayout tabLayoutDots;
+    private ImageButton btnFavorito;
+    private ImageView ivVerificadoBadge, ivVideoThumbnail;
     private TextView tvNombre, tvRol, tvVerificado, tvPrecio, tvDescripcion, tvDisponibilidad, tvTiposPerros, tvZonasServicioNombres;
     private TextView tvExperienciaAnos, tvExperienciaDesde;
     private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
@@ -88,6 +104,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private boolean isContentVisible = false;
     private String paseadorId;
 
+    private RecyclerView recyclerViewResenas;
+    private ResenaAdapter resenaAdapter;
+    private List<Resena> resenasList = new ArrayList<>();
+    private DocumentSnapshot lastVisibleResena = null;
+    private boolean isLoadingResenas = false;
+
     // Listeners for real-time updates
     private ListenerRegistration usuarioListener;
     private ListenerRegistration paseadorListener;
@@ -107,6 +129,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         initViews();
         setupListeners();
         setupTabs();
+        setupViewPager(new ArrayList<>()); // Inicializar con lista vacía
+        setupResenasRecyclerView();
 
         paseadorId = getIntent().getStringExtra("paseadorId");
         String viewerRole = getIntent().getStringExtra("viewerRole");
@@ -164,7 +188,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     private void initViews() {
-        ivAvatar = findViewById(R.id.iv_avatar);
+        viewPagerGaleria = findViewById(R.id.view_pager_galeria);
+        tabLayoutDots = findViewById(R.id.tab_layout_dots);
+        btnFavorito = findViewById(R.id.btn_favorito);
         tvNombre = findViewById(R.id.tv_nombre);
         tvRol = findViewById(R.id.tv_rol);
         ivVerificadoBadge = findViewById(R.id.iv_verificado_badge);
@@ -224,13 +250,92 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
         skeletonLayout = findViewById(R.id.skeleton_layout);
         scrollViewContent = findViewById(R.id.scroll_view_content);
+        recyclerViewResenas = findViewById(R.id.recycler_view_resenas);
 
     }
 
     @SuppressWarnings("unchecked")
+    private void setupResenasRecyclerView() {
+        recyclerViewResenas.setLayoutManager(new LinearLayoutManager(this));
+        resenaAdapter = new ResenaAdapter(this, resenasList);
+        recyclerViewResenas.setAdapter(resenaAdapter);
+    }
+
+    private void cargarMasResenas() {
+        if (isLoadingResenas) return;
+        isLoadingResenas = true;
+
+        Query query = db.collection("resenas")
+                .whereEqualTo("paseador_ref", db.collection("paseadores").document(paseadorId))
+                .orderBy("fecha_creacion", Query.Direction.DESCENDING)
+                .limit(10);
+
+        if (lastVisibleResena != null) {
+            query = query.startAfter(lastVisibleResena);
+        }
+
+        query.get().addOnSuccessListener(queryDocumentSnapshots -> {
+            if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
+                isLoadingResenas = false;
+                return;
+            }
+
+            lastVisibleResena = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
+
+            List<Resena> nuevasResenas = new ArrayList<>();
+            List<Task<DocumentSnapshot>> userTasks = new ArrayList<>();
+
+            for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                Resena resena = doc.toObject(Resena.class);
+                resena.setId(doc.getId());
+                nuevasResenas.add(resena);
+
+                DocumentReference userRef = doc.getDocumentReference("dueño_ref");
+                if (userRef != null) {
+                    userTasks.add(userRef.get());
+                }
+            }
+
+            if (userTasks.isEmpty()) {
+                isLoadingResenas = false;
+                return;
+            }
+
+            Tasks.whenAllSuccess(userTasks).addOnSuccessListener(userDocs -> {
+                for (int i = 0; i < userDocs.size(); i++) {
+                    DocumentSnapshot userDoc = (DocumentSnapshot) userDocs.get(i);
+                    if (userDoc.exists()) {
+                        nuevasResenas.get(i).setAutorNombre(userDoc.getString("nombre_display"));
+                        nuevasResenas.get(i).setAutorFotoUrl(userDoc.getString("foto_perfil"));
+                    }
+                }
+                resenaAdapter.addResenas(nuevasResenas);
+                isLoadingResenas = false;
+            });
+
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error al cargar reseñas", e);
+            isLoadingResenas = false;
+        });
+    }
+
     private void setupListeners() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+
+        btnFavorito.setOnClickListener(v -> {
+            // Lógica para añadir/quitar de favoritos
+            // Esto es solo un ejemplo visual, la lógica de guardado debe implementarse
+            if (v.isSelected()) {
+                ((ImageButton) v).setImageResource(R.drawable.ic_corazon);
+                v.setSelected(false);
+                showToast("Eliminado de favoritos");
+            } else {
+                ((ImageButton) v).setImageResource(R.drawable.ic_corazon_lleno);
+                v.setSelected(true);
+                showToast("Añadido a favoritos");
+            }
+        });
 
         fabReservar.setOnClickListener(v -> showToast("Próximamente: Reservar"));
         btnMensaje.setOnClickListener(v -> showToast("Próximamente: Enviar Mensaje"));
@@ -271,6 +376,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
             finish();
+        });
+
+        scrollViewContent.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            if (v.getChildAt(v.getChildCount() - 1) != null) {
+                if ((scrollY >= (v.getChildAt(v.getChildCount() - 1).getMeasuredHeight() - v.getMeasuredHeight())) &&
+                        scrollY > oldScrollY) {
+                    cargarMasResenas();
+                }
+            }
         });
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
@@ -321,6 +435,18 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
     }
 
+    private void setupViewPager(List<String> imageUrls) {
+        GaleriaPerfilAdapter adapter = new GaleriaPerfilAdapter(this, imageUrls);
+        viewPagerGaleria.setAdapter(adapter);
+
+        new TabLayoutMediator(tabLayoutDots, viewPagerGaleria, (tab, position) -> {
+            // Este callback se usa para customizar los tabs, pero solo necesitamos los puntos.
+            // El drawable selector se encarga de cambiar el estado visual.
+        }).attach();
+
+        tabLayoutDots.setVisibility(imageUrls.size() > 1 ? View.VISIBLE : View.GONE);
+    }
+
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
@@ -366,11 +492,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
             if (usuarioDoc != null && usuarioDoc.exists()) {
                 tvNombre.setText(usuarioDoc.getString("nombre_display"));
-                Glide.with(this)
-                        .load(usuarioDoc.getString("foto_perfil"))
-                        .circleCrop()
-                        .placeholder(R.drawable.bg_avatar_circle)
-                        .into(ivAvatar);
 
                 Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
                 if (fechaRegistro != null) {
@@ -381,6 +502,34 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 if (ultimaConexion != null) {
                     tvUltimaConexion.setText(String.format("Últ. conexión: %s", formatUltimaConexion(ultimaConexion)));
                 }
+
+                // Cargar la galería de fotos
+                List<String> galeriaPaths = (List<String>) usuarioDoc.get("galeria_paseos");
+                if (galeriaPaths != null && !galeriaPaths.isEmpty()) {
+                    List<Task<android.net.Uri>> urlTasks = new ArrayList<>();
+                    FirebaseStorage storage = FirebaseStorage.getInstance();
+                    for (String path : galeriaPaths) {
+                        urlTasks.add(storage.getReference().child(path).getDownloadUrl());
+                    }
+
+                    Tasks.whenAllSuccess(urlTasks).addOnSuccessListener(urls -> {
+                        List<String> urlStrings = new ArrayList<>();
+                        for (Object urlObject : urls) {
+                            android.net.Uri url = (android.net.Uri) urlObject;
+                            urlStrings.add(url.toString());
+                        }
+                        setupViewPager(urlStrings);
+                    });
+                } else {
+                    // Si no hay galería, mostrar solo la foto de perfil
+                    List<String> fotoPerfil = new ArrayList<>();
+                    String fotoUrl = usuarioDoc.getString("foto_perfil");
+                    if (fotoUrl != null) {
+                        fotoPerfil.add(fotoUrl);
+                    }
+                    setupViewPager(fotoPerfil);
+                }
+
                 showContent();
             } else {
                 Log.d(TAG, "El documento de usuario no existe o está vacío");
@@ -605,7 +754,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     @Override
     public void onMapReady(GoogleMap googleMap) {
         this.googleMap = googleMap;
-        this.googleMap.getUiSettings().setAllGesturesEnabled(false);
+        // --- MEJORA 4: MAPA MEJORADO ---
+        this.googleMap.getUiSettings().setZoomControlsEnabled(true);
+        this.googleMap.getUiSettings().setScrollGesturesEnabled(true);
+        this.googleMap.getUiSettings().setZoomGesturesEnabled(true);
+        this.googleMap.getUiSettings().setTiltGesturesEnabled(true);
+        this.googleMap.getUiSettings().setRotateGesturesEnabled(true);
+        // --- FIN MEJORA 4 ---
 
         String paseadorId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
         if (paseadorId == null) {

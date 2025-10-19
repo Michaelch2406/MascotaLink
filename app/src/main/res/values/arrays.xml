@@ -19,4 +19,20 @@
         <item>Schnauzer</item>
     </string-array>
 
+    <string-array name="ordenamiento_busqueda">
+        <item>Distancia (más cercano)</item>
+        <item>Precio (menor a mayor)</item>
+        <item>Precio (mayor a menor)</item>
+        <item>Calificación (mejor a peor)</item>
+    </string-array>
+
+    <array name="initial_range_slider_values_distancia">
+        <item>0.0</item>
+        <item>50.0</item>
+    </array>
+
+    <array name="initial_range_slider_values_precio">
+        <item>0.0</item>
+        <item>100.0</item>
+    </array>
 </resources>
