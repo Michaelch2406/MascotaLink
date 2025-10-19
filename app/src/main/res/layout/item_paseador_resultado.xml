@@ -16,15 +16,13 @@
         android:padding="16dp">
 
         <!-- Avatar del Paseador -->
-        <com.google.android.material.imageview.ShapeableImageView
+        <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/paseador_avatar"
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:scaleType="centerCrop"
+            android:src="@drawable/selfie"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" 
-            tools:src="@drawable/selfie" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!-- Nombre del Paseador -->
         <TextView

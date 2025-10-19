@@ -17,12 +17,10 @@
         android:gravity="center_horizontal">
 
         <!-- Avatar del paseador -->
-        <ImageView
+        <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/iv_avatar_popular"
             android:layout_width="80dp"
             android:layout_height="80dp"
-            android:background="@drawable/bg_avatar_circle"
-            android:scaleType="centerCrop"
             android:src="@drawable/paseador_mascota"/>
 
         <!-- Nombre del paseador -->

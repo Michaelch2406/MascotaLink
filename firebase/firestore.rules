@@ -31,6 +31,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Colección denormalizada para búsqueda
+    match /paseadores_search/{paseadorId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Solo las Cloud Functions pueden escribir aquí
+    }
+
     // Subcolecciones bajo usuarios
     match /usuarios/{userId}/metodos_pago/{metodoId} {
       allow read, write: if isOwner(userId);
@@ -51,6 +57,13 @@ service cloud.firestore {
     match /paseadores/{userId}/zonas_servicio/{zonaId} {
       allow read: if request.auth != null;
       allow write: if isOwner(userId);
+    }
+
+    // Reseñas
+    match /resenas/{resenaId} {
+      allow read: if request.auth != null;
+      // La escritura se podría limitar a un dueño que haya completado un servicio con el paseador
+      allow write: if false; 
     }
 
     // Servicios

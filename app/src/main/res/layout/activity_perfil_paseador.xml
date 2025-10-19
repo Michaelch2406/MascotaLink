@@ -16,49 +16,104 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:navigationIconTint="@color/gray_dark">
+            android:layout_height="?attr/actionBarSize">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="Paseador"
-                android:textColor="@android:color/black"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
-            <ImageButton
-                android:id="@+id/btn_favorito"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_corazon"
-                android:layout_marginEnd="16dp"
-                app:tint="@color/icon_color" />
+                <ImageView
+                    android:id="@+id/iv_back"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_arrow_back"
+                    android:layout_centerVertical="true"
+                    android:layout_alignParentStart="true"
+                    android:contentDescription="Atrás"
+                    app:tint="@color/gray_dark" />
 
-            <ImageButton
-                android:id="@+id/iv_edit_perfil"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_edit"
-                android:layout_marginEnd="16dp"
-                app:tint="@color/blue_primary"
-                android:contentDescription="Editar Perfil"/>
+                <TextView
+                    android:id="@+id/toolbar_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_toEndOf="@id/iv_back"
+                    android:layout_toStartOf="@id/btn_favorito"
+                    android:gravity="center"
+                    android:text="Paseador"
+                    android:textColor="@android:color/black"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
 
-            <ImageButton
-                android:id="@+id/btn_mensaje"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_messages"
-                android:layout_marginEnd="16dp"
-                app:tint="@color/icon_color" />
+                <ImageButton
+                    android:id="@+id/btn_favorito"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/iv_edit_perfil"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_corazon"
+                    android:layout_marginEnd="16dp"
+                    app:tint="@color/icon_color" />
+
+                <ImageButton
+                    android:id="@+id/iv_edit_perfil"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/btn_mensaje"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_edit"
+                    android:layout_marginEnd="16dp"
+                    app:tint="@color/blue_primary"
+                    android:contentDescription="Editar Perfil"/>
+
+                <ImageButton
+                    android:id="@+id/btn_mensaje"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_messages"
+                    android:layout_marginEnd="16dp"
+                    app:tint="@color/icon_color" />
+
+                <ImageButton
+                    android:id="@+id/btn_favorito"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/iv_edit_perfil"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_corazon"
+                    android:layout_marginEnd="16dp"
+                    app:tint="@color/icon_color" />
+
+                <ImageButton
+                    android:id="@+id/iv_edit_perfil"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/btn_mensaje"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_edit"
+                    android:layout_marginEnd="16dp"
+                    app:tint="@color/blue_primary"
+                    android:contentDescription="Editar Perfil"/>
+
+                <ImageButton
+                    android:id="@+id/btn_mensaje"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_messages"
+                    android:layout_marginEnd="16dp"
+                    app:tint="@color/icon_color" />
+
+            </RelativeLayout>
 
         </com.google.android.material.appbar.MaterialToolbar>
 
@@ -121,20 +176,20 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Galería de Fotos Deslizable -->
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/view_pager_galeria"
-                android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:layout_gravity="center" />
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/iv_avatar"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center"
+                android:src="@drawable/paseador_mascota" />
 
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tab_layout_dots"
-                android:layout_width="match_parent"
+            <Button
+                android:id="@+id/btn_ver_galeria"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:tabBackground="@drawable/tab_selector"
-                app:tabGravity="center"
-                app:tabIndicatorHeight="0dp" />
+                android:layout_gravity="center"
+                android:text="Ver galería" />
 
             <TextView
                 android:id="@+id/tv_nombre"

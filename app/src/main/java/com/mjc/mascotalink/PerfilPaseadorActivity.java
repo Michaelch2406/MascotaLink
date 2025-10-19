@@ -79,6 +79,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private FirebaseFirestore db;
 
     // Views
+    private de.hdodenhof.circleimageview.CircleImageView ivAvatar;
+    private Button btnVerGaleria;
     private ViewPager2 viewPagerGaleria;
     private TabLayout tabLayoutDots;
     private ImageButton btnFavorito;
@@ -110,6 +112,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private DocumentSnapshot lastVisibleResena = null;
     private boolean isLoadingResenas = false;
 
+    private ArrayList<String> galeriaImageUrls = new ArrayList<>();
+
     // Listeners for real-time updates
     private ListenerRegistration usuarioListener;
     private ListenerRegistration paseadorListener;
@@ -129,7 +133,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         initViews();
         setupListeners();
         setupTabs();
-        setupViewPager(new ArrayList<>()); // Inicializar con lista vacía
+
         setupResenasRecyclerView();
 
         paseadorId = getIntent().getStringExtra("paseadorId");
@@ -140,11 +144,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             paseadorId = currentUserId;
         }
 
+        TextView toolbarTitle = findViewById(R.id.toolbar_title);
+
         if (paseadorId != null) {
             boolean isOwnerViewing = "DUEÑO".equalsIgnoreCase(viewerRole);
             boolean isOwnProfile = paseadorId.equals(currentUserId);
 
             if (isOwnProfile) {
+                toolbarTitle.setText("Perfil");
+                btnFavorito.setVisibility(View.GONE);
                 // Paseador viendo su propio perfil
                 fabReservar.setVisibility(View.GONE);
                 btnMensaje.setVisibility(View.GONE);
@@ -155,6 +163,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 soporte_section.setVisibility(View.VISIBLE);
                 btnCerrarSesion.setVisibility(View.VISIBLE);
             } else if (isOwnerViewing) {
+                toolbarTitle.setText("Paseador");
                 // Dueño viendo el perfil de un paseador
                 fabReservar.setVisibility(View.VISIBLE);
                 btnMensaje.setVisibility(View.VISIBLE);
@@ -165,6 +174,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 soporte_section.setVisibility(View.GONE);
                 btnCerrarSesion.setVisibility(View.GONE);
             } else {
+                toolbarTitle.setText("Paseador");
                 // Otro caso (ej. no logueado, o un paseador viendo a otro)
                 fabReservar.setVisibility(View.GONE);
                 btnMensaje.setVisibility(View.GONE);
@@ -188,8 +198,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     private void initViews() {
-        viewPagerGaleria = findViewById(R.id.view_pager_galeria);
-        tabLayoutDots = findViewById(R.id.tab_layout_dots);
+        ivAvatar = findViewById(R.id.iv_avatar);
+        btnVerGaleria = findViewById(R.id.btn_ver_galeria);
         btnFavorito = findViewById(R.id.btn_favorito);
         tvNombre = findViewById(R.id.tv_nombre);
         tvRol = findViewById(R.id.tv_rol);
@@ -321,7 +331,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
     private void setupListeners() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        ImageView ivBack = findViewById(R.id.iv_back);
+        ivBack.setOnClickListener(v -> finish());
 
         btnFavorito.setOnClickListener(v -> {
             // Lógica para añadir/quitar de favoritos
@@ -334,6 +345,16 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 ((ImageButton) v).setImageResource(R.drawable.ic_corazon_lleno);
                 v.setSelected(true);
                 showToast("Añadido a favoritos");
+            }
+        });
+
+        btnVerGaleria.setOnClickListener(v -> {
+            if (galeriaImageUrls != null && !galeriaImageUrls.isEmpty()) {
+                Intent intent = new Intent(PerfilPaseadorActivity.this, GaleriaActivity.class);
+                intent.putStringArrayListExtra("imageUrls", galeriaImageUrls);
+                startActivity(intent);
+            } else {
+                showToast("No hay imágenes en la galería.");
             }
         });
 
@@ -435,17 +456,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
     }
 
-    private void setupViewPager(List<String> imageUrls) {
-        GaleriaPerfilAdapter adapter = new GaleriaPerfilAdapter(this, imageUrls);
-        viewPagerGaleria.setAdapter(adapter);
 
-        new TabLayoutMediator(tabLayoutDots, viewPagerGaleria, (tab, position) -> {
-            // Este callback se usa para customizar los tabs, pero solo necesitamos los puntos.
-            // El drawable selector se encarga de cambiar el estado visual.
-        }).attach();
-
-        tabLayoutDots.setVisibility(imageUrls.size() > 1 ? View.VISIBLE : View.GONE);
-    }
 
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
@@ -493,6 +504,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             if (usuarioDoc != null && usuarioDoc.exists()) {
                 tvNombre.setText(usuarioDoc.getString("nombre_display"));
 
+                Glide.with(this)
+                        .load(usuarioDoc.getString("foto_perfil"))
+                        .placeholder(R.drawable.ic_person)
+                        .into(ivAvatar);
+
                 Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
                 if (fechaRegistro != null) {
                     tvMiembroDesde.setText(String.format("Se unió en %s", formatMiembroDesde(fechaRegistro)));
@@ -504,30 +520,30 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 }
 
                 // Cargar la galería de fotos
-                List<String> galeriaPaths = (List<String>) usuarioDoc.get("galeria_paseos");
-                if (galeriaPaths != null && !galeriaPaths.isEmpty()) {
-                    List<Task<android.net.Uri>> urlTasks = new ArrayList<>();
+                String galeriaFolderPath = usuarioDoc.getString("galeria_paseos");
+                if (galeriaFolderPath != null && !galeriaFolderPath.isEmpty()) {
+                    btnVerGaleria.setVisibility(View.VISIBLE);
                     FirebaseStorage storage = FirebaseStorage.getInstance();
-                    for (String path : galeriaPaths) {
-                        urlTasks.add(storage.getReference().child(path).getDownloadUrl());
-                    }
-
-                    Tasks.whenAllSuccess(urlTasks).addOnSuccessListener(urls -> {
-                        List<String> urlStrings = new ArrayList<>();
-                        for (Object urlObject : urls) {
-                            android.net.Uri url = (android.net.Uri) urlObject;
-                            urlStrings.add(url.toString());
-                        }
-                        setupViewPager(urlStrings);
-                    });
+                    storage.getReference().child(galeriaFolderPath).listAll()
+                        .addOnSuccessListener(listResult -> {
+                            List<Task<android.net.Uri>> urlTasks = new ArrayList<>();
+                            for (com.google.firebase.storage.StorageReference item : listResult.getItems()) {
+                                urlTasks.add(item.getDownloadUrl());
+                            }
+                            Tasks.whenAllSuccess(urlTasks).addOnSuccessListener(urls -> {
+                                galeriaImageUrls.clear();
+                                for (Object urlObject : urls) {
+                                    android.net.Uri url = (android.net.Uri) urlObject;
+                                    galeriaImageUrls.add(url.toString());
+                                }
+                            });
+                        })
+                        .addOnFailureListener(exception -> {
+                            Log.e(TAG, "Error al listar archivos de la galería", exception);
+                            btnVerGaleria.setVisibility(View.GONE);
+                        });
                 } else {
-                    // Si no hay galería, mostrar solo la foto de perfil
-                    List<String> fotoPerfil = new ArrayList<>();
-                    String fotoUrl = usuarioDoc.getString("foto_perfil");
-                    if (fotoUrl != null) {
-                        fotoPerfil.add(fotoUrl);
-                    }
-                    setupViewPager(fotoPerfil);
+                    btnVerGaleria.setVisibility(View.GONE);
                 }
 
                 showContent();
@@ -537,9 +553,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
 
         // Listener for the 'paseadores' document
-        paseadorListener = db.collection("paseadores").document(paseadorId).addSnapshotListener((paseadorDoc, e) -> {
-            if (e != null) {
-                Log.e(TAG, "Error al escuchar documento de paseador", e);
+        paseadorListener = db.collection("paseadores").document(paseadorId).addSnapshotListener((paseadorDoc, error) -> {
+            if (error != null) {
+                Log.e(TAG, "Error al escuchar documento de paseador", error);
                 Toast.makeText(this, "Error al cargar el perfil.", Toast.LENGTH_SHORT).show();
                 return;
             }

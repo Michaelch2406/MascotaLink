@@ -243,6 +243,12 @@
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
+            android:name=".GaleriaActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
             android:name="com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity"
             android:exported="false"
             android:screenOrientation="portrait"

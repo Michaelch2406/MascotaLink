@@ -362,7 +362,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
 
 
-        builder.setPositiveButton("Aplicar", (dialog, which) -> {
+        final AlertDialog dialog = builder.create();
+
+        dialogView.findViewById(R.id.button_aplicar_filtros).setOnClickListener(v -> {
             Filtros nuevosFiltros = new Filtros();
             nuevosFiltros.setOrden(spinnerOrdenar.getSelectedItem().toString());
             nuevosFiltros.setMaxDistancia(sliderDistancia.getValues().get(1));
@@ -377,9 +379,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             nuevosFiltros.setTamanosMascota(tamanos);
 
             viewModel.aplicarFiltros(nuevosFiltros);
+            dialog.dismiss();
         });
-
-        builder.setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss());
 
         dialogView.findViewById(R.id.button_limpiar_filtros).setOnClickListener(v -> {
             viewModel.limpiarFiltros();
@@ -391,10 +392,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             ((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_pequeno)).setChecked(false);
             ((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_mediano)).setChecked(false);
             ((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_grande)).setChecked(false);
-
         });
 
-        AlertDialog dialog = builder.create();
         dialog.show();
     }
 
