@@ -272,7 +272,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             soporte_section.setVisibility(View.VISIBLE);
             btnCerrarSesion.setVisibility(View.VISIBLE);
 
-        } else if ("DUENO".equals(currentUserRole)) {
+        } else if ("DUEÑO".equals(currentUserRole)) {
             // Case 2: DUEÑO viewing a PASEADOR's profile
             ivEditPerfil.setVisibility(View.GONE);
             btnMensaje.setVisibility(View.VISIBLE);
