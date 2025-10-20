@@ -165,13 +165,14 @@
 
                         <ImageButton
                             android:id="@+id/btn_favorito"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
                             android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
+                            android:layout_alignTop="@+id/tv_nombre"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:contentDescription="Agregar a favoritos"
                             android:padding="4dp"
+                            android:scaleType="fitCenter"
                             android:src="@drawable/ic_corazon"
                             android:visibility="gone"
                             tools:visibility="visible" />

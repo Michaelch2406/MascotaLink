@@ -195,6 +195,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ivAvatar = findViewById(R.id.iv_avatar);
         btnVerGaleria = findViewById(R.id.btn_ver_galeria);
         btnFavorito = findViewById(R.id.btn_favorito); // Now references the button next to the name
+        if (btnFavorito == null) {
+            Log.e(TAG, "ERROR: btn_favorito es NULL. Verifica el ID en el XML.");
+        } else {
+            Log.d(TAG, "btn_favorito inicializado correctamente");
+        }
         tvNombre = findViewById(R.id.tv_nombre);
         tvRol = findViewById(R.id.tv_rol);
         ivVerificadoBadge = findViewById(R.id.iv_verificado_badge);
@@ -279,6 +284,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             btnFavorito.setVisibility(View.VISIBLE); // Can add to favorites
             fabReservar.setVisibility(View.VISIBLE);
 
+            // LOG PARA DEPURACIÓN
+            Log.d(TAG, "Rol DUEÑO detectado - btn_favorito debe ser VISIBLE");
+
             ivEditZonas.setVisibility(View.GONE);
             ivEditDisponibilidad.setVisibility(View.GONE);
             ajustes_section.setVisibility(View.GONE);
@@ -287,6 +295,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
             // Setup favorite button functionality
             configurarBotonFavorito(currentUserId, paseadorId);
+
+            // Post-execution log to check final visibility
+            btnFavorito.post(() -> Log.d(TAG, "btn_favorito visibility: " + btnFavorito.getVisibility()));
 
         } else {
             // Case 3: Read-only view (not logged in, another paseador, etc.)
