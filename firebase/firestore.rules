@@ -42,6 +42,11 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
+    // Subcolección para los paseadores favoritos de un dueño
+    match /usuarios/{userId}/favoritos/{paseadorId} {
+      allow read, write, delete: if isOwner(userId);
+    }
+
     // Mascotas dentro de duenos
     match /duenos/{duenoId}/mascotas/{mascotaId} {
       allow read: if request.auth != null;
