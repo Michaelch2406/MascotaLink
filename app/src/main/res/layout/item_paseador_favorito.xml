@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginEnd="8dp"
+    android:layout_marginBottom="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp">
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/iv_avatar_favorito"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:src="@drawable/paseador_mascota"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_nombre_favorito"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:textAppearance="@style/TextAppearance.Mascota.Title"
+            android:textSize="16sp" 
+            app:layout_constraintEnd_toStartOf="@+id/btn_quitar_favorito"
+            app:layout_constraintStart_toEndOf="@+id/iv_avatar_favorito"
+            app:layout_constraintTop_toTopOf="@+id/iv_avatar_favorito"
+            tools:text="Sofía Ramírez" />
+
+        <RatingBar
+            android:id="@+id/rating_bar_favorito"
+            style="?android:attr/ratingBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:isIndicator="true"
+            android:numStars="5"
+            android:stepSize="0.1"
+            app:layout_constraintStart_toStartOf="@+id/tv_nombre_favorito"
+            app:layout_constraintTop_toBottomOf="@+id/tv_nombre_favorito"
+            tools:rating="4.8" />
+
+        <TextView
+            android:id="@+id/tv_precio_favorito"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/green_success"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="@+id/rating_bar_favorito"
+            app:layout_constraintStart_toEndOf="@+id/rating_bar_favorito"
+            app:layout_constraintTop_toTopOf="@+id/rating_bar_favorito"
+            tools:text="$8/hora" />
+
+        <ImageButton
+            android:id="@+id/btn_quitar_favorito"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Quitar de favoritos"
+            android:src="@drawable/ic_corazon_lleno"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/colorError" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

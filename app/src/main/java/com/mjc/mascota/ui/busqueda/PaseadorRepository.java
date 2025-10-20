@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -123,9 +124,19 @@ public class PaseadorRepository {
         MutableLiveData<UiState<PaseadorSearchResult>> liveData = new MutableLiveData<>();
         liveData.setValue(new UiState.Loading<>());
 
-        Query firestoreQuery = db.collection("paseadores_search").whereEqualTo("activo", true);
+        // Obtener el usuario actual
+        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
 
-        // Aplicar filtro de texto
+        // Tarea para obtener los favoritos del usuario
+        Task<QuerySnapshot> favoritosTask;
+        if (currentUser != null) {
+            favoritosTask = db.collection("usuarios").document(currentUser.getUid()).collection("favoritos").get();
+        } else {
+            favoritosTask = Tasks.forResult(null); // Tarea vacía si no hay usuario
+        }
+
+        // Tarea para la búsqueda de paseadores (lógica existente)
+        Query firestoreQuery = db.collection("paseadores_search").whereEqualTo("activo", true);
         if (query != null && !query.isEmpty()) {
             String queryNormalizado = query.toLowerCase();
             firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
@@ -172,46 +183,54 @@ public class PaseadorRepository {
         }
 
         firestoreQuery = firestoreQuery.limit(15);
-
         if (lastVisible != null) {
             firestoreQuery = firestoreQuery.startAfter(lastVisible);
         }
+        Task<QuerySnapshot> busquedaTask = firestoreQuery.get();
 
-        firestoreQuery.get()
-            .addOnSuccessListener(snapshots -> {
-                if (snapshots == null || snapshots.isEmpty()) {
-                    Log.d(TAG, "Búsqueda no arrojó resultados para query: " + query);
-                    liveData.setValue(new UiState.Empty<>());
-                    return;
+        // Combinar ambas tareas
+        Tasks.whenAllSuccess(favoritosTask, busquedaTask).addOnSuccessListener(results -> {
+            QuerySnapshot favoritosSnapshot = (QuerySnapshot) results.get(0);
+            QuerySnapshot busquedaSnapshot = (QuerySnapshot) results.get(1);
+
+            java.util.Set<String> favoritosIds = new java.util.HashSet<>();
+            if (favoritosSnapshot != null) {
+                for (DocumentSnapshot doc : favoritosSnapshot) {
+                    favoritosIds.add(doc.getId());
                 }
+            }
 
-                Log.d(TAG, "Búsqueda exitosa para query: " + query + ", encontrados: " + snapshots.size());
+            if (busquedaSnapshot == null || busquedaSnapshot.isEmpty()) {
+                liveData.setValue(new UiState.Empty<>());
+                return;
+            }
 
-                DocumentSnapshot newLastVisible = snapshots.getDocuments().get(snapshots.size() - 1);
-                ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+            DocumentSnapshot newLastVisible = busquedaSnapshot.getDocuments().get(busquedaSnapshot.size() - 1);
+            ArrayList<PaseadorResultado> resultados = new ArrayList<>();
 
-                for (DocumentSnapshot doc : snapshots) {
-                    PaseadorResultado resultado = new PaseadorResultado();
-                    resultado.setId(doc.getId());
-                    resultado.setNombre(getStringSafely(doc, "nombre_display", "N/A"));
-                    resultado.setFotoUrl(getStringSafely(doc, "foto_perfil", null));
-                    resultado.setCalificacion(getDoubleSafely(doc, "calificacion_promedio", 0.0));
-                    resultado.setTotalResenas(getLongSafely(doc, "num_servicios_completados", 0L).intValue());
-                    resultado.setTarifaPorHora(getDoubleSafely(doc, "tarifa_por_hora", 0.0));
-                    resultado.setAnosExperiencia(getLongSafely(doc, "anos_experiencia", 0L).intValue());
-                    // La zona principal ahora se debe obtener por separado si no está en la colección de búsqueda
-                    // Por ahora, la dejaremos fuera para simplificar.
-                    resultado.setZonaPrincipal("Sin zona especificada"); 
-                    resultados.add(resultado);
-                }
+            for (DocumentSnapshot doc : busquedaSnapshot) {
+                PaseadorResultado resultado = new PaseadorResultado();
+                resultado.setId(doc.getId());
+                resultado.setNombre(getStringSafely(doc, "nombre_display", "N/A"));
+                resultado.setFotoUrl(getStringSafely(doc, "foto_perfil", null));
+                resultado.setCalificacion(getDoubleSafely(doc, "calificacion_promedio", 0.0));
+                resultado.setTotalResenas(getLongSafely(doc, "num_servicios_completados", 0L).intValue());
+                resultado.setTarifaPorHora(getDoubleSafely(doc, "tarifa_por_hora", 0.0));
+                resultado.setAnosExperiencia(getLongSafely(doc, "anos_experiencia", 0L).intValue());
+                resultado.setZonaPrincipal("Sin zona especificada");
+                
+                // Marcar como favorito si el ID está en la lista
+                resultado.setFavorito(favoritosIds.contains(doc.getId()));
 
-                liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible)));
+                resultados.add(resultado);
+            }
 
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error en la búsqueda de paseadores para query: " + query, e);
-                liveData.setValue(new UiState.Error<>("Error al realizar la búsqueda."));
-            });
+            liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible)));
+
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error en la búsqueda de paseadores para query: " + query, e);
+            liveData.setValue(new UiState.Error<>("Error al realizar la búsqueda."));
+        });
 
         return liveData;
     }
@@ -253,5 +272,42 @@ public class PaseadorRepository {
         }
         listeners.clear();
         Log.d(TAG, "Todos los listeners de Firestore han sido limpiados.");
+    }
+
+    public void toggleFavorito(String paseadorId, final boolean add) {
+        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+
+        String userId = currentUser.getUid();
+        DocumentReference favRef = db.collection("usuarios").document(userId).collection("favoritos").document(paseadorId);
+
+        if (add) {
+            // Lógica para AÑADIR a favoritos con desnormalización
+            DocumentReference usuarioPaseadorRef = db.collection("usuarios").document(paseadorId);
+            DocumentReference perfilPaseadorRef = db.collection("paseadores").document(paseadorId);
+
+            Task<DocumentSnapshot> usuarioTask = usuarioPaseadorRef.get();
+            Task<DocumentSnapshot> paseadorTask = perfilPaseadorRef.get();
+
+            Tasks.whenAllSuccess(usuarioTask, paseadorTask).addOnSuccessListener(results -> {
+                DocumentSnapshot usuarioDoc = (DocumentSnapshot) results.get(0);
+                DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
+
+                if (usuarioDoc.exists() && paseadorDoc.exists()) {
+                    java.util.Map<String, Object> favoritoData = new java.util.HashMap<>();
+                    favoritoData.put("fecha_agregado", com.google.firebase.firestore.FieldValue.serverTimestamp());
+                    favoritoData.put("paseador_ref", perfilPaseadorRef);
+                    favoritoData.put("nombre_display", usuarioDoc.getString("nombre_display"));
+                    favoritoData.put("foto_perfil_url", usuarioDoc.getString("foto_perfil"));
+                    favoritoData.put("calificacion_promedio", paseadorDoc.getDouble("calificacion_promedio"));
+                    favoritoData.put("precio_hora", paseadorDoc.getDouble("precio_hora"));
+
+                    favRef.set(favoritoData);
+                }
+            });
+        } else {
+            // Lógica para QUITAR de favoritos
+            favRef.delete();
+        }
     }
 }

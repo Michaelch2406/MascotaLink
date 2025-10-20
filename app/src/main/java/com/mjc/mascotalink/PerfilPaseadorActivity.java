@@ -568,7 +568,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     tvVerificado.setVisibility(View.GONE);
                 }
                 Double precio = paseadorDoc.getDouble("precio_hora");
-                tvPrecio.setText(precio != null ? String.format(Locale.getDefault(), "• $%.0f/hora", precio) : "");
+                tvPrecio.setText(precio != null ? String.format(Locale.getDefault(), "• $%.2f/hora", precio) : "");
                 tvPrecio.setVisibility(precio != null ? View.VISIBLE : View.GONE);
 
                 Long paseos = paseadorDoc.getLong("num_servicios_completados");

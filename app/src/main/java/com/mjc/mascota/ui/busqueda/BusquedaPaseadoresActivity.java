@@ -64,7 +64,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnMapReadyCallback { 
+public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnMapReadyCallback, PaseadorResultadoAdapter.OnItemClickListener, PaseadorResultadoAdapter.OnFavoritoToggleListener { 
 
     private static final String TAG = "BusquedaPaseadoresActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
@@ -212,27 +212,33 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         recyclerViewPopulares.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         popularesAdapter = new PaseadorResultadoAdapter();
         recyclerViewPopulares.setAdapter(popularesAdapter);
-
-        // Configurar el listener para los clicks
-        popularesAdapter.setOnItemClickListener(paseador -> {
-            // Acción al hacer click: ir al perfil del paseador
-            Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
-            intent.putExtra("paseadorId", paseador.getId());
-            intent.putExtra("viewerRole", "DUEÑO"); // Informar que un dueño está viendo el perfil
-            startActivity(intent);
-        });
+        popularesAdapter.setOnItemClickListener(this);
+        popularesAdapter.setOnFavoritoToggleListener(this);
 
         // Adapter para los resultados de búsqueda
         recyclerViewResultados.setLayoutManager(new LinearLayoutManager(this));
         resultadosAdapter = new PaseadorResultadoAdapter();
         recyclerViewResultados.setAdapter(resultadosAdapter);
-        resultadosAdapter.setOnItemClickListener(paseador -> {
-            // Acción al hacer click: ir al perfil del paseador
-            Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
-            intent.putExtra("paseadorId", paseador.getId());
-            intent.putExtra("viewerRole", "DUEÑO"); // Informar que un dueño está viendo el perfil
-            startActivity(intent);
-        });
+        resultadosAdapter.setOnItemClickListener(this);
+        resultadosAdapter.setOnFavoritoToggleListener(this);
+    }
+
+    @Override
+    public void onItemClick(PaseadorResultado paseador) {
+        // Acción al hacer click: ir al perfil del paseador
+        Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
+        intent.putExtra("paseadorId", paseador.getId());
+        intent.putExtra("viewerRole", "DUEÑO"); // Informar que un dueño está viendo el perfil
+        startActivity(intent);
+    }
+
+    @Override
+    public void onFavoritoToggle(String paseadorId, boolean add) {
+        viewModel.toggleFavorito(paseadorId, add);
+        // Forzar un refresco para ver el cambio del corazón inmediatamente.
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            viewModel.onSearchQueryChanged(searchAutocomplete.getText().toString());
+        }, 300); // Un pequeño delay para dar tiempo a que Firestore se actualice
     }
 
     private void setupSearch() {

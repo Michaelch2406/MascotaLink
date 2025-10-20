@@ -89,6 +89,13 @@ public class BusquedaViewModel extends ViewModel {
         executeSearch(currentQuery, true, _filtros.getValue());
     }
 
+    public void toggleFavorito(String paseadorId, boolean isFavorito) {
+        // Llama al repositorio para cambiar el estado de favorito.
+        // La UI se actualizará automáticamente si el repositorio emite nuevos datos,
+        // o se puede forzar una recarga si es necesario.
+        repository.toggleFavorito(paseadorId, isFavorito);
+    }
+
     private void executeSearch(String query, boolean isPaginating, Filtros filtros) {
         if (!isPaginating) {
             currentQuery = query;

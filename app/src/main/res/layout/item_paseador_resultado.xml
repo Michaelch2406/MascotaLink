@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView 
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -15,7 +14,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Avatar del Paseador -->
+        <!-- Avatar -->
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/paseador_avatar"
             android:layout_width="64dp"
@@ -24,72 +23,80 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <!-- Botón de Favorito -->
+        <ImageButton
+            android:id="@+id/btn_favorito_resultado"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Marcar como favorito"
+            android:src="@drawable/ic_corazon" 
+            app:tint="@color/colorError"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <!-- Nombre del Paseador -->
         <TextView
             android:id="@+id/paseador_nombre"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="@android:color/black"
+            android:textAppearance="@style/TextAppearance.Mascota.Title"
             android:textSize="16sp"
-            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@+id/btn_favorito_resultado"
             app:layout_constraintStart_toEndOf="@id/paseador_avatar"
             app:layout_constraintTop_toTopOf="@id/paseador_avatar"
-            app:layout_constraintEnd_toStartOf="@id/guideline_vertical"
-            tools:text="Alejandro Martinez" />
+            tools:text="Michael Christopher" />
+
+        <!-- Calificación (RatingBar) -->
+        <RatingBar
+            android:id="@+id/paseador_rating_bar"
+            style="?android:attr/ratingBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:isIndicator="true"
+            android:numStars="5"
+            android:stepSize="0.1"
+            app:layout_constraintStart_toStartOf="@id/paseador_nombre"
+            app:layout_constraintTop_toBottomOf="@id/paseador_nombre"
+            tools:rating="4.8" />
+
+        <!-- Total de Reseñas -->
+        <TextView
+            android:id="@+id/paseador_total_resenas"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:textColor="#6B7280"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="@+id/paseador_rating_bar"
+            app:layout_constraintStart_toEndOf="@+id/paseador_rating_bar"
+            app:layout_constraintTop_toTopOf="@+id/paseador_rating_bar"
+            tools:text="(120)" />
 
         <!-- Zona de Servicio -->
         <TextView
             android:id="@+id/paseador_zona"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:drawableStart="@drawable/ic_my_location" 
+            android:drawableStart="@drawable/ic_my_location"
             android:drawablePadding="4dp"
             android:ellipsize="end"
             android:maxLines="1"
+            android:textColor="#6B7280"
             android:textSize="12sp"
             app:drawableTint="#888888"
-            app:layout_constraintStart_toStartOf="@id/paseador_nombre"
-            app:layout_constraintTop_toBottomOf="@id/paseador_nombre"
-            tools:text="Quito Centro, La Carolina" />
-
-        <!-- Guía para separar la sección derecha -->
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/guideline_vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_constraintGuide_end="90dp" />
-
-        <!-- Calificación -->
-        <LinearLayout
-            android:id="@+id/paseador_calificacion_layout"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintStart_toStartOf="@id/paseador_rating_bar"
+            app:layout_constraintTop_toBottomOf="@id/paseador_rating_bar"
+            tools:text="Duchicela, Ecuador" />
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_corazon"
-                app:tint="@color/colorPrimary" />
-
-            <TextView
-                android:id="@+id/paseador_calificacion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textStyle="bold"
-                tools:text="4.9" />
-        </LinearLayout>
-
-        <!-- Tarifa -->
+        <!-- Tarifa por Hora -->
         <TextView
             android:id="@+id/paseador_tarifa"
             android:layout_width="wrap_content"
@@ -98,12 +105,12 @@
             android:background="@drawable/button_outline_background"
             android:paddingHorizontal="8dp"
             android:paddingVertical="4dp"
-            android:textColor="@color/colorPrimaryDark"
+            android:textColor="@color/green_success"
             android:textSize="12sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/paseador_calificacion_layout"
-            tools:text="$8.50/hora" />
+            app:layout_constraintTop_toBottomOf="@+id/paseador_zona"
+            tools:text="$10.60/hora" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

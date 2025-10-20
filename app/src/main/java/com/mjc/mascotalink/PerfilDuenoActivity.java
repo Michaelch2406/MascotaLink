@@ -53,6 +53,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private View skeletonLayout;
     private androidx.core.widget.NestedScrollView scrollViewContent;
     private boolean isContentVisible = false;
+    private View btnFavoritos; // Botón para favoritos
 
     // Listeners for real-time updates
     private ListenerRegistration duenoListener;
@@ -105,6 +106,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         // Ajustes Views
         ivEditPerfil = findViewById(R.id.iv_edit_perfil);
+        btnFavoritos = findViewById(R.id.btn_favoritos); // Botón de favoritos
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
@@ -216,6 +218,12 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             Intent intent = new Intent(PerfilDuenoActivity.this, EditarPerfilDuenoActivity.class);
             startActivity(intent);
         });
+
+        btnFavoritos.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilDuenoActivity.this, FavoritosActivity.class);
+            startActivity(intent);
+        });
+
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
         btnMetodosPago.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, MetodoPagoActivity.class);
