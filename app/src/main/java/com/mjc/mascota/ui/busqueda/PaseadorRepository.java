@@ -56,66 +56,72 @@ public class PaseadorRepository {
 
     private LiveData<UiState<List<PaseadorResultado>>> combineUserDataWithPaseadorData(QuerySnapshot userSnapshots) {
         MutableLiveData<UiState<List<PaseadorResultado>>> liveData = new MutableLiveData<>();
-        List<Task<DocumentSnapshot>> tasks = new ArrayList<>();
-        for (DocumentSnapshot userDoc : userSnapshots) {
-            tasks.add(db.collection("paseadores").document(userDoc.getId()).get());
-        }
 
-        Tasks.whenAllSuccess(tasks).addOnSuccessListener(paseadorDocs -> {
-            ArrayList<PaseadorResultado> resultados = new ArrayList<>();
-            if (paseadorDocs.isEmpty()) {
-                liveData.setValue(new UiState.Empty<>());
-                return;
+        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        Task<QuerySnapshot> favoritosTask = currentUser != null ? 
+            db.collection("usuarios").document(currentUser.getUid()).collection("favoritos").get() : 
+            Tasks.forResult(null);
+
+        favoritosTask.addOnSuccessListener(favoritosSnapshot -> {
+            java.util.Set<String> favoritosIds = new java.util.HashSet<>();
+            if (favoritosSnapshot != null) {
+                for (DocumentSnapshot doc : favoritosSnapshot) {
+                    favoritosIds.add(doc.getId());
+                }
             }
 
-            List<Task<QuerySnapshot>> zonaTasks = new ArrayList<>();
-            for (int i = 0; i < userSnapshots.size(); i++) {
-                DocumentSnapshot userDoc = userSnapshots.getDocuments().get(i);
-                DocumentSnapshot paseadorDoc = (DocumentSnapshot) paseadorDocs.get(i);
-
-                if (!paseadorDoc.exists()) {
-                    continue;
-                }
-
-                PaseadorResultado resultado = new PaseadorResultado();
-                resultado.setId(userDoc.getId());
-                resultado.setNombre(getStringSafely(userDoc, "nombre_display", "N/A"));
-                resultado.setFotoUrl(getStringSafely(userDoc, "foto_perfil", null));
-                resultado.setCalificacion(getDoubleSafely(paseadorDoc, "calificacion_promedio", 0.0));
-                resultado.setTotalResenas(getLongSafely(paseadorDoc, "num_servicios_completados", 0L).intValue());
-                resultado.setTarifaPorHora(getDoubleSafely(paseadorDoc, "tarifa_por_hora", 0.0));
-                
-                String experienciaStr = getStringSafely(paseadorDoc, "experiencia_general", "0");
-                try {
-                    // Extraer solo los números de la cadena
-                    String numeros = experienciaStr.replaceAll("[^0-9]", "");
-                    resultado.setAnosExperiencia(Integer.parseInt(numeros));
-                } catch (NumberFormatException e) {
-                    resultado.setAnosExperiencia(0);
-                }
-
-                resultados.add(resultado);
-
-                zonaTasks.add(db.collection("paseadores").document(paseadorDoc.getId()).collection("zonas_servicio").limit(1).get());
+            List<Task<DocumentSnapshot>> paseadorTasks = new ArrayList<>();
+            for (DocumentSnapshot userDoc : userSnapshots) {
+                paseadorTasks.add(db.collection("paseadores").document(userDoc.getId()).get());
             }
 
-            Tasks.whenAllSuccess(zonaTasks).addOnSuccessListener(zonaSnapshots -> {
-                for (int i = 0; i < zonaSnapshots.size(); i++) {
-                    QuerySnapshot zonaSnapshot = (QuerySnapshot) zonaSnapshots.get(i);
-                    if (!zonaSnapshot.isEmpty()) {
-                        resultados.get(i).setZonaPrincipal(zonaSnapshot.getDocuments().get(0).getString("direccion"));
-                    } else {
-                        resultados.get(i).setZonaPrincipal("Sin zona especificada");
+            Tasks.whenAllSuccess(paseadorTasks).addOnSuccessListener(paseadorDocs -> {
+                ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+                List<Task<QuerySnapshot>> zonaTasks = new ArrayList<>();
+
+                for (int i = 0; i < userSnapshots.size(); i++) {
+                    DocumentSnapshot userDoc = userSnapshots.getDocuments().get(i);
+                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) paseadorDocs.get(i);
+
+                    if (!paseadorDoc.exists()) continue;
+
+                    PaseadorResultado resultado = new PaseadorResultado();
+                    resultado.setId(userDoc.getId());
+                    resultado.setNombre(getStringSafely(userDoc, "nombre_display", "N/A"));
+                    resultado.setFotoUrl(getStringSafely(userDoc, "foto_perfil", null));
+                    resultado.setCalificacion(getDoubleSafely(paseadorDoc, "calificacion_promedio", 0.0));
+                    resultado.setTotalResenas(getLongSafely(paseadorDoc, "num_servicios_completados", 0L).intValue());
+                    resultado.setTarifaPorHora(getDoubleSafely(paseadorDoc, "precio_hora", 0.0)); // Corregido a precio_hora
+                    resultado.setFavorito(favoritosIds.contains(userDoc.getId()));
+
+                    String experienciaStr = getStringSafely(paseadorDoc, "experiencia_general", "0");
+                    try {
+                        String numeros = experienciaStr.replaceAll("[^0-9]", "");
+                        resultado.setAnosExperiencia(Integer.parseInt(numeros));
+                    } catch (NumberFormatException e) {
+                        resultado.setAnosExperiencia(0);
                     }
-                }
-                liveData.setValue(new UiState.Success<>(resultados));
-            }).addOnFailureListener(e -> {
-                liveData.setValue(new UiState.Success<>(resultados));
-            });
 
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error al combinar datos de paseadores populares", e);
-            liveData.setValue(new UiState.Error<>("No se pudieron cargar los perfiles completos de paseadores populares."));
+                    resultados.add(resultado);
+                    zonaTasks.add(db.collection("paseadores").document(paseadorDoc.getId()).collection("zonas_servicio").limit(1).get());
+                }
+
+                Tasks.whenAllSuccess(zonaTasks).addOnSuccessListener(zonaSnapshots -> {
+                    for (int i = 0; i < zonaSnapshots.size(); i++) {
+                        QuerySnapshot zonaSnapshot = (QuerySnapshot) zonaSnapshots.get(i);
+                        if (!zonaSnapshot.isEmpty()) {
+                            resultados.get(i).setZonaPrincipal(zonaSnapshot.getDocuments().get(0).getString("direccion"));
+                        } else {
+                            resultados.get(i).setZonaPrincipal("Sin zona especificada");
+                        }
+                    }
+                    liveData.setValue(new UiState.Success<>(resultados));
+                }).addOnFailureListener(e -> liveData.setValue(new UiState.Success<>(resultados))); // Fallback sin zonas
+
+            }).addOnFailureListener(e -> {
+                Log.e(TAG, "Error al combinar datos de paseadores populares", e);
+                liveData.setValue(new UiState.Error<>("No se pudieron cargar los perfiles completos."));
+            });
         });
         return liveData;
     }
