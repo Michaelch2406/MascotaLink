@@ -333,20 +333,56 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private void toggleFavorito(String duenoId, String paseadorId, DocumentReference favRef) {
         favRef.get().addOnSuccessListener(doc -> {
             if (doc.exists()) {
-                // Remove from favorites
+                // El paseador ya está en favoritos, así que lo eliminamos
                 favRef.delete().addOnSuccessListener(aVoid -> {
                     btnFavorito.setImageResource(R.drawable.ic_corazon);
                     Toast.makeText(this, "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
                 });
             } else {
-                // Add to favorites
-                Map<String, Object> favorito = new HashMap<>();
-                favorito.put("fecha_agregado", FieldValue.serverTimestamp());
-                favorito.put("paseador_ref", db.collection("paseadores").document(paseadorId));
+                // El paseador no está en favoritos, así que lo agregamos con datos desnormalizados
 
-                favRef.set(favorito).addOnSuccessListener(aVoid -> {
-                    btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
-                    Toast.makeText(this, "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                // 1. Referencias a los documentos del paseador
+                DocumentReference usuarioPaseadorRef = db.collection("usuarios").document(paseadorId);
+                DocumentReference perfilPaseadorRef = db.collection("paseadores").document(paseadorId);
+
+                // 2. Usamos Tasks.whenAllSuccess para obtener ambos documentos eficientemente
+                Task<DocumentSnapshot> usuarioTask = usuarioPaseadorRef.get();
+                Task<DocumentSnapshot> paseadorTask = perfilPaseadorRef.get();
+
+                Tasks.whenAllSuccess(usuarioTask, paseadorTask).addOnSuccessListener(results -> {
+                    DocumentSnapshot usuarioDoc = (DocumentSnapshot) results.get(0);
+                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
+
+                    if (usuarioDoc.exists() && paseadorDoc.exists()) {
+                        // 3. Extraer los datos para desnormalizar
+                        String nombre = usuarioDoc.getString("nombre_display");
+                        String fotoUrl = usuarioDoc.getString("foto_perfil");
+                        Double calificacion = paseadorDoc.getDouble("calificacion_promedio");
+                        Double precio = paseadorDoc.getDouble("precio_hora");
+
+                        // 4. Crear el mapa de datos para el nuevo documento de favorito
+                        Map<String, Object> favoritoData = new HashMap<>();
+                        favoritoData.put("fecha_agregado", FieldValue.serverTimestamp());
+                        favoritoData.put("paseador_ref", perfilPaseadorRef);
+                        favoritoData.put("nombre_display", nombre);
+                        favoritoData.put("foto_perfil_url", fotoUrl);
+                        favoritoData.put("calificacion_promedio", calificacion);
+                        favoritoData.put("precio_hora", precio);
+
+                        // 5. Guardar el documento en la subcolección de favoritos
+                        favRef.set(favoritoData).addOnSuccessListener(aVoid -> {
+                            btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
+                            Toast.makeText(PerfilPaseadorActivity.this, "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                        }).addOnFailureListener(e -> {
+                            Toast.makeText(PerfilPaseadorActivity.this, "Error al guardar favorito", Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "Error al escribir el documento de favorito", e);
+                        });
+                    } else {
+                        Toast.makeText(PerfilPaseadorActivity.this, "No se encontraron datos del paseador.", Toast.LENGTH_SHORT).show();
+                    }
+                }).addOnFailureListener(e -> {
+                    Toast.makeText(PerfilPaseadorActivity.this, "Error al obtener datos del paseador.", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error en Tasks.whenAllSuccess para obtener datos del paseador", e);
                 });
             }
         });
