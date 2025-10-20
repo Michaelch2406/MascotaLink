@@ -44,6 +44,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
@@ -55,7 +56,6 @@ import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascota.ui.perfil.ResenaAdapter;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 
-
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -63,6 +63,7 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -163,15 +164,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         currentUserRole = documentSnapshot.getString("rol");
-                    } else {
-                        currentUserRole = null; // O un rol por defecto si es necesario
                     }
                     setupRoleBasedUI();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching user role", e);
-                    currentUserRole = null;
-                    setupRoleBasedUI();
+                    setupRoleBasedUI(); // Setup UI even if role fetch fails (read-only mode)
                 });
     }
 
@@ -196,7 +194,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ivBack = findViewById(R.id.iv_back);
         ivAvatar = findViewById(R.id.iv_avatar);
         btnVerGaleria = findViewById(R.id.btn_ver_galeria);
-        btnFavorito = findViewById(R.id.btn_favorito);
+        btnFavorito = findViewById(R.id.btn_favorito); // Now references the button next to the name
         tvNombre = findViewById(R.id.tv_nombre);
         tvRol = findViewById(R.id.tv_rol);
         ivVerificadoBadge = findViewById(R.id.iv_verificado_badge);
@@ -230,8 +228,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ajustes_section = findViewById(R.id.ajustes_section);
         soporte_section = findViewById(R.id.soporte_section);
         fabReservar = findViewById(R.id.fab_reservar);
-        btnMensaje = findViewById(R.id.btn_mensaje);
-        ivEditPerfil = findViewById(R.id.iv_edit_perfil);
+        btnMensaje = findViewById(R.id.btn_mensaje); // In Toolbar
+        ivEditPerfil = findViewById(R.id.iv_edit_perfil); // In Toolbar
         ivEditZonas = findViewById(R.id.iv_edit_zonas);
         ivEditDisponibilidad = findViewById(R.id.iv_edit_disponibilidad);
         skeletonLayout = findViewById(R.id.skeleton_layout);
@@ -246,19 +244,26 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
     private void setupToolbar() {
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayShowTitleEnabled(false); // Usamos un TextView personalizado
+        getSupportActionBar().setDisplayShowTitleEnabled(false); // Use custom TextView for title
         ivBack.setOnClickListener(v -> finish());
     }
 
     private void setupRoleBasedUI() {
         boolean isOwnProfile = paseadorId.equals(currentUserId);
 
+        // Set Toolbar Title
         if (isOwnProfile) {
-            // Caso 1: El PASEADOR está viendo su propio perfil.
             toolbarTitle.setText("Perfil");
+        } else {
+            toolbarTitle.setText("Paseador");
+        }
+
+        // Configure button visibility based on role
+        if (isOwnProfile) {
+            // Case 1: PASEADOR viewing their own profile
             ivEditPerfil.setVisibility(View.VISIBLE);
             btnMensaje.setVisibility(View.GONE);
-            btnFavorito.setVisibility(View.GONE);
+            btnFavorito.setVisibility(View.GONE); // Cannot favorite oneself
             fabReservar.setVisibility(View.GONE);
 
             ivEditZonas.setVisibility(View.VISIBLE);
@@ -268,11 +273,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             btnCerrarSesion.setVisibility(View.VISIBLE);
 
         } else if ("DUENO".equals(currentUserRole)) {
-            // Caso 2: Un DUEÑO está viendo el perfil de un PASEADOR.
-            toolbarTitle.setText("Paseador");
+            // Case 2: DUEÑO viewing a PASEADOR's profile
             ivEditPerfil.setVisibility(View.GONE);
             btnMensaje.setVisibility(View.VISIBLE);
-            btnFavorito.setVisibility(View.VISIBLE);
+            btnFavorito.setVisibility(View.VISIBLE); // Can add to favorites
             fabReservar.setVisibility(View.VISIBLE);
 
             ivEditZonas.setVisibility(View.GONE);
@@ -281,9 +285,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);
 
+            // Setup favorite button functionality
+            configurarBotonFavorito(currentUserId, paseadorId);
+
         } else {
-            // Caso 3: Otro (no logueado, otro paseador, etc.) viendo el perfil.
-            toolbarTitle.setText("Paseador");
+            // Case 3: Read-only view (not logged in, another paseador, etc.)
             ivEditPerfil.setVisibility(View.GONE);
             btnMensaje.setVisibility(View.GONE);
             btnFavorito.setVisibility(View.GONE);
@@ -297,34 +303,57 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
     }
 
+    private void configurarBotonFavorito(String duenoId, String paseadorId) {
+        DocumentReference favRef = db.collection("usuarios").document(duenoId)
+                .collection("favoritos").document(paseadorId);
+
+        favRef.get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
+            } else {
+                btnFavorito.setImageResource(R.drawable.ic_corazon);
+            }
+        });
+
+        // Set click listener to toggle favorite status
+        btnFavorito.setOnClickListener(v -> toggleFavorito(duenoId, paseadorId, favRef));
+    }
+
+    private void toggleFavorito(String duenoId, String paseadorId, DocumentReference favRef) {
+        favRef.get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                // Remove from favorites
+                favRef.delete().addOnSuccessListener(aVoid -> {
+                    btnFavorito.setImageResource(R.drawable.ic_corazon);
+                    Toast.makeText(this, "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
+                });
+            } else {
+                // Add to favorites
+                Map<String, Object> favorito = new HashMap<>();
+                favorito.put("fecha_agregado", FieldValue.serverTimestamp());
+                favorito.put("paseador_ref", db.collection("paseadores").document(paseadorId));
+
+                favRef.set(favorito).addOnSuccessListener(aVoid -> {
+                    btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
+                    Toast.makeText(this, "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+
 
     private void setupListeners() {
-        // El listener de ivBack se movió a setupToolbar()
-
         ivEditPerfil.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
-            intent.putExtra("paseadorId", paseadorId); // Pasa el ID para que la pantalla de edición sepa qué cargar
+            intent.putExtra("paseadorId", paseadorId);
             startActivity(intent);
         });
 
         btnMensaje.setOnClickListener(v -> {
             Toast.makeText(this, "Próximamente: Iniciar chat", Toast.LENGTH_SHORT).show();
-            // Intent intent = new Intent(PerfilPaseadorActivity.this, ChatActivity.class);
-            // intent.putExtra("paseadorId", paseadorId);
-            // startActivity(intent);
         });
 
-        btnFavorito.setOnClickListener(v -> {
-            if (v.isSelected()) {
-                ((ImageButton) v).setImageResource(R.drawable.ic_corazon);
-                v.setSelected(false);
-                Toast.makeText(this, "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
-            } else {
-                ((ImageButton) v).setImageResource(R.drawable.ic_corazon_lleno);
-                v.setSelected(true);
-                Toast.makeText(this, "Añadido a favoritos", Toast.LENGTH_SHORT).show();
-            }
-        });
+        // The favorite button listener is now set in configurarBotonFavorito()
 
         btnVerGaleria.setOnClickListener(v -> {
             if (galeriaImageUrls != null && !galeriaImageUrls.isEmpty()) {
@@ -358,7 +387,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             finish();
         });
 
-        // Listeners de "Próximamente"
+        // "Coming Soon" Listeners
         btnNotificaciones.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Notificaciones", Toast.LENGTH_SHORT).show());
         btnMetodosPago.setOnClickListener(v -> {
              Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
@@ -400,7 +429,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
                 return true;
             } else if (itemId == R.id.menu_perfil) {
-                return true; // Ya estamos aquí
+                return true; // Already here
             }
             return false;
         });
@@ -432,6 +461,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     private void attachDataListeners() {
+        detachDataListeners(); // Ensure no duplicate listeners
+
         // Listener for the 'usuarios' document
         DocumentReference userDocRef = db.collection("usuarios").document(paseadorId);
         usuarioListener = userDocRef.addSnapshotListener((usuarioDoc, e) -> {
@@ -532,7 +563,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         // Listeners for sub-collections
         cargarDisponibilidad(paseadorId);
         cargarZonasServicio(paseadorId);
-        cargarMetodoPagoPredeterminado(paseadorId);
+        cargarMetodoPagoPredeterminado(currentUserId != null ? currentUserId : paseadorId);
     }
 
     private void detachDataListeners() {
@@ -579,7 +610,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     googleMap.clear();
                     if (querySnapshot == null || querySnapshot.isEmpty()) {
                         tvZonasServicioNombres.setText("No especificadas");
-return;
+                        return;
                     }
                     LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
                     List<String> nombresZonas = new ArrayList<>();
@@ -617,6 +648,7 @@ return;
     }
 
     private void cargarMetodoPagoPredeterminado(String uid) {
+        if (uid == null) return;
         if (metodoPagoListener != null) metodoPagoListener.remove();
         db.collection("usuarios").document(uid).collection("metodos_pago")
                 .whereEqualTo("predeterminado", true).limit(1)
