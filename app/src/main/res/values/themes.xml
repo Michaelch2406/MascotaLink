@@ -26,7 +26,13 @@
     <style name="TextAppearance.Mascota.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">#111827</item>
-        <item name="android:textSize">22sp</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="TextAppearance.Mascota.Title" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#111827</item>
+        <item name="android:textSize">18sp</item>
     </style>
 
     <!-- Buttons -->

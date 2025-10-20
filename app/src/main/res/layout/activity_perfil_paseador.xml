@@ -159,9 +159,7 @@
                             android:layout_alignParentStart="true"
                             android:layout_toStartOf="@+id/btn_favorito"
                             android:text="Sofia Ramirez"
-                            android:textColor="@android:color/black"
-                            android:textSize="22sp"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.Mascota.TitleLarge" />
 
                         <ImageButton
                             android:id="@+id/btn_favorito"
@@ -258,9 +256,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
                         android:text="Video de presentación"
-                        android:textColor="@android:color/black"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                     <FrameLayout
                         android:id="@+id/video_container"
@@ -295,9 +291,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Acerca de mí"
-                            android:textColor="@android:color/black"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                     </LinearLayout>
 
@@ -346,9 +340,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Zona de servicio"
-                            android:textColor="@android:color/black"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                         <ImageView
                             android:id="@+id/iv_edit_zonas"
@@ -388,9 +380,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Disponibilidad"
-                            android:textColor="@android:color/black"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                         <ImageView
                             android:id="@+id/iv_edit_disponibilidad"
@@ -421,9 +411,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Tipos de perros"
-                            android:textColor="@android:color/black"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                     </LinearLayout>
 
@@ -440,9 +428,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
                         android:text="Estadísticas"
-                        android:textColor="@android:color/black"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                     <GridLayout
                         android:layout_width="match_parent"
@@ -509,9 +495,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="24dp"
                         android:text="Calificaciones"
-                        android:textColor="@android:color/black"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -582,9 +566,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:text="Ajustes y Cuenta"
-                    android:textColor="@android:color/black"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                 <RelativeLayout
                     android:id="@+id/btn_notificaciones"
@@ -677,9 +659,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:text="Soporte y Legal"
-                    android:textColor="@android:color/black"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.Mascota.Title" />
 
                 <RelativeLayout
                     android:id="@+id/btn_centro_ayuda"
