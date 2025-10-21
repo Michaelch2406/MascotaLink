@@ -82,7 +82,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private de.hdodenhof.circleimageview.CircleImageView ivAvatar;
     private Button btnVerGaleria;
     private ImageButton btnFavorito;
-    private ImageView ivVerificadoBadge, ivVideoThumbnail;
+    private ImageView ivVerificadoBadge, ivVideoThumbnail, ivPlayButton;
     private TextView tvNombre, tvRol, tvVerificado, tvPrecio, tvDescripcion, tvDisponibilidad, tvTiposPerros, tvZonasServicioNombres;
     private TextView tvExperienciaAnos, tvExperienciaDesde;
     private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
@@ -90,6 +90,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private RatingBar ratingBar;
     private LinearLayout barrasRatings, llAcercaDe, llResenas, ajustes_section, soporte_section;
     private FrameLayout videoContainer;
+    private android.widget.VideoView videoView;
+    private android.widget.ProgressBar videoProgressBar;
     private TabLayout tabLayout;
     private Button btnCerrarSesion;
     private ImageButton btnMensaje;
@@ -106,6 +108,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private String paseadorId;
     private String currentUserId;
     private String currentUserRole;
+    private String videoUrl;
 
     private RecyclerView recyclerViewResenas;
     private ResenaAdapter resenaAdapter;
@@ -194,12 +197,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ivBack = findViewById(R.id.iv_back);
         ivAvatar = findViewById(R.id.iv_avatar);
         btnVerGaleria = findViewById(R.id.btn_ver_galeria);
-        btnFavorito = findViewById(R.id.btn_favorito); // Now references the button next to the name
-        if (btnFavorito == null) {
-            Log.e(TAG, "ERROR: btn_favorito es NULL. Verifica el ID en el XML.");
-        } else {
-            Log.d(TAG, "btn_favorito inicializado correctamente");
-        }
+        btnFavorito = findViewById(R.id.btn_favorito);
         tvNombre = findViewById(R.id.tv_nombre);
         tvRol = findViewById(R.id.tv_rol);
         ivVerificadoBadge = findViewById(R.id.iv_verificado_badge);
@@ -210,6 +208,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         llResenas = findViewById(R.id.ll_resenas);
         videoContainer = findViewById(R.id.video_container);
         ivVideoThumbnail = findViewById(R.id.iv_video_thumbnail);
+        ivPlayButton = findViewById(R.id.iv_play_button);
+        videoView = findViewById(R.id.video_view);
+        videoProgressBar = findViewById(R.id.video_progress_bar);
         tvDescripcion = findViewById(R.id.tv_descripcion);
         tvExperienciaAnos = findViewById(R.id.tv_experiencia_anos);
         tvExperienciaDesde = findViewById(R.id.tv_experiencia_desde);
@@ -284,20 +285,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             btnFavorito.setVisibility(View.VISIBLE); // Can add to favorites
             fabReservar.setVisibility(View.VISIBLE);
 
-            // LOG PARA DEPURACIÓN
-            Log.d(TAG, "Rol DUEÑO detectado - btn_favorito debe ser VISIBLE");
-
             ivEditZonas.setVisibility(View.GONE);
             ivEditDisponibilidad.setVisibility(View.GONE);
             ajustes_section.setVisibility(View.GONE);
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);
 
-            // Setup favorite button functionality
             configurarBotonFavorito(currentUserId, paseadorId);
-
-            // Post-execution log to check final visibility
-            btnFavorito.post(() -> Log.d(TAG, "btn_favorito visibility: " + btnFavorito.getVisibility()));
 
         } else {
             // Case 3: Read-only view (not logged in, another paseador, etc.)
@@ -340,12 +334,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 });
             } else {
                 // El paseador no está en favoritos, así que lo agregamos con datos desnormalizados
-
-                // 1. Referencias a los documentos del paseador
                 DocumentReference usuarioPaseadorRef = db.collection("usuarios").document(paseadorId);
                 DocumentReference perfilPaseadorRef = db.collection("paseadores").document(paseadorId);
 
-                // 2. Usamos Tasks.whenAllSuccess para obtener ambos documentos eficientemente
                 Task<DocumentSnapshot> usuarioTask = usuarioPaseadorRef.get();
                 Task<DocumentSnapshot> paseadorTask = perfilPaseadorRef.get();
 
@@ -354,35 +345,19 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
 
                     if (usuarioDoc.exists() && paseadorDoc.exists()) {
-                        // 3. Extraer los datos para desnormalizar
-                        String nombre = usuarioDoc.getString("nombre_display");
-                        String fotoUrl = usuarioDoc.getString("foto_perfil");
-                        Double calificacion = paseadorDoc.getDouble("calificacion_promedio");
-                        Double precio = paseadorDoc.getDouble("precio_hora");
-
-                        // 4. Crear el mapa de datos para el nuevo documento de favorito
                         Map<String, Object> favoritoData = new HashMap<>();
                         favoritoData.put("fecha_agregado", FieldValue.serverTimestamp());
                         favoritoData.put("paseador_ref", perfilPaseadorRef);
-                        favoritoData.put("nombre_display", nombre);
-                        favoritoData.put("foto_perfil_url", fotoUrl);
-                        favoritoData.put("calificacion_promedio", calificacion);
-                        favoritoData.put("precio_hora", precio);
+                        favoritoData.put("nombre_display", usuarioDoc.getString("nombre_display"));
+                        favoritoData.put("foto_perfil_url", usuarioDoc.getString("foto_perfil"));
+                        favoritoData.put("calificacion_promedio", paseadorDoc.getDouble("calificacion_promedio"));
+                        favoritoData.put("precio_hora", paseadorDoc.getDouble("precio_hora"));
 
-                        // 5. Guardar el documento en la subcolección de favoritos
                         favRef.set(favoritoData).addOnSuccessListener(aVoid -> {
                             btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
                             Toast.makeText(PerfilPaseadorActivity.this, "Agregado a favoritos", Toast.LENGTH_SHORT).show();
-                        }).addOnFailureListener(e -> {
-                            Toast.makeText(PerfilPaseadorActivity.this, "Error al guardar favorito", Toast.LENGTH_SHORT).show();
-                            Log.e(TAG, "Error al escribir el documento de favorito", e);
                         });
-                    } else {
-                        Toast.makeText(PerfilPaseadorActivity.this, "No se encontraron datos del paseador.", Toast.LENGTH_SHORT).show();
                     }
-                }).addOnFailureListener(e -> {
-                    Toast.makeText(PerfilPaseadorActivity.this, "Error al obtener datos del paseador.", Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "Error en Tasks.whenAllSuccess para obtener datos del paseador", e);
                 });
             }
         });
@@ -396,11 +371,40 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             startActivity(intent);
         });
 
+        videoContainer.setOnClickListener(v -> {
+            if (videoUrl != null && !videoUrl.isEmpty()) {
+                ivVideoThumbnail.setVisibility(View.GONE);
+                ivPlayButton.setVisibility(View.GONE);
+                videoProgressBar.setVisibility(View.VISIBLE);
+                videoView.setVisibility(View.VISIBLE);
+
+                android.widget.MediaController mediaController = new android.widget.MediaController(this);
+                mediaController.setAnchorView(videoView);
+                videoView.setMediaController(mediaController);
+                videoView.setVideoURI(android.net.Uri.parse(videoUrl));
+                videoView.setOnPreparedListener(mp -> {
+                    videoProgressBar.setVisibility(View.GONE);
+                    mp.start();
+                });
+                videoView.setOnCompletionListener(mp -> {
+                    // Opcional: volver a mostrar la miniatura cuando el video termina
+                    videoView.setVisibility(View.GONE);
+                    ivVideoThumbnail.setVisibility(View.VISIBLE);
+                    ivPlayButton.setVisibility(View.VISIBLE);
+                });
+                videoView.setOnErrorListener((mp, what, extra) -> {
+                    videoProgressBar.setVisibility(View.GONE);
+                    ivVideoThumbnail.setVisibility(View.VISIBLE);
+                    ivPlayButton.setVisibility(View.VISIBLE);
+                    Toast.makeText(this, "No se puede reproducir este video", Toast.LENGTH_SHORT).show();
+                    return true;
+                });
+            }
+        });
+
         btnMensaje.setOnClickListener(v -> {
             Toast.makeText(this, "Próximamente: Iniciar chat", Toast.LENGTH_SHORT).show();
         });
-
-        // The favorite button listener is now set in configurarBotonFavorito()
 
         btnVerGaleria.setOnClickListener(v -> {
             if (galeriaImageUrls != null && !galeriaImageUrls.isEmpty()) {
@@ -434,7 +438,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             finish();
         });
 
-        // "Coming Soon" Listeners
         btnNotificaciones.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Notificaciones", Toast.LENGTH_SHORT).show());
         btnMetodosPago.setOnClickListener(v -> {
              Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
@@ -586,7 +589,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 Map<String, Object> perfil = (Map<String, Object>) paseadorDoc.get("perfil_profesional");
                 if (perfil != null) {
                     tvDescripcion.setText((String) perfil.get("motivacion"));
-                    Glide.with(this).load((String) perfil.get("video_presentacion_url")).centerCrop().placeholder(R.drawable.galeria_paseos_foto1).into(ivVideoThumbnail);
+                    videoUrl = (String) perfil.get("video_presentacion_url");
+                    Glide.with(this).load(videoUrl).centerCrop().placeholder(R.drawable.galeria_paseos_foto1).into(ivVideoThumbnail);
                     Timestamp inicioExpTimestamp = (Timestamp) perfil.get("fecha_inicio_experiencia");
                     if (inicioExpTimestamp != null) {
                         int years = Period.between(inicioExpTimestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()).getYears();

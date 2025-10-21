@@ -262,7 +262,15 @@
                         android:id="@+id/video_container"
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="8dp"
+                        android:background="@android:color/black">
+
+                        <VideoView
+                            android:id="@+id/video_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_gravity="center"
+                            android:visibility="gone" />
 
                         <ImageView
                             android:id="@+id/iv_video_thumbnail"
@@ -272,10 +280,18 @@
                             android:src="@drawable/galeria_paseos_foto1" />
 
                         <ImageView
+                            android:id="@+id/iv_play_button"
                             android:layout_width="60dp"
                             android:layout_height="60dp"
                             android:layout_gravity="center"
                             android:src="@android:drawable/ic_media_play" />
+
+                        <ProgressBar
+                            android:id="@+id/video_progress_bar"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:visibility="gone" />
                     </FrameLayout>
 
                     <!-- Acerca de mí -->

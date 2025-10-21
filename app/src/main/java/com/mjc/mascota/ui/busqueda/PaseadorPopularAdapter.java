@@ -64,6 +64,7 @@ public class PaseadorPopularAdapter extends ListAdapter<PaseadorResultado, Pasea
         private final TextView nombreTextView;
         private final TextView calificacionTextView;
         private final TextView resenasTextView;
+        private final TextView precioTextView;
 
         public PaseadorPopularViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -71,12 +72,14 @@ public class PaseadorPopularAdapter extends ListAdapter<PaseadorResultado, Pasea
             nombreTextView = itemView.findViewById(R.id.tv_nombre_popular);
             calificacionTextView = itemView.findViewById(R.id.tv_calificacion_popular);
             resenasTextView = itemView.findViewById(R.id.tv_resenas_popular);
+            precioTextView = itemView.findViewById(R.id.tv_precio_popular);
         }
 
         public void bind(PaseadorResultado paseador, final PaseadorResultadoAdapter.OnItemClickListener listener) {
             nombreTextView.setText(paseador.getNombre());
             calificacionTextView.setText(String.format(Locale.getDefault(), "%.1f", paseador.getCalificacion()));
             resenasTextView.setText(String.format(Locale.getDefault(), "(%d)", paseador.getTotalResenas()));
+            precioTextView.setText(String.format(Locale.getDefault(), "$%.2f/hora", paseador.getTarifaPorHora()));
 
             Glide.with(itemView.getContext())
                     .load(paseador.getFotoUrl())
