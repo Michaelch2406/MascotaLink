@@ -88,7 +88,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private View errorStateView;
     private Button retryButton;
     private RecyclerView recyclerViewPopulares;
-    private PaseadorResultadoAdapter popularesAdapter;
+    private PaseadorPopularAdapter popularesAdapter; // Cambiado a su propio adaptador
     private RecyclerView recyclerViewResultados;
     private PaseadorResultadoAdapter resultadosAdapter;
     private AutoCompleteTextView searchAutocomplete;
@@ -210,12 +210,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private void setupRecyclerViews() {
         // Configuración para el RecyclerView de paseadores populares
         recyclerViewPopulares.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        popularesAdapter = new PaseadorResultadoAdapter();
+        popularesAdapter = new PaseadorPopularAdapter(); // Usando el nuevo adaptador
         recyclerViewPopulares.setAdapter(popularesAdapter);
-        popularesAdapter.setOnItemClickListener(this);
-        popularesAdapter.setOnFavoritoToggleListener(this);
+        popularesAdapter.setOnItemClickListener(paseador -> {
+            // Acción al hacer click: ir al perfil del paseador
+            Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
+            intent.putExtra("paseadorId", paseador.getId());
+            intent.putExtra("viewerRole", "DUEÑO");
+            startActivity(intent);
+        });
 
-        // Adapter para los resultados de búsqueda
+        // Adapter para los resultados de búsqueda (sin cambios)
         recyclerViewResultados.setLayoutManager(new LinearLayoutManager(this));
         resultadosAdapter = new PaseadorResultadoAdapter();
         recyclerViewResultados.setAdapter(resultadosAdapter);
