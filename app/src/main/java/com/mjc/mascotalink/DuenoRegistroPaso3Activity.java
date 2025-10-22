@@ -283,6 +283,9 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             
             StorageReference ref = storage.getReference().child(folder + "/" + userFolder + "/" + fileName);
 
+            Log.d(TAG, "UID del usuario: " + uid);
+            Log.d(TAG, "Ruta de Storage construida (DuenoRegistroPaso3): " + ref.getPath());
+
             uploadTasks.add(
                 ref.putFile(uri).continueWithTask(task -> {
                     if (!task.isSuccessful()) { throw task.getException(); }

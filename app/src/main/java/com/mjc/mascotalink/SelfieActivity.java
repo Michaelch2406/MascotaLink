@@ -1,126 +1,100 @@
 package com.mjc.mascotalink;
 
 import android.Manifest;
-import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
-import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCaptureException;
-import androidx.camera.core.Preview;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-
-import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
-import java.util.concurrent.ExecutionException;
 
 public class SelfieActivity extends AppCompatActivity {
 
     private static final String TAG = "SelfieActivity";
+    private Uri photoUri;
 
-    private PreviewView previewView;
-    private ImageCapture imageCapture;
-    private boolean useFront = true;
+    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(),
+            isGranted -> {
+                if (isGranted) {
+                    launchCamera();
+                } else {
+                    Toast.makeText(this, "Permiso de cámara denegado", Toast.LENGTH_SHORT).show();
+                    finishWithCancel();
+                }
+            }
+    );
 
-    private final ActivityResultLauncher<String> permissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
-                if (granted) startCamera(); else finishWithCancel();
-            });
+    private final ActivityResultLauncher<Uri> takePictureLauncher = registerForActivityResult(
+            new ActivityResultContracts.TakePicture(),
+            success -> {
+                if (success) {
+                    finishWithSuccess();
+                } else {
+                    // Si el usuario cancela, el archivo temporal se queda. Podemos borrarlo si es necesario.
+                    Log.d(TAG, "Captura de imagen cancelada por el usuario.");
+                    finishWithCancel();
+                }
+            }
+    );
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_selfie);
-
-        useFront = getIntent().getBooleanExtra("front", true);
-
-        previewView = findViewById(R.id.previewView);
-        Button btnCapturar = findViewById(R.id.btn_capturar);
-        btnCapturar.setOnClickListener(v -> capturar());
+        // No se necesita un layout complejo, la cámara nativa se encargará de la UI.
+        // setContentView(R.layout.activity_selfie);
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            startCamera();
+            launchCamera();
         } else {
-            permissionLauncher.launch(Manifest.permission.CAMERA);
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
         }
     }
 
-    private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-        cameraProviderFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                CameraSelector selector = new CameraSelector.Builder()
-                        .requireLensFacing(useFront ? CameraSelector.LENS_FACING_FRONT : CameraSelector.LENS_FACING_BACK)
-                        .build();
-
-                Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(previewView.getSurfaceProvider());
-
-                imageCapture = new ImageCapture.Builder().build();
-
-                cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(this, selector, preview, imageCapture);
-            } catch (ExecutionException | InterruptedException e) {
-                Log.e(TAG, "Error iniciando cámara", e);
-                finishWithCancel();
-            }
-        }, ContextCompat.getMainExecutor(this));
+    private void launchCamera() {
+        photoUri = createTempImageUri();
+        if (photoUri != null) {
+            takePictureLauncher.launch(photoUri);
+        } else {
+            Toast.makeText(this, "No se pudo crear el archivo para la foto", Toast.LENGTH_SHORT).show();
+            finishWithCancel();
+        }
     }
 
-    private void capturar() {
-        if (imageCapture == null) return;
-
-        File photoFile = null;
+    private Uri createTempImageUri() {
         try {
             File sharedDir = new File(getFilesDir(), "shared_files");
             if (!sharedDir.exists()) {
                 sharedDir.mkdirs();
             }
             String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(System.currentTimeMillis());
-            photoFile = new File(sharedDir, "SELFIE_" + timeStamp + ".jpg");
+            File photoFile = new File(sharedDir, "SELFIE_" + timeStamp + ".jpg");
+
+            return FileProvider.getUriForFile(this, com.mjc.mascotalink.BuildConfig.APPLICATION_ID + ".provider", photoFile);
         } catch (Exception e) {
-            Log.e(TAG, "Could not create file for selfie", e);
-            finishWithCancel();
-            return;
+            Log.e(TAG, "Error al crear el URI del archivo de imagen", e);
+            return null;
         }
+    }
 
-        Uri photoUri = FileProvider.getUriForFile(this, com.mjc.mascotalink.BuildConfig.APPLICATION_ID + ".provider", photoFile);
-
-        ImageCapture.OutputFileOptions opts = new ImageCapture.OutputFileOptions.Builder(photoFile).build();
-
-        imageCapture.takePicture(opts, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
-            @Override
-            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-                Intent data = new Intent();
-                data.setData(photoUri); // Use the content URI generated by the FileProvider
-                data.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                setResult(RESULT_OK, data);
-                finish();
-            }
-
-            @Override
-            public void onError(@NonNull ImageCaptureException exception) {
-                Log.e(TAG, "Error capturando imagen", exception);
-                finishWithCancel();
-            }
-        });
+    private void finishWithSuccess() {
+        Intent data = new Intent();
+        data.setData(photoUri);
+        data.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        setResult(RESULT_OK, data);
+        finish();
     }
 
     private void finishWithCancel() {

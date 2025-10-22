@@ -29,6 +29,8 @@ import java.util.Objects;
 
 public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
+    private static final String TAG = "MascotaRegistroPaso4";
+
     private ImageView arrowBack;
     private TextInputEditText rutinaPaseoEditText, tipoCorreaArnesEditText, recompensasEditText, instruccionesEmergenciaEditText, notasAdicionalesEditText;
     private Button guardarButton;
@@ -149,6 +151,9 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
                 duenoId, sanitizedDuenoNombre, sanitizedDuenoApellido, sanitizedPetName, extension);
 
         StorageReference storageRef = storage.getReference().child("foto_perfil_mascota/" + fileName);
+
+        Log.d(TAG, "UID del dueño: " + duenoId);
+        Log.d(TAG, "Ruta de Storage construida (MascotaRegistroPaso4): " + storageRef.getPath());
 
         storageRef.putFile(fotoUri)
                 .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {

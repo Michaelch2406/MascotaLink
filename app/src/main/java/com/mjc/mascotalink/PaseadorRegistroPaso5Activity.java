@@ -27,11 +27,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.textfield.TextInputEditText;
+
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
@@ -39,13 +37,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.Circle;
-import com.google.android.gms.maps.model.CircleOptions;
-import com.google.android.gms.maps.model.LatLng;
+
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -72,6 +65,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     private Button btnGuardar;
     private TextView tvValidationMessages;
     private ImageView ivPagoCheck, ivDisponibilidadCheck, ivPerrosCheck, ivZonasCheck;
+    private TextInputEditText etPrecioHora;
 
     private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
@@ -121,6 +115,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         ivDisponibilidadCheck = findViewById(R.id.iv_disponibilidad_check);
         ivPerrosCheck = findViewById(R.id.iv_perros_check);
         ivZonasCheck = findViewById(R.id.iv_zonas_check);
+        etPrecioHora = findViewById(R.id.et_precio_hora);
     }
 
     private void setupListeners() {
@@ -166,6 +161,20 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         if (btnGuardar != null) {
             btnGuardar.setOnClickListener(v -> completarRegistro());
         }
+
+        etPrecioHora.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                saveState();
+                verificarCompletitudTotal();
+            }
+        });
     }
 
     private void grabarVideoPresentacion() {
@@ -183,6 +192,28 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         if (result.getResultCode() == RESULT_OK && result.getData() != null) {
             Uri tempUri = result.getData().getData();
             if (tempUri != null) {
+                // Validar duración del video
+                android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+                try {
+                    retriever.setDataSource(this, tempUri);
+                    String time = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
+                    long durationMs = Long.parseLong(time);
+                    if (durationMs < 30000) { // 30 segundos
+                        Toast.makeText(this, "El video debe durar al menos 30 segundos", Toast.LENGTH_LONG).show();
+                        return; // No guardar el video
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error al leer la duración del video", e);
+                    Toast.makeText(this, "No se pudo verificar la duración del video.", Toast.LENGTH_SHORT).show();
+                    return;
+                } finally {
+                    try {
+                        retriever.release();
+                    } catch (java.io.IOException e) {
+                        Log.e(TAG, "Error releasing MediaMetadataRetriever", e);
+                    }
+                }
+
                 Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "VIDEO_PRESENTACION_");
                 if (permanentUri != null) {
                     SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
@@ -265,6 +296,21 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         ivZonasCheck.setVisibility(zonasServicioOk ? View.VISIBLE : View.GONE);
         if (!zonasServicioOk) {
             faltantes.add("• Falta configurar tus zonas de servicio.");
+        }
+
+        // Validar Precio por Hora
+        String precioHoraStr = etPrecioHora.getText().toString().trim();
+        if (precioHoraStr.isEmpty()) {
+            faltantes.add("• Falta establecer el precio por hora.");
+        } else {
+            try {
+                double precio = Double.parseDouble(precioHoraStr);
+                if (precio <= 0) {
+                    faltantes.add("• El precio por hora debe ser un número positivo.");
+                }
+            } catch (NumberFormatException e) {
+                faltantes.add("• El precio por hora debe ser un número válido.");
+            }
         }
 
         if (faltantes.isEmpty()) {
@@ -363,6 +409,9 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
             
             StorageReference ref = storage.getReference().child(destinationFolder + "/" + userFolder + "/" + fileName);
 
+            Log.d(TAG, "UID del usuario: " + uid);
+            Log.d(TAG, "Ruta de Storage construida (PaseadorRegistroPaso5 - individual): " + ref.getPath());
+
             uploadTasks.add(
                 ref.putFile(uri).continueWithTask(task -> {
                     if (!task.isSuccessful()) { throw task.getException(); }
@@ -381,6 +430,9 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
             String fileName = "paseo_" + (i + 1) + "." + extension;
             StorageReference ref = storage.getReference().child("galeria_paseos/" + userFolder + "/" + fileName);
             
+            Log.d(TAG, "UID del usuario: " + uid);
+            Log.d(TAG, "Ruta de Storage construida (PaseadorRegistroPaso5 - galeria): " + ref.getPath());
+
             uploadTasks.add(
                 ref.putFile(uri).continueWithTask(task -> {
                     if (!task.isSuccessful()) { throw task.getException(); }
@@ -483,6 +535,16 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         perfilProfesional.put("galeria_paseos_urls", urls.get("galeria_paseos_urls"));
         paseadorData.put("perfil_profesional", perfilProfesional);
 
+        // Precio por hora
+        String precioHoraStr = prefs.getString("precio_hora", "0");
+        try {
+            double precioHora = Double.parseDouble(precioHoraStr);
+            paseadorData.put("precio_hora", precioHora);
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "Error al parsear precio_hora, guardando 0 por defecto", e);
+            paseadorData.put("precio_hora", 0.0);
+        }
+
         // --- 3. Ejecutar la escritura en lote (atomic) ---
         db.runBatch(batch -> {
             batch.set(db.collection("usuarios").document(uid), usuarioData);
@@ -519,7 +581,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
 
     private void saveState() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        // No longer saving map state here, as ZonasServicioActivity handles it
+        editor.putString("precio_hora", etPrecioHora.getText().toString());
         editor.apply();
     }
 
@@ -529,6 +591,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         if (videoUriString != null) {
             mostrarPreviewVideo(Uri.parse(videoUriString));
         }
+        etPrecioHora.setText(prefs.getString("precio_hora", ""));
     }
 
     // Removed loadMapState as ZonasServicioActivity handles it

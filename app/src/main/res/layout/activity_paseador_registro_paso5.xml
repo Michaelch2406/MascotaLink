@@ -291,6 +291,44 @@
                     android:src="@android:drawable/arrow_down_float"/>
             </LinearLayout>
 
+            <!-- Precio por hora -->
+            <TextView
+                style="@style/TextAppearance.Mascota.CardTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Precio por hora"/>
+            <TextView
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Establece la tarifa que cobrarás por cada hora de paseo."/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_precio_hora"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:boxBackgroundColor="@android:color/white"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_precio_hora"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Ej: 10.50"
+                    android:inputType="numberDecimal"
+                    android:paddingStart="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="12dp"
+                    android:background="@drawable/edit_text_background"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="24dp"/>

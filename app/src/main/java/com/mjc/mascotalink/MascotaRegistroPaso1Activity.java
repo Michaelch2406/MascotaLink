@@ -21,12 +21,15 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
+import androidx.core.content.FileProvider;
+
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
+import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -83,8 +86,12 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         });
 
         tomarFotoButton.setOnClickListener(v -> {
-            // Implement camera logic here
-            Toast.makeText(this, "Tomar foto no implementado aún", Toast.LENGTH_SHORT).show();
+            fotoUri = createTempImageUri();
+            if (fotoUri != null) {
+                cameraLauncher.launch(fotoUri);
+            } else {
+                Toast.makeText(this, "No se pudo crear el archivo para la foto", Toast.LENGTH_SHORT).show();
+            }
         });
 
         siguienteButton.setOnClickListener(v -> {
@@ -154,6 +161,21 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
                 }, year, month, day);
         datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis()); // Cannot select a future date
         datePickerDialog.show();
+    }
+
+    private Uri createTempImageUri() {
+        try {
+            File sharedDir = new File(getFilesDir(), "shared_files");
+            if (!sharedDir.exists()) {
+                sharedDir.mkdirs();
+            }
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(System.currentTimeMillis());
+            File photoFile = new File(sharedDir, "MASCOTA_" + timeStamp + ".jpg");
+            return FileProvider.getUriForFile(this, com.mjc.mascotalink.BuildConfig.APPLICATION_ID + ".provider", photoFile);
+        } catch (Exception e) {
+            // Log the error
+            return null;
+        }
     }
 
     private void validateInputs() {
