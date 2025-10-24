@@ -53,8 +53,8 @@ async function sincronizarPaseador(docId) {
       activo: userData.activo || false,
       calificacion_promedio: paseadorData.calificacion_promedio || 0,
       num_servicios_completados: paseadorData.num_servicios_completados || 0,
-      tarifa_por_hora: paseadorData.tarifa_por_hora || 0,
-      tipos_perro_aceptados: paseadorData.tipos_perro_aceptados || [],
+      tarifa_por_hora: paseadorData.precio_hora || 0, // Corregido: usar precio_hora
+      tipos_perro_aceptados: paseadorData.manejo_perros?.tamanos || [], // Corregido: acceder a manejo_perros.tamanos
       anos_experiencia: anosExperiencia,
     };
 
