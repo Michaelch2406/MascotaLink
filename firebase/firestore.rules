@@ -64,6 +64,11 @@ service cloud.firestore {
       allow write: if isOwner(userId);
     }
 
+    // Regla para permitir la lectura de la colección group 'zonas_servicio'
+    match /{path=**}/zonas_servicio/{zonaId} {
+      allow read: if request.auth != null;
+    }
+
     // Reseñas
     match /resenas/{resenaId} {
       allow read: if request.auth != null;

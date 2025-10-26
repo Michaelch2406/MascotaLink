@@ -1,9 +1,9 @@
-package com.mjc.mascota.model;
+
+package com.mjc.mascota.ui.busqueda;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.maps.android.clustering.ClusterItem;
 
-public class PaseadorMarker implements ClusterItem {
+public class PaseadorMarker {
     private String paseadorId;
     private String nombre;
     private LatLng ubicacion;
@@ -76,25 +76,5 @@ public class PaseadorMarker implements ClusterItem {
 
     public void setDistanciaKm(double distanciaKm) {
         this.distanciaKm = distanciaKm;
-    }
-
-    @Override
-    public LatLng getPosition() {
-        return ubicacion;
-    }
-
-    @Override
-    public String getTitle() {
-        return nombre;
-    }
-
-    @Override
-    public String getSnippet() {
-        return "★ " + String.format(Locale.getDefault(), "%.1f", calificacion) + " - " + String.format(Locale.getDefault(), "%.1f", distanciaKm) + " km";
-    }
-
-    @Override
-    public float getZIndex() {
-        return 0;
     }
 }
