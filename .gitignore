@@ -17,3 +17,8 @@ local.properties
 
 # Firebase emulator data
 firebase/firebase-data/
+
+# Archivos a ignorar
+AGENTS.md
+BUSQUEDA_PASEADORES_README.md
+google-services.json
