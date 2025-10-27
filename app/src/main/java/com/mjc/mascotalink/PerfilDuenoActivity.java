@@ -36,7 +36,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private static final String TAG = "PerfilDuenoActivity";
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-    private FirebaseUser currentUser;
+
+    // Se añade el AuthStateListener
+    private FirebaseAuth.AuthStateListener mAuthListener;
 
     private ImageView ivAvatar, ivVerificado, ivBack;
     private TextView tvNombreCompleto, tvRol;
@@ -68,16 +70,31 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-        currentUser = mAuth.getCurrentUser();
 
         initViews();
         setupListeners();
+        setupAuthListener(); // Se configura el nuevo listener
+    }
 
-        if (currentUser == null) {
-            // Handle user not logged in
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-        }
+    private void setupAuthListener() {
+        mAuthListener = firebaseAuth -> {
+            FirebaseUser user = firebaseAuth.getCurrentUser();
+            if (user != null) {
+                // El usuario está logueado, procedemos a cargar datos.
+                Log.d(TAG, "onAuthStateChanged:signed_in:" + user.getUid());
+                String uid = user.getUid();
+                cargarDatosDueno(uid);
+                cargarMascotas(uid);
+                cargarMetodoPagoPredeterminado(uid);
+            } else {
+                // El usuario no está logueado, redirigir a LoginActivity.
+                Log.d(TAG, "onAuthStateChanged:signed_out");
+                Intent intent = new Intent(PerfilDuenoActivity.this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            }
+        };
     }
 
 
@@ -238,14 +255,17 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnTerminos.setOnClickListener(v -> showToast("Próximamente: Términos y Condiciones"));
 
         btnCerrarSesion.setOnClickListener(v -> {
+            // Detach listeners FIRST to prevent PERMISSION_DENIED noise on logout
+            if (duenoListener != null) duenoListener.remove();
+            if (mascotasListener != null) mascotasListener.remove();
+            if (metodoPagoListener != null) metodoPagoListener.remove();
+
             // Limpiar preferencias de "recordar sesión"
             getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE).edit().clear().apply();
 
+            // Sign out AFTER detaching listeners
             mAuth.signOut();
-            Intent intent = new Intent(PerfilDuenoActivity.this, LoginActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
+            // The AuthStateListener will automatically handle the navigation to LoginActivity
         });
     }
 
@@ -254,7 +274,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         duenoListener = db.collection("usuarios").document(uid).addSnapshotListener((document, e) -> {
             if (e != null) {
                 Log.w(TAG, "Listen failed.", e);
-                Toast.makeText(this, "Error al cargar el perfil.", Toast.LENGTH_SHORT).show();
+                // Don't show toast on initial load fail, AuthListener handles redirection
                 return;
             }
             if (document != null && document.exists()) {
@@ -290,7 +310,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 .addSnapshotListener((value, e) -> {
                     if (e != null) {
                         Log.w(TAG, "Listen failed.", e);
-                        Toast.makeText(this, "Error al cargar las mascotas.", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -351,11 +370,14 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     }
 
     private void updateContactInfo(String field, String value) {
-        if (currentUser != null) {
-            db.collection("usuarios").document(currentUser.getUid())
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null) {
+            db.collection("usuarios").document(user.getUid())
                     .update(field, value)
                     .addOnSuccessListener(aVoid -> showToast(field + " actualizado correctamente."))
                     .addOnFailureListener(e -> showToast("Error al actualizar " + field + ": " + e.getMessage()));
+        } else {
+            showToast("Error: No se pudo verificar el usuario para la actualización.");
         }
     }
 
@@ -366,17 +388,20 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (currentUser != null) {
-            String uid = currentUser.getUid();
-            cargarDatosDueno(uid);
-            cargarMascotas(uid);
-            cargarMetodoPagoPredeterminado(uid);
-        }
+        mAuth.addAuthStateListener(mAuthListener);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        // Clear Glide load to prevent crash on destroy
+        if (ivAvatar != null) {
+            Glide.with(this).clear(ivAvatar);
+        }
+
+        if (mAuthListener != null) {
+            mAuth.removeAuthStateListener(mAuthListener);
+        }
         if (duenoListener != null) {
             duenoListener.remove();
         }

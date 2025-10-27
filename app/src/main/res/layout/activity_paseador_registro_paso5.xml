@@ -136,7 +136,7 @@
                     android:layout_height="32dp"
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
-                    android:text="❌ Eliminar"
+                    android:text="Eliminar"
                     android:textSize="12sp"
                     android:textAllCaps="false"
                     android:backgroundTint="#DC2626"

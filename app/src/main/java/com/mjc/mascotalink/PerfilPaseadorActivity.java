@@ -119,6 +119,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private ArrayList<String> galeriaImageUrls = new ArrayList<>();
 
     // Listeners
+    private FirebaseAuth.AuthStateListener mAuthListener;
     private ListenerRegistration usuarioListener;
     private ListenerRegistration paseadorListener;
     private ListenerRegistration disponibilidadListener;
@@ -139,30 +140,42 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         setupListeners();
         setupTabs();
         setupResenasRecyclerView();
+        setupAuthListener();
 
         paseadorId = getIntent().getStringExtra("paseadorId");
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+    }
 
-        if (currentUser != null) {
-            currentUserId = currentUser.getUid();
-            if (paseadorId == null) {
-                paseadorId = currentUserId; // Viendo su propio perfil por defecto
+    private void setupAuthListener() {
+        mAuthListener = firebaseAuth -> {
+            FirebaseUser user = firebaseAuth.getCurrentUser();
+            if (user != null) {
+                // User is signed in
+                currentUserId = user.getUid();
+                if (paseadorId == null) {
+                    paseadorId = currentUserId; // Default to viewing own profile
+                }
+                fetchCurrentUserRoleAndSetupUI();
+                attachDataListeners();
+            } else {
+                // User is signed out
+                currentUserId = null;
+                currentUserRole = null;
+                // If we are on a profile screen and the user signs out, redirect to Login
+                if (!(this instanceof LoginActivity)) {
+                    Intent intent = new Intent(PerfilPaseadorActivity.this, LoginActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                }
             }
-            fetchCurrentUserRoleAndSetupUI();
-        } else {
-            // Usuario no logueado
-            currentUserId = null;
-            currentUserRole = null;
-            if (paseadorId == null) {
-                Toast.makeText(this, "Error: Perfil no especificado.", Toast.LENGTH_SHORT).show();
-                finish();
-                return;
-            }
-            setupRoleBasedUI();
-        }
+        };
     }
 
     private void fetchCurrentUserRoleAndSetupUI() {
+        if (currentUserId == null) {
+            setupRoleBasedUI(); // Setup as guest
+            return;
+        }
         db.collection("usuarios").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -180,14 +193,19 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     @Override
     protected void onStart() {
         super.onStart();
-        if (paseadorId != null) {
-            attachDataListeners();
-        }
+        mAuth.addAuthStateListener(mAuthListener);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        // Clear Glide load to prevent crash on destroy
+        if (ivAvatar != null) {
+            Glide.with(this).clear(ivAvatar);
+        }
+        if (mAuthListener != null) {
+            mAuth.removeAuthStateListener(mAuthListener);
+        }
         detachDataListeners();
     }
 
@@ -429,13 +447,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
 
         btnCerrarSesion.setOnClickListener(v -> {
+            // Detach listeners FIRST to prevent PERMISSION_DENIED noise on logout
+            detachDataListeners();
+
+            // Limpiar preferencias de "recordar sesión"
             SharedPreferences prefs = getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE);
             prefs.edit().clear().apply();
+
+            // Sign out AFTER detaching listeners. The AuthStateListener will handle navigation.
             mAuth.signOut();
-            Intent intent = new Intent(PerfilPaseadorActivity.this, LoginActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
         });
 
         btnNotificaciones.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Notificaciones", Toast.LENGTH_SHORT).show());

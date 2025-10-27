@@ -1815,8 +1815,8 @@
 
     <issue
         id="HardcodedText"
-        message="Hardcoded string &quot;❌ Eliminar&quot;, should use `@string` resource"
-        errorLine1="                    android:text=&quot;❌ Eliminar&quot;"
+        message="Hardcoded string &quot;Eliminar&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Eliminar&quot;"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/layout/activity_paseador_registro_paso2.xml"
@@ -1881,8 +1881,8 @@
 
     <issue
         id="HardcodedText"
-        message="Hardcoded string &quot;❌ Eliminar&quot;, should use `@string` resource"
-        errorLine1="                    android:text=&quot;❌ Eliminar&quot;"
+        message="Hardcoded string &quot;Eliminar&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Eliminar&quot;"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/layout/activity_paseador_registro_paso2.xml"
@@ -2013,8 +2013,8 @@
 
     <issue
         id="HardcodedText"
-        message="Hardcoded string &quot;❌ Eliminar&quot;, should use `@string` resource"
-        errorLine1="                    android:text=&quot;❌ Eliminar&quot;"
+        message="Hardcoded string &quot;Eliminar&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Eliminar&quot;"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/layout/activity_paseador_registro_paso3.xml"
@@ -2112,8 +2112,8 @@
 
     <issue
         id="HardcodedText"
-        message="Hardcoded string &quot;❌ Eliminar&quot;, should use `@string` resource"
-        errorLine1="                    android:text=&quot;❌ Eliminar&quot;"
+        message="Hardcoded string &quot;Eliminar&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;Eliminar&quot;"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/layout/activity_paseador_registro_paso3.xml"

@@ -36,6 +36,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import androidx.core.content.ContextCompat;
+
 public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
     private ImageView arrowBack, fotoPrincipalImageView;
@@ -49,6 +53,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     private Uri fotoUri;
     private ActivityResultLauncher<Intent> galleryLauncher;
     private ActivityResultLauncher<Uri> cameraLauncher;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,9 +74,9 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         elegirGaleriaButton = findViewById(R.id.elegirGaleriaButton);
         tomarFotoButton = findViewById(R.id.tomarFotoButton);
 
+        setupLaunchers(); // Setup launchers first
         setupListeners();
         setupRazaSpinner();
-        setupImageLaunchers();
         validateInputs(); // Call initially to set button state
     }
 
@@ -85,14 +90,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
             galleryLauncher.launch(intent);
         });
 
-        tomarFotoButton.setOnClickListener(v -> {
-            fotoUri = createTempImageUri();
-            if (fotoUri != null) {
-                cameraLauncher.launch(fotoUri);
-            } else {
-                Toast.makeText(this, "No se pudo crear el archivo para la foto", Toast.LENGTH_SHORT).show();
-            }
-        });
+        tomarFotoButton.setOnClickListener(v -> checkCameraPermissionAndLaunch());
 
         siguienteButton.setOnClickListener(v -> {
             if (validateFields()) {
@@ -126,7 +124,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         razaAutoComplete.setAdapter(adapter);
     }
 
-    private void setupImageLaunchers() {
+    private void setupLaunchers() {
         galleryLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -137,7 +135,6 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
                     }
                 });
 
-        // Initialize camera launcher (implementation pending)
         cameraLauncher = registerForActivityResult(
                 new ActivityResultContracts.TakePicture(),
                 success -> {
@@ -146,6 +143,37 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
                         validateInputs();
                     }
                 });
+
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) {
+                // Permission is granted. Continue the action
+                launchCamera();
+            } else {
+                // Explain to the user that the feature is unavailable
+                Toast.makeText(this, "El permiso de la cámara es necesario para tomar una foto.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void checkCameraPermissionAndLaunch() {
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED) {
+            // Permission is already granted
+            launchCamera();
+        } else {
+            // Directly ask for the permission
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    private void launchCamera() {
+        fotoUri = createTempImageUri();
+        if (fotoUri != null) {
+            cameraLauncher.launch(fotoUri);
+        } else {
+            Toast.makeText(this, "No se pudo crear el archivo para la foto", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showDatePickerDialog() {

@@ -37,6 +37,12 @@ service cloud.firestore {
       allow write: if false; // Solo las Cloud Functions pueden escribir aquí
     }
 
+    // Colección para manejar las solicitudes de reseteo de contraseña.
+    // NADIE desde el cliente puede leer o escribir aquí. Solo el backend (Admin SDK) tiene acceso.
+    match /solicitudes_recuperacion/{solicitudId} {
+      allow read, write: if false;
+    }
+
     // Subcolecciones bajo usuarios
     match /usuarios/{userId}/metodos_pago/{metodoId} {
       allow read, write: if isOwner(userId);
