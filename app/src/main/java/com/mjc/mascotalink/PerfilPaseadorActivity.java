@@ -161,12 +161,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 currentUserId = null;
                 currentUserRole = null;
                 // If we are on a profile screen and the user signs out, redirect to Login
-                if (!(this instanceof LoginActivity)) {
-                    Intent intent = new Intent(PerfilPaseadorActivity.this, LoginActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
-                }
+                Intent intent = new Intent(PerfilPaseadorActivity.this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
             }
         };
     }

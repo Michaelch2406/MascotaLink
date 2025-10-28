@@ -13,10 +13,14 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.Manifest; // Added for Manifest.permission
+import android.content.pm.PackageManager; // Added for PackageManager
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat; // Added for ActivityCompat
+import androidx.core.content.ContextCompat; // Added for ContextCompat
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -32,6 +36,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
     public static final String PREFS_NAME = "MascotaLinkPrefs";
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // Added for permission request
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -67,6 +72,17 @@ public class LoginActivity extends AppCompatActivity {
         setupEmailField();
         setupPasswordField();
         setupClickListeners();
+        checkAndRequestLocationPermission(); // Call the new permission check method
+    }
+
+    private void checkAndRequestLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted, request it
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            // Permission has already been granted
+            Log.d(TAG, "ACCESS_FINE_LOCATION permission already granted.");
+        }
     }
 
     private boolean checkForSavedSession() {
@@ -321,6 +337,21 @@ public class LoginActivity extends AppCompatActivity {
                 .show();
         } else {
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @androidx.annotation.NonNull String[] permissions, @androidx.annotation.NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "ACCESS_FINE_LOCATION permission granted by user.");
+                // Optionally, you could re-check the SSID here if needed,
+                // but MyApplication.onCreate() already handles it on app startup.
+            } else {
+                Log.w(TAG, "ACCESS_FINE_LOCATION permission denied by user.");
+                mostrarMensaje("Permiso de ubicación denegado. La detección automática de red para emuladores podría no funcionar.");
+            }
         }
     }
 }

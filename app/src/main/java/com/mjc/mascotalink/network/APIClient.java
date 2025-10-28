@@ -1,6 +1,8 @@
 
 package com.mjc.mascotalink.network;
 
+import com.mjc.mascotalink.MyApplication; // Import MyApplication
+
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -10,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 public class APIClient {
     // La IP debe apuntar a la IP de tu máquina en la red local, no a localhost.
     // El puerto 8000 es el que usa Uvicorn/FastAPI por defecto.
-    private static final String BASE_URL = "http://192.168.0.147:8000/";
+    // private static final String BASE_URL = "http://192.168.0.147:8000/"; // Removed
     private static Retrofit retrofit;
 
     public static Retrofit getRetrofit() {
@@ -25,8 +27,11 @@ public class APIClient {
                     .readTimeout(30, TimeUnit.SECONDS)
                     .build();
 
+            // Dynamically get the base URL from MyApplication
+            String dynamicBaseUrl = "http://" + MyApplication.getCurrentEmulatorHost() + ":8000/";
+
             retrofit = new Retrofit.Builder()
-                    .baseUrl(BASE_URL)
+                    .baseUrl(dynamicBaseUrl) // Used dynamic URL here
                     .client(okHttpClient)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
