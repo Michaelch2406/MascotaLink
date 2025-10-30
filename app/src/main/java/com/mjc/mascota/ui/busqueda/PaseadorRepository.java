@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import com.mjc.mascota.modelo.Filtros;
 
 public class PaseadorRepository {
-
     private static final String TAG = "PaseadorRepository";
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final List<ListenerRegistration> listeners = new ArrayList<>();

@@ -24,9 +24,13 @@ public class MyApplication extends Application {
     private static final String TAG = "MyApplication";
     private static final String EMULATOR_HOST_CASA = "192.168.0.147";
     private static final String EMULATOR_HOST_TRABAJO = "10.10.0.142";
+    private static final String EMULATOR_HOST_HOTSPOT = "10.246.204.132";
     // TODO: Reemplazar con los SSIDs reales de tus redes Wi-Fi
     private static final String SSID_CASA = "INNO_FLIA_CHASIGUANO_5G";
     private static final String SSID_TRABAJO = "ESTUDIANTES_IST";
+    private static final String SSID_HOTSPOT = "POCO X5 PRO 5G";
+    private static final String SSID_DESKTOP = "DESKTOP-EVP8AVD 0845";
+
 
     private static String currentEmulatorHost; // Made static
 
@@ -35,8 +39,10 @@ public class MyApplication extends Application {
         super.onCreate();
         FirebaseApp.initializeApp(this);
 
-        currentEmulatorHost = EMULATOR_HOST_CASA; // Default a casa
+        currentEmulatorHost = EMULATOR_HOST_HOTSPOT; // Default a hotspot
         String currentSsid = getCurrentWifiSsid();
+        Log.d(TAG, "Current SSID: " + currentSsid);
+
 
         if (currentSsid != null) {
             if (currentSsid.equals(SSID_TRABAJO)) {
@@ -45,12 +51,20 @@ public class MyApplication extends Application {
             } else if (currentSsid.equals(SSID_CASA)) {
                 currentEmulatorHost = EMULATOR_HOST_CASA;
                 Log.d(TAG, "Red de casa detectada. Usando EMULATOR_HOST_CASA: " + currentEmulatorHost);
+            } else if (currentSsid.equals(SSID_HOTSPOT)) {
+                currentEmulatorHost = EMULATOR_HOST_HOTSPOT;
+                Log.d(TAG, "Red de hotspot detectada. Usando EMULATOR_HOST_HOTSPOT: " + currentEmulatorHost);
+            } else if (currentSsid.equals(SSID_DESKTOP)) {
+                currentEmulatorHost = EMULATOR_HOST_CASA;
+                Log.d(TAG, "Red de desktop detectada. Usando EMULATOR_HOST_CASA: " + currentEmulatorHost);
             } else {
-                Log.w(TAG, "SSID desconocido: " + currentSsid + ". Usando EMULATOR_HOST_CASA por defecto.");
+                currentEmulatorHost = EMULATOR_HOST_HOTSPOT; // Default a hotspot
+                Log.w(TAG, "SSID desconocido: " + currentSsid + ". Usando EMULATOR_HOST_HOTSPOT por defecto.");
             }
         } else {
+            currentEmulatorHost = EMULATOR_HOST_HOTSPOT; // Default a hotspot
             Log.e(TAG, "No se pudo obtener el SSID de la red Wi-Fi. Asegúrate de tener los permisos de ubicación y Wi-Fi.");
-            Log.w(TAG, "Usando EMULATOR_HOST_CASA por defecto.");
+            Log.w(TAG, "Usando EMULATOR_HOST_HOTSPOT por defecto.");
         }
 
         /*
@@ -118,12 +132,17 @@ public class MyApplication extends Application {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (wifiManager != null) {
             WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-            if (wifiInfo != null && wifiInfo.getSupplicantState() == SupplicantState.COMPLETED) {
-                String ssid = wifiInfo.getSSID();
-                if (ssid != null && ssid.startsWith("\"") && ssid.endsWith("\"")) {
-                    return ssid.substring(1, ssid.length() - 1); // Remove surrounding quotes
+            Log.d(TAG, "WifiInfo: " + wifiInfo);
+            if (wifiInfo != null) {
+                SupplicantState supplicantState = wifiInfo.getSupplicantState();
+                Log.d(TAG, "SupplicantState: " + supplicantState);
+                if (supplicantState == SupplicantState.COMPLETED) {
+                    String ssid = wifiInfo.getSSID();
+                    if (ssid != null && ssid.startsWith("\"") && ssid.endsWith("\"")) {
+                        return ssid.substring(1, ssid.length() - 1); // Remove surrounding quotes
+                    }
+                    return ssid;
                 }
-                return ssid;
             }
         }
         return null;
