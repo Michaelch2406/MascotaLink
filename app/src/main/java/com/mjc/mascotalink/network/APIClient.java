@@ -28,7 +28,7 @@ public class APIClient {
                     .build();
 
             // Dynamically get the base URL from MyApplication
-            String dynamicBaseUrl = "http://" + MyApplication.getCurrentEmulatorHost() + ":8000/";
+            String dynamicBaseUrl = "http://" + MyApplication.getCurrentEmulatorHost(MyApplication.getAppContext()) + ":8000/";
 
             retrofit = new Retrofit.Builder()
                     .baseUrl(dynamicBaseUrl) // Used dynamic URL here
