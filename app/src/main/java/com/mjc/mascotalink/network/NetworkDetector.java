@@ -266,7 +266,12 @@ public class NetworkDetector {
             return null;
         }
         
-        ssid = ssid.replace("", "");
+        // Remover comillas dobles y simples que Android puede agregar
+        ssid = ssid.replace("\"", "").replace("'", "");
+        
+        // Remover espacios al inicio/final
+        ssid = ssid.trim();
+        
         return ssid;
     }
     
@@ -376,7 +381,7 @@ public class NetworkDetector {
                 .getSystemService(Context.WIFI_SERVICE);
             
             if (wifiManager != null) {
-                DhcpInfo dhcp = wifiManager.getDhcpInfo();
+                android.net.DhcpInfo dhcp = wifiManager.getDhcpInfo();
                 if (dhcp != null && dhcp.gateway != 0) {
                     return intToIp(dhcp.gateway);
                 }
