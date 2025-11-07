@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F7FAFC">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mis Paseos"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- Tabs de filtro -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:scrollbars="none"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tab_activos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ACTIVOS"
+                android:textColor="#9CA3AF"
+                android:textSize="14sp"
+                android:paddingBottom="8dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="16dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/tab_en_progreso"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EN PROGRESO"
+                android:textColor="#12A3ED"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:paddingBottom="8dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/tab_selected_underline" />
+
+            <TextView
+                android:id="@+id/tab_completados"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="COMPLETADOS"
+                android:textColor="#9CA3AF"
+                android:textSize="14sp"
+                android:paddingBottom="8dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="16dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/tab_cancelados"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CANCELADOS"
+                android:textColor="#9CA3AF"
+                android:textSize="14sp"
+                android:paddingBottom="8dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="16dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+
+    </HorizontalScrollView>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB" />
+
+    <!-- SwipeRefreshLayout con RecyclerView -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_paseos"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="12dp" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <!-- Vista vacía -->
+    <LinearLayout
+        android:id="@+id/ll_empty_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="32dp">
+
+        <TextView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:text="🐾"
+            android:textSize="48sp"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No tienes paseos en esta categoría"
+            android:textColor="#9CA3AF"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
+
+        <Button
+            android:id="@+id/btn_reservar_paseo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reservar un Paseo"
+            android:textColor="@android:color/white"
+            android:background="@drawable/btn_procesar_pago"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp" />
+
+    </LinearLayout>
+
+    <!-- Divider superior de bottom nav -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB" />
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F7FAFC"
+        app:menu="@menu/menu_bottom_nav_new"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/bottom_nav_item_color"
+        app:itemTextColor="@color/bottom_nav_item_color" />
+
+</LinearLayout>

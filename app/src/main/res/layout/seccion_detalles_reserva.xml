@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tv_titulo_detalles"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Detalles de la reserva"
+        android:textColor="@android:color/black"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:padding="16dp"
+        android:layout_marginBottom="80dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓ "
+                android:textColor="@color/green_success"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Paseador: "
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_paseador_nombre"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Alex"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓ "
+                android:textColor="@color/green_success"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mascota: "
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_mascota_nombre"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Max"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓ "
+                android:textColor="@color/green_success"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fecha: "
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_detalle_fecha"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="29 de Octubre 2025"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓ "
+                android:textColor="@color/green_success"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hora: "
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_detalle_hora"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="10:00 AM"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓ "
+                android:textColor="@color/green_success"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Duración: "
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_detalle_duracion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2 horas"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

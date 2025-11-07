@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F7FAFC">
+
+    <!-- Header -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize">
+
+            <ImageView
+                android:id="@+id/iv_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_arrow_back"
+                android:layout_gravity="start"
+                android:contentDescription="Atrás"
+                android:padding="8dp"
+                app:tint="@android:color/black" />
+
+            <TextView
+                android:id="@+id/toolbar_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Reservar paseo"
+                android:textColor="@android:color/black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- ScrollView Principal -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/app_bar"
+        android:layout_above="@id/bottom_container"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Seccion Mascotas -->
+            <include layout="@layout/seccion_mascotas" />
+
+            <!-- Seccion Fecha -->
+            <include layout="@layout/seccion_fecha" />
+
+            <!-- Seccion Hora -->
+            <include layout="@layout/seccion_hora" />
+
+            <!-- Seccion Resumen Costo -->
+            <include layout="@layout/seccion_resumen_costo" />
+
+            <!-- Seccion Detalles -->
+            <include layout="@layout/seccion_detalles_reserva" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Boton Confirmar -->
+    <LinearLayout
+        android:id="@+id/bottom_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bottom_nav"
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/btn_confirmar_reserva"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Confirmar Reserva"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="@drawable/button_primary_selector"
+            android:enabled="false" />
+
+    </LinearLayout>
+
+    <!-- Navegación inferior -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB"
+        android:layout_above="@id/bottom_nav"/>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#F7FAFC"
+        app:menu="@menu/menu_bottom_nav_new"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/bottom_nav_item_color"
+        app:itemTextColor="@color/bottom_nav_item_color" />
+
+</RelativeLayout>

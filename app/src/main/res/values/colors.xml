@@ -26,4 +26,8 @@
     <!-- Skeleton Loading Colors -->
     <color name="skeleton_color">#E0E0E0</color>
     <color name="skeleton_color_light">#F5F5F5</color>
+    
+    <!-- Additional Colors -->
+    <color name="icon_color">#6B7280</color>
+    <color name="gray_text">#9CA3AF</color>
 </resources>

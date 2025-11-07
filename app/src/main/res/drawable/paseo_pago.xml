@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder temporal: Reemplazar con imagen real paseo_pago.png -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#E0E0E0" />
+    <gradient
+        android:angle="45"
+        android:startColor="#BDBDBD"
+        android:endColor="#9E9E9E"
+        android:type="linear" />
+</shape>

@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tv_titulo_fecha"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Selecciona la fecha"
+        android:textColor="@android:color/black"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group_fecha"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:singleSelection="true"
+        app:checkedChip="@id/chip_dias_especificos">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_dias_especificos"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Por días específicos"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            app:chipBackgroundColor="@color/chip_background_selector" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_semana"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Por semana"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            app:chipBackgroundColor="@color/chip_background_selector" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_mes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Por mes"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            app:chipBackgroundColor="@color/chip_background_selector" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <LinearLayout
+        android:id="@+id/calendario_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/iv_mes_anterior"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_arrow_back"
+                android:contentDescription="Mes anterior"
+                android:padding="8dp"
+                app:tint="@color/gray_dark" />
+
+            <TextView
+                android:id="@+id/tv_mes_anio"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Octubre 2025"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <ImageView
+                android:id="@+id/iv_mes_siguiente"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_arrow_forward"
+                android:contentDescription="Mes siguiente"
+                android:padding="8dp"
+                app:tint="@color/gray_dark" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/dias_semana_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="D"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="L"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="M"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="M"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="J"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="V"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="S"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+        <GridView
+            android:id="@+id/gv_calendario"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:numColumns="7"
+            android:horizontalSpacing="4dp"
+            android:verticalSpacing="4dp"
+            android:stretchMode="columnWidth"
+            android:gravity="center" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_fecha_seleccionada"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Domingo, 29 de Octubre 2025"
+        android:textColor="@color/blue_primary"
+        android:textSize="14sp"
+        android:layout_marginBottom="24dp"
+        android:visibility="gone" />
+
+</LinearLayout>
