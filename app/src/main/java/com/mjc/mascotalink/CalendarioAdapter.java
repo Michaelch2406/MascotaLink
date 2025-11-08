@@ -76,18 +76,15 @@ public class CalendarioAdapter extends BaseAdapter {
             boolean isPast = date.before(today.getTime());
 
             if (isPast) {
-                // Día pasado: gris opaco, deshabilitado
-                tvDia.setTextColor(context.getResources().getColor(R.color.gray_disabled));
+                // Día pasado: deshabilitado (el selector de color y fondo se encargarán)
                 tvDia.setEnabled(false);
                 tvDia.setSelected(false);
             } else if (selectedPosition == position) {
-                // Día seleccionado: círculo azul, texto blanco
-                tvDia.setTextColor(context.getResources().getColor(android.R.color.white));
+                // Día seleccionado (el selector de color y fondo se encargarán)
                 tvDia.setEnabled(true);
                 tvDia.setSelected(true);
             } else {
-                // Día disponible: texto negro, clickeable
-                tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
+                // Día disponible (el selector de color y fondo se encargarán)
                 tvDia.setEnabled(true);
                 tvDia.setSelected(false);
             }

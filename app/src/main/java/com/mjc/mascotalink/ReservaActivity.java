@@ -46,7 +46,8 @@ public class ReservaActivity extends AppCompatActivity {
     // Views
     private ImageView ivBack;
     private RecyclerView rvMascotas, rvHorarios;
-    private Button btnAgregarMascota, btnConfirmarReserva;
+    private View btnAgregarMascota;
+    private Button btnConfirmarReserva;
     private ChipGroup chipGroupFecha;
     private ImageView ivMesAnterior, ivMesSiguiente;
     private TextView tvMesAnio, tvFechaSeleccionada, tvDisponibilidad;
@@ -201,32 +202,30 @@ public class ReservaActivity extends AppCompatActivity {
         });
 
         chipGroupFecha.setOnCheckedChangeListener((group, checkedId) -> {
-            // --- FIX INICIO: Lógica para actualizar la UI del calendario ---
-            // RIESGO: El listener anterior solo actualizaba variables, pero no la UI,
-            // causando que la vista del calendario nunca cambiara.
-            // SOLUCIÓN: Se añade lógica para mostrar/ocultar el calendario según el modo.
-            // Las vistas para "semana" y "mes" no están implementadas, por lo que se oculta
-            // el calendario y se notifica al usuario.
+            // --- FIX INICIO: Lógica para llamar a los métodos de vista de calendario ---
             if (checkedId == R.id.chip_dias_especificos) {
                 modoFechaActual = "DIAS_ESPECIFICOS";
                 tipoReserva = "PUNTUAL";
-                calendarioContainer.setVisibility(View.VISIBLE);
+                cargarVistaMensual(); // El modo "días específicos" muestra el calendario mensual.
             } else if (checkedId == R.id.chip_semana) {
                 modoFechaActual = "SEMANA";
                 tipoReserva = "SEMANAL";
-                calendarioContainer.setVisibility(View.GONE);
-                Toast.makeText(this, "La selección por semana estará disponible próximamente.", Toast.LENGTH_SHORT).show();
+                cargarVistaSemanales();
             } else if (checkedId == R.id.chip_mes) {
                 modoFechaActual = "MES";
                 tipoReserva = "MENSUAL";
-                calendarioContainer.setVisibility(View.GONE);
-                Toast.makeText(this, "La selección por mes estará disponible próximamente.", Toast.LENGTH_SHORT).show();
+                cargarVistaMensual(); // El modo "por mes" también usa la vista de calendario mensual.
             } else {
-                // Chip deseleccionado, volver al modo por defecto
+                // Por defecto, si no hay nada seleccionado, mostrar la vista mensual.
                 modoFechaActual = "DIAS_ESPECIFICOS";
                 tipoReserva = "PUNTUAL";
+                cargarVistaMensual();
+            }
+            
+            if (calendarioContainer != null) {
                 calendarioContainer.setVisibility(View.VISIBLE);
             }
+
             actualizarTextoDuracion();
             // --- FIX FIN ---
         });
@@ -319,8 +318,60 @@ public class ReservaActivity extends AppCompatActivity {
     private void setupCalendario() {
         currentMonth = Calendar.getInstance();
         datesList = new ArrayList<>();
-        actualizarCalendario();
+        // Por defecto, se carga la vista mensual.
+        cargarVistaMensual();
     }
+
+    // --- FIX INICIO: Nuevos métodos para cargar las vistas del calendario ---
+
+    /**
+     * Carga la vista del calendario para mostrar solo los 7 días de la semana actual.
+     */
+    private void cargarVistaSemanales() {
+        // Ocultar flechas de navegación y cambiar título
+        ivMesAnterior.setVisibility(View.INVISIBLE);
+        ivMesSiguiente.setVisibility(View.INVISIBLE);
+        tvMesAnio.setText("Esta Semana");
+
+        datesList.clear();
+        Calendar cal = Calendar.getInstance();
+        
+        // --- FIX: Lógica robusta para encontrar el Lunes de la semana actual ---
+        // Retroceder día por día hasta encontrar el Lunes.
+        while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+            cal.add(Calendar.DATE, -1);
+        }
+
+        // Generar los 7 días de la semana desde el Lunes
+        for (int i = 0; i < 7; i++) {
+            datesList.add(cal.getTime());
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        if (calendarioAdapter == null) {
+             calendarioAdapter = new CalendarioAdapter(this, datesList, currentMonth, (date, position) -> {
+                fechaSeleccionada = date;
+                mostrarFechaSeleccionada(date);
+                cargarHorariosDisponibles();
+                verificarCamposCompletos();
+            });
+            gvCalendario.setAdapter(calendarioAdapter);
+        } else {
+            calendarioAdapter.updateDates(datesList, (Calendar) cal.clone());
+        }
+    }
+
+    /**
+     * Carga la vista del calendario para mostrar el mes completo.
+     */
+    private void cargarVistaMensual() {
+        // Mostrar flechas de navegación
+        ivMesAnterior.setVisibility(View.VISIBLE);
+        ivMesSiguiente.setVisibility(View.VISIBLE);
+        actualizarCalendario(); // Este método ya dibuja el mes completo
+    }
+
+    // --- FIX FIN ---
 
     private void actualizarCalendario() {
         SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", new Locale("es", "ES"));
@@ -330,16 +381,28 @@ public class ReservaActivity extends AppCompatActivity {
         Calendar cal = (Calendar) currentMonth.clone();
         cal.set(Calendar.DAY_OF_MONTH, 1);
 
-        int firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
         int daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
 
-        for (int i = 1; i < firstDayOfWeek; i++) {
+        // --- FIX: Lógica robusta para calcular los días vacíos al inicio del mes ---
+        int dayOfWeekForFirst = cal.get(Calendar.DAY_OF_WEEK); // ej. Miércoles es 4
+        int firstDayOfWeekSetting = cal.getFirstDayOfWeek(); // ej. Lunes es 2
+        int emptyDays = dayOfWeekForFirst - firstDayOfWeekSetting;
+        if (emptyDays < 0) {
+            emptyDays += 7;
+        }
+        for (int i = 0; i < emptyDays; i++) {
             datesList.add(null);
         }
 
+        // Añadir los días del mes actual
         for (int i = 1; i <= daysInMonth; i++) {
             cal.set(Calendar.DAY_OF_MONTH, i);
             datesList.add(cal.getTime());
+        }
+
+        // Rellenar con días vacíos para completar la última fila
+        while (datesList.size() % 7 != 0) {
+            datesList.add(null);
         }
 
         if (calendarioAdapter == null) {

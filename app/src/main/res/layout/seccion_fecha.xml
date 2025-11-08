@@ -170,7 +170,7 @@
 
         </LinearLayout>
 
-        <GridView
+        <com.mjc.mascotalink.util.ExpandedGridView
             android:id="@+id/gv_calendario"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
