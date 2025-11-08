@@ -109,11 +109,12 @@ service cloud.firestore {
 
     // Reservas
     match /reservas/{reservaId} {
-      // Un usuario puede crear una reserva si él mismo es el dueño.
-      allow create: if request.auth.uid == request.resource.data.id_dueno.id;
+      // El usuario puede crear una reserva si el campo 'id_dueno' apunta a su propio documento de usuario.
+      allow create: if request.resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid);
 
       // El dueño o el paseador pueden leer o actualizar la reserva.
-      allow read, update: if request.auth.uid == resource.data.id_dueno.id || request.auth.uid == resource.data.id_paseador.id;
+      allow read, update: if resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
+                           resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid);
       
       allow delete: if false;
     }
