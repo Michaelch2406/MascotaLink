@@ -681,21 +681,30 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void setupBottomNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
-        bottomNav.setSelectedItemId(R.id.menu_search);
+        bottomNav.setSelectedItemId(R.id.menu_search); 
 
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            if (itemId == R.id.menu_home) {
+            if (itemId == R.id.menu_search) {
+                // Ya estamos aquí
                 return true;
-            } else if (itemId == R.id.menu_search) {
+            } else if (itemId == R.id.menu_home) { // 'Inicio' te lleva al perfil
+                Intent intent = new Intent(this, PerfilDuenoActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
-            } else if (itemId == R.id.menu_walks) {
+            } else if (itemId == R.id.menu_walks) { // 'Paseos'
+                Intent intent = new Intent(this, com.mjc.mascotalink.PaseosActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.menu_messages) {
-                return true;
+                Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
+                return false; // No cambiar la selección
             } else if (itemId == R.id.menu_perfil) {
-                startActivity(new Intent(this, PerfilDuenoActivity.class));
-                overridePendingTransition(0, 0);
+                Intent intent = new Intent(this, PerfilDuenoActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             }
             return false;

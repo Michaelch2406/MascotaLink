@@ -175,21 +175,29 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void setupBottomNavigation() {
-        bottomNav.setSelectedItemId(R.id.menu_paseos);
+        bottomNav.setSelectedItemId(R.id.menu_walks);
         bottomNav.setOnNavigationItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            if (itemId == R.id.menu_inicio) {
-                startActivity(new Intent(this, PerfilDuenoActivity.class));
+            if (itemId == R.id.menu_walks) {
+                // Ya estamos aquí
                 return true;
-            } else if (itemId == R.id.menu_buscar) {
-                startActivity(new Intent(this, com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity.class));
+            } else if (itemId == R.id.menu_home) { // 'Inicio' te lleva al perfil
+                Intent intent = new Intent(this, PerfilDuenoActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
-            } else if (itemId == R.id.menu_paseos) {
+            } else if (itemId == R.id.menu_search) { // 'Buscar'
+                Intent intent = new Intent(this, com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.menu_messages) {
-                return true;
+                Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
+                return false; // No cambiar la selección
             } else if (itemId == R.id.menu_perfil) {
-                startActivity(new Intent(this, PerfilDuenoActivity.class));
+                Intent intent = new Intent(this, PerfilDuenoActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             }
             return false;

@@ -138,23 +138,25 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         bottomNav.setSelectedItemId(R.id.menu_perfil);
         bottomNav.setOnNavigationItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            if (itemId == R.id.menu_home) {
-                showToast("Próximamente: Inicio");
+            if (itemId == R.id.menu_perfil) {
+                // Ya estamos aquí
                 return true;
+            } else if (itemId == R.id.menu_home) {
+                showToast("Próximamente: Inicio");
+                return false; // No cambiar la selección
             } else if (itemId == R.id.menu_search) {
                 Intent intent = new Intent(this, BusquedaPaseadoresActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 startActivity(intent);
                 return true;
             } else if (itemId == R.id.menu_walks) {
-                showToast("Próximamente: Paseos");
+                Intent intent = new Intent(this, PaseosActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.menu_messages) {
                 showToast("Próximamente: Mensajes");
-                return true;
-            } else if (itemId == R.id.menu_perfil) {
-                // Ya estamos aquí
-                return true;
+                return false; // No cambiar la selección
             }
             return false;
         });

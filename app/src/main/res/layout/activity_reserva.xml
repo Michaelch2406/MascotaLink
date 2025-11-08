@@ -116,6 +116,7 @@
         app:menu="@menu/menu_bottom_nav_new"
         app:labelVisibilityMode="labeled"
         app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color" />
+        app:itemTextColor="@color/bottom_nav_item_color"
+        app:itemActiveIndicatorStyle="@null" />
 
 </RelativeLayout>
