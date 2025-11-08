@@ -53,6 +53,11 @@ service cloud.firestore {
       allow read, write, delete: if isOwner(userId);
     }
 
+    // Subcolección de mascotas bajo usuarios (para dueños)
+    match /usuarios/{userId}/mascotas/{mascotaId} {
+      allow read, write: if isOwner(userId);
+    }
+
     // Mascotas dentro de duenos
     match /duenos/{duenoId}/mascotas/{mascotaId} {
       allow read: if request.auth != null;
@@ -99,6 +104,17 @@ service cloud.firestore {
         (request.auth.uid == resource.data.pas_id && request.resource.data.estado in ['CONFIRMADO', 'EN_PROGRESO'])
       );
 
+      allow delete: if false;
+    }
+
+    // Reservas
+    match /reservas/{reservaId} {
+      // Un usuario puede crear una reserva si él mismo es el dueño.
+      allow create: if request.auth.uid == request.resource.data.id_dueno.id;
+
+      // El dueño o el paseador pueden leer o actualizar la reserva.
+      allow read, update: if request.auth.uid == resource.data.id_dueno.id || request.auth.uid == resource.data.id_paseador.id;
+      
       allow delete: if false;
     }
 

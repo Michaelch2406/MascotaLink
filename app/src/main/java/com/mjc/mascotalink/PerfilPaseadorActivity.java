@@ -109,6 +109,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private String currentUserId;
     private String currentUserRole;
     private String videoUrl;
+    private Double paseadorPrecioHora = null;
 
     private RecyclerView recyclerViewResenas;
     private ResenaAdapter resenaAdapter;
@@ -432,7 +433,20 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
         });
 
-        fabReservar.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Reservar", Toast.LENGTH_SHORT).show());
+        fabReservar.setOnClickListener(v -> {
+            // --- FIX INICIO: Implementación de la navegación a la pantalla de Reserva ---
+            if (paseadorId == null || paseadorPrecioHora == null) {
+                Toast.makeText(this, "Cargando datos del paseador...", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Intent intent = new Intent(PerfilPaseadorActivity.this, ReservaActivity.class);
+            intent.putExtra("paseador_id", paseadorId);
+            intent.putExtra("paseador_nombre", tvNombre.getText().toString());
+            intent.putExtra("precio_hora", paseadorPrecioHora);
+            startActivity(intent);
+            // --- FIX FIN ---
+        });
 
         ivEditZonas.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilPaseadorActivity.this, ZonasServicioActivity.class);
@@ -589,6 +603,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     tvVerificado.setVisibility(View.GONE);
                 }
                 Double precio = paseadorDoc.getDouble("precio_hora");
+                this.paseadorPrecioHora = precio; // Guardar el precio en la variable de instancia
                 tvPrecio.setText(precio != null ? String.format(Locale.getDefault(), "• $%.2f/hora", precio) : "");
                 tvPrecio.setVisibility(precio != null ? View.VISIBLE : View.GONE);
 

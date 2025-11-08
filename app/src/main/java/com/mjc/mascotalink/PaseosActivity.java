@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -199,93 +200,121 @@ public class PaseosActivity extends AppCompatActivity {
         swipeRefresh.setRefreshing(true);
         paseosList.clear();
 
+        // --- FIX INICIO: Refactorización completa de la carga de datos ---
+        // RIESGO: El método anterior realizaba múltiples llamadas a la red en secuencia
+        // y notificaba al adaptador dentro de un bucle, causando un rendimiento muy bajo
+        // y un alto consumo de recursos (N+1 queries problem).
+        // SOLUCIÓN: Se utiliza Tasks.whenAllSuccess para paralelizar las consultas.
+        // 1. Se obtiene la lista de reservas.
+        // 2. Se crea una lista de tareas para buscar todos los paseadores y mascotas a la vez.
+        // 3. Solo cuando TODAS las tareas terminan, se procesan los datos y se notifica
+        //    al adaptador UNA SOLA VEZ. Esto mejora drásticamente el tiempo de carga.
+
         Query query = db.collection("reservas")
                 .whereEqualTo("id_dueno", db.collection("usuarios").document(currentUserId))
                 .orderBy("fecha", Query.Direction.DESCENDING);
 
-        // Filtrar por estado
-        if ("ACTIVOS".equals(estadoActual)) {
-            // ACTIVOS incluye CONFIRMADO y EN_CURSO
-            query.get().addOnSuccessListener(querySnapshot -> {
-                for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    String estado = doc.getString("estado");
-                    String estadoPago = doc.getString("estado_pago");
-                    
-                    if ("PROCESADO".equals(estadoPago) && 
-                        ("CONFIRMADO".equals(estado) || "EN_CURSO".equals(estado))) {
-                        procesarDocumentoPaseo(doc);
+        // El filtro para "ACTIVOS" requiere un manejo especial post-consulta
+        boolean filtrarActivosLocalmente = "ACTIVOS".equals(estadoActual);
+
+        Query finalQuery = filtrarActivosLocalmente ? query : query.whereEqualTo("estado", estadoActual);
+
+        finalQuery.get().addOnSuccessListener(querySnapshot -> {
+            if (querySnapshot.isEmpty()) {
+                finalizarCarga();
+                return;
+            }
+
+            List<Paseo> paseosTemporales = new ArrayList<>();
+            List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
+
+            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                // Filtro local para el estado "ACTIVOS"
+                String estado = doc.getString("estado");
+                String estadoPago = doc.getString("estado_pago");
+                if (filtrarActivosLocalmente) {
+                    if (!("PROCESADO".equals(estadoPago) && ("CONFIRMADO".equals(estado) || "EN_CURSO".equals(estado)))) {
+                        continue; // Saltar este documento si no cumple la condición de "ACTIVO"
                     }
+                } else {
+                    // Para otros tabs, solo verificar que esté pagado
+                    if (!"PROCESADO".equals(estadoPago)) {
+                        continue;
+                    }
+                }
+
+                Paseo paseo = new Paseo();
+                paseo.setReservaId(doc.getId());
+                paseo.setEstado(doc.getString("estado"));
+                paseo.setFecha(doc.getTimestamp("fecha") != null ? doc.getTimestamp("fecha").toDate() : new Date());
+                paseo.setHoraInicio(doc.getTimestamp("hora_inicio") != null ? doc.getTimestamp("hora_inicio").toDate() : new Date());
+                paseo.setIdMascota(doc.getString("id_mascota"));
+                paseo.setCostoTotal(doc.getDouble("costo_total"));
+                paseo.setDuracionMinutos(doc.getLong("duracion_minutos") != null ? doc.getLong("duracion_minutos").intValue() : 0);
+                paseo.setRazonCancelacion(doc.getString("razon_cancelacion"));
+                
+                paseosTemporales.add(paseo);
+
+                // Añadir tareas de obtención de datos relacionados
+                DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
+                if (paseadorRef != null) {
+                    tareas.add(paseadorRef.get());
+                } else {
+                    tareas.add(null); // Placeholder para mantener el orden
+                }
+
+                if (paseo.getIdMascota() != null && !paseo.getIdMascota().isEmpty()) {
+                    tareas.add(db.collection("usuarios").document(currentUserId).collection("mascotas").document(paseo.getIdMascota()).get());
+                } else {
+                    tareas.add(null); // Placeholder
+                }
+            }
+
+            if (tareas.isEmpty()) {
+                finalizarCarga();
+                return;
+            }
+
+            // Ejecutar todas las tareas en paralelo
+            com.google.android.gms.tasks.Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
+                for (int i = 0; i < paseosTemporales.size(); i++) {
+                    Paseo paseo = paseosTemporales.get(i);
+                    
+                    // El resultado corresponde a paseadorRef.get()
+                    Object paseadorResult = results.get(i * 2);
+                    if (paseadorResult instanceof DocumentSnapshot) {
+                        DocumentSnapshot paseadorDoc = (DocumentSnapshot) paseadorResult;
+                        if (paseadorDoc.exists()) {
+                            paseo.setPaseadorNombre(paseadorDoc.getString("nombre"));
+                            paseo.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                        }
+                    }
+
+                    // El resultado corresponde a mascota.get()
+                    Object mascotaResult = results.get(i * 2 + 1);
+                    if (mascotaResult instanceof DocumentSnapshot) {
+                        DocumentSnapshot mascotaDoc = (DocumentSnapshot) mascotaResult;
+                        if (mascotaDoc.exists()) {
+                            paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
+                        } else {
+                            paseo.setMascotaNombre("Mascota eliminada");
+                        }
+                    } else {
+                        paseo.setMascotaNombre("Mascota no especificada");
+                    }
+                    
+                    paseosList.add(paseo);
+                }
+
+                if (paseosAdapter != null) {
+                    paseosAdapter.notifyDataSetChanged();
                 }
                 finalizarCarga();
-            }).addOnFailureListener(e -> manejarError(e));
-        } else {
-            // Otros estados: filtrar directamente
-            query.whereEqualTo("estado", estadoActual)
-                    .get()
-                    .addOnSuccessListener(querySnapshot -> {
-                        for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                            String estadoPago = doc.getString("estado_pago");
-                            if ("PROCESADO".equals(estadoPago)) {
-                                procesarDocumentoPaseo(doc);
-                            }
-                        }
-                        finalizarCarga();
-                    })
-                    .addOnFailureListener(e -> manejarError(e));
-        }
-    }
 
-    private void procesarDocumentoPaseo(DocumentSnapshot doc) {
-        Paseo paseo = new Paseo();
-        paseo.setReservaId(doc.getId());
-        paseo.setEstado(doc.getString("estado"));
-        paseo.setFecha(doc.getTimestamp("fecha") != null ? doc.getTimestamp("fecha").toDate() : new Date());
-        paseo.setHoraInicio(doc.getTimestamp("hora_inicio") != null ? doc.getTimestamp("hora_inicio").toDate() : new Date());
-        paseo.setIdMascota(doc.getString("id_mascota"));
-        paseo.setCostoTotal(doc.getDouble("costo_total"));
-        paseo.setDuracionMinutos(doc.getLong("duracion_minutos").intValue());
-        paseo.setRazonCancelacion(doc.getString("razon_cancelacion"));
+            }).addOnFailureListener(this::manejarError);
 
-        // Obtener referencia del paseador
-        DocumentReference paseadorRef = (DocumentReference) doc.get("id_paseador");
-        if (paseadorRef != null) {
-            paseadorRef.get().addOnSuccessListener(paseadorDoc -> {
-                if (paseadorDoc.exists()) {
-                    paseo.setPaseadorNombre(paseadorDoc.getString("nombre"));
-                    paseo.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
-                    
-                    // Obtener nombre de mascota
-                    cargarNombreMascota(paseo);
-                }
-            });
-        }
-    }
-
-    private void cargarNombreMascota(Paseo paseo) {
-        if (paseo.getIdMascota() == null) {
-            paseo.setMascotaNombre("Mascota no disponible");
-            paseosList.add(paseo);
-            paseosAdapter.notifyDataSetChanged();
-            return;
-        }
-
-        db.collection("usuarios").document(currentUserId)
-                .collection("mascotas").document(paseo.getIdMascota())
-                .get()
-                .addOnSuccessListener(mascotaDoc -> {
-                    if (mascotaDoc.exists()) {
-                        paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
-                    } else {
-                        paseo.setMascotaNombre("Mascota no disponible");
-                    }
-                    paseosList.add(paseo);
-                    paseosAdapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> {
-                    paseo.setMascotaNombre("Mascota no disponible");
-                    paseosList.add(paseo);
-                    paseosAdapter.notifyDataSetChanged();
-                });
+        }).addOnFailureListener(this::manejarError);
+        // --- FIX FIN ---
     }
 
     private void finalizarCarga() {
@@ -308,6 +337,12 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void mostrarDialogCalificacion(Paseo paseo) {
+        // --- FIX: Añadir check de isFinishing() ---
+        // RIESGO: Mostrar un diálogo si la actividad se está cerrando puede causar un crash.
+        // SOLUCIÓN: Se verifica el estado de la actividad antes de mostrar el diálogo.
+        if (isFinishing()) {
+            return;
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Calificar Paseador");
         builder.setMessage("¿Cómo fue tu experiencia con " + paseo.getPaseadorNombre() + "?");
@@ -321,6 +356,10 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void mostrarDialogMotivoCancelacion(Paseo paseo) {
+        // --- FIX: Añadir check de isFinishing() ---
+        if (isFinishing()) {
+            return;
+        }
         String motivo = paseo.getRazonCancelacion();
         if (motivo == null || motivo.isEmpty()) {
             motivo = "No se especificó un motivo";

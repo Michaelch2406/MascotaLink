@@ -535,6 +535,22 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         perfilProfesional.put("galeria_paseos_urls", urls.get("galeria_paseos_urls"));
         paseadorData.put("perfil_profesional", perfilProfesional);
 
+        // --- FIX INICIO: Añadir la lógica faltante para guardar los tipos de perro ---
+        // RIESGO: Este dato no se estaba guardando, por lo que el perfil del paseador
+        // en la base de datos estaba incompleto.
+        // SOLUCIÓN: Se leen las preferencias guardadas desde TiposPerrosActivity,
+        // se reconstruye la lista de tamaños y se añade al mapa 'manejo_perros'
+        // con la estructura que la Cloud Function espera.
+        Map<String, Object> manejoPerros = new HashMap<>();
+        List<String> tamanosAceptados = new ArrayList<>();
+        if (prefs.getBoolean("perros_pequeno", false)) tamanosAceptados.add("Pequeño");
+        if (prefs.getBoolean("perros_mediano", false)) tamanosAceptados.add("Mediano");
+        if (prefs.getBoolean("perros_grande", false)) tamanosAceptados.add("Grande");
+        manejoPerros.put("tamanos", tamanosAceptados);
+        // Aquí también se podrían añadir los temperamentos si fueran necesarios en el futuro
+        paseadorData.put("manejo_perros", manejoPerros);
+        // --- FIX FIN ---
+
         // Precio por hora
         String precioHoraStr = prefs.getString("precio_hora", "0");
         try {

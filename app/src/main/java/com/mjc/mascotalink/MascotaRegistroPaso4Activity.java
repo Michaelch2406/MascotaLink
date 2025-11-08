@@ -180,6 +180,7 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         mascota.put("foto_principal_url", fotoUrl);
         mascota.put("fecha_registro", FieldValue.serverTimestamp());
         mascota.put("ultima_actualizacion", FieldValue.serverTimestamp());
+        mascota.put("activo", true); // FIX: Añadir el campo 'activo' por defecto
 
         // Pantalla 2 - Salud
         Map<String, Object> salud = new HashMap<>();

@@ -58,14 +58,36 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_confirmar_pago);
 
-        // Inicializar Firebase
+        // --- FIX INICIO: Validaciones críticas de seguridad y datos ---
+        // RIESGO: Un usuario no autenticado no debería poder confirmar un pago.
+        // SOLUCIÓN: Se verifica la sesión del usuario. Si es nula, se cierra la actividad.
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        if (mAuth.getCurrentUser() == null) {
+            Toast.makeText(this, "Error: Sesión de usuario no válida.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
-        // Obtener datos del intent
+        // RIESGO: Si 'reserva_id' es nulo o 'costo_total' es inválido, el pago no puede
+        // procesarse correctamente, llevando a datos corruptos en Firebase.
+        // SOLUCIÓN: Se valida la presencia y validez de los extras del Intent.
         Intent intent = getIntent();
         reservaId = intent.getStringExtra("reserva_id");
         costoTotal = intent.getDoubleExtra("costo_total", 0.0);
+
+        if (reservaId == null || reservaId.isEmpty()) {
+            Toast.makeText(this, "Error: ID de reserva no válido.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        if (costoTotal <= 0) {
+            Toast.makeText(this, "Error: El costo total de la reserva es inválido.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        // --- FIX FIN ---
+
         paseadorNombre = intent.getStringExtra("paseador_nombre");
         mascotaNombre = intent.getStringExtra("mascota_nombre");
         fechaReserva = intent.getStringExtra("fecha_reserva");
@@ -137,25 +159,48 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         }
     }
 
-    private void procesarPago() {
-        // Validar la reserva antes de procesar
-        if (!validarReserva()) {
-            return;
-        }
+    // --- FIX INICIO: Interfaz para manejar el resultado de la validación asíncrona ---
+    private interface ValidationCallback {
+        void onValidationComplete(boolean isValid, String errorMessage);
+    }
+    // --- FIX FIN ---
 
-        // Deshabilitar botón y mostrar loading
+    private void procesarPago() {
+        // Deshabilitar botón y mostrar loading para evitar clics múltiples
         btnProcesarPago.setEnabled(false);
         btnProcesarPago.setAlpha(0.6f);
         btnCancelar.setEnabled(false);
         progressBar.setVisibility(View.VISIBLE);
         btnProcesarPago.setText("");
 
+        // --- FIX INICIO: Uso del patrón callback para la validación asíncrona ---
+        // RIESGO: La validación de Firebase es asíncrona. Llamar a un método que devuelve
+        // boolean de forma síncrona (como antes) no espera el resultado de la red,
+        // creando una condición de carrera y permitiendo procesar pagos de reservas inválidas.
+        // SOLUCIÓN: Se pasa un callback a validarReserva(). La lógica de pago se mueve
+        // DENTRO del callback, asegurando que solo se ejecute DESPUÉS de que la
+        // validación de Firebase haya terminado y sea exitosa.
+        validarReserva(new ValidationCallback() {
+            @Override
+            public void onValidationComplete(boolean isValid, String errorMessage) {
+                if (isValid) {
+                    // La validación fue exitosa, proceder con el pago
+                    ejecutarLogicaDePago();
+                } else {
+                    // La validación falló, mostrar error y restaurar la UI
+                    Toast.makeText(ConfirmarPagoActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                    restaurarUIAposFallo();
+                }
+            }
+        });
+        // --- FIX FIN ---
+    }
+
+    private void ejecutarLogicaDePago() {
         // Simular procesamiento de 2 segundos
         new Handler().postDelayed(() -> {
-            // Generar ID de pago único
             String pagoId = "PAGO_" + System.currentTimeMillis();
 
-            // Actualizar documento en Firebase
             Map<String, Object> updates = new HashMap<>();
             updates.put("estado", "CONFIRMADO");
             updates.put("id_pago", pagoId);
@@ -163,6 +208,9 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             updates.put("fecha_pago", Timestamp.now());
             updates.put("metodo_pago", "PAGO_INTERNO");
 
+            // RIESGO: Una falla en la actualización de la BD podría dejar al usuario en un
+            // estado de "pago en proceso" infinito.
+            // SOLUCIÓN: Se implementa on-failure-listener para reintentar o notificar.
             db.collection("reservas").document(reservaId)
                     .update(updates)
                     .addOnSuccessListener(aVoid -> {
@@ -172,7 +220,6 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         Toast.makeText(this, "¡Pago procesado exitosamente!", 
                                 Toast.LENGTH_LONG).show();
 
-                        // CRÍTICO: Navegar a PaseosActivity después de pago exitoso
                         new Handler().postDelayed(() -> {
                             Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -182,28 +229,36 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                     })
                     .addOnFailureListener(e -> {
                         intentosFallidos++;
-                        progressBar.setVisibility(View.GONE);
-                        btnProcesarPago.setText("Procesar Pago");
-                        
                         if (intentosFallidos >= MAX_INTENTOS) {
-                            // Después de 3 intentos fallidos, deshabilitar completamente
-                            btnProcesarPago.setEnabled(false);
-                            btnProcesarPago.setAlpha(0.5f);
                             Toast.makeText(this, "Máximo de intentos alcanzado. Contacta soporte.", 
                                     Toast.LENGTH_LONG).show();
+                            btnProcesarPago.setEnabled(false); // Deshabilitar permanentemente
+                            btnProcesarPago.setAlpha(0.5f);
                         } else {
-                            // Permitir reintentar
-                            btnProcesarPago.setEnabled(true);
-                            btnProcesarPago.setAlpha(1.0f);
-                            btnCancelar.setEnabled(true);
                             Toast.makeText(this, "Error al procesar pago. Intento " + intentosFallidos + "/" + MAX_INTENTOS, 
                                     Toast.LENGTH_SHORT).show();
+                            restaurarUIAposFallo();
                         }
                     });
         }, 2000);
     }
 
+    private void restaurarUIAposFallo() {
+        progressBar.setVisibility(View.GONE);
+        btnProcesarPago.setText("Procesar Pago");
+        btnProcesarPago.setEnabled(true);
+        btnProcesarPago.setAlpha(1.0f);
+        btnCancelar.setEnabled(true);
+    }
+
     private void mostrarDialogCancelar() {
+        // --- FIX: Añadir check de isFinishing() ---
+        // RIESGO: Mostrar un diálogo después de que la actividad se está cerrando
+        // puede causar un crash (WindowManager$BadTokenException).
+        // SOLUCIÓN: Se verifica si la actividad está en proceso de cierre antes de mostrar el diálogo.
+        if (isFinishing()) {
+            return;
+        }
         new AlertDialog.Builder(this)
                 .setTitle("Cancelar Reserva")
                 .setMessage("¿Estás seguro de cancelar esta reserva?")
@@ -224,36 +279,37 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                 .show();
     }
 
-    private boolean validarReserva() {
+    private void validarReserva(ValidationCallback callback) {
+        // Validaciones síncronas primero
         if (reservaId == null || reservaId.isEmpty()) {
-            Toast.makeText(this, "Error: ID de reserva no válido", Toast.LENGTH_SHORT).show();
-            return false;
+            callback.onValidationComplete(false, "Error: ID de reserva no válido");
+            return;
         }
         
         if (costoTotal <= 0) {
-            Toast.makeText(this, "Error: Costo total inválido", Toast.LENGTH_SHORT).show();
-            return false;
+            callback.onValidationComplete(false, "Error: Costo total inválido");
+            return;
         }
         
-        // Validar que la reserva existe en Firebase antes de procesar
+        // Validación asíncrona en Firebase
         db.collection("reservas").document(reservaId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
-                    if (!documentSnapshot.exists()) {
-                        Toast.makeText(this, "Error: Reserva no encontrada", Toast.LENGTH_SHORT).show();
-                        btnProcesarPago.setEnabled(false);
+                    if (documentSnapshot == null || !documentSnapshot.exists()) {
+                        callback.onValidationComplete(false, "Error: La reserva ya no existe.");
                     } else {
                         String estado = documentSnapshot.getString("estado");
                         if (!"PENDIENTE_PAGO".equals(estado)) {
-                            Toast.makeText(this, "Esta reserva ya fue procesada", Toast.LENGTH_SHORT).show();
-                            btnProcesarPago.setEnabled(false);
+                            callback.onValidationComplete(false, "Esta reserva ya fue procesada o cancelada.");
+                        } else {
+                            // ¡Todo en orden!
+                            callback.onValidationComplete(true, null);
                         }
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error al validar reserva", Toast.LENGTH_SHORT).show();
+                    callback.onValidationComplete(false, "Error de red al validar la reserva.");
                 });
-        
-        return true;
     }
 }
+

@@ -51,7 +51,7 @@ public class ReservaActivity extends AppCompatActivity {
     private ImageView ivMesAnterior, ivMesSiguiente;
     private TextView tvMesAnio, tvFechaSeleccionada, tvDisponibilidad;
     private GridView gvCalendario;
-    private LinearLayout llDisponibilidad;
+    private LinearLayout llDisponibilidad, calendarioContainer;
     private TextView tabPorHoras, tabPorMes;
     private TextView tvDuracionTitulo, tvDuracionSubtitulo;
     private Button btn1Hora, btn2Horas, btn3Horas, btnPersonalizado;
@@ -86,19 +86,43 @@ public class ReservaActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reserva);
 
+        // --- FIX INICIO: Validaciones críticas de seguridad y datos ---
+        // RIESGO: Si el usuario no está autenticado, currentUserId será nulo, causando fallos
+        // en las consultas a Firebase.
+        // SOLUCIÓN: Se verifica la sesión del usuario. Si es nula, se notifica y se
+        // cierra la actividad para prevenir operaciones inválidas.
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            currentUserId = currentUser.getUid();
+        if (currentUser == null) {
+            Toast.makeText(this, "Error: Sesión de usuario no válida.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
         }
+        currentUserId = currentUser.getUid();
 
+        // RIESGO: Si no se recibe 'paseador_id' o 'tarifa_por_hora', la reserva no puede
+        // crearse correctamente, usando datos por defecto o nulos.
+        // SOLUCIÓN: Se valida la presencia y validez de los extras del Intent. Si falta
+        // información esencial, se notifica y se cierra la actividad.
         Intent intent = getIntent();
         paseadorId = intent.getStringExtra("paseador_id");
         paseadorNombre = intent.getStringExtra("paseador_nombre");
-        if (intent.hasExtra("tarifa_por_hora")) {
-            tarifaPorHora = intent.getDoubleExtra("tarifa_por_hora", 10.6);
+
+        if (paseadorId == null || paseadorId.isEmpty()) {
+            Toast.makeText(this, "Error: No se ha proporcionado un paseador.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
         }
+
+        // Se mantiene el valor por defecto para la tarifa, pero se asegura que no sea cero.
+        tarifaPorHora = intent.getDoubleExtra("precio_hora", 0.0);
+        if (tarifaPorHora <= 0) {
+            Toast.makeText(this, "Error: Tarifa por hora no válida.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        // --- FIX FIN ---
 
         initViews();
         setupListeners();
@@ -112,23 +136,25 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        // --- FIX INICIO: Verificación de nulidad para las vistas ---
+        // RIESGO: Si una ID del layout XML no coincide con la del código Java,
+        // findViewById() devuelve null, causando un NullPointerException al usar la vista.
+        // SOLUCIÓN: Se comprueba cada vista después de buscarla. Si alguna es nula,
+        // se lanza una excepción clara para un diagnóstico rápido.
+
         ivBack = findViewById(R.id.iv_back);
         rvMascotas = findViewById(R.id.rv_mascotas);
         btnAgregarMascota = findViewById(R.id.btn_agregar_mascota);
-        mascotaList = new ArrayList<>();
-
         chipGroupFecha = findViewById(R.id.chip_group_fecha);
         ivMesAnterior = findViewById(R.id.iv_mes_anterior);
         ivMesSiguiente = findViewById(R.id.iv_mes_siguiente);
         tvMesAnio = findViewById(R.id.tv_mes_anio);
         gvCalendario = findViewById(R.id.gv_calendario);
+        calendarioContainer = findViewById(R.id.calendario_container);
         tvFechaSeleccionada = findViewById(R.id.tv_fecha_seleccionada);
-
         rvHorarios = findViewById(R.id.rv_horarios);
         llDisponibilidad = findViewById(R.id.ll_disponibilidad);
         tvDisponibilidad = findViewById(R.id.tv_disponibilidad);
-        horarioList = new ArrayList<>();
-
         tabPorHoras = findViewById(R.id.tab_por_horas);
         tabPorMes = findViewById(R.id.tab_por_mes);
         tvDuracionTitulo = findViewById(R.id.tv_duracion_titulo);
@@ -138,19 +164,34 @@ public class ReservaActivity extends AppCompatActivity {
         btn3Horas = findViewById(R.id.btn_3_horas);
         btnPersonalizado = findViewById(R.id.btn_personalizado);
         tvCalculoResumen = findViewById(R.id.tv_calculo_resumen);
-
         tvTarifaValor = findViewById(R.id.tv_tarifa_valor);
         tvDuracionValor = findViewById(R.id.tv_duracion_valor);
         tvTotalValor = findViewById(R.id.tv_total_valor);
-
         tvPaseadorNombre = findViewById(R.id.tv_paseador_nombre);
         tvMascotaNombre = findViewById(R.id.tv_mascota_nombre);
         tvDetalleFecha = findViewById(R.id.tv_detalle_fecha);
         tvDetalleHora = findViewById(R.id.tv_detalle_hora);
         tvDetalleDuracion = findViewById(R.id.tv_detalle_duracion);
-
         btnConfirmarReserva = findViewById(R.id.btn_confirmar_reserva);
         bottomNav = findViewById(R.id.bottom_nav);
+
+        if (ivBack == null || rvMascotas == null || btnAgregarMascota == null || chipGroupFecha == null ||
+            ivMesAnterior == null || ivMesSiguiente == null || tvMesAnio == null || gvCalendario == null ||
+            calendarioContainer == null || tvFechaSeleccionada == null || rvHorarios == null || llDisponibilidad == null ||
+            tvDisponibilidad == null || tabPorHoras == null || tabPorMes == null || tvDuracionTitulo == null ||
+            tvDuracionSubtitulo == null || btn1Hora == null || btn2Horas == null || btn3Horas == null ||
+            btnPersonalizado == null || tvCalculoResumen == null || tvTarifaValor == null ||
+            tvDuracionValor == null || tvTotalValor == null || tvPaseadorNombre == null ||
+            tvMascotaNombre == null || tvDetalleFecha == null || tvDetalleHora == null ||
+            tvDetalleDuracion == null || btnConfirmarReserva == null || bottomNav == null) {
+            
+            throw new IllegalStateException("Error de inicialización: Una o más vistas no se encontraron en el layout. " +
+                    "Verifica que los IDs en activity_reserva.xml coincidan con los usados en ReservaActivity.java.");
+        }
+
+        mascotaList = new ArrayList<>();
+        horarioList = new ArrayList<>();
+        // --- FIX FIN ---
     }
 
     private void setupListeners() {
@@ -160,17 +201,34 @@ public class ReservaActivity extends AppCompatActivity {
         });
 
         chipGroupFecha.setOnCheckedChangeListener((group, checkedId) -> {
+            // --- FIX INICIO: Lógica para actualizar la UI del calendario ---
+            // RIESGO: El listener anterior solo actualizaba variables, pero no la UI,
+            // causando que la vista del calendario nunca cambiara.
+            // SOLUCIÓN: Se añade lógica para mostrar/ocultar el calendario según el modo.
+            // Las vistas para "semana" y "mes" no están implementadas, por lo que se oculta
+            // el calendario y se notifica al usuario.
             if (checkedId == R.id.chip_dias_especificos) {
                 modoFechaActual = "DIAS_ESPECIFICOS";
                 tipoReserva = "PUNTUAL";
+                calendarioContainer.setVisibility(View.VISIBLE);
             } else if (checkedId == R.id.chip_semana) {
                 modoFechaActual = "SEMANA";
                 tipoReserva = "SEMANAL";
+                calendarioContainer.setVisibility(View.GONE);
+                Toast.makeText(this, "La selección por semana estará disponible próximamente.", Toast.LENGTH_SHORT).show();
             } else if (checkedId == R.id.chip_mes) {
                 modoFechaActual = "MES";
                 tipoReserva = "MENSUAL";
+                calendarioContainer.setVisibility(View.GONE);
+                Toast.makeText(this, "La selección por mes estará disponible próximamente.", Toast.LENGTH_SHORT).show();
+            } else {
+                // Chip deseleccionado, volver al modo por defecto
+                modoFechaActual = "DIAS_ESPECIFICOS";
+                tipoReserva = "PUNTUAL";
+                calendarioContainer.setVisibility(View.VISIBLE);
             }
             actualizarTextoDuracion();
+            // --- FIX FIN ---
         });
 
         ivMesAnterior.setOnClickListener(v -> cambiarMes(-1));
@@ -208,7 +266,7 @@ public class ReservaActivity extends AppCompatActivity {
     private void cargarMascotasUsuario() {
         if (currentUserId == null) return;
 
-        db.collection("usuarios").document(currentUserId).collection("mascotas")
+        db.collection("duenos").document(currentUserId).collection("mascotas")
                 .whereEqualTo("activo", true)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
@@ -217,7 +275,7 @@ public class ReservaActivity extends AppCompatActivity {
                         MascotaSelectorAdapter.Mascota mascota = new MascotaSelectorAdapter.Mascota();
                         mascota.setId(doc.getId());
                         mascota.setNombre(doc.getString("nombre"));
-                        mascota.setFotoUrl(doc.getString("foto_url"));
+                        mascota.setFotoUrl(doc.getString("foto_principal_url"));
                         mascota.setActivo(Boolean.TRUE.equals(doc.getBoolean("activo")));
                         mascotaList.add(mascota);
                     }
@@ -605,6 +663,11 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private boolean validarDatosReserva() {
+        // --- FIX INICIO: Validación de datos de la reserva ---
+        // RIESGO: Datos incompletos o inválidos pueden llevar a la creación de una reserva
+        // corrupta en Firebase, causando errores en otras partes de la app (pago, historial).
+        // SOLUCIÓN: Se valida cada campo requerido antes de la confirmación. Se añade
+        // una comprobación defensiva para la tarifa, aunque ya se valida en onCreate.
         if (mascotaSeleccionada == null) {
             Toast.makeText(this, "Selecciona una mascota", Toast.LENGTH_SHORT).show();
             return false;
@@ -617,10 +680,15 @@ public class ReservaActivity extends AppCompatActivity {
             Toast.makeText(this, "Selecciona una hora", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (duracionMinutos == 0) {
-            Toast.makeText(this, "Selecciona una duración", Toast.LENGTH_SHORT).show();
+        if (duracionMinutos <= 0) {
+            Toast.makeText(this, "Selecciona una duración válida", Toast.LENGTH_SHORT).show();
             return false;
         }
+        if (tarifaPorHora <= 0) {
+            Toast.makeText(this, "Error: La tarifa por hora es inválida.", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        // --- FIX FIN ---
         return true;
     }
 
