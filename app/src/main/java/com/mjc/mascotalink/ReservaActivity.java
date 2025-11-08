@@ -1,8 +1,10 @@
 package com.mjc.mascotalink;
 
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -584,45 +586,34 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void mostrarDialogDuracionPersonalizada() {
-        Dialog dialog = new Dialog(this);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 50, 50, 50);
-        
-        EditText etHoras = new EditText(this);
-        etHoras.setHint("Horas (ej: 1.5)");
-        etHoras.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        layout.addView(etHoras);
-        
-        Button btnAceptar = new Button(this);
-        btnAceptar.setText("Aceptar");
-        btnAceptar.setOnClickListener(v -> {
-            String horasStr = etHoras.getText().toString().trim();
-            if (!horasStr.isEmpty()) {
-                try {
-                    double horas = Double.parseDouble(horasStr);
-                    if (horas > 0 && horas <= 8) {
-                        duracionMinutos = (int) (horas * 60);
-                        resetearBotonesDuracion();
-                        btnPersonalizado.setSelected(true);
-                        btnPersonalizado.setTextColor(getResources().getColor(android.R.color.white));
-                        actualizarResumenCosto();
-                        verificarCamposCompletos();
-                        dialog.dismiss();
-                    } else {
-                        Toast.makeText(this, "Ingresa entre 0.5 y 8 horas", Toast.LENGTH_SHORT).show();
-                    }
-                } catch (NumberFormatException e) {
-                    Toast.makeText(this, "Formato inválido", Toast.LENGTH_SHORT).show();
-                }
-            }
+        // --- FIX INICIO: Reemplazar EditText por NumberPicker para una mejor UX ---
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = this.getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_duracion_picker, null);
+        builder.setView(dialogView);
+
+        final android.widget.NumberPicker numberPicker = dialogView.findViewById(R.id.number_picker_horas);
+        numberPicker.setMinValue(1); // Mínimo 1 hora
+        numberPicker.setMaxValue(8); // Máximo 8 horas
+        numberPicker.setValue(duracionMinutos > 0 ? duracionMinutos / 60 : 1); // Valor inicial
+
+        builder.setTitle("Duración Personalizada");
+        builder.setPositiveButton("Aceptar", (dialog, which) -> {
+            int horasSeleccionadas = numberPicker.getValue();
+            duracionMinutos = horasSeleccionadas * 60;
+
+            resetearBotonesDuracion();
+            btnPersonalizado.setSelected(true);
+            btnPersonalizado.setTextColor(getResources().getColor(android.R.color.white));
+            actualizarResumenCosto();
+            verificarCamposCompletos();
+            dialog.dismiss();
         });
-        layout.addView(btnAceptar);
-        
-        dialog.setContentView(layout);
+        builder.setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss());
+
+        AlertDialog dialog = builder.create();
         dialog.show();
+        // --- FIX FIN ---
     }
 
     private void actualizarResumenCosto() {

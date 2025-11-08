@@ -110,51 +110,52 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:weightSum="4"
             android:layout_marginBottom="12dp">
 
             <Button
                 android:id="@+id/btn_1_hora"
+                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="1 hora"
-                android:textSize="12sp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/selector_duracion_button"
-                android:layout_marginEnd="8dp"
-                style="?android:attr/borderlessButtonStyle" />
+                android:text="1 hora"
+                android:textSize="12sp" />
 
             <Button
                 android:id="@+id/btn_2_horas"
+                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="2 horas"
-                android:textSize="12sp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/selector_duracion_button"
-                android:layout_marginEnd="8dp"
-                style="?android:attr/borderlessButtonStyle" />
+                android:text="2 horas"
+                android:textSize="12sp" />
 
             <Button
                 android:id="@+id/btn_3_horas"
+                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="3 horas"
-                android:textSize="12sp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/selector_duracion_button"
-                android:layout_marginEnd="8dp"
-                style="?android:attr/borderlessButtonStyle" />
+                android:text="3 horas"
+                android:textSize="12sp" />
 
             <Button
                 android:id="@+id/btn_personalizado"
+                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:text="Personalizado"
-                android:textSize="11sp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/selector_duracion_button"
-                style="?android:attr/borderlessButtonStyle" />
+                android:maxLines="2"
+                android:text="Personalizado"
+                android:textSize="12sp" />
 
         </LinearLayout>
 

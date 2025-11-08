@@ -41,26 +41,25 @@ public class HorarioSelectorAdapter extends RecyclerView.Adapter<HorarioSelector
 
         // Aplicar estilos según estado
         if (!horario.isDisponible()) {
-            // No disponible: texto gris claro, tachado, deshabilitado
-            holder.tvHorario.setTextColor(context.getResources().getColor(R.color.gray_disabled));
+            // No disponible: el selector de color se encarga del texto.
             holder.tvHorario.setPaintFlags(holder.tvHorario.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
             holder.itemView.setEnabled(false);
             holder.itemView.setSelected(false);
             holder.tvCheckmark.setVisibility(View.GONE);
         } else if (selectedPosition == position) {
-            // Seleccionado: fondo azul claro, texto azul bold
-            holder.tvHorario.setTextColor(context.getResources().getColor(R.color.blue_primary));
+            // Seleccionado: los selectores de color de fondo y texto se encargan.
             holder.tvHorario.setPaintFlags(holder.tvHorario.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
             holder.itemView.setSelected(true);
             holder.itemView.setEnabled(true);
             holder.tvCheckmark.setVisibility(View.VISIBLE);
+            holder.tvCheckmark.setTextColor(context.getResources().getColor(android.R.color.white)); // Checkmark blanco
         } else {
-            // No seleccionado: texto gris normal
-            holder.tvHorario.setTextColor(context.getResources().getColor(R.color.secondary));
+            // No seleccionado: los selectores de color de fondo y texto se encargan.
             holder.tvHorario.setPaintFlags(holder.tvHorario.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
             holder.itemView.setSelected(false);
             holder.itemView.setEnabled(true);
             holder.tvCheckmark.setVisibility(View.GONE);
+            holder.tvCheckmark.setTextColor(context.getResources().getColor(R.color.blue_primary)); // Devolver checkmark a azul
         }
 
         // Click listener

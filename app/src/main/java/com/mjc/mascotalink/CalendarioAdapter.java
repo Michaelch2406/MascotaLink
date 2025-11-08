@@ -76,26 +76,28 @@ public class CalendarioAdapter extends BaseAdapter {
             boolean isPast = date.before(today.getTime());
 
             if (isPast) {
-                // Día pasado: deshabilitado (el selector de color y fondo se encargarán)
+                // Día pasado: gris opaco, deshabilitado
+                tvDia.setTextColor(context.getResources().getColor(R.color.gray_disabled));
+                tvDia.setBackgroundResource(android.R.color.transparent);
                 tvDia.setEnabled(false);
-                tvDia.setSelected(false);
             } else if (selectedPosition == position) {
-                // Día seleccionado (el selector de color y fondo se encargarán)
+                // Día seleccionado: fondo azul, texto blanco
+                tvDia.setBackgroundResource(R.drawable.bg_calendario_seleccionado);
+                tvDia.setTextColor(context.getResources().getColor(android.R.color.white));
                 tvDia.setEnabled(true);
-                tvDia.setSelected(true);
             } else {
-                // Día disponible (el selector de color y fondo se encargarán)
+                // Día disponible: fondo transparente, texto negro
+                tvDia.setBackgroundResource(android.R.color.transparent);
+                tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
                 tvDia.setEnabled(true);
-                tvDia.setSelected(false);
             }
         }
 
         // Click listener
         tvDia.setOnClickListener(v -> {
             if (date != null && tvDia.isEnabled()) {
-                int previousPosition = selectedPosition;
                 selectedPosition = position;
-                notifyDataSetChanged();
+                notifyDataSetChanged(); // Forzar redibujado de toda la grilla
                 if (listener != null) {
                     listener.onDateSelected(date, position);
                 }

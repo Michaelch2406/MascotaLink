@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:text="10:00 AM"
-        android:textColor="@color/secondary"
+        android:textColor="@color/selector_texto_horario"
         android:textSize="14sp" />
 
     <TextView

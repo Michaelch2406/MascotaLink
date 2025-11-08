@@ -264,7 +264,8 @@ public class PaseosActivity extends AppCompatActivity {
                 }
 
                 if (paseo.getIdMascota() != null && !paseo.getIdMascota().isEmpty()) {
-                    tareas.add(db.collection("usuarios").document(currentUserId).collection("mascotas").document(paseo.getIdMascota()).get());
+                    // FIX: Corregir la ruta de la subcolección de mascotas
+                    tareas.add(db.collection("duenos").document(currentUserId).collection("mascotas").document(paseo.getIdMascota()).get());
                 } else {
                     tareas.add(null); // Placeholder
                 }
@@ -285,7 +286,8 @@ public class PaseosActivity extends AppCompatActivity {
                     if (paseadorResult instanceof DocumentSnapshot) {
                         DocumentSnapshot paseadorDoc = (DocumentSnapshot) paseadorResult;
                         if (paseadorDoc.exists()) {
-                            paseo.setPaseadorNombre(paseadorDoc.getString("nombre"));
+                            // FIX: Usar 'nombre_display' para obtener el nombre completo
+                            paseo.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
                             paseo.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
                         }
                     }
