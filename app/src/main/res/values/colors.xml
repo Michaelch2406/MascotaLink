@@ -29,4 +29,9 @@
     
     <!-- Additional Colors -->
     <color name="gray_text">#9CA3AF</color>
+    <color name="color_en_curso">#4CAF50</color>
+    <color name="color_confirmado">#12A3ED</color>
+    <color name="color_completado">#81C784</color>
+    <color name="color_cancelado">#F44336</color>
+    <color name="color_costo">#4CAF50</color>
 </resources>

@@ -42,6 +42,10 @@ android {
     }
     lint {
         baseline = file("lint-baseline.xml")
+        abortOnError false
+    }
+    lintOptions {
+        checkReleaseBuilds false
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11

@@ -260,6 +260,7 @@ public class PaseosActivity extends AppCompatActivity {
                 paseo.setCostoTotal(doc.getDouble("costo_total"));
                 paseo.setDuracionMinutos(doc.getLong("duracion_minutos") != null ? doc.getLong("duracion_minutos").intValue() : 0);
                 paseo.setRazonCancelacion(doc.getString("razon_cancelacion"));
+                paseo.setTipoReserva(doc.getString("tipo_reserva"));
                 
                 paseosTemporales.add(paseo);
 
@@ -395,6 +396,7 @@ public class PaseosActivity extends AppCompatActivity {
         private double costoTotal;
         private int duracionMinutos;
         private String razonCancelacion;
+        private String tipoReserva;
 
         public Paseo() {}
 
@@ -431,6 +433,10 @@ public class PaseosActivity extends AppCompatActivity {
 
         public String getRazonCancelacion() { return razonCancelacion; }
         public void setRazonCancelacion(String razonCancelacion) { this.razonCancelacion = razonCancelacion; }
+
+        public String getTipoReserva() { return tipoReserva; }
+        public void setTipoReserva(String tipoReserva) { this.tipoReserva = tipoReserva; }
+
 
         public String getFechaFormateada() {
             Calendar today = Calendar.getInstance();

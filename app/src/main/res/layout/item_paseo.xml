@@ -52,13 +52,105 @@
                 android:textSize="12sp"
                 android:layout_marginBottom="12dp" />
 
+            <!-- Row 2: Duración + Costo -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="8dp">
+
+                <!-- Duración -->
+                <TextView
+                    android:id="@+id/tvDuracion"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Duración: 2 horas"
+                    android:textSize="12sp"
+                    android:textColor="#757575" />
+
+                <!-- Costo -->
+                <TextView
+                    android:id="@+id/tvCosto"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="$21.20"
+                    android:textSize="12sp"
+                    android:textColor="#4CAF50"
+                    android:textStyle="bold"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- Row 3: Tipo + Estado Badge -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="8dp"
+                android:gravity="center_vertical">
+
+                <!-- Tipo de Reserva -->
+                <TextView
+                    android:id="@+id/tvTipoReserva"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="[PUNTUAL]"
+                    android:textSize="11sp"
+                    android:textColor="#12A3ED"
+                    android:background="@drawable/badge_tipo"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="4dp" />
+
+                <!-- Estado Badge -->
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipEstado"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="CONFIRMADO"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Row 4: Botones de Acción (se mostrarán/ocultarán según estado) -->
+            <LinearLayout
+                android:id="@+id/layoutBotonesAccion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="12dp"
+                android:gravity="center_vertical">
+
+                <!-- Botón 1: Dinámico -->
+                <Button
+                    android:id="@+id/btnAccion1"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="Ver Ubicación"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="6dp"
+                    android:backgroundTint="#12A3ED" />
+
+                <!-- Botón 2: Dinámico -->
+                <Button
+                    android:id="@+id/btnAccion2"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="Contactar"
+                    android:textSize="11sp"
+                    android:layout_marginStart="6dp"
+                    android:backgroundTint="#12A3ED" />
+            </LinearLayout>
+
             <!-- Botones de acción -->
             <LinearLayout
                 android:id="@+id/ll_botones"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <TextView
                     android:id="@+id/btn_ver_ubicacion"

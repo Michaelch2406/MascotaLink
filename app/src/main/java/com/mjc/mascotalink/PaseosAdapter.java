@@ -4,11 +4,14 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 
 import com.bumptech.glide.Glide;
 
@@ -54,8 +57,8 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.tvPaseadorNombre.setText(paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "Cargando...");
 
         // Mascota y hora
-        String mascotaHora = "Mascota: " + 
-                (paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Cargando...") + 
+        String mascotaHora = "Mascota: " +
+                (paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Cargando...") +
                 ", " + paseo.getHoraFormateada();
         holder.tvMascotaHora.setText(mascotaHora);
 
@@ -70,60 +73,154 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
             holder.ivPaseadorFoto.setImageResource(R.drawable.ic_person);
         }
 
-        // Configurar botones según estado
-        configurarBotonesPorEstado(holder, paseo);
+        // 1. MOSTRAR DURACIÓN (convertir minutos a horas/minutos)
+        int duracionMinutos = paseo.getDuracionMinutos();
+        String duracionTexto = formatearDuracion(duracionMinutos);
+        holder.tvDuracion.setText("Duración: " + duracionTexto);
+
+        // 2. MOSTRAR COSTO (formatear como moneda)
+        double costo = paseo.getCostoTotal();
+        holder.tvCosto.setText(String.format("$%.2f", costo));
+
+        // 3. MOSTRAR TIPO DE RESERVA
+        String tipoReserva = paseo.getTipoReserva();
+        if (tipoReserva != null) {
+            String tipoTexto = tipoReserva.equals("PUNTUAL") ? "UN DÍA" :
+                    tipoReserva.equals("SEMANAL") ? "SEMANA" :
+                            tipoReserva.equals("MENSUAL") ? "MES" : tipoReserva;
+            holder.tvTipoReserva.setText(tipoTexto);
+        }
+
+        // 4. MOSTRAR ESTADO Y ESTABLECER COLOR
+        String estado = paseo.getEstado();
+        holder.chipEstado.setText(estado != null ? estado : "DESCONOCIDO");
+        establecerColorEstado(holder.chipEstado, estado);
+
+        // 5. APLICAR OPACIDAD SEGÚN ESTADO
+        float opacidad = 1.0f;
+        if (estado != null) {
+            if (estado.equals("COMPLETADO")) opacidad = 0.8f;
+            else if (estado.equals("CANCELADO")) opacidad = 0.6f;
+        }
+        holder.itemView.setAlpha(opacidad);
+
+        // 6. CONFIGURAR BOTONES SEGÚN ESTADO
+        configurarBotonesAccion(holder, estado);
+
 
         // Click en card
         holder.itemView.setOnClickListener(v -> listener.onPaseoClick(paseo));
 
-        // Aplicar opacidad según estado
-        float alpha = 1.0f;
-        if ("COMPLETADO".equals(paseo.getEstado())) {
-            alpha = 0.8f;
-        } else if ("CANCELADO".equals(paseo.getEstado())) {
-            alpha = 0.6f;
-        }
-        holder.itemView.setAlpha(alpha);
     }
 
-    private void configurarBotonesPorEstado(PaseoViewHolder holder, PaseosActivity.Paseo paseo) {
-        // Ocultar todos los botones primero
-        holder.btnVerUbicacion.setVisibility(View.GONE);
-        holder.btnContactar.setVisibility(View.GONE);
-        holder.btnCalificar.setVisibility(View.GONE);
-        holder.btnVerMotivo.setVisibility(View.GONE);
-        holder.llBotones.setVisibility(View.GONE);
+    // Método para formatear duración (minutos → horas y minutos)
+    private String formatearDuracion(int minutos) {
+        int horas = minutos / 60;
+        int mins = minutos % 60;
 
-        String estado = paseo.getEstado();
-
-        if ("EN_CURSO".equals(estado)) {
-            // Mostrar Ver Ubicación y Contactar
-            holder.llBotones.setVisibility(View.VISIBLE);
-            holder.btnVerUbicacion.setVisibility(View.VISIBLE);
-            holder.btnContactar.setVisibility(View.VISIBLE);
-
-            holder.btnVerUbicacion.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
-            holder.btnContactar.setOnClickListener(v -> listener.onContactarClick(paseo));
-
-        } else if ("COMPLETADO".equals(estado)) {
-            // Mostrar Calificar Paseador
-            holder.llBotones.setVisibility(View.VISIBLE);
-            holder.btnCalificar.setVisibility(View.VISIBLE);
-
-            holder.btnCalificar.setOnClickListener(v -> listener.onCalificarClick(paseo));
-
-        } else if ("CANCELADO".equals(estado)) {
-            // Mostrar Ver motivo
-            holder.llBotones.setVisibility(View.VISIBLE);
-            holder.btnVerMotivo.setVisibility(View.VISIBLE);
-
-            holder.btnVerMotivo.setOnClickListener(v -> listener.onVerMotivoClick(paseo));
-
-        } else if ("CONFIRMADO".equals(estado)) {
-            // No mostrar botones
-            holder.llBotones.setVisibility(View.GONE);
+        if (horas > 0 && mins > 0) {
+            return horas + "h " + mins + "m";
+        } else if (horas > 0) {
+            return horas + (horas == 1 ? " hora" : " horas");
+        } else {
+            return mins + (mins == 1 ? " minuto" : " minutos");
         }
     }
+
+    // Método para establecer color del chip según estado
+    private void establecerColorEstado(com.google.android.material.chip.Chip chip, String estado) {
+        int colorFondo;
+        int colorTexto;
+
+        if (estado != null) {
+            switch (estado) {
+                case "EN_CURSO":
+                    colorFondo = 0xFF4CAF50; // Verde
+                    colorTexto = 0xFFFFFFFF; // Blanco
+                    break;
+                case "CONFIRMADO":
+                    colorFondo = 0xFF12A3ED; // Azul
+                    colorTexto = 0xFFFFFFFF; // Blanco
+                    break;
+                case "COMPLETADO":
+                    colorFondo = 0xFF81C784; // Verde claro
+                    colorTexto = 0xFFFFFFFF; // Blanco
+                    break;
+                case "CANCELADO":
+                    colorFondo = 0xFFF44336; // Rojo
+                    colorTexto = 0xFFFFFFFF; // Blanco
+                    break;
+                default:
+                    colorFondo = 0xFF9CA3AF; // Gris
+                    colorTexto = 0xFFFFFFFF; // Blanco
+                    break;
+            }
+        } else {
+            colorFondo = 0xFF9CA3AF;
+            colorTexto = 0xFFFFFFFF;
+        }
+
+        chip.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(colorFondo));
+        chip.setTextColor(colorTexto);
+    }
+
+    // Método para configurar botones según estado
+    private void configurarBotonesAccion(PaseoViewHolder holder, String estado) {
+        holder.layoutBotonesAccion.setVisibility(View.VISIBLE);
+
+        if (estado != null) {
+            if (estado.equals("EN_CURSO")) {
+                // Mostrar: Ver Ubicación + Contactar
+                holder.btnAccion1.setText("Ver Ubicación 📍");
+                holder.btnAccion2.setText("Contactar 💬");
+
+                holder.btnAccion1.setOnClickListener(v -> {
+                    Toast.makeText(v.getContext(), "Abriendo ubicación en tiempo real...", Toast.LENGTH_SHORT).show();
+                    // TODO: Implementar lógica para abrir mapa/ubicación
+                });
+
+                holder.btnAccion2.setOnClickListener(v -> {
+                    Toast.makeText(v.getContext(), "Abriendo chat con paseador...", Toast.LENGTH_SHORT).show();
+                    // TODO: Implementar lógica para abrir mensajería
+                });
+            }
+            else if (estado.equals("COMPLETADO")) {
+                // Mostrar: Calificar + Ver Feedback
+                holder.btnAccion1.setText("Calificar ⭐");
+                holder.btnAccion2.setText("Ver Feedback");
+
+                holder.btnAccion1.setOnClickListener(v -> {
+                    Toast.makeText(v.getContext(), "Abriendo calificación...", Toast.LENGTH_SHORT).show();
+                    // TODO: Implementar diálogo de calificación
+                });
+
+                holder.btnAccion2.setOnClickListener(v -> {
+                    Toast.makeText(v.getContext(), "Abriendo feedback...", Toast.LENGTH_SHORT).show();
+                    // TODO: Implementar visualización de feedback
+                });
+            }
+            else if (estado.equals("CANCELADO")) {
+                // Mostrar solo: Ver Motivo
+                holder.btnAccion1.setText("Ver Motivo ℹ️");
+                holder.btnAccion2.setVisibility(View.GONE);
+
+                holder.btnAccion1.setOnClickListener(v -> {
+                    Toast.makeText(v.getContext(), "Motivo de cancelación...", Toast.LENGTH_SHORT).show();
+                    // TODO: Implementar diálogo con motivo
+                });
+            }
+            else if (estado.equals("CONFIRMADO")) {
+                // Ocultar botones para paseos confirmados (aún no iniciados)
+                holder.layoutBotonesAccion.setVisibility(View.GONE);
+            }
+            else {
+                holder.layoutBotonesAccion.setVisibility(View.GONE);
+            }
+        } else {
+            holder.layoutBotonesAccion.setVisibility(View.GONE);
+        }
+    }
+
 
     @Override
     public int getItemCount() {
@@ -140,6 +237,13 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         TextView btnContactar;
         TextView btnCalificar;
         TextView btnVerMotivo;
+        TextView tvDuracion;
+        TextView tvCosto;
+        TextView tvTipoReserva;
+        com.google.android.material.chip.Chip chipEstado;
+        LinearLayout layoutBotonesAccion;
+        Button btnAccion1;
+        Button btnAccion2;
 
         public PaseoViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -152,6 +256,13 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
             btnContactar = itemView.findViewById(R.id.btn_contactar);
             btnCalificar = itemView.findViewById(R.id.btn_calificar);
             btnVerMotivo = itemView.findViewById(R.id.btn_ver_motivo);
+            tvDuracion = itemView.findViewById(R.id.tvDuracion);
+            tvCosto = itemView.findViewById(R.id.tvCosto);
+            tvTipoReserva = itemView.findViewById(R.id.tvTipoReserva);
+            chipEstado = itemView.findViewById(R.id.chipEstado);
+            layoutBotonesAccion = itemView.findViewById(R.id.layoutBotonesAccion);
+            btnAccion1 = itemView.findViewById(R.id.btnAccion1);
+            btnAccion2 = itemView.findViewById(R.id.btnAccion2);
         }
     }
 }
