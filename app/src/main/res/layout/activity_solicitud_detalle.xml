@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FAFAFA">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
+
+        <!-- Botón atrás -->
+        <ImageButton
+            android:id="@+id/iv_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_arrow_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Volver"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Título -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Solicitudes"
+            android:textColor="@android:color/black"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB" />
+
+    <!-- ScrollView para contenido -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Sección A: Encabezado - Información del dueño -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingBottom="24dp">
+
+                <!-- Foto circular del dueño -->
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/iv_dueno_foto"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:src="@drawable/ic_person"
+                    app:civ_border_width="3dp"
+                    app:civ_border_color="#E5E7EB"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Nombre completo del dueño -->
+                <TextView
+                    android:id="@+id/tv_dueno_nombre"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sofía Ramírez"
+                    android:textColor="#000000"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Fecha y Horario del paseo -->
+                <TextView
+                    android:id="@+id/tv_fecha_horario"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="12 de junio, 10:00 AM - 11:00 AM"
+                    android:textColor="#757575"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <!-- Divisor -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E5E7EB"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Sección B: Información de la mascota -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="24dp">
+
+                <!-- Mascota -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="12dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Mascota:"
+                        android:textColor="#757575"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_mascota_nombre"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Max"
+                        android:textColor="#000000"
+                        android:textSize="13sp"
+                        android:gravity="end" />
+
+                </LinearLayout>
+
+                <!-- Divisor -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#E5E7EB" />
+
+                <!-- Raza -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="12dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Raza:"
+                        android:textColor="#757575"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_mascota_raza"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Golden Retriever"
+                        android:textColor="#000000"
+                        android:textSize="13sp"
+                        android:gravity="end" />
+
+                </LinearLayout>
+
+                <!-- Divisor -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#E5E7EB" />
+
+                <!-- Edad -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="12dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Edad:"
+                        android:textColor="#757575"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_mascota_edad"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="3 años"
+                        android:textColor="#000000"
+                        android:textSize="13sp"
+                        android:gravity="end" />
+
+                </LinearLayout>
+
+                <!-- Divisor -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#E5E7EB" />
+
+                <!-- Peso -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="12dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Peso:"
+                        android:textColor="#757575"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_mascota_peso"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="25 kg"
+                        android:textColor="#000000"
+                        android:textSize="13sp"
+                        android:gravity="end" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Divisor -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E5E7EB"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Sección C: Notas del dueño -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="24dp">
+
+                <!-- Encabezado "Notas:" -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Notas:"
+                    android:textColor="#757575"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Contenido de notas -->
+                <TextView
+                    android:id="@+id/tv_notas"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Max es muy amigable y le encanta jugar con otros perros."
+                    android:textColor="#333333"
+                    android:textSize="13sp"
+                    android:background="#F5F5F5"
+                    android:padding="12dp"
+                    android:minHeight="60dp"
+                    android:gravity="center_vertical" />
+
+            </LinearLayout>
+
+            <!-- Espaciador para botones -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="16dp" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Sección D: Botones de acción (fuera del ScrollView) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@android:color/white">
+
+        <!-- Fila de botones: Ver Perfil + Rechazar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <!-- Botón Ver Perfil -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_ver_perfil"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="Ver perfil"
+                android:textColor="#12A3ED"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/white"
+                app:strokeColor="#12A3ED"
+                app:strokeWidth="1dp"
+                app:cornerRadius="8dp" />
+
+            <!-- Botón Rechazar -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_rechazar"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="Rechazar"
+                android:textColor="#F44336"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:backgroundTint="@android:color/white"
+                app:strokeColor="#F44336"
+                app:strokeWidth="1dp"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+        <!-- Botón Aceptar (ancho completo) -->
+        <Button
+            android:id="@+id/btn_aceptar"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Aceptar"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="#12A3ED" />
+
+    </LinearLayout>
+
+    <!-- Divider superior de bottom nav -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB" />
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FAFAFA"
+        app:menu="@menu/menu_bottom_nav_new"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/bottom_nav_item_color"
+        app:itemTextColor="@color/bottom_nav_item_color"
+        app:itemActiveIndicatorStyle="@null" />
+
+</LinearLayout>
+

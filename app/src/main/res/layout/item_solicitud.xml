@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="12dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    android:foreground="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Información superior: fecha/hora, nombre dueño, raza mascota -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Información izquierda -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginEnd="12dp">
+
+                <!-- Fecha y hora -->
+                <TextView
+                    android:id="@+id/tv_fecha_hora"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="12 de junio · 10:00 AM"
+                    android:textColor="#9CA3AF"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="4dp" />
+
+                <!-- Nombre del dueño -->
+                <TextView
+                    android:id="@+id/tv_dueno_nombre"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sofía"
+                    android:textColor="#000000"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <!-- Raza de la mascota -->
+                <TextView
+                    android:id="@+id/tv_mascota_raza"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Golden Retriever"
+                    android:textColor="#757575"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <!-- Foto del dueño (circular) -->
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/iv_dueno_foto"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_person"
+                app:civ_border_width="2dp"
+                app:civ_border_color="#E5E7EB" />
+
+        </LinearLayout>
+
+        <!-- Botón Aceptar -->
+        <Button
+            android:id="@+id/btn_aceptar"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginTop="12dp"
+            android:text="Aceptar ✓"
+            android:textColor="#2E7D32"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:backgroundTint="#E8F5E9"
+            android:minWidth="80dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
+
