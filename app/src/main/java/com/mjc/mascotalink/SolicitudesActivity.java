@@ -166,85 +166,97 @@ public class SolicitudesActivity extends AppCompatActivity {
                 return;
             }
 
-            List<Solicitud> solicitudesTemporales = new ArrayList<>();
-            List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
+            final int totalSolicitudes = querySnapshot.size();
+            final int[] solicitudesProcesadas = {0};
 
             for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                 Solicitud solicitud = new Solicitud();
                 solicitud.setReservaId(doc.getId());
                 solicitud.setFechaCreacion(doc.getTimestamp("fecha_creacion") != null ? doc.getTimestamp("fecha_creacion").toDate() : new Date());
                 solicitud.setHoraInicio(doc.getTimestamp("hora_inicio") != null ? doc.getTimestamp("hora_inicio").toDate() : new Date());
-                solicitud.setIdDueno(doc.getDocumentReference("id_dueno"));
-                solicitud.setIdMascota(doc.getString("id_mascota"));
-                
-                solicitudesTemporales.add(solicitud);
 
-                // Añadir tareas de obtención de datos relacionados
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
-                if (duenoRef != null) {
-                    tareas.add(duenoRef.get());
-                } else {
-                    tareas.add(null);
-                }
-
                 String idMascota = doc.getString("id_mascota");
-                if (idMascota != null && !idMascota.isEmpty() && duenoRef != null) {
-                    // Obtener ID del dueño desde la referencia (el path es usuarios/{duenoId})
-                    String duenoId = duenoRef.getId();
-                    // Las mascotas están en duenos/{duenoId}/mascotas/{idMascota}
-                    // Nota: El ID en usuarios y duenos debería ser el mismo
-                    tareas.add(db.collection("duenos").document(duenoId).collection("mascotas").document(idMascota).get());
-                } else {
-                    tareas.add(null);
+                solicitud.setIdDueno(duenoRef);
+                solicitud.setIdMascota(idMascota);
+
+                // Tareas para obtener datos relacionados (dueño y mascota)
+                Task<DocumentSnapshot> duenoTask = null;
+                if (duenoRef != null) {
+                    duenoTask = duenoRef.get();
                 }
-            }
 
-            if (tareas.isEmpty()) {
-                finalizarCarga();
-                return;
-            }
+                Task<DocumentSnapshot> mascotaTask = null;
+                if (duenoRef != null && idMascota != null && !idMascota.isEmpty()) {
+                    String duenoId = duenoRef.getId();
+                    mascotaTask = db.collection("duenos").document(duenoId).collection("mascotas").document(idMascota).get();
+                }
 
-            // Ejecutar todas las tareas en paralelo
-            com.google.android.gms.tasks.Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
-                for (int i = 0; i < solicitudesTemporales.size(); i++) {
-                    Solicitud solicitud = solicitudesTemporales.get(i);
-                    
-                    // El resultado corresponde a duenoRef.get()
-                    Object duenoResult = results.get(i * 2);
-                    if (duenoResult instanceof DocumentSnapshot) {
-                        DocumentSnapshot duenoDoc = (DocumentSnapshot) duenoResult;
+                // Combinar tareas y procesar resultados
+                Task<DocumentSnapshot> finalDuenoTask = duenoTask;
+                Task<DocumentSnapshot> finalMascotaTask = mascotaTask;
+
+                // Procesar tarea del dueño
+                if (finalDuenoTask != null) {
+                    finalDuenoTask.addOnSuccessListener(duenoDoc -> {
                         if (duenoDoc.exists()) {
                             solicitud.setDuenoNombre(duenoDoc.getString("nombre_display"));
                             solicitud.setDuenoFotoUrl(duenoDoc.getString("foto_perfil"));
                         } else {
                             solicitud.setDuenoNombre("Usuario desconocido");
                         }
-                    }
 
-                    // El resultado corresponde a mascota.get()
-                    Object mascotaResult = results.get(i * 2 + 1);
-                    if (mascotaResult instanceof DocumentSnapshot) {
-                        DocumentSnapshot mascotaDoc = (DocumentSnapshot) mascotaResult;
-                        if (mascotaDoc.exists()) {
-                            solicitud.setMascotaRaza(mascotaDoc.getString("raza"));
+                        // Una vez obtenido el dueño, procesar la mascota
+                        if (finalMascotaTask != null) {
+                            finalMascotaTask.addOnSuccessListener(mascotaDoc -> {
+                                if (mascotaDoc.exists()) {
+                                    solicitud.setMascotaRaza(mascotaDoc.getString("raza"));
+                                } else {
+                                    solicitud.setMascotaRaza("Mascota");
+                                }
+                                solicitudesList.add(solicitud);
+                                if (++solicitudesProcesadas[0] == totalSolicitudes) {
+                                    actualizarYFinalizar();
+                                }
+                            }).addOnFailureListener(e -> {
+                                solicitud.setMascotaRaza("Error");
+                                solicitudesList.add(solicitud);
+                                if (++solicitudesProcesadas[0] == totalSolicitudes) {
+                                    actualizarYFinalizar();
+                                }
+                            });
                         } else {
-                            solicitud.setMascotaRaza("Mascota");
+                            solicitud.setMascotaRaza("Mascota no especificada");
+                            solicitudesList.add(solicitud);
+                            if (++solicitudesProcesadas[0] == totalSolicitudes) {
+                                actualizarYFinalizar();
+                            }
                         }
-                    } else {
-                        solicitud.setMascotaRaza("Mascota");
-                    }
-                    
+                    }).addOnFailureListener(e -> {
+                        solicitud.setDuenoNombre("Error al cargar");
+                        solicitudesList.add(solicitud);
+                        if (++solicitudesProcesadas[0] == totalSolicitudes) {
+                            actualizarYFinalizar();
+                        }
+                    });
+                } else {
+                    solicitud.setDuenoNombre("Dueño no especificado");
                     solicitudesList.add(solicitud);
+                    if (++solicitudesProcesadas[0] == totalSolicitudes) {
+                        actualizarYFinalizar();
+                    }
                 }
-
-                if (solicitudesAdapter != null) {
-                    solicitudesAdapter.notifyDataSetChanged();
-                }
-                finalizarCarga();
-
-            }).addOnFailureListener(this::manejarError);
-
+            }
         }).addOnFailureListener(this::manejarError);
+    }
+
+    private void actualizarYFinalizar() {
+        // Ordenar la lista por fecha de creación descendente antes de mostrar
+        solicitudesList.sort((s1, s2) -> s2.getFechaCreacion().compareTo(s1.getFechaCreacion()));
+        if (solicitudesAdapter != null) {
+            solicitudesAdapter.notifyDataSetChanged();
+        }
+        finalizarCarga();
     }
 
     private void finalizarCarga() {

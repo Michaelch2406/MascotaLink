@@ -202,7 +202,8 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             String pagoId = "PAGO_" + System.currentTimeMillis();
 
             Map<String, Object> updates = new HashMap<>();
-            updates.put("estado", "CONFIRMADO");
+            // Ajuste de flujo: tras pago exitoso, la reserva queda pendiente de aceptación del paseador
+            updates.put("estado", "PENDIENTE_ACEPTACION");
             updates.put("id_pago", pagoId);
             updates.put("estado_pago", "PROCESADO");
             updates.put("fecha_pago", Timestamp.now());

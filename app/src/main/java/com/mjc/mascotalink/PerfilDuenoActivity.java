@@ -74,18 +74,68 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         initViews();
         setupListeners();
         setupAuthListener(); // Se configura el nuevo listener
+
+        // Si recibimos un id_dueno por Intent, cargar directamente ese perfil
+        String duenoIdFromIntent = getIntent().getStringExtra("id_dueno");
+        if (duenoIdFromIntent != null && !duenoIdFromIntent.isEmpty()) {
+            setupRoleBasedUI(duenoIdFromIntent); // Configurar UI basado en el rol
+            cargarDatosDueno(duenoIdFromIntent);
+            cargarMascotas(duenoIdFromIntent);
+            cargarMetodoPagoPredeterminado(duenoIdFromIntent);
+        }
+    }
+
+    private void setupRoleBasedUI(String profileOwnerId) {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        // Es mi perfil si el usuario actual no es nulo y su UID coincide con el del perfil que se está viendo.
+        boolean isMyProfile = currentUser != null && currentUser.getUid().equals(profileOwnerId);
+
+        // Controles de edición de campos (siempre empiezan deshabilitados)
+        ivEditEmail.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        ivEditTelefono.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        etEmailDueno.setEnabled(false);
+        etTelefonoDueno.setEnabled(false);
+        ivSaveEmail.setVisibility(View.GONE);
+        ivSaveTelefono.setVisibility(View.GONE);
+
+        // Icono de edición principal y de mascotas
+        ivEditPerfil.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        ivEditMascotas.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+
+        // Secciones completas (Ajustes, Soporte) y botón de cerrar sesión
+        View seccionAjustes = findViewById(R.id.seccion_ajustes_cuenta);
+        if (seccionAjustes != null) {
+            seccionAjustes.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        }
+        View seccionSoporte = findViewById(R.id.seccion_soporte_legal);
+        if (seccionSoporte != null) {
+            seccionSoporte.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        }
+        if (btnCerrarSesion != null) {
+            btnCerrarSesion.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        }
+
+
+        // La barra de navegación inferior solo debe ser visible para el dueño del perfil
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+        bottomNav.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
     }
 
     private void setupAuthListener() {
         mAuthListener = firebaseAuth -> {
             FirebaseUser user = firebaseAuth.getCurrentUser();
             if (user != null) {
-                // El usuario está logueado, procedemos a cargar datos.
+                // El usuario está logueado.
                 Log.d(TAG, "onAuthStateChanged:signed_in:" + user.getUid());
                 String uid = user.getUid();
-                cargarDatosDueno(uid);
-                cargarMascotas(uid);
-                cargarMetodoPagoPredeterminado(uid);
+
+                // Si no se pasó un ID por intent, significa que el usuario está viendo su propio perfil.
+                if (getIntent().getStringExtra("id_dueno") == null) {
+                    setupRoleBasedUI(uid); // Configurar UI para el propio perfil
+                    cargarDatosDueno(uid);
+                    cargarMascotas(uid);
+                    cargarMetodoPagoPredeterminado(uid);
+                }
             } else {
                 // El usuario no está logueado, redirigir a LoginActivity.
                 Log.d(TAG, "onAuthStateChanged:signed_out");

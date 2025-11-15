@@ -24,6 +24,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
     private Context context;
     private List<PaseosActivity.Paseo> paseosList;
     private OnPaseoClickListener listener;
+    private String userRole;
 
     public interface OnPaseoClickListener {
         void onPaseoClick(PaseosActivity.Paseo paseo);
@@ -33,10 +34,11 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         void onVerMotivoClick(PaseosActivity.Paseo paseo);
     }
 
-    public PaseosAdapter(Context context, List<PaseosActivity.Paseo> paseosList, OnPaseoClickListener listener) {
+    public PaseosAdapter(Context context, List<PaseosActivity.Paseo> paseosList, OnPaseoClickListener listener, String userRole) {
         this.context = context;
         this.paseosList = paseosList;
         this.listener = listener;
+        this.userRole = userRole;
     }
 
     @NonNull
@@ -50,39 +52,48 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
     public void onBindViewHolder(@NonNull PaseoViewHolder holder, int position) {
         PaseosActivity.Paseo paseo = paseosList.get(position);
 
-        // Fecha
         holder.tvFecha.setText(paseo.getFechaFormateada());
 
-        // Nombre paseador
-        holder.tvPaseadorNombre.setText(paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "Cargando...");
+        // Lógica basada en el rol
+        if ("PASEADOR".equalsIgnoreCase(userRole)) {
+            // Vista para el Paseador
+            holder.tvPaseadorNombre.setText(paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "Dueño no asignado");
+            if (paseo.getMascotaFoto() != null && !paseo.getMascotaFoto().isEmpty()) {
+                Glide.with(context)
+                        .load(paseo.getMascotaFoto())
+                        .placeholder(R.drawable.ic_pet_placeholder)
+                        .circleCrop()
+                        .into(holder.ivPaseadorFoto);
+            } else {
+                holder.ivPaseadorFoto.setImageResource(R.drawable.ic_pet_placeholder);
+            }
+        } else {
+            // Vista para el Dueño (comportamiento original)
+            holder.tvPaseadorNombre.setText(paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "Paseador no asignado");
+            if (paseo.getPaseadorFoto() != null && !paseo.getPaseadorFoto().isEmpty()) {
+                Glide.with(context)
+                        .load(paseo.getPaseadorFoto())
+                        .placeholder(R.drawable.ic_person)
+                        .circleCrop()
+                        .into(holder.ivPaseadorFoto);
+            } else {
+                holder.ivPaseadorFoto.setImageResource(R.drawable.ic_person);
+            }
+        }
 
-        // Mascota y hora
+
         String mascotaHora = "Mascota: " +
                 (paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Cargando...") +
                 ", " + paseo.getHoraFormateada();
         holder.tvMascotaHora.setText(mascotaHora);
 
-        // Imagen del paseador
-        if (paseo.getPaseadorFoto() != null && !paseo.getPaseadorFoto().isEmpty()) {
-            Glide.with(context)
-                    .load(paseo.getPaseadorFoto())
-                    .placeholder(R.drawable.ic_person)
-                    .circleCrop()
-                    .into(holder.ivPaseadorFoto);
-        } else {
-            holder.ivPaseadorFoto.setImageResource(R.drawable.ic_person);
-        }
-
-        // 1. MOSTRAR DURACIÓN (convertir minutos a horas/minutos)
         int duracionMinutos = paseo.getDuracionMinutos();
         String duracionTexto = formatearDuracion(duracionMinutos);
         holder.tvDuracion.setText("Duración: " + duracionTexto);
 
-        // 2. MOSTRAR COSTO (formatear como moneda)
         double costo = paseo.getCostoTotal();
         holder.tvCosto.setText(String.format("$%.2f", costo));
 
-        // 3. MOSTRAR TIPO DE RESERVA
         String tipoReserva = paseo.getTipoReserva();
         if (tipoReserva != null) {
             String tipoTexto = tipoReserva.equals("PUNTUAL") ? "UN DÍA" :
@@ -91,12 +102,10 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
             holder.tvTipoReserva.setText(tipoTexto);
         }
 
-        // 4. MOSTRAR ESTADO Y ESTABLECER COLOR
         String estado = paseo.getEstado();
         holder.chipEstado.setText(estado != null ? estado : "DESCONOCIDO");
         establecerColorEstado(holder.chipEstado, estado);
 
-        // 5. APLICAR OPACIDAD SEGÚN ESTADO
         float opacidad = 1.0f;
         if (estado != null) {
             if (estado.equals("COMPLETADO")) opacidad = 0.8f;
@@ -104,16 +113,13 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         }
         holder.itemView.setAlpha(opacidad);
 
-        // 6. CONFIGURAR BOTONES SEGÚN ESTADO
-        configurarBotonesAccion(holder, estado);
+        configurarBotonesAccion(holder, estado, paseo);
 
 
-        // Click en card
         holder.itemView.setOnClickListener(v -> listener.onPaseoClick(paseo));
 
     }
 
-    // Método para formatear duración (minutos → horas y minutos)
     private String formatearDuracion(int minutos) {
         int horas = minutos / 60;
         int mins = minutos % 60;
@@ -127,7 +133,6 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         }
     }
 
-    // Método para establecer color del chip según estado
     private void establecerColorEstado(com.google.android.material.chip.Chip chip, String estado) {
         int colorFondo;
         int colorTexto;
@@ -164,54 +169,33 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         chip.setTextColor(colorTexto);
     }
 
-    // Método para configurar botones según estado
-    private void configurarBotonesAccion(PaseoViewHolder holder, String estado) {
+    private void configurarBotonesAccion(PaseoViewHolder holder, String estado, final PaseosActivity.Paseo paseo) {
         holder.layoutBotonesAccion.setVisibility(View.VISIBLE);
+        holder.btnAccion1.setVisibility(View.VISIBLE);
+        holder.btnAccion2.setVisibility(View.VISIBLE);
+
 
         if (estado != null) {
             if (estado.equals("EN_CURSO")) {
-                // Mostrar: Ver Ubicación + Contactar
                 holder.btnAccion1.setText("Ver Ubicación 📍");
-                holder.btnAccion2.setText("Contactar 💬");
-
-                holder.btnAccion1.setOnClickListener(v -> {
-                    Toast.makeText(v.getContext(), "Abriendo ubicación en tiempo real...", Toast.LENGTH_SHORT).show();
-                    // TODO: Implementar lógica para abrir mapa/ubicación
-                });
-
-                holder.btnAccion2.setOnClickListener(v -> {
-                    Toast.makeText(v.getContext(), "Abriendo chat con paseador...", Toast.LENGTH_SHORT).show();
-                    // TODO: Implementar lógica para abrir mensajería
-                });
+                holder.btnAccion2.setText("PASEADOR".equalsIgnoreCase(userRole) ? "Contactar Dueño 💬" : "Contactar Paseador 💬");
+                holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
+                holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
             }
             else if (estado.equals("COMPLETADO")) {
-                // Mostrar: Calificar + Ver Feedback
-                holder.btnAccion1.setText("Calificar ⭐");
-                holder.btnAccion2.setText("Ver Feedback");
-
-                holder.btnAccion1.setOnClickListener(v -> {
-                    Toast.makeText(v.getContext(), "Abriendo calificación...", Toast.LENGTH_SHORT).show();
-                    // TODO: Implementar diálogo de calificación
-                });
-
-                holder.btnAccion2.setOnClickListener(v -> {
-                    Toast.makeText(v.getContext(), "Abriendo feedback...", Toast.LENGTH_SHORT).show();
-                    // TODO: Implementar visualización de feedback
-                });
+                if("PASEADOR".equalsIgnoreCase(userRole)) {
+                    holder.layoutBotonesAccion.setVisibility(View.GONE);
+                } else {
+                    holder.btnAccion1.setText("Calificar ⭐");
+                    holder.btnAccion2.setText("Ver Feedback");
+                    holder.btnAccion1.setOnClickListener(v -> listener.onCalificarClick(paseo));
+                    holder.btnAccion2.setOnClickListener(v -> Toast.makeText(context, "Próximamente: Ver feedback", Toast.LENGTH_SHORT).show());
+                }
             }
             else if (estado.equals("CANCELADO")) {
-                // Mostrar solo: Ver Motivo
                 holder.btnAccion1.setText("Ver Motivo ℹ️");
                 holder.btnAccion2.setVisibility(View.GONE);
-
-                holder.btnAccion1.setOnClickListener(v -> {
-                    Toast.makeText(v.getContext(), "Motivo de cancelación...", Toast.LENGTH_SHORT).show();
-                    // TODO: Implementar diálogo con motivo
-                });
-            }
-            else if (estado.equals("CONFIRMADO")) {
-                // Ocultar botones para paseos confirmados (aún no iniciados)
-                holder.layoutBotonesAccion.setVisibility(View.GONE);
+                holder.btnAccion1.setOnClickListener(v -> listener.onVerMotivoClick(paseo));
             }
             else {
                 holder.layoutBotonesAccion.setVisibility(View.GONE);

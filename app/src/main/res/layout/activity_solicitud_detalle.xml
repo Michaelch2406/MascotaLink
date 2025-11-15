@@ -21,6 +21,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/ic_arrow_back"
+            android:tint="#111827"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Volver"
             android:layout_marginEnd="8dp" />
@@ -33,7 +34,13 @@
             android:text="Solicitudes"
             android:textColor="@android:color/black"
             android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <!-- Spacer para centrar título con simetría -->
+        <View
+            android:layout_width="48dp"
+            android:layout_height="48dp" />
 
     </LinearLayout>
 

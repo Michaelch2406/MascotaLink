@@ -111,11 +111,11 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         // Botón Ver Perfil
         btnVerPerfil.setOnClickListener(v -> {
             if (idDueno != null && !idDueno.isEmpty()) {
-                // Abrir perfil del dueño
-                // Nota: PerfilDuenoActivity muestra el perfil del usuario actual
-                // Necesitamos una actividad diferente o modificar PerfilDuenoActivity para aceptar un ID
-                Toast.makeText(this, "Ver perfil de " + tvDuenoNombre.getText(), Toast.LENGTH_SHORT).show();
-                // TODO: Implementar navegación al perfil del dueño
+                Intent intent = new Intent(SolicitudDetalleActivity.this, PerfilDuenoActivity.class);
+                intent.putExtra("id_dueno", idDueno);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "No se pudo abrir el perfil del dueño", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -165,6 +165,14 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                 .addOnSuccessListener(reservaDoc -> {
                     if (!reservaDoc.exists()) {
                         Toast.makeText(this, "La solicitud no existe", Toast.LENGTH_SHORT).show();
+                        finish();
+                        return;
+                    }
+
+                    // Validación de permisos: el paseador debe ser el usuario actual
+                    DocumentReference paseadorRef = reservaDoc.getDocumentReference("id_paseador");
+                    if (paseadorRef != null && !currentUserId.equals(paseadorRef.getId())) {
+                        Toast.makeText(this, "No tienes permiso para ver esta solicitud", Toast.LENGTH_SHORT).show();
                         finish();
                         return;
                     }
