@@ -80,23 +80,18 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
 
-    // Regla para permitir la lectura del grupo de colecciones 'mascotas'
-    match /{path=**}/mascotas/{mascotaId} {
-      allow read: if request.auth != null;
-    }
-
     // Reseñas
     match /resenas/{resenaId} {
       allow read: if request.auth != null;
       // La escritura se podría limitar a un dueño que haya completado un servicio con el paseador
-      allow write: if false; 
+      allow write: if false;
     }
 
     // Servicios
     match /servicios/{servicioId} {
       // Solo el dueño o el paseador pueden leer un servicio específico.
       // La regla de listado (query) se debe manejar a nivel de la app.
-      allow read: if resource != null && request.auth != null && 
+      allow read: if resource != null && request.auth != null &&
                   (request.auth.uid == resource.data.due_id || request.auth.uid == resource.data.pas_id);
 
       // El dueño crea el servicio.
@@ -120,7 +115,7 @@ service cloud.firestore {
       // El dueño o el paseador pueden leer o actualizar la reserva.
       allow read, update: if resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
                            resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid);
-      
+
       allow delete: if false;
     }
 
@@ -129,7 +124,7 @@ service cloud.firestore {
       // Un participante puede leer o actualizar un chat.
       allow read, update: if resource != null && request.auth != null &&
                          request.auth.uid in resource.data.participantes_ids;
-      
+
       // Un usuario puede crear un chat si es uno de los participantes.
       allow create: if request.auth != null &&
                       request.auth.uid in request.resource.data.participantes_ids;
@@ -138,7 +133,7 @@ service cloud.firestore {
         // Para leer/actualizar un mensaje, el usuario debe estar en la lista de participantes del chat padre.
         allow read, update: if request.auth != null &&
                            request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantes_ids;
-        
+
         // Para crear un mensaje, el usuario debe ser el sender y estar en la lista de participantes del chat padre.
         allow create: if request.auth != null &&
                         request.auth.uid == request.resource.data.sender_id &&

@@ -122,16 +122,40 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
             }
         });
 
-        // Make pet name clickable to see pet profile
+        // Make pet name clickable to see pet profile.
+        // This implementation re-fetches the reservation on click to ensure data is fresh
+        // and avoids any potential race conditions with class member variables.
         tvMascotaNombre.setOnClickListener(v -> {
-            if (idDueno != null && !idDueno.isEmpty() && idMascota != null && !idMascota.isEmpty()) {
-                Intent intent = new Intent(SolicitudDetalleActivity.this, PerfilMascotaActivity.class);
-                intent.putExtra("dueno_id", idDueno);
-                intent.putExtra("mascota_id", idMascota);
-                startActivity(intent);
-            } else {
-                Toast.makeText(this, "No se pudo abrir el perfil de la mascota", Toast.LENGTH_SHORT).show();
+            if (idReserva == null || idReserva.isEmpty()) {
+                Toast.makeText(this, "Error: ID de reserva no disponible.", Toast.LENGTH_SHORT).show();
+                return;
             }
+            
+            // Re-fetch the document to get the most accurate data just before launching the intent
+            db.collection("reservas").document(idReserva).get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    DocumentReference duenoRef = documentSnapshot.getDocumentReference("id_dueno");
+                    String mascotaIdFromDoc = documentSnapshot.getString("id_mascota");
+
+                    if (duenoRef != null && mascotaIdFromDoc != null && !mascotaIdFromDoc.isEmpty()) {
+                        String duenoIdFromDoc = duenoRef.getId();
+                        
+                        Log.d(TAG, "Lanzando PerfilMascotaActivity con dueno_id: " + duenoIdFromDoc + " y mascota_id: " + mascotaIdFromDoc);
+                        
+                        Intent intent = new Intent(SolicitudDetalleActivity.this, PerfilMascotaActivity.class);
+                        intent.putExtra("dueno_id", duenoIdFromDoc);
+                        intent.putExtra("mascota_id", mascotaIdFromDoc);
+                        startActivity(intent);
+                    } else {
+                        Toast.makeText(this, "No se pudo abrir el perfil de la mascota. Datos incompletos en la reserva.", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(this, "La reserva ya no existe.", Toast.LENGTH_SHORT).show();
+                }
+            }).addOnFailureListener(e -> {
+                Log.e(TAG, "Error al re-obtener la reserva para ver perfil de mascota", e);
+                Toast.makeText(this, "Error de red. No se pudo abrir el perfil.", Toast.LENGTH_SHORT).show();
+            });
         });
 
         // Botón Rechazar

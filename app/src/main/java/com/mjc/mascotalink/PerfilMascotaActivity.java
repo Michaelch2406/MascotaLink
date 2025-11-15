@@ -181,19 +181,16 @@ public class PerfilMascotaActivity extends AppCompatActivity {
         
         Log.d(TAG, "Cargando mascota con duenoId: " + duenoId + " y mascotaId: " + mascotaId);
 
-        // Workaround: Use a query instead of a direct get, in case of an emulator bug with security rules on subcollection document gets.
         mascotaListener = db.collection("duenos").document(duenoId)
-                .collection("mascotas").whereEqualTo(com.google.firebase.firestore.FieldPath.documentId(), mascotaId)
-                .addSnapshotListener((querySnapshot, e) -> {
+                .collection("mascotas").document(mascotaId)
+                .addSnapshotListener((document, e) -> {
                     if (e != null) {
                         Log.w(TAG, "Listen failed.", e);
                         showErrorState("Error al cargar el perfil de la mascota.");
                         return;
                     }
 
-                    if (querySnapshot != null && !querySnapshot.isEmpty()) {
-                        DocumentSnapshot document = querySnapshot.getDocuments().get(0);
-                        
+                    if (document != null && document.exists()) {
                         showContentState();
                         // Nombre
                         String nombre = document.getString("nombre");

@@ -345,6 +345,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                             pet.setName(doc.getString("nombre"));
                             pet.setBreed(doc.getString("raza"));
                             pet.setAvatarUrl(doc.getString("foto_principal_url"));
+                            pet.setOwnerId(uid); // <-- Set the owner's ID here
                             petList.add(pet);
                         }
                     }

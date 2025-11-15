@@ -45,10 +45,8 @@ public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdap
         // Set click listener for the entire item
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, PerfilMascotaActivity.class);
-            // Get current user ID
-            String duenoId = FirebaseAuth.getInstance().getCurrentUser() != null ?
-                    FirebaseAuth.getInstance().getCurrentUser().getUid() : null;
-            intent.putExtra("dueno_id", duenoId);
+            // Use the ownerId from the Pet object, not the current user's UID
+            intent.putExtra("dueno_id", pet.getOwnerId());
             intent.putExtra("mascota_id", pet.getId());
             context.startActivity(intent);
         });

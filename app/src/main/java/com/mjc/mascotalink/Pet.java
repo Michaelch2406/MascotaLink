@@ -5,16 +5,18 @@ public class Pet {
     private String name;
     private String breed;
     private String avatarUrl;
+    private String ownerId; // ID del dueño
 
     public Pet() {
         // Constructor vacío requerido para Firestore
     }
 
-    public Pet(String id, String name, String breed, String avatarUrl) {
+    public Pet(String id, String name, String breed, String avatarUrl, String ownerId) {
         this.id = id;
         this.name = name;
         this.breed = breed;
         this.avatarUrl = avatarUrl;
+        this.ownerId = ownerId;
     }
 
     public String getId() {
@@ -47,5 +49,13 @@ public class Pet {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 }
