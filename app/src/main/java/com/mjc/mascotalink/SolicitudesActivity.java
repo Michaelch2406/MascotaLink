@@ -21,6 +21,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -69,7 +70,9 @@ public class SolicitudesActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
         setupSwipeRefresh();
-        setupBottomNavigation();
+        // Refactored to use BottomNavManager
+        BottomNavManager.setupBottomNav(this, bottomNav, "PASEADOR", R.id.menu_search);
+
 
         // Cargar solicitudes iniciales
         cargarSolicitudes();
@@ -118,36 +121,6 @@ public class SolicitudesActivity extends AppCompatActivity {
             cargarSolicitudes();
         });
         swipeRefresh.setColorSchemeResources(R.color.blue_primary);
-    }
-
-    private void setupBottomNavigation() {
-        bottomNav.setSelectedItemId(R.id.menu_walks);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_walks) {
-                // Ya estamos aquí
-                return true;
-            } else if (itemId == R.id.menu_home) {
-                Intent intent = new Intent(this, PerfilPaseadorActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_search) {
-                Intent intent = new Intent(this, com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
-                return false;
-            } else if (itemId == R.id.menu_perfil) {
-                Intent intent = new Intent(this, PerfilPaseadorActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            }
-            return false;
-        });
     }
 
     private void cargarSolicitudes() {
@@ -318,4 +291,3 @@ public class SolicitudesActivity extends AppCompatActivity {
         public void setMascotaRaza(String mascotaRaza) { this.mascotaRaza = mascotaRaza; }
     }
 }
-

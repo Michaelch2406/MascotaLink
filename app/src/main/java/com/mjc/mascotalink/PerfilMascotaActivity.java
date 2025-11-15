@@ -17,10 +17,11 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -36,6 +37,7 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
+    // Views
     private ImageView ivBack, ivAvatarMascota, ivEditMascota;
     private TextView tvNombreMascota, tvDescripcionMascota;
     private TextView tvRaza, tvSexo, tvEdad, tvTamano, tvPeso, tvEsterilizado;
@@ -43,9 +45,14 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     private View btnSalud, btnComportamiento, btnInstrucciones;
     private GaleriaAdapter galeriaAdapter;
     private List<String> galeriaUrls;
+    private BottomNavigationView bottomNav;
+    private View contentContainer, errorContainer; // Containers for content and error message
+    private TextView tvErrorMessage; // TextView inside errorContainer
 
+    // Data
     private String duenoId;
     private String mascotaId;
+    private String currentUserId;
     private ListenerRegistration mascotaListener;
 
     @Override
@@ -56,21 +63,30 @@ public class PerfilMascotaActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
+        // Get current user
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Error: Usuario no autenticado.", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        currentUserId = currentUser.getUid();
+
         // Get IDs from intent
         duenoId = getIntent().getStringExtra("dueno_id");
         mascotaId = getIntent().getStringExtra("mascota_id");
 
-        if (duenoId == null && mAuth.getCurrentUser() != null) {
-            duenoId = mAuth.getCurrentUser().getUid();
-        }
-
-        if (mascotaId == null) {
-            Toast.makeText(this, "Error: No se pudo cargar el perfil de la mascota", Toast.LENGTH_SHORT).show();
-            finish();
+        if (duenoId == null || duenoId.isEmpty() || mascotaId == null || mascotaId.isEmpty()) {
+            // Show error state immediately if IDs are missing
+            initViews(); // Need to init views to show error
+            showErrorState("No se pudo cargar el perfil de la mascota. Faltan datos.");
+            // Hide back button if we can't even load the profile
+            if(ivBack != null) ivBack.setVisibility(View.GONE);
             return;
         }
 
         initViews();
+        setupRoleBasedUI();
         setupListeners();
     }
 
@@ -96,36 +112,33 @@ public class PerfilMascotaActivity extends AppCompatActivity {
         btnSalud = findViewById(R.id.btn_salud);
         btnComportamiento = findViewById(R.id.btn_comportamiento);
         btnInstrucciones = findViewById(R.id.btn_instrucciones);
+        bottomNav = findViewById(R.id.bottom_nav);
 
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
-        bottomNav.setSelectedItemId(R.id.menu_perfil);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_home) {
-                showToast("Próximamente: Inicio");
-                return true;
-            } else if (itemId == R.id.menu_search) {
-                Intent intent = new Intent(this, BusquedaPaseadoresActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_walks) {
-                showToast("Próximamente: Paseos");
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                showToast("Próximamente: Mensajes");
-                return true;
-            } else if (itemId == R.id.menu_perfil) {
-                finish();
-                return true;
-            }
-            return false;
-        });
+        contentContainer = findViewById(R.id.content_container);
+        errorContainer = findViewById(R.id.error_container);
+        tvErrorMessage = findViewById(R.id.tv_error_message);
+    }
+
+    private void setupRoleBasedUI() {
+        boolean isOwner = duenoId.equals(currentUserId);
+
+        // The main edit icon is only visible to the owner
+        ivEditMascota.setVisibility(isOwner ? View.VISIBLE : View.GONE);
+
+        // The bottom navigation is only visible to the owner
+        if (isOwner) {
+            bottomNav.setVisibility(View.VISIBLE);
+            // Assuming the owner is always "DUEÑO"
+            BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_perfil);
+        } else {
+            bottomNav.setVisibility(View.GONE);
+        }
     }
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
 
+        // This listener is only visible to the owner, so no role check is needed here.
         ivEditMascota.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilMascotaActivity.this, EditarPerfilMascotaActivity.class);
             intent.putExtra("dueno_id", duenoId);
@@ -133,10 +146,13 @@ public class PerfilMascotaActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        // These buttons are visible to everyone (owner and walker)
         btnSalud.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilMascotaActivity.this, MascotaSaludActivity.class);
             intent.putExtra("dueno_id", duenoId);
             intent.putExtra("mascota_id", mascotaId);
+            // Pass a flag to indicate read-only mode if not owner
+            intent.putExtra("read_only", !duenoId.equals(currentUserId));
             startActivity(intent);
         });
 
@@ -144,6 +160,8 @@ public class PerfilMascotaActivity extends AppCompatActivity {
             Intent intent = new Intent(PerfilMascotaActivity.this, MascotaComportamientoActivity.class);
             intent.putExtra("dueno_id", duenoId);
             intent.putExtra("mascota_id", mascotaId);
+            // Pass a flag to indicate read-only mode if not owner
+            intent.putExtra("read_only", !duenoId.equals(currentUserId));
             startActivity(intent);
         });
 
@@ -151,6 +169,8 @@ public class PerfilMascotaActivity extends AppCompatActivity {
             Intent intent = new Intent(PerfilMascotaActivity.this, MascotaInstruccionesActivity.class);
             intent.putExtra("dueno_id", duenoId);
             intent.putExtra("mascota_id", mascotaId);
+            // Pass a flag to indicate read-only mode if not owner
+            intent.putExtra("read_only", !duenoId.equals(currentUserId));
             startActivity(intent);
         });
     }
@@ -158,16 +178,23 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     @SuppressWarnings("unchecked")
     private void cargarDatosMascota() {
         if (mascotaListener != null) mascotaListener.remove();
+        
+        Log.d(TAG, "Cargando mascota con duenoId: " + duenoId + " y mascotaId: " + mascotaId);
+
+        // Workaround: Use a query instead of a direct get, in case of an emulator bug with security rules on subcollection document gets.
         mascotaListener = db.collection("duenos").document(duenoId)
-                .collection("mascotas").document(mascotaId)
-                .addSnapshotListener((document, e) -> {
+                .collection("mascotas").whereEqualTo(com.google.firebase.firestore.FieldPath.documentId(), mascotaId)
+                .addSnapshotListener((querySnapshot, e) -> {
                     if (e != null) {
                         Log.w(TAG, "Listen failed.", e);
-                        Toast.makeText(this, "Error al cargar el perfil.", Toast.LENGTH_SHORT).show();
+                        showErrorState("Error al cargar el perfil de la mascota.");
                         return;
                     }
 
-                    if (document != null && document.exists()) {
+                    if (querySnapshot != null && !querySnapshot.isEmpty()) {
+                        DocumentSnapshot document = querySnapshot.getDocuments().get(0);
+                        
+                        showContentState();
                         // Nombre
                         String nombre = document.getString("nombre");
                         tvNombreMascota.setText(nombre);
@@ -224,6 +251,8 @@ public class PerfilMascotaActivity extends AppCompatActivity {
                         String fotoUrl = document.getString("foto_principal_url");
                         if (fotoUrl != null && !fotoUrl.isEmpty()) {
                             Glide.with(this).load(fotoUrl).circleCrop().into(ivAvatarMascota);
+                        } else {
+                            ivAvatarMascota.setImageResource(R.drawable.ic_pet_placeholder);
                         }
 
                         // Galería
@@ -238,9 +267,21 @@ public class PerfilMascotaActivity extends AppCompatActivity {
                         galeriaAdapter.notifyDataSetChanged();
 
                     } else {
-                        Log.d(TAG, "Current data: null");
+                        Log.d(TAG, "No such document for duenoId: " + duenoId + " y mascotaId: " + mascotaId);
+                        showErrorState("El perfil de esta mascota no fue encontrado o fue eliminado.");
                     }
                 });
+    }
+
+    private void showErrorState(String message) {
+        contentContainer.setVisibility(View.GONE);
+        errorContainer.setVisibility(View.VISIBLE);
+        tvErrorMessage.setText(message);
+    }
+
+    private void showContentState() {
+        contentContainer.setVisibility(View.VISIBLE);
+        errorContainer.setVisibility(View.GONE);
     }
 
     private void showToast(String message) {
@@ -250,7 +291,10 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        cargarDatosMascota();
+        // Only load data if IDs are valid
+        if (duenoId != null && !duenoId.isEmpty() && mascotaId != null && !mascotaId.isEmpty()) {
+            cargarDatosMascota();
+        }
     }
 
     @Override

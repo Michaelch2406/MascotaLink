@@ -20,6 +20,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -55,6 +56,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
 
     // Datos
     private String idDueno;
+    private String idMascota; // Make idMascota a field
     private Date fecha;
     private Date horaInicio;
     private int duracionMinutos;
@@ -86,7 +88,8 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         }
 
         initViews();
-        setupBottomNavigation();
+        // Refactored to use BottomNavManager
+        BottomNavManager.setupBottomNav(this, bottomNav, "PASEADOR", R.id.menu_search);
         cargarDatosReserva();
     }
 
@@ -108,7 +111,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         // Botón atrás
         ivBack.setOnClickListener(v -> finish());
 
-        // Botón Ver Perfil
+        // Botón Ver Perfil (Dueño)
         btnVerPerfil.setOnClickListener(v -> {
             if (idDueno != null && !idDueno.isEmpty()) {
                 Intent intent = new Intent(SolicitudDetalleActivity.this, PerfilDuenoActivity.class);
@@ -119,44 +122,23 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
             }
         });
 
+        // Make pet name clickable to see pet profile
+        tvMascotaNombre.setOnClickListener(v -> {
+            if (idDueno != null && !idDueno.isEmpty() && idMascota != null && !idMascota.isEmpty()) {
+                Intent intent = new Intent(SolicitudDetalleActivity.this, PerfilMascotaActivity.class);
+                intent.putExtra("dueno_id", idDueno);
+                intent.putExtra("mascota_id", idMascota);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "No se pudo abrir el perfil de la mascota", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         // Botón Rechazar
         btnRechazar.setOnClickListener(v -> mostrarDialogRechazar());
 
         // Botón Aceptar
         btnAceptar.setOnClickListener(v -> aceptarSolicitud());
-    }
-
-    private void setupBottomNavigation() {
-        bottomNav.setSelectedItemId(R.id.menu_walks);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_walks) {
-                // Navegar a SolicitudesActivity
-                Intent intent = new Intent(this, SolicitudesActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_home) {
-                Intent intent = new Intent(this, PerfilPaseadorActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_search) {
-                Intent intent = new Intent(this, com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
-                return false;
-            } else if (itemId == R.id.menu_perfil) {
-                Intent intent = new Intent(this, PerfilPaseadorActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            }
-            return false;
-        });
     }
 
     private void cargarDatosReserva() {
@@ -188,7 +170,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     Long duracion = reservaDoc.getLong("duracion_minutos");
                     duracionMinutos = duracion != null ? duracion.intValue() : 60;
 
-                    String idMascota = reservaDoc.getString("id_mascota");
+                    idMascota = reservaDoc.getString("id_mascota"); // Assign to field
                     String notas = reservaDoc.getString("notas");
 
                     // Mostrar notas
@@ -275,7 +257,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         }
 
                         if (peso != null) {
-                            tvMascotaPeso.setText(peso.intValue() + " kg");
+                            tvMascotaPeso.setText(String.format(Locale.US, "%.1f kg", peso));
                         } else {
                             tvMascotaPeso.setText("No especificado");
                         }
@@ -391,4 +373,3 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                 });
     }
 }
-

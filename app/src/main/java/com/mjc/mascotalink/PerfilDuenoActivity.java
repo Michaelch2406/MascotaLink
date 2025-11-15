@@ -39,7 +39,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
-    // Se añade el AuthStateListener
     private FirebaseAuth.AuthStateListener mAuthListener;
 
     private ImageView ivAvatar, ivVerificado, ivBack;
@@ -53,15 +52,13 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private Button btnCerrarSesion;
     private ImageView ivEditPerfil;
     private View btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
-    private String metodoPagoId; // Variable to store the payment method ID
+    private String metodoPagoId;
     private View skeletonLayout;
     private androidx.core.widget.NestedScrollView scrollViewContent;
     private boolean isContentVisible = false;
-    private View btnFavoritos; // Botón para favoritos
+    private View btnFavoritos;
     private BottomNavigationView bottomNav;
 
-
-    // Listeners for real-time updates
     private ListenerRegistration duenoListener;
     private ListenerRegistration mascotasListener;
     private ListenerRegistration metodoPagoListener;
@@ -77,36 +74,40 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         initViews();
         setupListeners();
-        setupAuthListener(); // Se configura el nuevo listener
+        setupAuthListener();
 
-        // Si recibimos un id_dueno por Intent, cargar directamente ese perfil
         String duenoIdFromIntent = getIntent().getStringExtra("id_dueno");
         if (duenoIdFromIntent != null && !duenoIdFromIntent.isEmpty()) {
-            setupRoleBasedUI(duenoIdFromIntent); // Configurar UI basado en el rol
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            boolean isMyProfile = currentUser != null && currentUser.getUid().equals(duenoIdFromIntent);
+            
+            setupRoleBasedUI(duenoIdFromIntent);
             cargarDatosDueno(duenoIdFromIntent);
+            // Always load pets, as they should be visible to walkers
             cargarMascotas(duenoIdFromIntent);
-            cargarMetodoPagoPredeterminado(duenoIdFromIntent);
+
+            if (isMyProfile) {
+                // Only load sensitive data if the user is viewing their own profile
+                cargarMetodoPagoPredeterminado(duenoIdFromIntent);
+            }
         }
     }
 
     private void setupRoleBasedUI(String profileOwnerId) {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        // Es mi perfil si el usuario actual no es nulo y su UID coincide con el del perfil que se está viendo.
         boolean isMyProfile = currentUser != null && currentUser.getUid().equals(profileOwnerId);
 
-        // Controles de edición de campos (siempre empiezan deshabilitados)
+        // Controls that are ONLY for the owner
         ivEditEmail.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
         ivEditTelefono.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        ivEditPerfil.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        ivEditMascotas.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        
         etEmailDueno.setEnabled(false);
         etTelefonoDueno.setEnabled(false);
         ivSaveEmail.setVisibility(View.GONE);
         ivSaveTelefono.setVisibility(View.GONE);
 
-        // Icono de edición principal y de mascotas
-        ivEditPerfil.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
-        ivEditMascotas.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
-
-        // Secciones completas (Ajustes, Soporte) y botón de cerrar sesión
         View seccionAjustes = findViewById(R.id.seccion_ajustes_cuenta);
         if (seccionAjustes != null) {
             seccionAjustes.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
@@ -119,12 +120,15 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             btnCerrarSesion.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
         }
 
-
-        // La barra de navegación inferior solo debe ser visible para el dueño del perfil
-        bottomNav.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
-        if(isMyProfile) {
-            // Hardcoding "DUEÑO" role as this is the owner's profile activity
+        // Navigation Bar Logic
+        bottomNav.setVisibility(View.VISIBLE); // Always show the nav bar
+        if (isMyProfile) {
+            // I am the owner viewing my own profile
             BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_perfil);
+        } else {
+            // I am a walker viewing an owner's profile
+            // We assume the current user is a walker. The active item is set to menu_search as a safe default.
+            BottomNavManager.setupBottomNav(this, bottomNav, "PASEADOR", R.id.menu_search);
         }
     }
 
@@ -132,19 +136,16 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         mAuthListener = firebaseAuth -> {
             FirebaseUser user = firebaseAuth.getCurrentUser();
             if (user != null) {
-                // El usuario está logueado.
                 Log.d(TAG, "onAuthStateChanged:signed_in:" + user.getUid());
                 String uid = user.getUid();
 
-                // Si no se pasó un ID por intent, significa que el usuario está viendo su propio perfil.
                 if (getIntent().getStringExtra("id_dueno") == null) {
-                    setupRoleBasedUI(uid); // Configurar UI para el propio perfil
+                    setupRoleBasedUI(uid);
                     cargarDatosDueno(uid);
                     cargarMascotas(uid);
                     cargarMetodoPagoPredeterminado(uid);
                 }
             } else {
-                // El usuario no está logueado, redirigir a LoginActivity.
                 Log.d(TAG, "onAuthStateChanged:signed_out");
                 Intent intent = new Intent(PerfilDuenoActivity.this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -178,9 +179,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         mascotaAdapter = new MascotaPerfilAdapter(this, petList);
         rvMascotas.setAdapter(mascotaAdapter);
 
-        // Ajustes Views
         ivEditPerfil = findViewById(R.id.iv_edit_perfil);
-        btnFavoritos = findViewById(R.id.btn_favoritos); // Botón de favoritos
+        btnFavoritos = findViewById(R.id.btn_favoritos);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
@@ -195,7 +195,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
 
-        // Email editing
         ivEditEmail.setOnClickListener(v -> {
             etEmailDueno.setEnabled(true);
             ivEditEmail.setVisibility(View.GONE);
@@ -216,8 +215,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                             ivEditEmail.setVisibility(View.VISIBLE);
                         })
                         .setNegativeButton("No", (dialog, which) -> {
-                            // Revertir cambios o simplemente cerrar el diálogo
-                            etEmailDueno.setText(originalEmail); // Revertir al valor original
+                            etEmailDueno.setText(originalEmail);
                             etEmailDueno.setEnabled(false);
                             ivSaveEmail.setVisibility(View.GONE);
                             ivEditEmail.setVisibility(View.VISIBLE);
@@ -228,7 +226,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             }
         });
 
-        // Phone editing
         ivEditTelefono.setOnClickListener(v -> {
             etTelefonoDueno.setEnabled(true);
             ivEditTelefono.setVisibility(View.GONE);
@@ -249,8 +246,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                             ivEditTelefono.setVisibility(View.VISIBLE);
                         })
                         .setNegativeButton("No", (dialog, which) -> {
-                            // Revertir cambios o simplemente cerrar el diálogo
-                            etTelefonoDueno.setText(originalTelefono); // Revertir al valor original
+                            etTelefonoDueno.setText(originalTelefono);
                             etTelefonoDueno.setEnabled(false);
                             ivSaveTelefono.setVisibility(View.GONE);
                             ivEditTelefono.setVisibility(View.VISIBLE);
@@ -276,7 +272,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnNotificaciones.setOnClickListener(v -> showToast("Próximamente: Notificaciones"));
         btnMetodosPago.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, MetodoPagoActivity.class);
-            // Pass the payment method ID to the activity
             if (metodoPagoId != null && !metodoPagoId.isEmpty()) {
                 intent.putExtra("metodo_pago_id", metodoPagoId);
             }
@@ -287,17 +282,13 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnTerminos.setOnClickListener(v -> showToast("Próximamente: Términos y Condiciones"));
 
         btnCerrarSesion.setOnClickListener(v -> {
-            // Detach listeners FIRST to prevent PERMISSION_DENIED noise on logout
             if (duenoListener != null) duenoListener.remove();
             if (mascotasListener != null) mascotasListener.remove();
             if (metodoPagoListener != null) metodoPagoListener.remove();
 
-            // Limpiar preferencias de "recordar sesión"
             getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE).edit().clear().apply();
 
-            // Sign out AFTER detaching listeners
             mAuth.signOut();
-            // The AuthStateListener will automatically handle the navigation to LoginActivity
         });
     }
 
@@ -306,7 +297,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         duenoListener = db.collection("usuarios").document(uid).addSnapshotListener((document, e) -> {
             if (e != null) {
                 Log.w(TAG, "Listen failed.", e);
-                // Don't show toast on initial load fail, AuthListener handles redirection
                 return;
             }
             if (document != null && document.exists()) {
@@ -342,13 +332,13 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 .addSnapshotListener((value, e) -> {
                     if (e != null) {
                         Log.w(TAG, "Listen failed.", e);
+                        // Now that rules are fixed, this might indicate a real issue, but we won't crash
+                        Toast.makeText(PerfilDuenoActivity.this, "No se pudieron cargar las mascotas.", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
                     petList.clear();
-                    if (value == null || value.isEmpty()) {
-                        // Opcional: mostrar un mensaje de que no hay mascotas
-                    } else {
+                    if (value != null && !value.isEmpty()) {
                         for (QueryDocumentSnapshot doc : value) {
                             Pet pet = new Pet();
                             pet.setId(doc.getId());
@@ -370,14 +360,13 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         metodoPagoListener = query.addSnapshotListener((queryDocumentSnapshots, e) -> {
             if (e != null) {
-                Log.w(TAG, "Listen failed.", e);
+                Log.w(TAG, "Listen failed for default payment method.", e);
                 return;
             }
 
             if (queryDocumentSnapshots != null && !queryDocumentSnapshots.isEmpty()) {
                 metodoPagoId = queryDocumentSnapshots.getDocuments().get(0).getId();
             } else {
-                // Si no hay predeterminado, busca el más reciente en tiempo real también
                 db.collection("usuarios").document(uid).collection("metodos_pago")
                         .orderBy("fecha_registro", Query.Direction.DESCENDING).limit(1)
                         .addSnapshotListener((snapshots, error) -> {
@@ -426,7 +415,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        // Clear Glide load to prevent crash on destroy
         if (ivAvatar != null) {
             Glide.with(this).clear(ivAvatar);
         }

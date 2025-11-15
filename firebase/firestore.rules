@@ -80,6 +80,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
 
+    // Regla para permitir la lectura del grupo de colecciones 'mascotas'
+    match /{path=**}/mascotas/{mascotaId} {
+      allow read: if request.auth != null;
+    }
+
     // Reseñas
     match /resenas/{resenaId} {
       allow read: if request.auth != null;
