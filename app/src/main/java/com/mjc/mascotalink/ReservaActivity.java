@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
@@ -83,6 +84,8 @@ public class ReservaActivity extends AppCompatActivity {
     private String tipoReserva = "PUNTUAL";
     private String modoFechaActual = "DIAS_ESPECIFICOS";
     private boolean tabPorMesActivo = false;
+    private String notasAdicionalesMascota = "";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -312,10 +315,42 @@ public class ReservaActivity extends AppCompatActivity {
         mascotaAdapter = new MascotaSelectorAdapter(this, mascotaList, (mascota, position) -> {
             mascotaSeleccionada = mascota;
             tvMascotaNombre.setText(mascota.getNombre());
+            cargarNotasAdicionalesMascota(mascota.getId());
             verificarCamposCompletos();
         });
         rvMascotas.setAdapter(mascotaAdapter);
     }
+
+    private void cargarNotasAdicionalesMascota(String mascotaId) {
+        if (currentUserId == null || mascotaId == null) {
+            notasAdicionalesMascota = "";
+            return;
+        }
+        db.collection("duenos").document(currentUserId).collection("mascotas").document(mascotaId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Map<String, Object> instruccionesMap = (Map<String, Object>) documentSnapshot.get("instrucciones");
+                        if (instruccionesMap != null) {
+                            String notas = (String) instruccionesMap.get("notas_adicionales");
+                            if (notas != null && !notas.isEmpty()) {
+                                notasAdicionalesMascota = notas;
+                            } else {
+                                notasAdicionalesMascota = "";
+                            }
+                        } else {
+                            notasAdicionalesMascota = "";
+                        }
+                    } else {
+                        notasAdicionalesMascota = "";
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar notas adicionales de la mascota", e);
+                    notasAdicionalesMascota = ""; // Asegurarse de que esté vacío en caso de error
+                });
+    }
+
 
     private void setupCalendario() {
         currentMonth = Calendar.getInstance();
@@ -686,6 +721,8 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("tarifa_confirmada", tarifaPorHora);
         reserva.put("id_pago", null);           // NULL inicialmente
         reserva.put("estado_pago", "PENDIENTE"); // Estado inicial de pago
+        reserva.put("notas", notasAdicionalesMascota);
+
 
         db.collection("reservas")
                 .add(reserva)

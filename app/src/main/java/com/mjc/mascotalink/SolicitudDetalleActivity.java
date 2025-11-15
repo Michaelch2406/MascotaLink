@@ -254,14 +254,22 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     if (mascotaDoc.exists()) {
                         String nombre = mascotaDoc.getString("nombre");
                         String raza = mascotaDoc.getString("raza");
-                        Long edad = mascotaDoc.getLong("edad");
                         Double peso = mascotaDoc.getDouble("peso");
 
                         tvMascotaNombre.setText(nombre != null ? nombre : "Mascota");
                         tvMascotaRaza.setText(raza != null ? raza : "No especificada");
 
-                        if (edad != null) {
-                            tvMascotaEdad.setText(edad + " años");
+                        Timestamp fechaNacimientoTimestamp = mascotaDoc.getTimestamp("fecha_nacimiento");
+                        if (fechaNacimientoTimestamp != null) {
+                            Date fechaNacimiento = fechaNacimientoTimestamp.toDate();
+                            Calendar dob = Calendar.getInstance();
+                            dob.setTime(fechaNacimiento);
+                            Calendar today = Calendar.getInstance();
+                            int age = today.get(Calendar.YEAR) - dob.get(Calendar.YEAR);
+                            if (today.get(Calendar.DAY_OF_YEAR) < dob.get(Calendar.DAY_OF_YEAR)) {
+                                age--;
+                            }
+                            tvMascotaEdad.setText(age + " años");
                         } else {
                             tvMascotaEdad.setText("No especificada");
                         }
