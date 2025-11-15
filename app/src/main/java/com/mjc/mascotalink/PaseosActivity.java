@@ -4,8 +4,6 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -27,7 +25,8 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 
 import java.text.SimpleDateFormat;
@@ -36,7 +35,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 public class PaseosActivity extends AppCompatActivity {
 
@@ -128,7 +126,7 @@ public class PaseosActivity extends AppCompatActivity {
 
     private void setupRoleSpecificUI(String role) {
         setupTabs(role);
-        setupBottomNavigation(role);
+        BottomNavManager.setupBottomNav(this, bottomNav, role, R.id.menu_walks);
         btnReservarPaseo.setVisibility("PASEADOR".equalsIgnoreCase(role) ? View.GONE : View.VISIBLE);
     }
 
@@ -139,7 +137,7 @@ public class PaseosActivity extends AppCompatActivity {
         tabCancelados.setOnClickListener(v -> cambiarTab("CANCELADO", tabCancelados, role));
 
         btnReservarPaseo.setOnClickListener(v -> {
-            Intent intent = new Intent(PaseosActivity.this, com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity.class);
+            Intent intent = new Intent(PaseosActivity.this, BusquedaPaseadoresActivity.class);
             startActivity(intent);
         });
 
@@ -207,48 +205,6 @@ public class PaseosActivity extends AppCompatActivity {
             }
         });
         swipeRefresh.setColorSchemeResources(R.color.blue_primary);
-    }
-
-    private void setupBottomNavigation(String role) {
-        bottomNav.getMenu().clear();
-        bottomNav.inflateMenu(R.menu.menu_bottom_nav_new);
-        bottomNav.setSelectedItemId(R.id.menu_walks);
-
-        Menu menu = bottomNav.getMenu();
-        MenuItem secondItem = menu.findItem(R.id.menu_search);
-
-        if ("PASEADOR".equalsIgnoreCase(role)) {
-            secondItem.setTitle("Solicitudes");
-            secondItem.setIcon(R.drawable.ic_request);
-        }
-
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_walks) {
-                return true;
-            } else if (itemId == R.id.menu_home) {
-                Intent intent = new Intent(this, "PASEADOR".equalsIgnoreCase(role) ? PerfilPaseadorActivity.class : PerfilDuenoActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_search) { // Este ID se reutiliza
-                if ("PASEADOR".equalsIgnoreCase(role)) {
-                    startActivity(new Intent(this, SolicitudesActivity.class));
-                } else {
-                    startActivity(new Intent(this, com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity.class));
-                }
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
-                return false;
-            } else if (itemId == R.id.menu_perfil) {
-                Intent intent = new Intent(this, "PASEADOR".equalsIgnoreCase(role) ? PerfilPaseadorActivity.class : PerfilDuenoActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            }
-            return false;
-        });
     }
 
     private void cargarPaseos(String role) {

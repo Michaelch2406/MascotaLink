@@ -7,7 +7,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.mjc.mascotalink.BusquedaPaseadoresActivity;
+import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 import com.mjc.mascotalink.PaseosActivity;
 import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;

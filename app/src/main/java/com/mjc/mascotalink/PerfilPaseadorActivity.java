@@ -50,8 +50,7 @@ import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.storage.FirebaseStorage;
-import com.mjc.mascotalink.R;
-import com.mjc.mascotalink.GaleriaActivity;
+import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascota.ui.perfil.ResenaAdapter;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
@@ -110,6 +109,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private String currentUserRole;
     private String videoUrl;
     private Double paseadorPrecioHora = null;
+    private BottomNavigationView bottomNav;
+
 
     private RecyclerView recyclerViewResenas;
     private ResenaAdapter resenaAdapter;
@@ -258,6 +259,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         skeletonLayout = findViewById(R.id.skeleton_layout);
         scrollViewContent = findViewById(R.id.scroll_view_content);
         recyclerViewResenas = findViewById(R.id.recycler_view_resenas);
+        bottomNav = findViewById(R.id.bottom_nav);
+
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_container);
         if (mapFragment != null) {
@@ -295,7 +298,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             soporte_section.setVisibility(View.VISIBLE);
             btnCerrarSesion.setVisibility(View.VISIBLE);
 
-        } else if ("DUEÑO".equals(currentUserRole)) {
+        } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
             // Case 2: DUEÑO viewing a PASEADOR's profile
             ivEditPerfil.setVisibility(View.GONE);
             btnMensaje.setVisibility(View.VISIBLE);
@@ -323,6 +326,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);
         }
+        // Refactored: Setup bottom navigation using the manager
+        BottomNavManager.setupBottomNav(this, bottomNav, currentUserRole, R.id.menu_perfil);
     }
 
     private void configurarBotonFavorito(String duenoId, String paseadorId) {
@@ -490,30 +495,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     cargarMasResenas();
                 }
             }
-        });
-
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
-        bottomNav.setSelectedItemId(R.id.menu_perfil);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_home) {
-                Toast.makeText(this, "Próximamente: Inicio", Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.menu_search) {
-                Intent intent = new Intent(this, BusquedaPaseadoresActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_walks) {
-                Toast.makeText(this, "Próximamente: Paseos", Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.menu_perfil) {
-                return true; // Already here
-            }
-            return false;
         });
     }
 

@@ -27,6 +27,8 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.util.BottomNavManager;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +58,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private androidx.core.widget.NestedScrollView scrollViewContent;
     private boolean isContentVisible = false;
     private View btnFavoritos; // Botón para favoritos
+    private BottomNavigationView bottomNav;
+
 
     // Listeners for real-time updates
     private ListenerRegistration duenoListener;
@@ -117,8 +121,11 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
 
         // La barra de navegación inferior solo debe ser visible para el dueño del perfil
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
         bottomNav.setVisibility(isMyProfile ? View.VISIBLE : View.GONE);
+        if(isMyProfile) {
+            // Hardcoding "DUEÑO" role as this is the owner's profile activity
+            BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_perfil);
+        }
     }
 
     private void setupAuthListener() {
@@ -182,34 +189,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnCerrarSesion = findViewById(R.id.btn_cerrar_sesion);
         skeletonLayout = findViewById(R.id.skeleton_layout);
         scrollViewContent = findViewById(R.id.scroll_view_content);
-
-
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
-        bottomNav.setSelectedItemId(R.id.menu_perfil);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_perfil) {
-                // Ya estamos aquí
-                return true;
-            } else if (itemId == R.id.menu_home) {
-                showToast("Próximamente: Inicio");
-                return false; // No cambiar la selección
-            } else if (itemId == R.id.menu_search) {
-                Intent intent = new Intent(this, BusquedaPaseadoresActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_walks) {
-                Intent intent = new Intent(this, PaseosActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                showToast("Próximamente: Mensajes");
-                return false; // No cambiar la selección
-            }
-            return false;
-        });
+        bottomNav = findViewById(R.id.bottom_nav);
     }
 
     private void setupListeners() {
