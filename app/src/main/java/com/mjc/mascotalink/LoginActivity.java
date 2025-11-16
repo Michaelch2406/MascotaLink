@@ -1,7 +1,6 @@
 package com.mjc.mascotalink;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -31,11 +30,12 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
+import com.mjc.mascotalink.security.SessionManager;
 
 public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
-    public static final String PREFS_NAME = "MascotaLinkPrefs";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // Added for permission request
 
     private FirebaseAuth mAuth;
@@ -86,15 +86,28 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private boolean checkForSavedSession() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        boolean recordarSesion = prefs.getBoolean("recordar_sesion", false);
-        String uid = prefs.getString("uid", null);
-        String rol = prefs.getString("rol", null);
+        try {
+            EncryptedPreferencesHelper prefs = EncryptedPreferencesHelper.getInstance(this);
+            boolean rememberDevice = prefs.getBoolean("remember_device", false);
+            if (!rememberDevice) {
+                rememberDevice = prefs.getBoolean("recordar_sesion", false);
+            }
 
-        if (recordarSesion && uid != null && rol != null && FirebaseAuth.getInstance().getCurrentUser() != null) {
-            Log.d(TAG, "Sesión guardada encontrada. Redirigiendo...");
-            redirigirSegunRol(rol, prefs.getString("verificacion_estado", null));
-            return true;
+            String userId = prefs.getString("user_id", null);
+            if (userId == null) {
+                userId = prefs.getString("uid", null);
+            }
+
+            String rol = prefs.getString("rol", null);
+            String verificacionEstado = prefs.getString("verificacion_estado", null);
+
+            if (rememberDevice && userId != null && rol != null && FirebaseAuth.getInstance().getCurrentUser() != null) {
+                Log.d(TAG, "Sesión guardada encontrada. Redirigiendo...");
+                redirigirSegunRol(rol, verificacionEstado);
+                return true;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "checkForSavedSession: error accediendo prefs cifradas", e);
         }
         return false;
     }
@@ -212,10 +225,26 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void handleSessionAndRedirect(String uid, String rol, String verificacionEstado) {
+        SessionManager sessionManager = new SessionManager(this);
+        sessionManager.createSession(uid);
         if (cbRemember.isChecked()) {
             guardarPreferenciasLogin(uid, rol, verificacionEstado);
         } else {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().clear().apply();
+            try {
+                EncryptedPreferencesHelper prefs = EncryptedPreferencesHelper.getInstance(this);
+                if (prefs != null) {
+                    prefs.remove("remember_device");
+                    prefs.remove("recordar_sesion");
+                    prefs.remove("user_id");
+                    prefs.remove("uid");
+                    prefs.remove("rol");
+                    prefs.remove("verificacion_estado");
+                    prefs.remove("email");
+                    prefs.remove("token");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "handleSessionAndRedirect: error limpiando prefs cifradas", e);
+            }
         }
         redirigirSegunRol(rol, verificacionEstado);
     }
@@ -263,14 +292,35 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void guardarPreferenciasLogin(String uid, String rol, String verificacionEstado) {
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-        editor.putBoolean("recordar_sesion", true);
-        editor.putString("uid", uid);
-        editor.putString("rol", rol);
-        if (verificacionEstado != null) {
-            editor.putString("verificacion_estado", verificacionEstado);
+        try {
+            EncryptedPreferencesHelper prefs = EncryptedPreferencesHelper.getInstance(this);
+            prefs.putBoolean("remember_device", true);
+            prefs.putBoolean("recordar_sesion", true);
+            prefs.putString("user_id", uid);
+            prefs.putString("uid", uid);
+            prefs.putString("rol", rol);
+            if (verificacionEstado != null) {
+                prefs.putString("verificacion_estado", verificacionEstado);
+            }
+
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            if (currentUser != null) {
+                String email = currentUser.getEmail();
+                if (email != null) {
+                    prefs.putString("email", email);
+                }
+                currentUser.getIdToken(false)
+                        .addOnSuccessListener(tokenResult -> {
+                            String token = tokenResult.getToken();
+                            if (token != null) {
+                                prefs.putString("token", token);
+                            }
+                        })
+                        .addOnFailureListener(e -> Log.e(TAG, "guardarPreferenciasLogin: no se pudo guardar token", e));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "guardarPreferenciasLogin: error guardando prefs cifradas", e);
         }
-        editor.apply();
     }
 
     private boolean validarCampos(String email, String password) {

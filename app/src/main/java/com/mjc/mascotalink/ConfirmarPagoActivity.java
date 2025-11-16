@@ -16,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
+import com.mjc.mascotalink.security.SessionManager;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -30,6 +32,8 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     // Firebase
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private EncryptedPreferencesHelper encryptedPrefs;
+    private SessionManager sessionManager;
 
     // Views
     private ImageView ivBack;
@@ -63,6 +67,18 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         // SOLUCIÓN: Se verifica la sesión del usuario. Si es nula, se cierra la actividad.
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+
+        encryptedPrefs = EncryptedPreferencesHelper.getInstance(this);
+        sessionManager = new SessionManager(this);
+
+        if (!sessionManager.isSessionValid()) {
+            Toast.makeText(this, "Sesión expirada. Por favor inicia sesión de nuevo", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+        sessionManager.validateAndRefreshToken();
+
         if (mAuth.getCurrentUser() == null) {
             Toast.makeText(this, "Error: Sesión de usuario no válida.", Toast.LENGTH_LONG).show();
             finish();
@@ -166,6 +182,12 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     // --- FIX FIN ---
 
     private void procesarPago() {
+        String metodoPagoSeleccionado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "") : "";
+        if (metodoPagoSeleccionado == null || metodoPagoSeleccionado.isEmpty()) {
+            Toast.makeText(this, "Selecciona un método de pago para continuar", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         // Deshabilitar botón y mostrar loading para evitar clics múltiples
         btnProcesarPago.setEnabled(false);
         btnProcesarPago.setAlpha(0.6f);
@@ -200,14 +222,21 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         // Simular procesamiento de 2 segundos
         new Handler().postDelayed(() -> {
             String pagoId = "PAGO_" + System.currentTimeMillis();
+            if (encryptedPrefs != null) {
+                encryptedPrefs.putString("transaction_id", pagoId);
+                encryptedPrefs.putString("payment_status", "PROCESSING");
+                encryptedPrefs.putLong("payment_timestamp", System.currentTimeMillis());
+            }
 
             Map<String, Object> updates = new HashMap<>();
             // Ajuste de flujo: tras pago exitoso, la reserva queda pendiente de aceptación del paseador
             updates.put("estado", "PENDIENTE_ACEPTACION");
             updates.put("id_pago", pagoId);
+            updates.put("transaction_id", pagoId);
             updates.put("estado_pago", "PROCESADO");
             updates.put("fecha_pago", Timestamp.now());
-            updates.put("metodo_pago", "PAGO_INTERNO");
+            String metodoPagoGuardado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
+            updates.put("metodo_pago", metodoPagoGuardado);
 
             // RIESGO: Una falla en la actualización de la BD podría dejar al usuario en un
             // estado de "pago en proceso" infinito.
@@ -217,8 +246,15 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                     .addOnSuccessListener(aVoid -> {
                         progressBar.setVisibility(View.GONE);
                         btnProcesarPago.setText("Procesar Pago");
-                        
-                        Toast.makeText(this, "¡Pago procesado exitosamente!", 
+                        if (encryptedPrefs != null) {
+                            encryptedPrefs.putString("payment_status", "COMPLETED");
+                            encryptedPrefs.putString("payment_id", pagoId);
+                            encryptedPrefs.putString("payment_token", pagoId);
+                        }
+                        if (mAuth.getCurrentUser() != null) {
+                            sessionManager.createSession(mAuth.getCurrentUser().getUid());
+                        }
+                        Toast.makeText(this, "Pago procesado exitosamente!", 
                                 Toast.LENGTH_LONG).show();
 
                         new Handler().postDelayed(() -> {
@@ -229,6 +265,10 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         }, 1000);
                     })
                     .addOnFailureListener(e -> {
+                        if (encryptedPrefs != null) {
+                            encryptedPrefs.putString("payment_status", "FAILED");
+                            encryptedPrefs.putString("payment_error", e.getMessage());
+                        }
                         intentosFallidos++;
                         if (intentosFallidos >= MAX_INTENTOS) {
                             Toast.makeText(this, "Máximo de intentos alcanzado. Contacta soporte.", 

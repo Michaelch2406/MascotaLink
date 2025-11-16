@@ -27,6 +27,7 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
 
 
@@ -286,7 +287,11 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             if (mascotasListener != null) mascotasListener.remove();
             if (metodoPagoListener != null) metodoPagoListener.remove();
 
-            getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE).edit().clear().apply();
+            try {
+                EncryptedPreferencesHelper.getInstance(PerfilDuenoActivity.this).clear();
+            } catch (Exception e) {
+                Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
+            }
 
             mAuth.signOut();
         });

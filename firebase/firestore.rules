@@ -37,6 +37,35 @@ service cloud.firestore {
       allow write: if false; // Solo las Cloud Functions pueden escribir aquí
     }
 
+    // Colección de pagos con acceso restringido al pagador.
+    match /pagos/{pagoId} {
+      allow read: if request.auth != null &&
+                  resource.data.id_usuario == request.auth.uid;
+      allow create: if request.auth != null &&
+                     request.resource.data.id_usuario == request.auth.uid &&
+                     request.resource.data.monto is number &&
+                     request.resource.data.monto > 0 &&
+                     request.resource.data.estado in ['PROCESSING', 'COMPLETED'];
+      allow update, delete: if false;
+    }
+
+    // Reglas adicionales
+    function isReservaParticipant(res) {
+      return request.auth != null &&
+             (request.auth.uid == res.data.id_dueno ||
+              request.auth.uid == res.data.id_paseador);
+    }
+
+    function reservaStateTransitionAllowed(prev, next) {
+      return prev == next ||
+             (prev == "PENDIENTE_PAGO" && next in ["PENDIENTE_ACEPTACION", "CANCELADO"]) ||
+             (prev == "PENDIENTE_ACEPTACION" && next in ["CONFIRMADO", "CANCELADO"]) ||
+             (prev == "CONFIRMADO" && next in ["EN_PROGRESO", "CANCELADO"]) ||
+             (prev == "EN_PROGRESO" && next in ["COMPLETADO", "CANCELADO"]) ||
+             (prev == "COMPLETADO" && next == "COMPLETADO") ||
+             (prev == "CANCELADO" && next == "CANCELADO");
+    }
+
     // Colección para manejar las solicitudes de reseteo de contraseña.
     // NADIE desde el cliente puede leer o escribir aquí. Solo el backend (Admin SDK) tiene acceso.
     match /solicitudes_recuperacion/{solicitudId} {
@@ -45,7 +74,13 @@ service cloud.firestore {
 
     // Subcolecciones bajo usuarios
     match /usuarios/{userId}/metodos_pago/{metodoId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) &&
+                            request.resource.data.banco is string &&
+                            request.resource.data.numero_cuenta is string &&
+                            request.resource.data.numero_cuenta.size() >= 4 &&
+                            request.resource.data.predeterminado in [true, false];
+      allow delete: if false;
     }
 
     // Subcolección para los paseadores favoritos de un dueño
@@ -109,12 +144,25 @@ service cloud.firestore {
 
     // Reservas
     match /reservas/{reservaId} {
-      // El usuario puede crear una reserva si el campo 'id_dueno' apunta a su propio documento de usuario.
-      allow create: if request.resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid);
+      // El usuario puede crear una reserva si el campo 'id_dueno' apunta a su propio documento de usuario
+      // y el estado inicial es PENDIENTE_PAGO.
+      allow create: if request.auth != null &&
+                    request.resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) &&
+                    request.resource.data.estado == "PENDIENTE_PAGO";
 
-      // El dueño o el paseador pueden leer o actualizar la reserva.
-      allow read, update: if resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
-                           resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid);
+      // Lectura autorizada para dueño y paseador.
+      allow read: if request.auth != null &&
+                  resource != null &&
+                  (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
+                   resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid));
+
+      // Actualizaciones solo si el participante está involucrado y la transición de estado es válida.
+      allow update: if request.auth != null &&
+                    resource != null &&
+                    isReservaParticipant(resource) &&
+                    request.resource.data.id_dueno == resource.data.id_dueno &&
+                    request.resource.data.id_paseador == resource.data.id_paseador &&
+                    reservaStateTransitionAllowed(resource.data.estado, request.resource.data.estado);
 
       allow delete: if false;
     }

@@ -1,4 +1,4 @@
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentWritten, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -73,4 +73,49 @@ exports.onUsuarioWrite = onDocumentWritten("usuarios/{userId}", async (event) =>
 exports.onPaseadorWrite = onDocumentWritten("paseadores/{paseadorId}", async (event) => {
   const { paseadorId } = event.params;
   await sincronizarPaseador(paseadorId);
+});
+
+exports.validatePaymentOnCreate = onDocumentCreated("pagos/{pagoId}", async (event) => {
+  const { pagoId } = event.params;
+  const paymentDoc = event.data;
+  if (!paymentDoc || !paymentDoc.exists) {
+    console.warn(`validatePaymentOnCreate: documento ${pagoId} no existe o fue eliminado.`);
+    return;
+  }
+  const paymentData = paymentDoc.data();
+  const authUid = event.auth?.uid;
+  const violations = [];
+
+  if (!paymentData.id_usuario) {
+    violations.push("id_usuario ausente");
+  }
+
+  if (!paymentData.monto || typeof paymentData.monto !== "number" || paymentData.monto <= 0) {
+    violations.push("monto inválido");
+  }
+
+  if (!authUid || authUid !== paymentData.id_usuario) {
+    violations.push("auth.uid no coincide");
+  }
+
+  if (violations.length > 0) {
+    console.error(`validatePaymentOnCreate: bloqueo de pago ${pagoId} -> ${violations.join(", ")}`);
+    await db.collection("audit_logs").add({
+      action: "pago_rechazado",
+      paymentId: pagoId,
+      usuario: paymentData.id_usuario || null,
+      reason: violations.join("; "),
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await paymentDoc.ref.delete();
+    return;
+  }
+
+  await db.collection("audit_logs").add({
+    action: "pago_validado",
+    paymentId: pagoId,
+    usuario: paymentData.id_usuario,
+    monto: paymentData.monto,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
 });

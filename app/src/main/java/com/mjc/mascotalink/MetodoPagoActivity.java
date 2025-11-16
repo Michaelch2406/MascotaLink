@@ -1,6 +1,5 @@
 package com.mjc.mascotalink;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.ArrayAdapter;
@@ -17,6 +16,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,6 +26,7 @@ public class MetodoPagoActivity extends AppCompatActivity {
     private String PREFS = "WizardPaseador"; // default; can be overridden via Intent
     private AutoCompleteTextView etBanco;
     private EditText etCuenta;
+    private EncryptedPreferencesHelper encryptedPrefs;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -60,11 +61,12 @@ public class MetodoPagoActivity extends AppCompatActivity {
         } else {
             // CREATE MODE (for registration wizard)
             setTitle("Añadir Método de Pago");
-            String passedPrefs = getIntent().getStringExtra("prefs");
-            if (passedPrefs != null && !passedPrefs.trim().isEmpty()) {
-                PREFS = passedPrefs.trim();
-            }
-            loadStateFromPrefs();
+        String passedPrefs = getIntent().getStringExtra("prefs");
+        if (passedPrefs != null && !passedPrefs.trim().isEmpty()) {
+            PREFS = passedPrefs.trim();
+        }
+        encryptedPrefs = EncryptedPreferencesHelper.getInstance(this);
+        loadStateFromPrefs();
         }
 
         btnGuardar.setOnClickListener(v -> guardarMetodoPago());
@@ -97,9 +99,11 @@ public class MetodoPagoActivity extends AppCompatActivity {
     }
 
     private void loadStateFromPrefs() {
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        String savedBank = prefs.getString("pago_banco", "");
-        String savedAccount = prefs.getString("pago_cuenta", "");
+        if (encryptedPrefs == null) {
+            return;
+        }
+        String savedBank = encryptedPrefs.getString(prefKey("pago_banco"), "");
+        String savedAccount = encryptedPrefs.getString(prefKey("pago_cuenta"), "");
         etBanco.setText(savedBank, false);
         etCuenta.setText(savedAccount);
     }
@@ -138,11 +142,14 @@ public class MetodoPagoActivity extends AppCompatActivity {
         // CREATE case
         if (user == null) {
             // From REGISTRATION WIZARD (user not logged in yet) -> Save to SharedPreferences
-            SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-            editor.putBoolean("metodo_pago_completo", true);
-            editor.putString("pago_banco", banco);
-            editor.putString("pago_cuenta", cuenta);
-            editor.apply();
+            if (encryptedPrefs != null) {
+                encryptedPrefs.putBoolean(prefKey("metodo_pago_completo"), true);
+                encryptedPrefs.putString(prefKey("pago_banco"), banco);
+                encryptedPrefs.putString(prefKey("pago_cuenta"), cuenta);
+                encryptedPrefs.putString(prefKey("selected_payment_method"), banco);
+                encryptedPrefs.putString(prefKey("card_last_four"), getLastFourDigits(cuenta));
+                encryptedPrefs.putString(prefKey("card_holder_name"), "");
+            }
 
             Toast.makeText(this, "Método de pago guardado", Toast.LENGTH_SHORT).show();
             setResult(RESULT_OK);
@@ -180,5 +187,20 @@ public class MetodoPagoActivity extends AppCompatActivity {
             return false;
         }
         return true;
+    }
+
+    private String prefKey(String key) {
+        return PREFS + "_" + key;
+    }
+
+    private String getLastFourDigits(String input) {
+        if (input == null) {
+            return "";
+        }
+        String clean = input.replaceAll("\\D", "");
+        if (clean.length() <= 4) {
+            return clean;
+        }
+        return clean.substring(clean.length() - 4);
     }
 }

@@ -1,7 +1,6 @@
 package com.mjc.mascotalink;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.format.DateUtils;
@@ -50,6 +49,7 @@ import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.storage.FirebaseStorage;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascota.ui.perfil.ResenaAdapter;
@@ -468,8 +468,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             detachDataListeners();
 
             // Limpiar preferencias de "recordar sesión"
-            SharedPreferences prefs = getSharedPreferences(LoginActivity.PREFS_NAME, MODE_PRIVATE);
-            prefs.edit().clear().apply();
+            try {
+                EncryptedPreferencesHelper.getInstance(PerfilPaseadorActivity.this).clear();
+            } catch (Exception e) {
+                Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
+            }
 
             // Sign out AFTER detaching listeners. The AuthStateListener will handle navigation.
             mAuth.signOut();
