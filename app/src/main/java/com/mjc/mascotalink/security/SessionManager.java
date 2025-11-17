@@ -19,7 +19,7 @@ public class SessionManager {
     private static final String SESSION_TOKEN_KEY = "session_token";
     private static final String SESSION_EXPIRY_KEY = "session_expiry";
     private static final String SESSION_USER_KEY = "session_user";
-    private static final long SESSION_DURATION_MS = 3600000; // 1 hora
+    private static final long SESSION_DURATION_MS = 7200000; // 2 horas
 
     private final Context context;
     private final EncryptedSharedPreferences encryptedSharedPrefs;

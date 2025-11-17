@@ -49,6 +49,7 @@ import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.storage.FirebaseStorage;
+import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascota.modelo.Resena;
@@ -466,6 +467,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         btnCerrarSesion.setOnClickListener(v -> {
             // Detach listeners FIRST to prevent PERMISSION_DENIED noise on logout
             detachDataListeners();
+
+            new CredentialManager(PerfilPaseadorActivity.this).clearCredentials();
 
             // Limpiar preferencias de "recordar sesión"
             try {

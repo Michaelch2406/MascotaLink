@@ -151,6 +151,20 @@
             android:textColor="#FFFFFF"
             android:textStyle="bold" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_biometric"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Iniciar con huella"
+            android:textAllCaps="false"
+            android:visibility="gone"
+            android:textColor="#111827"
+            app:strokeColor="#6B7280"
+            app:strokeWidth="1dp"
+            android:backgroundTint="#FFFFFF" />
+
         <!-- Loading -->
         <ProgressBar
             android:id="@+id/pb_loading"

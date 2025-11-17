@@ -17,6 +17,7 @@ import android.content.pm.PackageManager; // Added for PackageManager
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat; // Added for ActivityCompat
 import androidx.core.content.ContextCompat; // Added for ContextCompat
@@ -30,10 +31,12 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.security.BiometricAuthManager;
+import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.security.SessionManager;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements BiometricAuthManager.BiometricPromptCallback {
 
     private static final String TAG = "LoginActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // Added for permission request
@@ -45,6 +48,11 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etEmail, etPassword;
     private CheckBox cbRemember;
     private ProgressBar progressBar;
+    private Button btnBiometric;
+    private BiometricAuthManager biometricMgr;
+    private CredentialManager credentialMgr;
+    private String pendingEmail;
+    private String pendingPassword;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -56,6 +64,9 @@ public class LoginActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_login);
         Log.d(TAG, "onCreate: Iniciando LoginActivity");
+
+        biometricMgr = new BiometricAuthManager(this);
+        credentialMgr = new CredentialManager(this);
 
         try {
             mAuth = FirebaseAuth.getInstance();
@@ -72,6 +83,9 @@ public class LoginActivity extends AppCompatActivity {
         setupEmailField();
         setupPasswordField();
         setupClickListeners();
+        if (!attemptAutomaticBiometricLogin()) {
+            mostrarLoginNormal();
+        }
         checkAndRequestLocationPermission(); // Call the new permission check method
     }
 
@@ -119,6 +133,7 @@ public class LoginActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.et_password);
         cbRemember = findViewById(R.id.cb_remember);
         progressBar = findViewById(R.id.pb_loading);
+        btnBiometric = findViewById(R.id.btn_biometric);
     }
 
     private void setupClickListeners() {
@@ -127,6 +142,9 @@ public class LoginActivity extends AppCompatActivity {
         TextView tvRegisterLink = findViewById(R.id.tv_register_link);
 
         btnLogin.setOnClickListener(v -> realizarLogin());
+        if (btnBiometric != null) {
+            btnBiometric.setOnClickListener(v -> loginWithBiometric());
+        }
         tvForgotPassword.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class)));
         tvRegisterLink.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, SeleccionRolActivity.class)));
     }
@@ -166,6 +184,9 @@ public class LoginActivity extends AppCompatActivity {
         if (!validarCampos(email, password)) {
             return;
         }
+
+        pendingEmail = email;
+        pendingPassword = password;
 
         mostrarProgressBar(true);
         mAuth.signInWithEmailAndPassword(email, password)
@@ -246,7 +267,10 @@ public class LoginActivity extends AppCompatActivity {
                 Log.e(TAG, "handleSessionAndRedirect: error limpiando prefs cifradas", e);
             }
         }
-        redirigirSegunRol(rol, verificacionEstado);
+        boolean deferred = offerBiometricEnrollmentIfNeeded(() -> redirigirSegunRol(rol, verificacionEstado));
+        if (!deferred) {
+            redirigirSegunRol(rol, verificacionEstado);
+        }
     }
 
     private void redirigirSegunRol(String rol, String estadoVerificacion) {
@@ -388,6 +412,137 @@ public class LoginActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void loginWithBiometric() {
+        if (biometricMgr == null || credentialMgr == null) {
+            return;
+        }
+        if (!credentialMgr.isBiometricEnabled()) {
+            Toast.makeText(this, "Registra tu huella primero", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        biometricMgr.showBiometricPrompt(
+                this,
+                "Inicia sesión",
+                "Presiona tu huella para continuar",
+                this
+        );
+    }
+
+    private boolean attemptAutomaticBiometricLogin() {
+        if (biometricMgr == null || credentialMgr == null) {
+            return false;
+        }
+        if (credentialMgr.canAutoLogin() && biometricMgr.isBiometricAvailable()) {
+            hideLoginUI();
+            biometricMgr.showBiometricPromptAutomatic(this, this);
+            return true;
+        }
+        return false;
+    }
+
+    private void mostrarLoginNormal() {
+        if (etEmail != null) etEmail.setVisibility(View.VISIBLE);
+        if (etPassword != null) etPassword.setVisibility(View.VISIBLE);
+        if (btnBiometric != null) btnBiometric.setVisibility(View.GONE);
+        Button btnLogin = findViewById(R.id.btn_login);
+        if (btnLogin != null) btnLogin.setVisibility(View.VISIBLE);
+    }
+
+    private void hideLoginUI() {
+        if (etEmail != null) etEmail.setVisibility(View.GONE);
+        if (etPassword != null) etPassword.setVisibility(View.GONE);
+        Button btnLogin = findViewById(R.id.btn_login);
+        if (btnLogin != null) btnLogin.setVisibility(View.GONE);
+        if (btnBiometric != null) btnBiometric.setVisibility(View.GONE);
+    }
+
+    private boolean offerBiometricEnrollmentIfNeeded(Runnable onComplete) {
+        if (biometricMgr == null || credentialMgr == null || !cbRemember.isChecked()) {
+            clearPendingCredentials();
+            return false;
+        }
+        if (!biometricMgr.isBiometricAvailable() || credentialMgr.isBiometricEnabled()) {
+            clearPendingCredentials();
+            return false;
+        }
+        if (pendingEmail == null || pendingPassword == null) {
+            return false;
+        }
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Usar huella dactilar")
+                .setMessage("¿Deseas usar tu huella para iniciar sesión más rápido en este dispositivo?")
+                .setPositiveButton("Sí", (dlg, which) -> {
+                    credentialMgr.saveCredentials(pendingEmail, pendingPassword);
+                    refreshBiometricButtonState();
+                })
+                .setNegativeButton("No", null)
+                .show();
+        dialog.setOnDismissListener(d -> onComplete.run());
+        clearPendingCredentials();
+        return true;
+    }
+
+    private void clearPendingCredentials() {
+        pendingEmail = null;
+        pendingPassword = null;
+    }
+
+    @Override
+    public void onBiometricSuccess() {
+        if (credentialMgr == null) {
+            return;
+        }
+        String[] creds = credentialMgr.getCredentials();
+        if (creds == null) {
+            Toast.makeText(this, "No hay credenciales guardadas", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        mostrarProgressBar(true);
+        mAuth.signInWithEmailAndPassword(creds[0], creds[1])
+                .addOnSuccessListener(task -> {
+                    mostrarProgressBar(false);
+                    FirebaseUser user = mAuth.getCurrentUser();
+                    if (user != null) {
+                        verificarRolYRedirigir(user.getUid());
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    mostrarProgressBar(false);
+                    Toast.makeText(this, "Error autenticando con huella", Toast.LENGTH_SHORT).show();
+                    credentialMgr.clearCredentials();
+                });
+    }
+
+    @Override
+    public void onBiometricError(String error) {
+        Log.w(TAG, "Biometría no disponible: " + error);
+        mostrarLoginNormal();
+        Toast.makeText(this, "Usa tu email y contraseña para continuar", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onBiometricFailed() {
+        Toast.makeText(this, "Huella no reconocida. Intenta de nuevo.", Toast.LENGTH_SHORT).show();
+    }
+
+    private void refreshBiometricButtonState() {
+        if (btnBiometric == null || biometricMgr == null || credentialMgr == null) {
+            return;
+        }
+        if (credentialMgr.isBiometricEnabled() && biometricMgr.isBiometricAvailable()) {
+            btnBiometric.setVisibility(View.VISIBLE);
+        } else {
+            btnBiometric.setVisibility(View.GONE);
+        }
+    }
+
+    // For legacy callers that still reference the previous helper name.
+    private void updateBiometricButtonVisibility() {
+        refreshBiometricButtonState();
     }
 
     @Override

@@ -27,6 +27,7 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
 
@@ -286,6 +287,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             if (duenoListener != null) duenoListener.remove();
             if (mascotasListener != null) mascotasListener.remove();
             if (metodoPagoListener != null) metodoPagoListener.remove();
+
+            new CredentialManager(PerfilDuenoActivity.this).clearCredentials();
 
             try {
                 EncryptedPreferencesHelper.getInstance(PerfilDuenoActivity.this).clear();
