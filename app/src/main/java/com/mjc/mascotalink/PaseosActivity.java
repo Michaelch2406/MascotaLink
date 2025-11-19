@@ -249,6 +249,18 @@ public class PaseosActivity extends AppCompatActivity {
                 Paseo paseo = doc.toObject(Paseo.class);
                 if (paseo == null) continue;
                 paseo.setReservaId(doc.getId());
+                Double costoTotalDoc = doc.getDouble("costo_total");
+                if (costoTotalDoc != null) {
+                    paseo.setCostoTotal(costoTotalDoc);
+                }
+                Long duracionDoc = doc.getLong("duracion_minutos");
+                if (duracionDoc != null) {
+                    paseo.setDuracionMinutos(duracionDoc);
+                }
+                String tipoReserva = doc.getString("tipo_reserva");
+                if (tipoReserva != null) {
+                    paseo.setTipoReserva(tipoReserva);
+                }
                 paseo.setEstado(doc.getString("estado"));
                 paseo.setEstadoPago(doc.getString("estado_pago"));
                 paseosTemporales.add(paseo);

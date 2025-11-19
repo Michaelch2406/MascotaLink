@@ -274,8 +274,7 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         }
         String metodoPagoSeleccionado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "") : "";
         if (metodoPagoSeleccionado == null || metodoPagoSeleccionado.isEmpty()) {
-            Toast.makeText(this, "Selecciona un método de pago para continuar", Toast.LENGTH_SHORT).show();
-            return;
+            metodoPagoSeleccionado = "PAGO_INTERNO";
         }
 
         // Deshabilitar botón y mostrar loading para evitar clics múltiples
