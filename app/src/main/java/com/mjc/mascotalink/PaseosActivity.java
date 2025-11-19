@@ -27,6 +27,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 
 import java.text.SimpleDateFormat;
@@ -227,21 +228,22 @@ public class PaseosActivity extends AppCompatActivity {
                 return;
             }
 
-            List<Paseo> paseosTemporales = new ArrayList<>();
-            List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
+                List<Paseo> paseosTemporales = new ArrayList<>();
+                List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
 
-            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                String estado = doc.getString("estado");
-                String estadoPago = doc.getString("estado_pago");
-                if (filtrarActivosLocalmente) {
-                    if (!("PROCESADO".equals(estadoPago) && ("CONFIRMADO".equals(estado) || "EN_CURSO".equals(estado)))) {
-                        continue;
+                for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                    String estado = doc.getString("estado");
+                    String estadoPago = doc.getString("estado_pago");
+                    boolean pagoConfirmado = ReservaEstadoValidator.isPagoCompletado(estadoPago);
+                    if (filtrarActivosLocalmente) {
+                        if (!(pagoConfirmado && ("CONFIRMADO".equals(estado) || "EN_CURSO".equals(estado)))) {
+                            continue;
+                        }
+                    } else {
+                        if (!pagoConfirmado) {
+                            continue;
+                        }
                     }
-                } else {
-                    if (!"PROCESADO".equals(estadoPago)) {
-                        continue;
-                    }
-                }
 
                 Paseo paseo = doc.toObject(Paseo.class);
                 if (paseo == null) continue;

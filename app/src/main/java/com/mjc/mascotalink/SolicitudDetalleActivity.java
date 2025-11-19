@@ -21,6 +21,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -60,6 +61,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private Date fecha;
     private Date horaInicio;
     private int duracionMinutos;
+    private String estadoReserva;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -196,6 +198,8 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
 
                     idMascota = reservaDoc.getString("id_mascota"); // Assign to field
                     String notas = reservaDoc.getString("notas");
+                    estadoReserva = reservaDoc.getString("estado");
+                    actualizarBotonesPorEstado();
 
                     // Mostrar notas
                     if (notas != null && !notas.isEmpty()) {
@@ -224,6 +228,19 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     Toast.makeText(this, "Error al cargar los datos de la solicitud", Toast.LENGTH_SHORT).show();
                     finish();
                 });
+    }
+
+    private void actualizarBotonesPorEstado() {
+        boolean puedeAceptar = ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_ACEPTADO);
+        boolean puedeRechazar = ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_RECHAZADO);
+        actualizarBoton(btnAceptar, puedeAceptar);
+        actualizarBoton(btnRechazar, puedeRechazar);
+    }
+
+    private void actualizarBoton(Button boton, boolean habilitado) {
+        if (boton == null) return;
+        boton.setEnabled(habilitado);
+        boton.setAlpha(habilitado ? 1f : 0.5f);
     }
 
     private void cargarDatosDueno(DocumentReference duenoRef) {
@@ -329,6 +346,11 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
             return;
         }
 
+        if (!ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_RECHAZADO)) {
+            Toast.makeText(this, "No se puede rechazar esta solicitud en su estado actual.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String[] motivos = {
             "Estoy ocupado",
             "No puedo llegar a esa hora",
@@ -347,17 +369,23 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     }
 
     private void rechazarSolicitud(String motivo) {
+        if (!ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_RECHAZADO)) {
+            Toast.makeText(this, "No se puede rechazar esta solicitud en su estado actual.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         btnRechazar.setEnabled(false);
         btnAceptar.setEnabled(false);
 
         db.collection("reservas").document(idReserva)
                 .update(
-                        "estado", "RECHAZADO",
+                        "estado", ReservaEstadoValidator.ESTADO_RECHAZADO,
                         "motivo_rechazo", motivo,
                         "fecha_respuesta", Timestamp.now()
                 )
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Solicitud rechazada", Toast.LENGTH_SHORT).show();
+                    estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
+                    actualizarBotonesPorEstado();
                     // Volver a SolicitudesActivity después de 1 segundo
                     new android.os.Handler().postDelayed(() -> {
                         finish();
@@ -372,17 +400,23 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     }
 
     private void aceptarSolicitud() {
+        if (!ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_ACEPTADO)) {
+            Toast.makeText(this, "No se puede aceptar esta solicitud en su estado actual.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         btnAceptar.setEnabled(false);
         btnRechazar.setEnabled(false);
         btnVerPerfil.setEnabled(false);
 
         db.collection("reservas").document(idReserva)
                 .update(
-                        "estado", "CONFIRMADO",
+                        "estado", ReservaEstadoValidator.ESTADO_ACEPTADO,
                         "fecha_respuesta", Timestamp.now()
                 )
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "¡Solicitud aceptada!", Toast.LENGTH_SHORT).show();
+                    estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
+                    actualizarBotonesPorEstado();
                     // Volver a SolicitudesActivity después de 1 segundo
                     new android.os.Handler().postDelayed(() -> {
                         finish();

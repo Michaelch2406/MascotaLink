@@ -22,6 +22,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -130,7 +131,7 @@ public class SolicitudesActivity extends AppCompatActivity {
         // Consultar reservas donde el paseador es el actual y el estado es PENDIENTE_ACEPTACION
         Query query = db.collection("reservas")
                 .whereEqualTo("id_paseador", db.collection("usuarios").document(currentUserId))
-                .whereEqualTo("estado", "PENDIENTE_ACEPTACION")
+                .whereEqualTo("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION)
                 .orderBy("fecha_creacion", Query.Direction.DESCENDING);
 
         query.get().addOnSuccessListener(querySnapshot -> {

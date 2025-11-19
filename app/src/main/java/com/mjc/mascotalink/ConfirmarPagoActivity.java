@@ -18,6 +18,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.security.SessionManager;
+import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -42,6 +43,8 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     private TextView tvMascotaNombre;
     private TextView tvFecha;
     private TextView tvHora;
+    private TextView tvEstadoReserva;
+    private TextView tvEstadoMensaje;
     private Button btnProcesarPago;
     private Button btnCancelar;
     private ProgressBar progressBar;
@@ -54,6 +57,8 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     private String fechaReserva;
     private String horaReserva;
     private String direccionRecogida;
+    private String estadoReserva;
+    private String estadoPago;
     private int intentosFallidos = 0;
     private static final int MAX_INTENTOS = 3;
 
@@ -122,9 +127,13 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         tvMascotaNombre = findViewById(R.id.tv_mascota_nombre);
         tvFecha = findViewById(R.id.tv_fecha);
         tvHora = findViewById(R.id.tv_hora);
+        tvEstadoReserva = findViewById(R.id.tv_estado_reserva);
+        tvEstadoMensaje = findViewById(R.id.tv_estado_mensaje);
         btnProcesarPago = findViewById(R.id.btn_procesar_pago);
         btnCancelar = findViewById(R.id.btn_cancelar);
         progressBar = findViewById(R.id.progress_bar);
+        btnProcesarPago.setEnabled(false);
+        btnProcesarPago.setAlpha(0.6f);
     }
 
     private void setupListeners() {
@@ -134,25 +143,40 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     }
 
     private void cargarDatosReserva() {
-        // Si no se pasaron los datos, cargarlos desde Firebase
-        if (paseadorNombre == null || mascotaNombre == null) {
-            db.collection("reservas").document(reservaId)
-                    .get()
-                    .addOnSuccessListener(documentSnapshot -> {
-                        if (documentSnapshot.exists()) {
-                            // Extraer datos del documento
-                            costoTotal = documentSnapshot.getDouble("costo_total");
-                            
-                            // Formatear y mostrar datos
-                            mostrarDatos();
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this, "Error al cargar datos", Toast.LENGTH_SHORT).show();
-                    });
-        } else {
-            mostrarDatos();
-        }
+        db.collection("reservas").document(reservaId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!documentSnapshot.exists()) {
+                        Toast.makeText(this, "La reserva ya no está disponible.", Toast.LENGTH_LONG).show();
+                        finish();
+                        return;
+                    }
+
+                    Double totalDoc = documentSnapshot.getDouble("costo_total");
+                    if (totalDoc != null) {
+                        costoTotal = totalDoc;
+                    }
+
+                    Timestamp fechaTimestamp = documentSnapshot.getTimestamp("fecha");
+                    if (fechaTimestamp != null) {
+                        fechaReserva = new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH).format(fechaTimestamp.toDate());
+                    }
+
+                    Timestamp horaTimestamp = documentSnapshot.getTimestamp("hora_inicio");
+                    if (horaTimestamp != null) {
+                        horaReserva = new SimpleDateFormat("h:mm a", Locale.US).format(horaTimestamp.toDate());
+                    }
+
+                    estadoReserva = documentSnapshot.getString("estado");
+                    estadoPago = documentSnapshot.getString("estado_pago");
+
+                    mostrarDatos();
+                    actualizarEstadoUI();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error al cargar la reserva. Intenta nuevamente.", Toast.LENGTH_LONG).show();
+                    finish();
+                });
     }
 
     private void mostrarDatos() {
@@ -175,6 +199,64 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         }
     }
 
+    private void actualizarEstadoUI() {
+        if (tvEstadoReserva == null || tvEstadoMensaje == null) {
+            return;
+        }
+
+        String estadoEtiqueta = formatearEstado(estadoReserva);
+        tvEstadoReserva.setText("Estado: " + estadoEtiqueta);
+
+        if (ReservaEstadoValidator.canPay(estadoReserva) && !ReservaEstadoValidator.isPagoCompletado(estadoPago)) {
+            habilitarBotonPago(true);
+            btnProcesarPago.setText("Procesar Pago");
+            tvEstadoMensaje.setText("Reserva aceptada. Ya puedes completar el pago.");
+            return;
+        }
+
+        habilitarBotonPago(false);
+
+        if (ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION.equals(estadoReserva)) {
+            tvEstadoMensaje.setText("Esperando a que el paseador acepte la solicitud.");
+            btnProcesarPago.setText("Pago bloqueado");
+        } else if (ReservaEstadoValidator.ESTADO_CONFIRMADO.equals(estadoReserva)) {
+            tvEstadoMensaje.setText("Pago confirmado. Todo listo para el paseo.");
+        } else if (ReservaEstadoValidator.ESTADO_RECHAZADO.equals(estadoReserva)) {
+            tvEstadoMensaje.setText("La reserva fue rechazada. No se puede pagar.");
+        } else if (ReservaEstadoValidator.ESTADO_CANCELADO.equals(estadoReserva)) {
+            tvEstadoMensaje.setText("La reserva fue cancelada. Contacta soporte si es necesario.");
+        } else if (ReservaEstadoValidator.isPagoCompletado(estadoPago)) {
+            tvEstadoMensaje.setText("El pago ya fue procesado.");
+        } else {
+            tvEstadoMensaje.setText("Estado actual: " + (estadoReserva != null ? estadoReserva : "desconocido"));
+        }
+    }
+
+    private void habilitarBotonPago(boolean habilitado) {
+        btnProcesarPago.setEnabled(habilitado);
+        btnProcesarPago.setAlpha(habilitado ? 1f : 0.6f);
+    }
+
+    private String formatearEstado(String estado) {
+        if (estado == null) {
+            return "No disponible";
+        }
+        switch (estado) {
+            case ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION:
+                return "Pendiente de aceptación";
+            case ReservaEstadoValidator.ESTADO_ACEPTADO:
+                return "Aceptado";
+            case ReservaEstadoValidator.ESTADO_CONFIRMADO:
+                return "Confirmado";
+            case ReservaEstadoValidator.ESTADO_RECHAZADO:
+                return "Rechazado";
+            case ReservaEstadoValidator.ESTADO_CANCELADO:
+                return "Cancelado";
+            default:
+                return estado;
+        }
+    }
+
     // --- FIX INICIO: Interfaz para manejar el resultado de la validación asíncrona ---
     private interface ValidationCallback {
         void onValidationComplete(boolean isValid, String errorMessage);
@@ -182,6 +264,14 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     // --- FIX FIN ---
 
     private void procesarPago() {
+        if (!ReservaEstadoValidator.canPay(estadoReserva)) {
+            Toast.makeText(this, "La reserva aún no fue aceptada por el paseador.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (ReservaEstadoValidator.isPagoCompletado(estadoPago)) {
+            Toast.makeText(this, "El pago ya fue procesado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String metodoPagoSeleccionado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "") : "";
         if (metodoPagoSeleccionado == null || metodoPagoSeleccionado.isEmpty()) {
             Toast.makeText(this, "Selecciona un método de pago para continuar", Toast.LENGTH_SHORT).show();
@@ -229,11 +319,10 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             }
 
             Map<String, Object> updates = new HashMap<>();
-            // Ajuste de flujo: tras pago exitoso, la reserva queda pendiente de aceptación del paseador
-            updates.put("estado", "PENDIENTE_ACEPTACION");
+            updates.put("estado", ReservaEstadoValidator.ESTADO_CONFIRMADO);
             updates.put("id_pago", pagoId);
             updates.put("transaction_id", pagoId);
-            updates.put("estado_pago", "PROCESADO");
+            updates.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO);
             updates.put("fecha_pago", Timestamp.now());
             String metodoPagoGuardado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
             updates.put("metodo_pago", metodoPagoGuardado);
@@ -254,8 +343,11 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         if (mAuth.getCurrentUser() != null) {
                             sessionManager.createSession(mAuth.getCurrentUser().getUid());
                         }
-                        Toast.makeText(this, "Pago procesado exitosamente!", 
-                                Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Pago procesado exitosamente!", 
+                            Toast.LENGTH_LONG).show();
+                    estadoReserva = ReservaEstadoValidator.ESTADO_CONFIRMADO;
+                    estadoPago = ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO;
+                    actualizarEstadoUI();
 
                         new Handler().postDelayed(() -> {
                             Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
@@ -300,15 +392,21 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         if (isFinishing()) {
             return;
         }
+        if (!ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_CANCELADO)) {
+            Toast.makeText(this, "No se puede cancelar esta reserva en su estado actual.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         new AlertDialog.Builder(this)
                 .setTitle("Cancelar Reserva")
                 .setMessage("¿Estás seguro de cancelar esta reserva?")
                 .setPositiveButton("Sí, cancelar", (dialog, which) -> {
                     // Actualizar estado a cancelado
                     db.collection("reservas").document(reservaId)
-                            .update("estado", "CANCELADO")
+                            .update("estado", ReservaEstadoValidator.ESTADO_CANCELADO)
                             .addOnSuccessListener(aVoid -> {
                                 Toast.makeText(this, "Reserva cancelada", Toast.LENGTH_SHORT).show();
+                                estadoReserva = ReservaEstadoValidator.ESTADO_CANCELADO;
+                                actualizarEstadoUI();
                                 finish();
                             })
                             .addOnFailureListener(e -> {
@@ -339,13 +437,17 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                     if (documentSnapshot == null || !documentSnapshot.exists()) {
                         callback.onValidationComplete(false, "Error: La reserva ya no existe.");
                     } else {
-                        String estado = documentSnapshot.getString("estado");
-                        if (!"PENDIENTE_PAGO".equals(estado)) {
-                            callback.onValidationComplete(false, "Esta reserva ya fue procesada o cancelada.");
-                        } else {
-                            // ¡Todo en orden!
-                            callback.onValidationComplete(true, null);
-                        }
+                    String estado = documentSnapshot.getString("estado");
+                    String estadoPagoDoc = documentSnapshot.getString("estado_pago");
+                    if (!ReservaEstadoValidator.canPay(estado)) {
+                        callback.onValidationComplete(false, "Esta reserva no está lista para pagar.");
+                        return;
+                    }
+                    if (ReservaEstadoValidator.isPagoCompletado(estadoPagoDoc)) {
+                        callback.onValidationComplete(false, "El pago ya fue registrado.");
+                        return;
+                    }
+                    callback.onValidationComplete(true, null);
                     }
                 })
                 .addOnFailureListener(e -> {

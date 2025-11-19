@@ -56,13 +56,18 @@ service cloud.firestore {
               request.auth.uid == res.data.id_paseador);
     }
 
+    function documentReferenceEquals(docRef, other) {
+      return other == null || docRef == other;
+    }
+
     function reservaStateTransitionAllowed(prev, next) {
       return prev == next ||
-             (prev == "PENDIENTE_PAGO" && next in ["PENDIENTE_ACEPTACION", "CANCELADO"]) ||
-             (prev == "PENDIENTE_ACEPTACION" && next in ["CONFIRMADO", "CANCELADO"]) ||
-             (prev == "CONFIRMADO" && next in ["EN_PROGRESO", "CANCELADO"]) ||
-             (prev == "EN_PROGRESO" && next in ["COMPLETADO", "CANCELADO"]) ||
+             (prev == "PENDIENTE_ACEPTACION" && next in ["ACEPTADO", "RECHAZADO", "CANCELADO"]) ||
+             (prev == "ACEPTADO" && next in ["CONFIRMADO", "CANCELADO"]) ||
+             (prev == "CONFIRMADO" && next in ["EN_CURSO", "COMPLETADO", "CANCELADO"]) ||
+             (prev == "EN_CURSO" && next in ["COMPLETADO", "CANCELADO"]) ||
              (prev == "COMPLETADO" && next == "COMPLETADO") ||
+             (prev == "RECHAZADO" && next == "RECHAZADO") ||
              (prev == "CANCELADO" && next == "CANCELADO");
     }
 
@@ -148,7 +153,7 @@ service cloud.firestore {
       // y el estado inicial es PENDIENTE_PAGO.
       allow create: if request.auth != null &&
                     request.resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) &&
-                    request.resource.data.estado == "PENDIENTE_PAGO";
+                    request.resource.data.estado == "PENDIENTE_ACEPTACION";
 
       // Lectura autorizada para dueño y paseador.
       allow read: if request.auth != null &&
@@ -156,13 +161,13 @@ service cloud.firestore {
                   (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
                    resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid));
 
-      // Actualizaciones solo si el participante está involucrado y la transición de estado es válida.
-      allow update: if request.auth != null &&
-                    resource != null &&
-                    isReservaParticipant(resource) &&
-                    request.resource.data.id_dueno == resource.data.id_dueno &&
-                    request.resource.data.id_paseador == resource.data.id_paseador &&
-                    reservaStateTransitionAllowed(resource.data.estado, request.resource.data.estado);
+    // Actualizaciones solo si el participante está involucrado y la transición de estado es válida.
+    allow update: if request.auth != null &&
+                  resource != null &&
+                  isReservaParticipant(resource) &&
+                  documentReferenceEquals(resource.data.id_dueno, request.resource.data.id_dueno) &&
+                  documentReferenceEquals(resource.data.id_paseador, request.resource.data.id_paseador) &&
+                  reservaStateTransitionAllowed(resource.data.estado, request.resource.data.estado);
 
       allow delete: if false;
     }

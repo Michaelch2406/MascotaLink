@@ -28,6 +28,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -715,12 +716,12 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("hora_inicio", new Timestamp(cal.getTime()));
         reserva.put("duracion_minutos", duracionMinutos);
         reserva.put("costo_total", costoTotal);
-        reserva.put("estado", "PENDIENTE_PAGO");
+        reserva.put("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
         reserva.put("tipo_reserva", tipoReserva);
         reserva.put("fecha_creacion", Timestamp.now());
         reserva.put("tarifa_confirmada", tarifaPorHora);
         reserva.put("id_pago", null);           // NULL inicialmente
-        reserva.put("estado_pago", "PENDIENTE"); // Estado inicial de pago
+        reserva.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_PENDIENTE); // Estado inicial de pago
         reserva.put("notas", notasAdicionalesMascota);
 
 
