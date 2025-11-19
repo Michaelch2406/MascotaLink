@@ -281,6 +281,12 @@
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
+            android:name=".PaseoEnCursoActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
             android:name=".SolicitudesActivity"
             android:exported="false"
             android:screenOrientation="portrait"

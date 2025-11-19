@@ -172,8 +172,13 @@ public class PaseosActivity extends AppCompatActivity {
         paseosAdapter = new PaseosAdapter(this, paseosList, new PaseosAdapter.OnPaseoClickListener() {
             @Override
             public void onPaseoClick(PaseosActivity.Paseo paseo) {
-                // Abrir detalles del paseo
-                Toast.makeText(PaseosActivity.this, "Abrir detalles de " + paseo.getPaseadorNombre(), Toast.LENGTH_SHORT).show();
+                if ("PASEADOR".equalsIgnoreCase(userRole) && esPaseoEnCurso(paseo)) {
+                    Intent intent = new Intent(PaseosActivity.this, PaseoEnCursoActivity.class);
+                    intent.putExtra("id_reserva", paseo.getReservaId());
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(PaseosActivity.this, "Abrir detalles de " + paseo.getPaseadorNombre(), Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
@@ -209,6 +214,12 @@ public class PaseosActivity extends AppCompatActivity {
             }
         }, role);
         rvPaseos.setAdapter(paseosAdapter);
+    }
+
+    private boolean esPaseoEnCurso(Paseo paseo) {
+        if (paseo == null || paseo.getEstado() == null) return false;
+        String estado = paseo.getEstado();
+        return "EN_CURSO".equalsIgnoreCase(estado) || "EN_PROGRESO".equalsIgnoreCase(estado);
     }
 
 

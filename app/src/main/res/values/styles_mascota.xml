@@ -15,4 +15,14 @@
         <item name="android:textStyle">normal</item>
         <item name="android:textSize">13sp</item>
     </style>
+
+    <style name="ShapeAppearance.Mascota.Radius8" parent="@style/ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Mascota.Radius12" parent="@style/ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
 </resources>
