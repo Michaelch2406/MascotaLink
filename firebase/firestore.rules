@@ -56,10 +56,6 @@ service cloud.firestore {
               request.auth.uid == res.data.id_paseador);
     }
 
-    function documentReferenceEquals(docRef, other) {
-      return other == null || docRef == other;
-    }
-
     function reservaStateTransitionAllowed(prev, next) {
       return prev == next ||
              (prev == "PENDIENTE_ACEPTACION" && next in ["ACEPTADO", "RECHAZADO", "CANCELADO"]) ||
@@ -161,13 +157,36 @@ service cloud.firestore {
                   (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
                    resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid));
 
-    // Actualizaciones solo si el participante está involucrado y la transición de estado es válida.
-    allow update: if request.auth != null &&
-                  resource != null &&
-                  isReservaParticipant(resource) &&
-                  documentReferenceEquals(resource.data.id_dueno, request.resource.data.id_dueno) &&
-                  documentReferenceEquals(resource.data.id_paseador, request.resource.data.id_paseador) &&
-                  reservaStateTransitionAllowed(resource.data.estado, request.resource.data.estado);
+      allow update: if (
+        // Reglas para el Paseador
+        (/databases/$(database)/documents/usuarios/$(request.auth.uid) == resource.data.id_paseador &&
+          (
+            // Caso 1: Aceptar solicitud
+            (
+              request.resource.data.estado == 'ACEPTADO' &&
+              resource.data.estado == 'PENDIENTE_ACEPTACION' &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'fecha_respuesta'])
+            ) ||
+            // Caso 2: Rechazar solicitud
+            (
+              request.resource.data.estado == 'RECHAZADO' &&
+              resource.data.estado == 'PENDIENTE_ACEPTACION' &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'fecha_respuesta', 'motivo_rechazo'])
+            ) ||
+            // Caso 3: Iniciar/Completar paseo
+            (
+              request.resource.data.estado in ['EN_CURSO', 'COMPLETADO'] &&
+              resource.data.estado in ['CONFIRMADO', 'EN_CURSO'] &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+            )
+          )
+        ) ||
+        // Reglas para el Dueño
+        (/databases/$(database)/documents/usuarios/$(request.auth.uid) == resource.data.id_dueno &&
+          request.resource.data.estado == 'CANCELADO' &&
+          resource.data.estado in ['PENDIENTE_ACEPTACION', 'ACEPTADO', 'CONFIRMADO'] &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']))
+      );
 
       allow delete: if false;
     }
