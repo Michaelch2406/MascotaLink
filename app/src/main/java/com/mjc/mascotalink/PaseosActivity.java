@@ -26,6 +26,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.ConfirmarPagoActivity;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
@@ -48,7 +49,7 @@ public class PaseosActivity extends AppCompatActivity {
     private String userRole;
 
     // Views
-    private TextView tabActivos, tabEnProgreso, tabCompletados, tabCancelados;
+    private TextView tabAceptados, tabProgramados, tabEnProgreso, tabCompletados, tabCancelados;
     private RecyclerView rvPaseos;
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout llEmptyView;
@@ -60,7 +61,7 @@ public class PaseosActivity extends AppCompatActivity {
     private List<Paseo> paseosList;
 
     // Estado actual
-    private String estadoActual = "EN_CURSO"; // Tab inicial: EN PROGRESO
+    private String estadoActual = ReservaEstadoValidator.ESTADO_ACEPTADO; // Mostrar primero las reservas aceptadas
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,7 +87,8 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        tabActivos = findViewById(R.id.tab_activos);
+        tabAceptados = findViewById(R.id.tab_aceptados);
+        tabProgramados = findViewById(R.id.tab_programados);
         tabEnProgreso = findViewById(R.id.tab_en_progreso);
         tabCompletados = findViewById(R.id.tab_completados);
         tabCancelados = findViewById(R.id.tab_cancelados);
@@ -132,7 +134,8 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void setupTabs(String role) {
-        tabActivos.setOnClickListener(v -> cambiarTab("ACTIVOS", tabActivos, role));
+        tabAceptados.setOnClickListener(v -> cambiarTab(ReservaEstadoValidator.ESTADO_ACEPTADO, tabAceptados, role));
+        tabProgramados.setOnClickListener(v -> cambiarTab(ReservaEstadoValidator.ESTADO_CONFIRMADO, tabProgramados, role));
         tabEnProgreso.setOnClickListener(v -> cambiarTab("EN_CURSO", tabEnProgreso, role));
         tabCompletados.setOnClickListener(v -> cambiarTab("COMPLETADO", tabCompletados, role));
         tabCancelados.setOnClickListener(v -> cambiarTab("CANCELADO", tabCancelados, role));
@@ -143,7 +146,7 @@ public class PaseosActivity extends AppCompatActivity {
         });
 
         // Seleccionar tab inicial
-        cambiarTab(estadoActual, tabEnProgreso, role);
+        cambiarTab(estadoActual, tabAceptados, role);
     }
 
     private void cambiarTab(String nuevoEstado, TextView tabSeleccionado, String role) {
@@ -156,7 +159,7 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void resetearTabs() {
-        TextView[] tabs = {tabActivos, tabEnProgreso, tabCompletados, tabCancelados};
+        TextView[] tabs = {tabAceptados, tabProgramados, tabEnProgreso, tabCompletados, tabCancelados};
         for (TextView tab : tabs) {
             tab.setTextColor(ContextCompat.getColor(this, R.color.gray_text));
             tab.setTypeface(null, android.graphics.Typeface.NORMAL);
@@ -192,6 +195,18 @@ public class PaseosActivity extends AppCompatActivity {
             public void onVerMotivoClick(PaseosActivity.Paseo paseo) {
                 mostrarDialogMotivoCancelacion(paseo);
             }
+            @Override
+            public void onProcesarPagoClick(PaseosActivity.Paseo paseo) {
+                Intent intent = new Intent(PaseosActivity.this, ConfirmarPagoActivity.class);
+                intent.putExtra("reserva_id", paseo.getReservaId());
+                intent.putExtra("costo_total", paseo.getCostoTotal());
+                intent.putExtra("paseador_nombre", paseo.getPaseadorNombre());
+                intent.putExtra("mascota_nombre", paseo.getMascotaNombre());
+                intent.putExtra("fecha_reserva", paseo.getFechaFormateada());
+                intent.putExtra("hora_reserva", paseo.getHoraFormateada());
+                intent.putExtra("direccion_recogida", "Calle Principal 123, Ciudad");
+                startActivity(intent);
+            }
         }, role);
         rvPaseos.setAdapter(paseosAdapter);
     }
@@ -219,8 +234,7 @@ public class PaseosActivity extends AppCompatActivity {
                 .whereEqualTo(fieldToFilter, userRef)
                 .orderBy("fecha", Query.Direction.DESCENDING);
 
-        boolean filtrarActivosLocalmente = "ACTIVOS".equals(estadoActual);
-        Query finalQuery = filtrarActivosLocalmente ? query : query.whereEqualTo("estado", estadoActual);
+        Query finalQuery = query.whereEqualTo("estado", estadoActual);
 
         finalQuery.get().addOnSuccessListener(querySnapshot -> {
             if (querySnapshot.isEmpty()) {
@@ -228,26 +242,15 @@ public class PaseosActivity extends AppCompatActivity {
                 return;
             }
 
-                List<Paseo> paseosTemporales = new ArrayList<>();
-                List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
+            List<Paseo> paseosTemporales = new ArrayList<>();
+            List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
 
-                for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    String estado = doc.getString("estado");
-                    String estadoPago = doc.getString("estado_pago");
-                    boolean pagoConfirmado = ReservaEstadoValidator.isPagoCompletado(estadoPago);
-                    if (filtrarActivosLocalmente) {
-                        if (!(pagoConfirmado && ("CONFIRMADO".equals(estado) || "EN_CURSO".equals(estado)))) {
-                            continue;
-                        }
-                    } else {
-                        if (!pagoConfirmado) {
-                            continue;
-                        }
-                    }
-
+            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                 Paseo paseo = doc.toObject(Paseo.class);
                 if (paseo == null) continue;
                 paseo.setReservaId(doc.getId());
+                paseo.setEstado(doc.getString("estado"));
+                paseo.setEstadoPago(doc.getString("estado_pago"));
                 paseosTemporales.add(paseo);
 
                 DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
@@ -346,6 +349,7 @@ public class PaseosActivity extends AppCompatActivity {
         private String idMascota;
         private Date fecha, horaInicio;
         private String estado, razonCancelacion, tipoReserva;
+        private String estadoPago;
         private double costoTotal;
         private long duracionMinutos;
 
@@ -366,6 +370,7 @@ public class PaseosActivity extends AppCompatActivity {
         public String getTipoReserva() { return tipoReserva; }
         public double getCostoTotal() { return costoTotal; }
         public int getDuracionMinutos() { return (int) duracionMinutos; }
+        public String getEstadoPago() { return estadoPago; }
 
         // Setters
         public void setReservaId(String reservaId) { this.reservaId = reservaId; }
@@ -382,6 +387,7 @@ public class PaseosActivity extends AppCompatActivity {
         public void setTipoReserva(String tipoReserva) { this.tipoReserva = tipoReserva; }
         public void setCostoTotal(double costoTotal) { this.costoTotal = costoTotal; }
         public void setDuracionMinutos(long duracionMinutos) { this.duracionMinutos = duracionMinutos; }
+        public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }
 
 
         public String getFechaFormateada() {

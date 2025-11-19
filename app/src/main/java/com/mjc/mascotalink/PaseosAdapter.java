@@ -17,6 +17,8 @@ import com.bumptech.glide.Glide;
 
 import java.util.List;
 
+import com.mjc.mascotalink.utils.ReservaEstadoValidator;
+
 import de.hdodenhof.circleimageview.CircleImageView;
 
 public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewHolder> {
@@ -32,6 +34,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         void onContactarClick(PaseosActivity.Paseo paseo);
         void onCalificarClick(PaseosActivity.Paseo paseo);
         void onVerMotivoClick(PaseosActivity.Paseo paseo);
+        void onProcesarPagoClick(PaseosActivity.Paseo paseo);
     }
 
     public PaseosAdapter(Context context, List<PaseosActivity.Paseo> paseosList, OnPaseoClickListener listener, String userRole) {
@@ -116,7 +119,15 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         configurarBotonesAccion(holder, estado, paseo);
 
 
-        holder.itemView.setOnClickListener(v -> listener.onPaseoClick(paseo));
+        holder.itemView.setOnClickListener(v -> {
+            boolean puedePagar = ReservaEstadoValidator.canPay(paseo.getEstado()) &&
+                    !ReservaEstadoValidator.isPagoCompletado(paseo.getEstadoPago());
+            if (!"PASEADOR".equalsIgnoreCase(userRole) && puedePagar) {
+                listener.onProcesarPagoClick(paseo);
+            } else {
+                listener.onPaseoClick(paseo);
+            }
+        });
 
     }
 
