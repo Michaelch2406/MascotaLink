@@ -158,22 +158,19 @@ service cloud.firestore {
                    resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid));
 
       allow update: if (
-        // Reglas para el Paseador
-        (/databases/$(database)/documents/usuarios/$(request.auth.uid) == resource.data.id_paseador &&
+        (
+          /databases/$(database)/documents/usuarios/$(request.auth.uid) == resource.data.id_paseador &&
           (
-            // Caso 1: Aceptar solicitud
             (
               request.resource.data.estado == 'ACEPTADO' &&
               resource.data.estado == 'PENDIENTE_ACEPTACION' &&
               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'fecha_respuesta'])
             ) ||
-            // Caso 2: Rechazar solicitud
             (
               request.resource.data.estado == 'RECHAZADO' &&
               resource.data.estado == 'PENDIENTE_ACEPTACION' &&
               request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'fecha_respuesta', 'motivo_rechazo'])
             ) ||
-            // Caso 3: Iniciar/Completar paseo
             (
               request.resource.data.estado in ['EN_CURSO', 'COMPLETADO'] &&
               resource.data.estado in ['CONFIRMADO', 'EN_CURSO'] &&
@@ -181,11 +178,21 @@ service cloud.firestore {
             )
           )
         ) ||
-        // Reglas para el Dueño
-        (/databases/$(database)/documents/usuarios/$(request.auth.uid) == resource.data.id_dueno &&
-          request.resource.data.estado == 'CANCELADO' &&
-          resource.data.estado in ['PENDIENTE_ACEPTACION', 'ACEPTADO', 'CONFIRMADO'] &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']))
+        (
+          /databases/$(database)/documents/usuarios/$(request.auth.uid) == resource.data.id_dueno &&
+          (
+            (
+              resource.data.estado == 'ACEPTADO' &&
+              request.resource.data.estado == 'CONFIRMADO' &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'estado_pago', 'id_pago', 'fecha_pago', 'metodo_pago', 'transaction_id'])
+            ) ||
+            (
+              request.resource.data.estado == 'CANCELADO' &&
+              resource.data.estado in ['PENDIENTE_ACEPTACION', 'ACEPTADO', 'CONFIRMADO'] &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+            )
+          )
+        )
       );
 
       allow delete: if false;
