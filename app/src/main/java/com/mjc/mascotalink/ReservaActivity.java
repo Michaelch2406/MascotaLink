@@ -28,6 +28,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.text.SimpleDateFormat;
@@ -64,6 +65,8 @@ public class ReservaActivity extends AppCompatActivity {
     private TextView tvTarifaValor, tvDuracionValor, tvTotalValor;
     private TextView tvPaseadorNombre, tvMascotaNombre, tvDetalleFecha, tvDetalleHora, tvDetalleDuracion;
     private BottomNavigationView bottomNav;
+    private String bottomNavRole = "DUEÑO";
+    private int bottomNavSelectedItem = R.id.menu_walks;
 
     // Adapters y listas
     private MascotaSelectorAdapter mascotaAdapter;
@@ -140,6 +143,12 @@ public class ReservaActivity extends AppCompatActivity {
 
         tvPaseadorNombre.setText(paseadorNombre != null ? paseadorNombre : "Alex");
         tvTarifaValor.setText(String.format(Locale.US, "$%.1f/hora", tarifaPorHora));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
     }
 
     private void initViews() {
@@ -248,24 +257,10 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void setupBottomNavigation() {
-        bottomNav.setSelectedItemId(R.id.menu_paseos);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_inicio) {
-                startActivity(new Intent(this, PerfilDuenoActivity.class));
-                return true;
-            } else if (itemId == R.id.menu_buscar) {
-                return true;
-            } else if (itemId == R.id.menu_paseos) {
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                return true;
-            } else if (itemId == R.id.menu_perfil) {
-                startActivity(new Intent(this, PerfilDuenoActivity.class));
-                return true;
-            }
-            return false;
-        });
+        if (bottomNav == null) {
+            return;
+        }
+        BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
     }
 
     private void cargarMascotasUsuario() {

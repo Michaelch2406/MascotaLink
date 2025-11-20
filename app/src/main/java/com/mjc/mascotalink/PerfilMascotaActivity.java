@@ -46,6 +46,8 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     private GaleriaAdapter galeriaAdapter;
     private List<String> galeriaUrls;
     private BottomNavigationView bottomNav;
+    private String bottomNavRole = "DUEÑO";
+    private int bottomNavSelectedItem = R.id.menu_perfil;
     private View contentContainer, errorContainer; // Containers for content and error message
     private TextView tvErrorMessage; // TextView inside errorContainer
 
@@ -120,7 +122,7 @@ public class PerfilMascotaActivity extends AppCompatActivity {
     }
 
     private void setupRoleBasedUI() {
-        boolean isOwner = duenoId.equals(currentUserId);
+        boolean isOwner = duenoId != null && duenoId.equals(currentUserId);
 
         // The main edit icon is only visible to the owner
         ivEditMascota.setVisibility(isOwner ? View.VISIBLE : View.GONE);
@@ -128,8 +130,8 @@ public class PerfilMascotaActivity extends AppCompatActivity {
         // The bottom navigation is only visible to the owner
         if (isOwner) {
             bottomNav.setVisibility(View.VISIBLE);
-            // Assuming the owner is always "DUEÑO"
-            BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_perfil);
+            bottomNavRole = "DUEÑO";
+            setupBottomNavigation();
         } else {
             bottomNav.setVisibility(View.GONE);
         }
@@ -173,6 +175,19 @@ public class PerfilMascotaActivity extends AppCompatActivity {
             intent.putExtra("read_only", !duenoId.equals(currentUserId));
             startActivity(intent);
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null || bottomNav.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
     }
 
     @SuppressWarnings("unchecked")

@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 public class FavoritosActivity extends AppCompatActivity implements FavoritosAdapter.OnItemClickListener {
 
@@ -19,6 +20,9 @@ public class FavoritosActivity extends AppCompatActivity implements FavoritosAda
     private FavoritosAdapter adapter;
     private RecyclerView recyclerView;
     private LinearLayout emptyView;
+    private BottomNavigationView bottomNav;
+    private String bottomNavRole = "DUEÑO";
+    private int bottomNavSelectedItem = R.id.menu_perfil;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +46,12 @@ public class FavoritosActivity extends AppCompatActivity implements FavoritosAda
                 emptyView.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
     }
 
     private void setupToolbar() {
@@ -70,27 +80,10 @@ public class FavoritosActivity extends AppCompatActivity implements FavoritosAda
     }
     
     private void setupBottomNavigation() {
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav_favoritos);
-        // Lógica para la navegación inferior si es necesario, por ejemplo, para mantener el ítem correcto seleccionado
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_home) {
-                // No hacer nada o ir a Home
-                return true;
-            } else if (itemId == R.id.menu_search) {
-                Intent intent = new Intent(this, BusquedaPaseadoresActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_perfil) {
-                // Ir al perfil del dueño
-                Intent intent = new Intent(this, PerfilDuenoActivity.class); // Asumiendo que tienes PerfilDuenoActivity
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            }
-            // Añadir otros casos si es necesario
-            return false;
-        });
+        bottomNav = findViewById(R.id.bottom_nav_favoritos);
+        if (bottomNav == null) {
+            return;
+        }
+        BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
     }
 }

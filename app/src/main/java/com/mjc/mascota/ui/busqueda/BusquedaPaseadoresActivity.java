@@ -81,6 +81,7 @@ import com.mjc.mascotalink.LoginActivity;
 import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -140,6 +141,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private AutoCompleteTextView searchAutocomplete;
     private SwipeRefreshLayout swipeRefreshLayout;
     private NestedScrollView contentScrollView;
+    private BottomNavigationView bottomNav;
+    private String userRole = "DUEÑO";
 
     // Handler y Runnable para la actualización periódica del mapa
     private final Handler periodicRefreshHandler = new Handler(Looper.getMainLooper());
@@ -164,6 +167,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         searchAutocomplete = findViewById(R.id.search_autocomplete);
         swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         contentScrollView = findViewById(R.id.content_scroll_view);
+        bottomNav = findViewById(R.id.bottom_navigation);
 
         setupRecyclerViews();
         setupSearch();
@@ -184,8 +188,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         createLocationRequest();
         createLocationCallback();
-
-        setupBottomNavigation();
 
         if (savedInstanceState != null) {
             String savedQuery = savedInstanceState.getString(SEARCH_QUERY_KEY);
@@ -262,6 +264,12 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         Log.d(TAG, "onStop");
@@ -286,6 +294,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String rol = documentSnapshot.getString("rol");
+                        userRole = rol != null ? rol : userRole;
                         Log.d(TAG, "checkUserSessionAndRole: Rol encontrado: " + rol);
                         if ("DUEÑO".equals(rol)) {
                             setupObservers();
@@ -680,35 +689,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void setupBottomNavigation() {
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
-        bottomNav.setSelectedItemId(R.id.menu_search); 
-
-        bottomNav.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_search) {
-                // Ya estamos aquí
-                return true;
-            } else if (itemId == R.id.menu_home) { // 'Inicio' te lleva al perfil
-                Intent intent = new Intent(this, PerfilDuenoActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_walks) { // 'Paseos'
-                Intent intent = new Intent(this, com.mjc.mascotalink.PaseosActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                Toast.makeText(this, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
-                return false; // No cambiar la selección
-            } else if (itemId == R.id.menu_perfil) {
-                Intent intent = new Intent(this, PerfilDuenoActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            }
-            return false;
-        });
+        if (bottomNav == null) {
+            return;
+        }
+        String roleForNav = userRole != null ? userRole : "DUEÑO";
+        BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, R.id.menu_search);
     }
 
     @Override

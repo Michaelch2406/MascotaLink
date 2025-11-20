@@ -14,6 +14,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.util.Map;
 
@@ -26,6 +27,9 @@ public class MascotaComportamientoActivity extends AppCompatActivity {
     private ImageView ivBack;
     private TextView tvNivelEnergia, tvConPersonas, tvConOtrosAnimales, tvConOtrosPerros;
     private TextView tvHabitosCorrea, tvComandosConocidos, tvMiedosFobias, tvManiasHabitos;
+    private BottomNavigationView bottomNav;
+    private String bottomNavRole = "DUEÑO";
+    private int bottomNavSelectedItem = R.id.menu_perfil;
 
     private String duenoId;
     private String mascotaId;
@@ -57,6 +61,12 @@ public class MascotaComportamientoActivity extends AppCompatActivity {
         cargarDatosComportamiento();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
+    }
+
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
         tvNivelEnergia = findViewById(R.id.tv_nivel_energia);
@@ -67,33 +77,26 @@ public class MascotaComportamientoActivity extends AppCompatActivity {
         tvComandosConocidos = findViewById(R.id.tv_comandos_conocidos);
         tvMiedosFobias = findViewById(R.id.tv_miedos_fobias);
         tvManiasHabitos = findViewById(R.id.tv_manias_habitos);
-
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
-        bottomNav.setSelectedItemId(R.id.menu_perfil);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_home) {
-                showToast("Próximamente: Inicio");
-                return true;
-            } else if (itemId == R.id.menu_search) {
-                showToast("Próximamente: Buscar");
-                return true;
-            } else if (itemId == R.id.menu_walks) {
-                showToast("Próximamente: Paseos");
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                showToast("Próximamente: Mensajes");
-                return true;
-            } else if (itemId == R.id.menu_perfil) {
-                finish();
-                return true;
-            }
-            return false;
-        });
+        bottomNav = findViewById(R.id.bottom_nav);
+        setupBottomNavigation();
     }
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) {
+            return;
+        }
+        String currentUserUid = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
+        boolean isOwner = currentUserUid != null && currentUserUid.equals(duenoId);
+        if (isOwner) {
+            bottomNav.setVisibility(View.VISIBLE);
+            BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
+        } else {
+            bottomNav.setVisibility(View.GONE);
+        }
     }
 
     @SuppressWarnings("unchecked")

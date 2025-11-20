@@ -45,6 +45,7 @@ public class SolicitudesActivity extends AppCompatActivity {
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout llEmptyView;
     private BottomNavigationView bottomNav;
+    private String userRole = "PASEADOR";
 
     // Adapter
     private SolicitudesAdapter solicitudesAdapter;
@@ -71,12 +72,15 @@ public class SolicitudesActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
         setupSwipeRefresh();
-        // Refactored to use BottomNavManager
-        BottomNavManager.setupBottomNav(this, bottomNav, "PASEADOR", R.id.menu_search);
-
 
         // Cargar solicitudes iniciales
         cargarSolicitudes();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
     }
 
     private void initViews() {
@@ -90,6 +94,14 @@ public class SolicitudesActivity extends AppCompatActivity {
 
         // Botón atrás
         ivBack.setOnClickListener(v -> finish());
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) {
+            return;
+        }
+        String roleForNav = userRole != null ? userRole : "PASEADOR";
+        BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, R.id.menu_search);
     }
 
     private void setupRecyclerView() {

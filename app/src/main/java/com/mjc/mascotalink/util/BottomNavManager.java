@@ -17,54 +17,66 @@ import com.mjc.mascotalink.SolicitudesActivity;
 public class BottomNavManager {
 
     public static void setupBottomNav(Activity activity, BottomNavigationView navView, String role, int selectedItemId) {
+        if (activity == null || navView == null) {
+            return;
+        }
+
+        String normalizedRole = role != null ? role : "";
+        Object currentTag = navView.getTag();
+        if (currentTag instanceof String) {
+            String currentTagStr = (String) currentTag;
+            if (currentTagStr.equalsIgnoreCase(normalizedRole) && navView.getSelectedItemId() == selectedItemId) {
+                return; // Already configured with the same role and selection
+            }
+        }
+
+        navView.setOnItemSelectedListener(null);
         navView.getMenu().clear();
         navView.inflateMenu(R.menu.menu_bottom_nav_new);
-        navView.setSelectedItemId(selectedItemId);
 
         Menu menu = navView.getMenu();
         MenuItem secondItem = menu.findItem(R.id.menu_search);
 
-        if ("PASEADOR".equalsIgnoreCase(role)) {
+        boolean isPaseador = "PASEADOR".equalsIgnoreCase(normalizedRole);
+        if (secondItem != null && isPaseador) {
             secondItem.setTitle("Solicitudes");
             secondItem.setIcon(R.drawable.ic_request);
         }
 
-        navView.setOnNavigationItemSelectedListener(item -> {
+        navView.setSelectedItemId(selectedItemId);
+        navView.setTag(normalizedRole);
+
+        final long[] lastClickTime = {0};
+        navView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
 
             if (itemId == selectedItemId) {
                 return true; // Already on this screen
             }
 
+            long now = System.currentTimeMillis();
+            if (now - lastClickTime[0] < 300) {
+                return false; // Debounce rapid taps
+            }
+            lastClickTime[0] = now;
+
             Intent intent = null;
 
             if (itemId == R.id.menu_home) {
-                if ("PASEADOR".equalsIgnoreCase(role)) {
-                    intent = new Intent(activity, PerfilPaseadorActivity.class);
-                } else {
-                    intent = new Intent(activity, PerfilDuenoActivity.class);
-                }
+                intent = new Intent(activity, isPaseador ? PerfilPaseadorActivity.class : PerfilDuenoActivity.class);
             } else if (itemId == R.id.menu_search) { // Reused ID
-                if ("PASEADOR".equalsIgnoreCase(role)) {
-                    intent = new Intent(activity, SolicitudesActivity.class);
-                } else { // DUEÑO
-                    intent = new Intent(activity, BusquedaPaseadoresActivity.class);
-                }
+                intent = new Intent(activity, isPaseador ? SolicitudesActivity.class : BusquedaPaseadoresActivity.class);
             } else if (itemId == R.id.menu_walks) {
                 intent = new Intent(activity, PaseosActivity.class);
             } else if (itemId == R.id.menu_messages) {
-                Toast.makeText(activity, "Próximamente: Mensajes", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Proximamente: Mensajes", Toast.LENGTH_SHORT).show();
                 return false; // Do not navigate
             } else if (itemId == R.id.menu_perfil) {
-                if ("PASEADOR".equalsIgnoreCase(role)) {
-                    intent = new Intent(activity, PerfilPaseadorActivity.class);
-                } else {
-                    intent = new Intent(activity, PerfilDuenoActivity.class);
-                }
+                intent = new Intent(activity, isPaseador ? PerfilPaseadorActivity.class : PerfilDuenoActivity.class);
             }
 
             if (intent != null) {
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                 activity.startActivity(intent);
                 return true;
             }

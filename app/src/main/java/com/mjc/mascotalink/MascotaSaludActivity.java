@@ -15,6 +15,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.text.SimpleDateFormat;
 import java.util.Locale;
@@ -30,6 +31,9 @@ public class MascotaSaludActivity extends AppCompatActivity {
     private TextView tvVacunasEstado, tvDesparasitacionEstado, tvUltimaVisita;
     private TextView tvCondicionesMedicas, tvMedicamentos;
     private TextView tvVeterinarioNombre, tvVeterinarioTelefono;
+    private BottomNavigationView bottomNav;
+    private String bottomNavRole = "DUEÑO";
+    private int bottomNavSelectedItem = R.id.menu_perfil;
 
     private String duenoId;
     private String mascotaId;
@@ -61,6 +65,12 @@ public class MascotaSaludActivity extends AppCompatActivity {
         cargarDatosSalud();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
+    }
+
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
         tvVacunasEstado = findViewById(R.id.tv_vacunas_estado);
@@ -70,33 +80,26 @@ public class MascotaSaludActivity extends AppCompatActivity {
         tvMedicamentos = findViewById(R.id.tv_medicamentos);
         tvVeterinarioNombre = findViewById(R.id.tv_veterinario_nombre);
         tvVeterinarioTelefono = findViewById(R.id.tv_veterinario_telefono);
-
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
-        bottomNav.setSelectedItemId(R.id.menu_perfil);
-        bottomNav.setOnNavigationItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.menu_home) {
-                showToast("Próximamente: Inicio");
-                return true;
-            } else if (itemId == R.id.menu_search) {
-                showToast("Próximamente: Buscar");
-                return true;
-            } else if (itemId == R.id.menu_walks) {
-                showToast("Próximamente: Paseos");
-                return true;
-            } else if (itemId == R.id.menu_messages) {
-                showToast("Próximamente: Mensajes");
-                return true;
-            } else if (itemId == R.id.menu_perfil) {
-                finish();
-                return true;
-            }
-            return false;
-        });
+        bottomNav = findViewById(R.id.bottom_nav);
+        setupBottomNavigation();
     }
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) {
+            return;
+        }
+        String currentUserUid = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
+        boolean isOwner = currentUserUid != null && currentUserUid.equals(duenoId);
+        if (isOwner) {
+            bottomNav.setVisibility(View.VISIBLE);
+            BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
+        } else {
+            bottomNav.setVisibility(View.GONE);
+        }
     }
 
     @SuppressWarnings("unchecked")

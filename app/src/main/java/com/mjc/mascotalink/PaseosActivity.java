@@ -86,6 +86,12 @@ public class PaseosActivity extends AppCompatActivity {
         fetchUserRoleAndSetupUI();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
+    }
+
     private void initViews() {
         tabAceptados = findViewById(R.id.tab_aceptados);
         tabProgramados = findViewById(R.id.tab_programados);
@@ -128,9 +134,18 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void setupRoleSpecificUI(String role) {
+        userRole = role;
         setupTabs(role);
-        BottomNavManager.setupBottomNav(this, bottomNav, role, R.id.menu_walks);
+        setupBottomNavigation();
         btnReservarPaseo.setVisibility("PASEADOR".equalsIgnoreCase(role) ? View.GONE : View.VISIBLE);
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) {
+            return;
+        }
+        String roleForNav = userRole != null ? userRole : "DUEÑO";
+        BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, R.id.menu_walks);
     }
 
     private void setupTabs(String role) {

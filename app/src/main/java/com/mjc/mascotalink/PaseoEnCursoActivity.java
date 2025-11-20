@@ -136,6 +136,15 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         escucharReserva();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        cargarRoleYBottomNav();
+        if (fechaInicioPaseo != null) {
+            startTimer();
+        }
+    }
+
     private void initViews() {
         tvNombreMascota = findViewById(R.id.tv_nombre_mascota);
         tvPaseador = findViewById(R.id.tv_paseador);
@@ -777,14 +786,6 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private void mostrarLoading(boolean mostrar) {
         pbLoading.setVisibility(mostrar ? View.VISIBLE : View.GONE);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (fechaInicioPaseo != null) {
-            startTimer();
-        }
     }
 
     @Override

@@ -111,6 +111,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private String videoUrl;
     private Double paseadorPrecioHora = null;
     private BottomNavigationView bottomNav;
+    private String bottomNavRole = "PASEADOR";
+    private int bottomNavSelectedItem = R.id.menu_perfil;
 
 
     private RecyclerView recyclerViewResenas;
@@ -146,6 +148,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         setupAuthListener();
 
         paseadorId = getIntent().getStringExtra("paseadorId");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
     }
 
     private void setupAuthListener() {
@@ -298,6 +306,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             ajustes_section.setVisibility(View.VISIBLE);
             soporte_section.setVisibility(View.VISIBLE);
             btnCerrarSesion.setVisibility(View.VISIBLE);
+            bottomNavRole = "PASEADOR";
 
         } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
             // Case 2: DUEÑO viewing a PASEADOR's profile
@@ -313,6 +322,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             btnCerrarSesion.setVisibility(View.GONE);
 
             configurarBotonFavorito(currentUserId, paseadorId);
+            bottomNavRole = "DUEÑO";
 
         } else {
             // Case 3: Read-only view (not logged in, another paseador, etc.)
@@ -326,9 +336,17 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             ajustes_section.setVisibility(View.GONE);
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);
+            bottomNavRole = currentUserRole != null ? currentUserRole : "DUEÑO";
         }
-        // Refactored: Setup bottom navigation using the manager
-        BottomNavManager.setupBottomNav(this, bottomNav, currentUserRole, R.id.menu_perfil);
+        setupBottomNavigation();
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) {
+            return;
+        }
+        String roleForNav = bottomNavRole != null ? bottomNavRole : (currentUserRole != null ? currentUserRole : "PASEADOR");
+        BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, bottomNavSelectedItem);
     }
 
     private void configurarBotonFavorito(String duenoId, String paseadorId) {

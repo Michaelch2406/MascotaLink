@@ -54,6 +54,8 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private Button btnRechazar;
     private Button btnAceptar;
     private BottomNavigationView bottomNav;
+    private String bottomNavRole = "PASEADOR";
+    private int bottomNavSelectedItem = R.id.menu_search;
 
     // Datos
     private String idDueno;
@@ -90,9 +92,14 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         }
 
         initViews();
-        // Refactored to use BottomNavManager
-        BottomNavManager.setupBottomNav(this, bottomNav, "PASEADOR", R.id.menu_search);
+        setupBottomNavigation();
         cargarDatosReserva();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
     }
 
     private void initViews() {
@@ -227,7 +234,14 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     Log.e(TAG, "Error al cargar reserva", e);
                     Toast.makeText(this, "Error al cargar los datos de la solicitud", Toast.LENGTH_SHORT).show();
                     finish();
-                });
+        });
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) {
+            return;
+        }
+        BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
     }
 
     private void actualizarBotonesPorEstado() {

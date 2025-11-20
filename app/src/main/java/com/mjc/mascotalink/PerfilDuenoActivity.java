@@ -60,6 +60,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private boolean isContentVisible = false;
     private View btnFavoritos;
     private BottomNavigationView bottomNav;
+    private String bottomNavRole = "DUEÑO";
+    private int bottomNavSelectedItem = R.id.menu_perfil;
 
     private ListenerRegistration duenoListener;
     private ListenerRegistration mascotasListener;
@@ -95,6 +97,12 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
+    }
+
     private void setupRoleBasedUI(String profileOwnerId) {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         boolean isMyProfile = currentUser != null && currentUser.getUid().equals(profileOwnerId);
@@ -125,13 +133,13 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         // Navigation Bar Logic
         bottomNav.setVisibility(View.VISIBLE); // Always show the nav bar
         if (isMyProfile) {
-            // I am the owner viewing my own profile
-            BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_perfil);
+            bottomNavRole = "DUEÑO";
+            bottomNavSelectedItem = R.id.menu_perfil;
         } else {
-            // I am a walker viewing an owner's profile
-            // We assume the current user is a walker. The active item is set to menu_search as a safe default.
-            BottomNavManager.setupBottomNav(this, bottomNav, "PASEADOR", R.id.menu_search);
+            bottomNavRole = "PASEADOR";
+            bottomNavSelectedItem = R.id.menu_search;
         }
+        setupBottomNavigation();
     }
 
     private void setupAuthListener() {
@@ -298,6 +306,13 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
             mAuth.signOut();
         });
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) {
+            return;
+        }
+        BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
     }
 
     private void cargarDatosDueno(String uid) {
