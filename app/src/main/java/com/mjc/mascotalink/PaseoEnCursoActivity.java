@@ -247,9 +247,20 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private void manejarSnapshotReserva(@NonNull DocumentSnapshot snapshot) {
         String estado = snapshot.getString("estado");
         if (estado == null) estado = "";
+        //vibe-fix: Validar transiciones de estado cuando el paseo se completa
         if (!estado.equalsIgnoreCase("EN_CURSO") && !estado.equalsIgnoreCase("EN_PROGRESO")) {
-            Toast.makeText(this, "Este paseo ya no está en curso.", Toast.LENGTH_SHORT).show();
-            finish();
+            if (estado.equalsIgnoreCase("COMPLETADO")) {
+                // Si el paseo fue completado (por acción propia o remota), cerrar la actividad
+                Log.d(TAG, "Paseo completado, cerrando actividad");
+                Toast.makeText(this, "El paseo ha sido completado.", Toast.LENGTH_SHORT).show();
+                stopTimer();
+                new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1500);
+            } else {
+                // Otro estado (CANCELADO, etc.)
+                Toast.makeText(this, "Este paseo ya no está en curso.", Toast.LENGTH_SHORT).show();
+                stopTimer();
+                finish();
+            }
             return;
         }
         tvEstado.setText("EN PROGRESO");
@@ -486,6 +497,19 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         foto.compress(Bitmap.CompressFormat.JPEG, 80, baos);
         byte[] data = baos.toByteArray();
 
+        //vibe-fix: Validar tamaño de foto < 5MB antes de subir
+        final long MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+        if (data.length > MAX_SIZE_BYTES) {
+            mostrarLoading(false);
+            double sizeMB = data.length / (1024.0 * 1024.0);
+            String mensaje = String.format(Locale.getDefault(), 
+                "La imagen es demasiado grande (%.2f MB). El tamaño máximo permitido es 5 MB. Por favor, selecciona una imagen más pequeña.", 
+                sizeMB);
+            Toast.makeText(this, mensaje, Toast.LENGTH_LONG).show();
+            Log.w(TAG, "Intento de subir foto mayor a 5MB: " + sizeMB + " MB");
+            return;
+        }
+
         String nombreArchivo = "paseo_" + idReserva + "_" + System.currentTimeMillis() + ".jpg";
         StorageReference ref = FirebaseStorage.getInstance().getReference("paseos/" + idReserva + "/" + nombreArchivo);
 
@@ -669,21 +693,49 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private void startTimer() {
         stopTimer();
-        if (fechaInicioPaseo == null) return;
+        //vibe-fix: Validar fecha_inicio_paseo NULL antes de iniciar temporizador
+        if (fechaInicioPaseo == null) {
+            Log.w(TAG, "startTimer: fechaInicioPaseo es null, cancelando temporizador");
+            Toast.makeText(this, "Error: No se pudo obtener la fecha de inicio del paseo", Toast.LENGTH_LONG).show();
+            tvHoras.setText("00");
+            tvMinutos.setText("00");
+            tvSegundos.setText("00");
+            return;
+        }
         timerRunnable = new Runnable() {
             @Override
             public void run() {
-                if (isFinishing() || fechaInicioPaseo == null) return;
+                //vibe-fix: Validar fecha_inicio_paseo NULL en cada tick del temporizador
+                if (isFinishing() || isDestroyed()) {
+                    stopTimer();
+                    return;
+                }
+                if (fechaInicioPaseo == null) {
+                    Log.w(TAG, "Timer tick: fechaInicioPaseo es null, deteniendo temporizador");
+                    stopTimer();
+                    runOnUiThread(() -> {
+                        Toast.makeText(PaseoEnCursoActivity.this, 
+                            "Error: La fecha de inicio del paseo no está disponible", 
+                            Toast.LENGTH_LONG).show();
+                        tvHoras.setText("00");
+                        tvMinutos.setText("00");
+                        tvSegundos.setText("00");
+                    });
+                    return;
+                }
                 long elapsed = calcularTiempoTranscurrido();
                 long horas = TimeUnit.MILLISECONDS.toHours(elapsed);
                 long minutos = TimeUnit.MILLISECONDS.toMinutes(elapsed) % 60;
                 long segundos = TimeUnit.MILLISECONDS.toSeconds(elapsed) % 60;
 
-                tvHoras.setText(String.format(Locale.getDefault(), "%02d", horas));
-                tvMinutos.setText(String.format(Locale.getDefault(), "%02d", minutos));
-                tvSegundos.setText(String.format(Locale.getDefault(), "%02d", segundos));
-
-                actualizarEstadoBotonFinalizar(elapsed >= obtenerTiempoMinimo());
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        tvHoras.setText(String.format(Locale.getDefault(), "%02d", horas));
+                        tvMinutos.setText(String.format(Locale.getDefault(), "%02d", minutos));
+                        tvSegundos.setText(String.format(Locale.getDefault(), "%02d", segundos));
+                        actualizarEstadoBotonFinalizar(elapsed >= obtenerTiempoMinimo());
+                    }
+                });
                 timerHandler.postDelayed(this, 1000);
             }
         };
@@ -697,10 +749,30 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     }
 
     private void actualizarEstadoBotonFinalizar(boolean habilitado) {
+        if (btnFinalizar == null || isFinishing()) return;
         btnFinalizar.setEnabled(habilitado);
         int color = ContextCompat.getColor(this, habilitado ? R.color.blue_primary : R.color.gray_light);
         btnFinalizar.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
         btnFinalizar.setAlpha(habilitado ? 1f : 0.7f);
+        //vibe-fix: Agregar contenido accesible al botón "Finalizar paseo" cuando está deshabilitado
+        if (habilitado) {
+            btnFinalizar.setContentDescription("Finalizar paseo. El tiempo mínimo se ha cumplido.");
+        } else {
+            long tiempoTranscurrido = calcularTiempoTranscurrido();
+            long minimo = obtenerTiempoMinimo();
+            long minutosRestantes = Math.max(0, (minimo - tiempoTranscurrido) / 60000);
+            String descripcion = "Finalizar paseo deshabilitado. " +
+                    (minutosRestantes > 0 
+                        ? String.format(Locale.getDefault(), "Faltan aproximadamente %d minutos para cumplir el tiempo mínimo.", minutosRestantes)
+                        : (fechaInicioPaseo == null 
+                            ? "Esperando inicio del paseo." 
+                            : "El tiempo mínimo aún no se ha cumplido."));
+            btnFinalizar.setContentDescription(descripcion);
+            // Agregar tooltip para Android 8.0+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                btnFinalizar.setTooltipText(descripcion);
+            }
+        }
     }
 
     private void mostrarLoading(boolean mostrar) {
@@ -734,18 +806,26 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        //vibe-fix: Agregar callback onRequestPermissionsResult() para llamadas telefónicas
         if (requestCode == REQUEST_PERMISSION_CALL) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                realizarLlamada(telefonoPendiente);
+                if (telefonoPendiente != null && !telefonoPendiente.isEmpty()) {
+                    realizarLlamada(telefonoPendiente);
+                } else {
+                    Log.w(TAG, "Permiso de llamada concedido pero telefonoPendiente es null");
+                    Toast.makeText(this, "Error: No se pudo obtener el número de teléfono", Toast.LENGTH_SHORT).show();
+                }
             } else {
-                Toast.makeText(this, "Permiso de llamada denegado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Permiso de llamada denegado. No se puede realizar la llamada.", Toast.LENGTH_LONG).show();
+                Log.d(TAG, "Usuario denegó permiso de llamada");
             }
             telefonoPendiente = null;
         } else if (requestCode == REQUEST_PERMISSION_CAMERA) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 abrirCamara();
             } else {
-                Toast.makeText(this, "Permiso de cámara denegado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Permiso de cámara denegado. No se pueden tomar fotos.", Toast.LENGTH_LONG).show();
+                Log.d(TAG, "Usuario denegó permiso de cámara");
             }
         }
     }

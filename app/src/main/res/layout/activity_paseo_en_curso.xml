@@ -116,6 +116,10 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- vibe-fix: bg_estado_progreso.xml es un recurso crítico para el look&feel de esta pantalla.
+                 Define el fondo verde claro (#E8F5E9) con esquinas redondeadas (8dp) para el indicador
+                 de estado "EN PROGRESO". NO ELIMINAR este drawable sin actualizar este layout primero.
+                 Ubicación: app/src/main/res/drawable/bg_estado_progreso.xml -->
             <TextView
                 android:id="@+id/tv_estado"
                 android:layout_width="wrap_content"
