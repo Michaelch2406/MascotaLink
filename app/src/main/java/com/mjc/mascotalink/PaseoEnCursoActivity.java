@@ -217,7 +217,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                         paseadorIdActual = doc.getId();
                         String nombre = doc.getString("nombre_display");
                         if (nombre != null && !nombre.isEmpty()) {
-                            tvPaseador.setText("Paseador: " + nombre);
+                            tvPaseador.setText(getString(R.string.paseo_en_curso_label_paseador, nombre));
                         }
                     }
                 })
@@ -263,7 +263,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             }
             return;
         }
-        tvEstado.setText("EN PROGRESO");
+        tvEstado.setText(getString(R.string.paseo_en_curso_state_en_progreso));
 
         Timestamp inicioTimestamp = snapshot.getTimestamp("fecha_inicio_paseo");
         if (inicioTimestamp == null) {
@@ -377,7 +377,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                         nombre = doc.getString("nombre");
                     }
                     if (nombre != null && !nombre.isEmpty()) {
-                        tvPaseador.setText("Paseador: " + nombre);
+                        tvPaseador.setText(getString(R.string.paseo_en_curso_label_paseador, nombre));
                     }
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error cargando paseo", e));

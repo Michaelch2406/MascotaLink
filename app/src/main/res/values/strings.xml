@@ -1,5 +1,19 @@
 <resources>
-    <string name="app_name">Walki</string>
+<string name="app_name">Walki</string>
+
+<string name="paseo_en_curso_title">Paseo en curso</string>
+<string name="paseo_en_curso_label_paseo_con">Paseo con</string>
+<string name="paseo_en_curso_label_paseador">Paseador: %1$s</string>
+<string name="paseo_en_curso_label_paseador_placeholder">Paseador: —</string>
+<string name="paseo_en_curso_state_en_progreso">EN PROGRESO</string>
+<string name="paseo_en_curso_label_horas">Horas</string>
+<string name="paseo_en_curso_label_minutos">Minutos</string>
+<string name="paseo_en_curso_label_segundos">Segundos</string>
+<string name="paseo_en_curso_section_notas">Notas y fotos</string>
+<string name="paseo_en_curso_hint_notas">Añade notas sobre el paseo</string>
+<string name="paseo_en_curso_button_adjuntar">Adjuntar fotos</string>
+<string name="paseo_en_curso_button_contactar_dueno">Contactar dueño</string>
+<string name="paseo_en_curso_button_finalizar">Finalizar paseo</string>
 
     <string-array name="dias_semana">
         <item>Lunes</item>

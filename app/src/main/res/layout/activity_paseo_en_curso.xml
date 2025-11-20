@@ -20,8 +20,9 @@
             android:background="@android:color/white"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:navigationIconTint="@color/gray_text"
-            app:title="Paseo en curso"
+            app:title="@string/paseo_en_curso_title"
             app:titleCentered="true"
+            app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"
             app:titleTextColor="@android:color/black" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -66,19 +67,15 @@
                             android:id="@+id/tv_paseo_con"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Paseo con"
-                            android:textColor="#9CA3AF"
-                            android:textSize="12sp" />
+                            style="@style/TextAppearance.Mascota.BodyMuted"
+                            android:text="@string/paseo_en_curso_label_paseo_con" />
 
                         <TextView
                             android:id="@+id/tv_nombre_mascota"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Max"
-                            android:textColor="@android:color/black"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
+                            style="@style/TextAppearance.Mascota.CardTitle"
                             tools:text="Max" />
 
                         <TextView
@@ -86,9 +83,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Paseador: Alex"
-                            android:textColor="#757575"
-                            android:textSize="12sp"
+                            style="@style/TextAppearance.Mascota.BodyMuted"
+                            android:text="@string/paseo_en_curso_label_paseador_placeholder"
                             tools:text="Paseador: Alex" />
 
                         <TextView
@@ -96,9 +92,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="12 de mayo, 10:00 AM - 10:30 AM"
-                            android:textColor="#757575"
-                            android:textSize="12sp"
+                            style="@style/TextAppearance.Mascota.BodyMuted"
                             tools:text="12 de mayo, 10:00 AM - 10:30 AM" />
 
                     </LinearLayout>
@@ -128,8 +122,8 @@
                 android:background="@drawable/bg_estado_progreso"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
-                android:text="EN PROGRESO"
-                android:textColor="#4CAF50"
+                android:text="@string/paseo_en_curso_state_en_progreso"
+                android:textColor="@color/color_en_curso"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -161,9 +155,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Hours"
-                        android:textColor="#757575"
-                        android:textSize="12sp" />
+                        style="@style/TextAppearance.Mascota.BodyMuted"
+                        android:text="@string/paseo_en_curso_label_horas" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -185,9 +178,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Minutes"
-                        android:textColor="#757575"
-                        android:textSize="12sp" />
+                        style="@style/TextAppearance.Mascota.BodyMuted"
+                        android:text="@string/paseo_en_curso_label_minutos" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -209,9 +201,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Seconds"
-                        android:textColor="#757575"
-                        android:textSize="12sp" />
+                        style="@style/TextAppearance.Mascota.BodyMuted"
+                        android:text="@string/paseo_en_curso_label_segundos" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -220,17 +211,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Notas y fotos"
-                android:textColor="@android:color/black"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="@string/paseo_en_curso_section_notas" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_notas"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:boxBackgroundMode="outlined"
+                app:boxBackgroundMode="outline"
                 app:boxCornerRadiusTopEnd="8dp"
                 app:boxCornerRadiusTopStart="8dp"
                 app:boxCornerRadiusBottomEnd="8dp"
@@ -242,13 +231,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="120dp"
                     android:gravity="top|start"
-                    android:hint="Añade notas sobre el paseo"
+                    android:hint="@string/paseo_en_curso_hint_notas"
                     android:inputType="textMultiLine"
                     android:maxLines="6"
                     android:padding="12dp"
                     android:textColor="@android:color/black"
                     android:textSize="13sp"
-                    tools:text="Max se comportó excelente durante el recorrido." />
+                    tools:text="Max se comporta excelente durante el recorrido." />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -257,13 +246,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Adjuntar fotos"
-                android:textColor="#12A3ED"
+                android:text="@string/paseo_en_curso_button_adjuntar"
+                android:textColor="@color/blue_primary"
                 android:textSize="13sp"
                 app:icon="@drawable/ic_camera_outline"
                 app:iconGravity="textStart"
                 app:iconPadding="8dp"
-                app:iconTint="#12A3ED" />
+                app:iconTint="@color/blue_primary" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_fotos"
@@ -300,11 +289,11 @@
                 android:layout_height="match_parent"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="45"
-                android:text="Contactar dueño"
-                android:textColor="#424242"
+                android:text="@string/paseo_en_curso_button_contactar_dueno"
+                android:textColor="@color/gray_dark"
                 android:textSize="14sp"
                 app:cornerRadius="8dp"
-                app:strokeColor="#E0E0E0"
+                app:strokeColor="@color/gray_light"
                 app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -313,24 +302,31 @@
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_weight="55"
-                android:text="Finalizar paseo"
+                android:text="@string/paseo_en_curso_button_finalizar"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                app:backgroundTint="#12A3ED"
+                app:backgroundTint="@color/blue_primary"
                 app:cornerRadius="8dp" />
         </LinearLayout>
     </LinearLayout>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="bottom"
+        android:background="@color/gray_light" />
+
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="@android:color/white"
-        app:itemIconTint="@color/icon_color"
-        app:itemTextColor="@color/icon_color"
+        android:background="@color/bottom_nav_background"
+        app:itemIconTint="@color/bottom_nav_item_color"
+        app:itemTextColor="@color/bottom_nav_item_color"
+        app:itemActiveIndicatorStyle="@null"
         app:labelVisibilityMode="labeled"
         app:menu="@menu/menu_bottom_nav_new" />
 

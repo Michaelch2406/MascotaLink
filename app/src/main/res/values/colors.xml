@@ -34,4 +34,5 @@
     <color name="color_completado">#81C784</color>
     <color name="color_cancelado">#F44336</color>
     <color name="color_costo">#4CAF50</color>
+    <color name="bottom_nav_background">#F7FAFC</color>
 </resources>
