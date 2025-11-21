@@ -12,6 +12,7 @@ import android.app.AlertDialog;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -34,6 +35,12 @@ import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class PerfilDuenoActivity extends AppCompatActivity {
 
@@ -430,10 +437,43 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 123;
+
     @Override
     protected void onStart() {
         super.onStart();
         mAuth.addAuthStateListener(mAuthListener);
+
+        // Request POST_NOTIFICATIONS permission for Android 13 (API 33) and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // TIRAMISU is API 33
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("Permiso de Notificaciones")
+                            .setMessage("Para recibir actualizaciones importantes sobre tus paseos y mascotas, por favor, habilita las notificaciones.")
+                            .setPositiveButton("Aceptar", (dialog, which) -> {
+                                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                            })
+                            .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
+                            .show();
+                } else {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("PerfilDuenoActivity", "POST_NOTIFICATIONS permission granted.");
+            } else {
+                Log.w("PerfilDuenoActivity", "POST_NOTIFICATIONS permission denied.");
+                Toast.makeText(this, "Las notificaciones están deshabilitadas. Es posible que no recibas actualizaciones importantes.", Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     @Override

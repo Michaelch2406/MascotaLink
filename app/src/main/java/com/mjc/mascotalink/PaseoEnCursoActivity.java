@@ -105,6 +105,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private String telefonoPendiente;
     private String nombreMascota = "";
     private String roleActual = "PASEADOR";
+    private String currentPaseadorNombre = ""; // New member variable
 
     private String mascotaIdActual;
     private String paseadorIdActual;
@@ -227,6 +228,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                         String nombre = doc.getString("nombre_display");
                         if (nombre != null && !nombre.isEmpty()) {
                             tvPaseador.setText(getString(R.string.paseo_en_curso_label_paseador, nombre));
+                            currentPaseadorNombre = nombre; // Store the walker's name
                         }
                     }
                 })
@@ -302,7 +304,20 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             contactoDueno = (String) contactoEmergencia;
         }
 
-        List<String> fotos = (List<String>) snapshot.get("fotos_paseo");
+        // Safely cast fotos_paseo to List<String>
+        Object fotosObj = snapshot.get("fotos_paseo");
+        List<String> fotos = new ArrayList<>();
+        if (fotosObj instanceof List) {
+            for (Object item : (List<?>) fotosObj) {
+                if (item instanceof String) {
+                    fotos.add((String) item);
+                } else {
+                    Log.w(TAG, "Unexpected item type in fotos_paseo: " + (item != null ? item.getClass().getName() : "null"));
+                }
+            }
+        } else if (fotosObj != null) {
+            Log.w(TAG, "fotos_paseo is not a List: " + fotosObj.getClass().getName());
+        }
         actualizarGaleria(fotos);
 
         String mascotaId = snapshot.getString("id_mascota");
@@ -343,26 +358,42 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     }
 
     private void cargarDatosMascota(String mascotaId) {
-        db.collection("mascotas").document(mascotaId).get()
+        // First, try to load from the subcollection within the owner's document
+        db.collection("duenos").document(duenoIdActual).collection("mascotas").document(mascotaId).get()
                 .addOnSuccessListener(doc -> {
-                    if (doc == null || !doc.exists()) return;
-                    nombreMascota = doc.getString("nombre") != null ? doc.getString("nombre") : "Mascota";
-                    tvNombreMascota.setText(nombreMascota);
-                    String urlFoto = doc.getString("foto_url");
-                    if (urlFoto == null || urlFoto.isEmpty()) {
-                        urlFoto = doc.getString("foto_perfil");
-                    }
-                    if (urlFoto != null && !urlFoto.isEmpty()) {
-                        Glide.with(this)
-                                .load(urlFoto)
-                                .placeholder(R.drawable.ic_pet_placeholder)
-                                .error(R.drawable.ic_pet_placeholder)
-                                .into(ivFotoMascota);
+                    if (doc != null && doc.exists()) {
+                        processMascotaDocument(doc);
                     } else {
-                        ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+                        // If not found in subcollection, try top-level 'mascotas' collection (fallback)
+                        db.collection("mascotas").document(mascotaId).get()
+                                .addOnSuccessListener(globalDoc -> {
+                                    if (globalDoc != null && globalDoc.exists()) {
+                                        processMascotaDocument(globalDoc);
+                                    } else {
+                                        Log.w(TAG, "Mascota document not found in subcollection or top-level collection for ID: " + mascotaId);
+                                        tvNombreMascota.setText("Mascota");
+                                        ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+                                    }
+                                })
+                                .addOnFailureListener(e -> Log.e(TAG, "Error cargando mascota desde colección global", e));
                     }
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Error cargando mascota", e));
+                .addOnFailureListener(e -> Log.e(TAG, "Error cargando mascota desde subcolección", e));
+    }
+
+    private void processMascotaDocument(@NonNull DocumentSnapshot doc) {
+        nombreMascota = doc.getString("nombre") != null ? doc.getString("nombre") : "Mascota";
+        tvNombreMascota.setText(nombreMascota);
+        String urlFoto = doc.getString("foto_principal_url"); // Use the correct field name
+        if (urlFoto != null && !urlFoto.isEmpty()) {
+            Glide.with(this)
+                    .load(urlFoto)
+                    .placeholder(R.drawable.ic_pet_placeholder)
+                    .error(R.drawable.ic_pet_placeholder)
+                    .into(ivFotoMascota);
+        } else {
+            ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+        }
     }
 
     private void cargarDatosDueno(DocumentReference duenoRef) {
@@ -629,7 +660,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private void enviarWhatsApp(String telefono) {
         try {
-            String url = "https://wa.me/" + telefono + "?text=Hola%21";
+            String mensaje = String.format(Locale.getDefault(),
+                    "¡Hola! Soy %s, el paseador a cargo de %s el día de hoy.",
+                    currentPaseadorNombre, nombreMascota);
+            String url = "https://wa.me/" + telefono + "?text=" + Uri.encode(mensaje);
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
         } catch (Exception e) {
@@ -638,8 +672,11 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     }
 
     private void enviarSms(String telefono) {
+        String mensaje = String.format(Locale.getDefault(),
+                "¡Hola! Soy %s, el paseador a cargo de %s el día de hoy.",
+                currentPaseadorNombre, nombreMascota);
         Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + telefono));
-        intent.putExtra("sms_body", "Hola, te escribo desde MascotaLink.");
+        intent.putExtra("sms_body", mensaje);
         try {
             startActivity(intent);
         } catch (Exception e) {

@@ -325,6 +325,7 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             updates.put("fecha_pago", Timestamp.now());
             String metodoPagoGuardado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
             updates.put("metodo_pago", metodoPagoGuardado);
+            updates.put("hasTransitionedToInCourse", false); // Initialize for scheduled transition
 
             // RIESGO: Una falla en la actualización de la BD podría dejar al usuario en un
             // estado de "pago en proceso" infinito.

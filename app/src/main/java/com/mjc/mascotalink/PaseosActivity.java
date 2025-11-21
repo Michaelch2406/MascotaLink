@@ -275,6 +275,8 @@ public class PaseosActivity extends AppCompatActivity {
                 Paseo paseo = doc.toObject(Paseo.class);
                 if (paseo == null) continue;
                 paseo.setReservaId(doc.getId());
+                String mascotaId = doc.getString("id_mascota"); // Declare mascotaId here
+                paseo.setIdMascota(mascotaId); // Set mascotaId on paseo object early
                 Double costoTotalDoc = doc.getDouble("costo_total");
                 if (costoTotalDoc != null) {
                     paseo.setCostoTotal(costoTotalDoc);
@@ -293,7 +295,8 @@ public class PaseosActivity extends AppCompatActivity {
 
                 DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
-                String mascotaId = doc.getString("id_mascota");
+                String currentMascotaId = paseo.getIdMascota(); // Use the one already set on paseo
+
 
                 tareas.add(paseadorRef != null ? paseadorRef.get() : Tasks.forResult(null));
                 tareas.add(duenoRef != null ? duenoRef.get() : Tasks.forResult(null));
@@ -318,16 +321,40 @@ public class PaseosActivity extends AppCompatActivity {
                     DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(i * 3 + 2);
 
                     if (paseadorDoc != null && paseadorDoc.exists()) {
+                        String paseadorFotoUrl = paseadorDoc.getString("foto_perfil");
+                        if (paseadorFotoUrl == null || paseadorFotoUrl.isEmpty()) {
+                            Log.w(TAG, "Paseador " + paseadorDoc.getId() + " for reservation " + paseo.getReservaId() + " has no 'foto_perfil' URL or it's empty.");
+                        } else {
+                            Log.d(TAG, "Paseador " + paseadorDoc.getId() + " foto_perfil: " + paseadorFotoUrl);
+                        }
                         paseo.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
-                        paseo.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                        paseo.setPaseadorFoto(paseadorFotoUrl);
+                    } else {
+                        Log.w(TAG, "Paseador document not found or does not exist for reservation " + paseo.getReservaId());
                     }
                     if (duenoDoc != null && duenoDoc.exists()) {
+                        String duenoFotoUrl = duenoDoc.getString("foto_perfil");
+                        if (duenoFotoUrl == null || duenoFotoUrl.isEmpty()) {
+                            Log.w(TAG, "Dueno " + duenoDoc.getId() + " for reservation " + paseo.getReservaId() + " has no 'foto_perfil' URL or it's empty.");
+                        } else {
+                            Log.d(TAG, "Dueno " + duenoDoc.getId() + " foto_perfil: " + duenoFotoUrl);
+                        }
                         paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                        // Note: duenoFoto is not used by the adapter, so not setting it on paseo object.
+                    } else {
+                        Log.w(TAG, "Dueno document not found or does not exist for reservation " + paseo.getReservaId());
                     }
                     if (mascotaDoc != null && mascotaDoc.exists()) {
+                        String mascotaFotoUrl = mascotaDoc.getString("foto_principal_url");
+                        if (mascotaFotoUrl == null || mascotaFotoUrl.isEmpty()) {
+                            Log.w(TAG, "Mascota " + mascotaDoc.getId() + " for reservation " + paseo.getReservaId() + " has no 'foto_perfil' URL or it's empty.");
+                        } else {
+                            Log.d(TAG, "Mascota " + mascotaDoc.getId() + " foto_perfil: " + mascotaFotoUrl);
+                        }
                         paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
-                        paseo.setMascotaFoto(mascotaDoc.getString("foto_perfil"));
+                        paseo.setMascotaFoto(mascotaFotoUrl);
                     } else {
+                        Log.w(TAG, "Mascota document not found or does not exist for reservation " + paseo.getReservaId() + " (ID: " + paseo.getIdMascota() + ")");
                         paseo.setMascotaNombre("Mascota no encontrada");
                     }
                     paseosList.add(paseo);

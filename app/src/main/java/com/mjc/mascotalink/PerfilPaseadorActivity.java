@@ -14,8 +14,15 @@ import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.app.AlertDialog;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.widget.NestedScrollView;
@@ -131,6 +138,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private ListenerRegistration zonasListener;
     private ListenerRegistration metodoPagoListener;
 
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 123; // Added constant
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -198,11 +206,41 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 });
     }
 
-
     @Override
     protected void onStart() {
         super.onStart();
         mAuth.addAuthStateListener(mAuthListener);
+
+        // Request POST_NOTIFICATIONS permission for Android 13 (API 33) and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // TIRAMISU is API 33
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("Permiso de Notificaciones")
+                            .setMessage("Para recibir actualizaciones importantes sobre tus paseos y solicitudes, por favor, habilita las notificaciones.")
+                            .setPositiveButton("Aceptar", (dialog, which) -> {
+                                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                            })
+                            .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
+                            .show();
+                } else {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("PerfilPaseadorActivity", "POST_NOTIFICATIONS permission granted.");
+            } else {
+                Log.w("PerfilPaseadorActivity", "POST_NOTIFICATIONS permission denied.");
+                Toast.makeText(this, "Las notificaciones están deshabilitadas. Es posible que no recibas actualizaciones importantes.", Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     @Override
