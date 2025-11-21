@@ -726,21 +726,11 @@ public class ReservaActivity extends AppCompatActivity {
                     String reservaId = documentReference.getId();
                     Toast.makeText(this, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show();
 
-                    Intent intent = new Intent(ReservaActivity.this, ConfirmarPagoActivity.class);
+                    // Tras crear la reserva y guardarla en Firestore, regresa al perfil del dueño
+                    Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
                     intent.putExtra("reserva_id", reservaId);
-                    intent.putExtra("costo_total", costoTotal);
-                    intent.putExtra("paseador_nombre", paseadorNombre);
-                    intent.putExtra("mascota_nombre", mascotaSeleccionada.getNombre());
-                    
-                    // Formatear fecha para mostrar
-                    SimpleDateFormat sdf = new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH);
-                    String fechaFormateada = sdf.format(fechaSeleccionada);
-                    intent.putExtra("fecha_reserva", fechaFormateada);
-                    intent.putExtra("hora_reserva", horarioSeleccionado.getHoraFormateada());
-                    
-                    // Pasar dirección de recogida (por ahora valor por defecto, puede venir de un input)
-                    intent.putExtra("direccion_recogida", "Calle Principal 123, Ciudad");
-                    
+                    intent.putExtra("reserva_estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                     finish();
                 })

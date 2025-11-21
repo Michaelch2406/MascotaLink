@@ -209,7 +209,36 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         btnFinalizar.setOnClickListener(v -> finalizarPaseo());
         btnAdjuntar.setOnClickListener(v -> mostrarOpcionesAdjuntar());
         actualizarEstadoBotonFinalizar(false);
+
+        // Click listeners for direct navigation
+        ivFotoMascota.setOnClickListener(v -> navigateToPetProfile());
+        tvNombreMascota.setOnClickListener(v -> navigateToPetProfile());
+        tvPaseador.setOnClickListener(v -> navigateToOwnerProfile()); // tvPaseador shows owner's name when viewing as PASEADOR
     }
+
+    private void navigateToPetProfile() {
+        if (mascotaIdActual != null && duenoIdActual != null && !mascotaIdActual.isEmpty() && !duenoIdActual.isEmpty()) {
+            Intent intent = new Intent(this, PerfilMascotaActivity.class);
+            intent.putExtra("mascota_id", mascotaIdActual);
+            intent.putExtra("owner_id", duenoIdActual); // Pass owner ID for context
+            startActivity(intent);
+        } else {
+            Toast.makeText(this, "Información de la mascota no disponible.", Toast.LENGTH_SHORT).show();
+            Log.w(TAG, "Cannot navigate to pet profile: mascotaIdActual or duenoIdActual is null/empty.");
+        }
+    }
+
+    private void navigateToOwnerProfile() {
+        if (duenoIdActual != null && !duenoIdActual.isEmpty()) {
+            Intent intent = new Intent(this, PerfilDuenoActivity.class);
+            intent.putExtra("id_dueno", duenoIdActual);
+            startActivity(intent);
+        } else {
+            Toast.makeText(this, "Información del dueño no disponible.", Toast.LENGTH_SHORT).show();
+            Log.w(TAG, "Cannot navigate to owner profile: duenoIdActual is null/empty.");
+        }
+    }
+
 
     private void cargarRoleYBottomNav() {
         FirebaseUser user = auth.getCurrentUser();

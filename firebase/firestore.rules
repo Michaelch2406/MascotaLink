@@ -49,6 +49,11 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Colección de mascotas de nivel superior (fallback para búsquedas)
+    match /mascotas/{mascotaId} {
+      allow read: if request.auth != null;
+    }
+
     // Reglas adicionales
     function isReservaParticipant(res) {
       return request.auth != null &&
@@ -184,7 +189,9 @@ service cloud.firestore {
             (
               resource.data.estado == 'ACEPTADO' &&
               request.resource.data.estado == 'CONFIRMADO' &&
-              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'estado_pago', 'id_pago', 'fecha_pago', 'metodo_pago', 'transaction_id'])
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'estado', 'estado_pago', 'id_pago', 'fecha_pago', 'metodo_pago', 'transaction_id', 'hasTransitionedToInCourse'
+              ])
             ) ||
             (
               request.resource.data.estado == 'CANCELADO' &&

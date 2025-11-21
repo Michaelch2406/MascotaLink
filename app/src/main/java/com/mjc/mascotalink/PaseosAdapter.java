@@ -90,14 +90,14 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                 ", " + paseo.getHoraFormateada();
         holder.tvMascotaHora.setText(mascotaHora);
 
-        int duracionMinutos = paseo.getDuracionMinutos();
+        int duracionMinutos = (int) paseo.getDuracion_minutos(); // Corrected getter
         String duracionTexto = formatearDuracion(duracionMinutos);
         holder.tvDuracion.setText("Duración: " + duracionTexto);
 
-        double costo = paseo.getCostoTotal();
+        double costo = paseo.getCosto_total(); // Corrected getter
         holder.tvCosto.setText(String.format("$%.2f", costo));
 
-        String tipoReserva = paseo.getTipoReserva();
+        String tipoReserva = paseo.getTipo_reserva(); // Corrected getter
         if (tipoReserva != null) {
             String tipoTexto = tipoReserva.equals("PUNTUAL") ? "UN DÍA" :
                     tipoReserva.equals("SEMANAL") ? "SEMANA" :
@@ -121,7 +121,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
         holder.itemView.setOnClickListener(v -> {
             boolean puedePagar = ReservaEstadoValidator.canPay(paseo.getEstado()) &&
-                    !ReservaEstadoValidator.isPagoCompletado(paseo.getEstadoPago());
+                    !ReservaEstadoValidator.isPagoCompletado(paseo.getEstado_pago());
             if (!"PASEADOR".equalsIgnoreCase(userRole) && puedePagar) {
                 listener.onProcesarPagoClick(paseo);
             } else {

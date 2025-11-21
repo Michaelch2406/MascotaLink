@@ -6,6 +6,7 @@ const { getFirestore } = require('firebase-admin/firestore');
 admin.initializeApp();
 
 const db = admin.firestore();
+const getIdValue = (value) => (value && typeof value === "object" && value.id ? value.id : value);
 
 /**
  * Sincroniza los datos de un paseador en una colección de búsqueda denormalizada.
@@ -131,8 +132,8 @@ exports.onPaymentConfirmed = onDocumentUpdated("pagos/{pagoId}", async (event) =
   if (newValue.estado === "confirmado" && oldValue.estado !== "confirmado") {
     console.log(`Payment ${pagoId} confirmed. Sending notifications.`);
 
-    const idDueno = newValue.id_dueno;
-    const idPaseador = newValue.id_paseador;
+    const idDueno = getIdValue(newValue.id_dueno);
+    const idPaseador = getIdValue(newValue.id_paseador);
 
     // Fetch FCM tokens for owner and walker
     const [duenoDoc, paseadorDoc] = await Promise.all([
@@ -199,8 +200,8 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
   if (newReservation.estado === "PENDIENTE_ACEPTACION") {
     console.log(`Nueva solicitud de paseo ${reservaId} creada. Enviando notificación al paseador.`);
 
-    const idDueno = newReservation.id_dueno;
-    const idPaseador = newReservation.id_paseador;
+    const idDueno = newReservation.id_dueno && typeof newReservation.id_dueno === 'object' && newReservation.id_dueno.id ? newReservation.id_dueno.id : newReservation.id_dueno;
+    const idPaseador = newReservation.id_paseador && typeof newReservation.id_paseador === 'object' && newReservation.id_paseador.id ? newReservation.id_paseador.id : newReservation.id_paseador;
     const idMascota = newReservation.id_mascota;
     const fecha = newReservation.fecha; // Assuming format "DD/MM/YYYY"
     const hora = newReservation.hora_inicio; // Assuming format "HH:MM"
@@ -264,9 +265,18 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
   if (oldValue.estado === "PENDIENTE_ACEPTACION" && newValue.estado === "ACEPTADO") {
     console.log(`Reserva ${reservaId} aceptada. Enviando notificación al dueño.`);
 
-    const idDueno = newValue.id_dueno;
-    const idPaseador = newValue.id_paseador;
+    const idDueno = getIdValue(newValue.id_dueno);
+    const idPaseador = getIdValue(newValue.id_paseador);
     const idMascota = newValue.id_mascota;
+
+    if (!idDueno || typeof idDueno !== 'string' || idDueno.trim() === '') {
+        console.error(`Error: id_dueno es inválido o nulo para la reserva ${reservaId}.`);
+        return;
+    }
+    if (!idPaseador || typeof idPaseador !== 'string' || idPaseador.trim() === '') {
+        console.error(`Error: id_paseador es inválido o nulo para la reserva ${reservaId}.`);
+        return;
+    }
 
     // Fetch owner's FCM token
     const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
@@ -324,8 +334,8 @@ exports.onWalkStarted = onDocumentUpdated("reservas/{reservaId}", async (event) 
   if (oldValue.estado !== "EN_CURSO" && newValue.estado === "EN_CURSO") {
     console.log(`Reserva ${reservaId} ha iniciado. Enviando notificación al dueño.`);
 
-    const idDueno = newValue.id_dueno;
-    const idPaseador = newValue.id_paseador;
+    const idDueno = getIdValue(newValue.id_dueno);
+    const idPaseador = getIdValue(newValue.id_paseador);
     const idMascota = newValue.id_mascota;
 
     // Fetch owner's FCM token
@@ -384,8 +394,8 @@ exports.onReservationCancelled = onDocumentUpdated("reservas/{reservaId}", async
   if (newValue.estado === "CANCELADO") {
     console.log(`Reserva ${reservaId} cancelada. Enviando notificación al paseador.`);
 
-    const idDueno = newValue.id_dueno;
-    const idPaseador = newValue.id_paseador;
+    const idDueno = getIdValue(newValue.id_dueno);
+    const idPaseador = getIdValue(newValue.id_paseador);
     const idMascota = newValue.id_mascota;
 
     // Fetch walker's FCM token
@@ -451,6 +461,9 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
   for (const doc of reservationsSnapshot.docs) {
     const reserva = doc.data();
     const reservaId = doc.id;
+    const idDueno = getIdValue(reserva.id_dueno);
+    const idPaseador = getIdValue(reserva.id_paseador);
+    const idMascota = getIdValue(reserva.id_mascota);
 
     // Convert date string (DD/MM/YYYY) and time string (HH:MM) to a Date object
     const [day, month, year] = reserva.fecha.split('/').map(Number);
@@ -461,11 +474,17 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
     if (walkTimestamp.toMillis() > now.toMillis() && walkTimestamp.toMillis() <= oneHourFromNow.toMillis()) {
       console.log(`Found upcoming walk ${reservaId} for reminder.`);
       
-      usersToFetchTokens.add(reserva.id_dueno);
-      usersToFetchTokens.add(reserva.id_paseador);
+      if (idDueno) {
+        usersToFetchTokens.add(idDueno);
+      }
+      if (idPaseador) {
+        usersToFetchTokens.add(idPaseador);
+      }
 
-      if (reserva.id_mascota) {
-        petsToFetch.set(reserva.id_dueno, (petsToFetch.get(reserva.id_dueno) || new Set()).add(reserva.id_mascota));
+      if (idMascota && idDueno) {
+        const petsForOwner = petsToFetch.get(idDueno) || new Set();
+        petsForOwner.add(idMascota);
+        petsToFetch.set(idDueno, petsForOwner);
       }
     }
   }
@@ -503,15 +522,18 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
   for (const doc of reservationsSnapshot.docs) {
     const reserva = doc.data();
     const reservaId = doc.id;
+    const idDueno = getIdValue(reserva.id_dueno);
+    const idPaseador = getIdValue(reserva.id_paseador);
+    const idMascota = getIdValue(reserva.id_mascota);
     const [day, month, year] = reserva.fecha.split('/').map(Number);
     const [hour, minute] = reserva.hora_inicio.split(':').map(Number);
     const walkDateTime = new Date(year, month - 1, day, hour, minute, 0);
     const walkTimestamp = admin.firestore.Timestamp.fromDate(walkDateTime);
 
     if (walkTimestamp.toMillis() > now.toMillis() && walkTimestamp.toMillis() <= oneHourFromNow.toMillis()) {
-      const dueno = usersData[reserva.id_dueno];
-      const paseador = usersData[reserva.id_paseador];
-      const pet = petsData[reserva.id_mascota];
+      const dueno = idDueno ? usersData[idDueno] : null;
+      const paseador = idPaseador ? usersData[idPaseador] : null;
+      const pet = idMascota ? petsData[idMascota] : null;
 
       const nombreDueno = dueno ? dueno.nombre_display : "Dueño";
       const nombrePaseador = paseador ? paseador.nombre_display : "Paseador";
