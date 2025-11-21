@@ -30,7 +30,6 @@ import com.mjc.mascotalink.ConfirmarPagoActivity;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -150,7 +149,8 @@ public class PaseosActivity extends AppCompatActivity {
 
     private void setupTabs(String role) {
         tabAceptados.setOnClickListener(v -> cambiarTab(ReservaEstadoValidator.ESTADO_ACEPTADO, tabAceptados, role));
-        tabProgramados.setOnClickListener(v -> cambiarTab(ReservaEstadoValidator.ESTADO_CONFIRMADO, tabProgramados, role));
+        tabProgramados
+                .setOnClickListener(v -> cambiarTab(ReservaEstadoValidator.ESTADO_CONFIRMADO, tabProgramados, role));
         tabEnProgreso.setOnClickListener(v -> cambiarTab("EN_CURSO", tabEnProgreso, role));
         tabCompletados.setOnClickListener(v -> cambiarTab("COMPLETADO", tabCompletados, role));
         tabCancelados.setOnClickListener(v -> cambiarTab("CANCELADO", tabCancelados, role));
@@ -174,7 +174,7 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void resetearTabs() {
-        TextView[] tabs = {tabAceptados, tabProgramados, tabEnProgreso, tabCompletados, tabCancelados};
+        TextView[] tabs = { tabAceptados, tabProgramados, tabEnProgreso, tabCompletados, tabCancelados };
         for (TextView tab : tabs) {
             tab.setTextColor(ContextCompat.getColor(this, R.color.gray_text));
             tab.setTypeface(null, android.graphics.Typeface.NORMAL);
@@ -187,12 +187,19 @@ public class PaseosActivity extends AppCompatActivity {
         paseosAdapter = new PaseosAdapter(this, paseosList, new PaseosAdapter.OnPaseoClickListener() {
             @Override
             public void onPaseoClick(PaseosActivity.Paseo paseo) {
-                if ("PASEADOR".equalsIgnoreCase(userRole) && esPaseoEnCurso(paseo)) {
-                    Intent intent = new Intent(PaseosActivity.this, PaseoEnCursoActivity.class);
-                    intent.putExtra("id_reserva", paseo.getReservaId());
-                    startActivity(intent);
+                if (esPaseoEnCurso(paseo)) {
+                    if ("PASEADOR".equalsIgnoreCase(userRole)) {
+                        Intent intent = new Intent(PaseosActivity.this, PaseoEnCursoActivity.class);
+                        intent.putExtra("id_reserva", paseo.getReservaId());
+                        startActivity(intent);
+                    } else {
+                        Intent intent = new Intent(PaseosActivity.this, PaseoEnCursoDuenoActivity.class);
+                        intent.putExtra("id_reserva", paseo.getReservaId());
+                        startActivity(intent);
+                    }
                 } else {
-                    Toast.makeText(PaseosActivity.this, "Abrir detalles de " + paseo.getPaseadorNombre(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(PaseosActivity.this, "Abrir detalles de " + paseo.getPaseadorNombre(),
+                            Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -215,6 +222,7 @@ public class PaseosActivity extends AppCompatActivity {
             public void onVerMotivoClick(PaseosActivity.Paseo paseo) {
                 mostrarDialogMotivoCancelacion(paseo);
             }
+
             @Override
             public void onProcesarPagoClick(PaseosActivity.Paseo paseo) {
                 Intent intent = new Intent(PaseosActivity.this, ConfirmarPagoActivity.class);
@@ -232,11 +240,11 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private boolean esPaseoEnCurso(Paseo paseo) {
-        if (paseo == null || paseo.getEstado() == null) return false;
+        if (paseo == null || paseo.getEstado() == null)
+            return false;
         String estado = paseo.getEstado();
         return "EN_CURSO".equalsIgnoreCase(estado) || "EN_PROGRESO".equalsIgnoreCase(estado);
     }
-
 
     private void setupSwipeRefresh() {
         swipeRefresh.setOnRefreshListener(() -> {
@@ -273,22 +281,25 @@ public class PaseosActivity extends AppCompatActivity {
 
             for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                 Paseo paseo = doc.toObject(Paseo.class);
-                if (paseo == null) continue;
+                if (paseo == null)
+                    continue;
                 paseo.setReservaId(doc.getId());
                 String mascotaId = doc.getString("id_mascota"); // Declare mascotaId here
                 paseo.setIdMascota(mascotaId); // Set mascotaId on paseo object early
-            
+
                 paseosTemporales.add(paseo);
 
                 DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
                 String currentMascotaId = paseo.getIdMascota(); // Use the one already set on paseo
 
-
                 tareas.add(paseadorRef != null ? paseadorRef.get() : Tasks.forResult(null));
                 tareas.add(duenoRef != null ? duenoRef.get() : Tasks.forResult(null));
-                if (duenoRef != null && currentMascotaId != null && !currentMascotaId.isEmpty()) { // Corrected logic to use currentMascotaId
-                    tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas").document(currentMascotaId).get());
+                if (duenoRef != null && currentMascotaId != null && !currentMascotaId.isEmpty()) { // Corrected logic to
+                                                                                                   // use
+                                                                                                   // currentMascotaId
+                    tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas")
+                            .document(currentMascotaId).get());
                 } else {
                     tareas.add(Tasks.forResult(null));
                 }
@@ -310,38 +321,45 @@ public class PaseosActivity extends AppCompatActivity {
                     if (paseadorDoc != null && paseadorDoc.exists()) {
                         String paseadorFotoUrl = paseadorDoc.getString("foto_perfil");
                         if (paseadorFotoUrl == null || paseadorFotoUrl.isEmpty()) {
-                            Log.w(TAG, "Paseador " + paseadorDoc.getId() + " for reservation " + paseo.getReservaId() + " has no 'foto_perfil' URL or it's empty.");
+                            Log.w(TAG, "Paseador " + paseadorDoc.getId() + " for reservation " + paseo.getReservaId()
+                                    + " has no 'foto_perfil' URL or it's empty.");
                         } else {
                             Log.d(TAG, "Paseador " + paseadorDoc.getId() + " foto_perfil: " + paseadorFotoUrl);
                         }
                         paseo.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
                         paseo.setPaseadorFoto(paseadorFotoUrl);
                     } else {
-                        Log.w(TAG, "Paseador document not found or does not exist for reservation " + paseo.getReservaId());
+                        Log.w(TAG, "Paseador document not found or does not exist for reservation "
+                                + paseo.getReservaId());
                     }
                     if (duenoDoc != null && duenoDoc.exists()) {
                         String duenoFotoUrl = duenoDoc.getString("foto_perfil");
                         if (duenoFotoUrl == null || duenoFotoUrl.isEmpty()) {
-                            Log.w(TAG, "Dueno " + duenoDoc.getId() + " for reservation " + paseo.getReservaId() + " has no 'foto_perfil' URL or it's empty.");
+                            Log.w(TAG, "Dueno " + duenoDoc.getId() + " for reservation " + paseo.getReservaId()
+                                    + " has no 'foto_perfil' URL or it's empty.");
                         } else {
                             Log.d(TAG, "Dueno " + duenoDoc.getId() + " foto_perfil: " + duenoFotoUrl);
                         }
                         paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
-                        // Note: duenoFoto is not used by the adapter, so not setting it on paseo object.
+                        // Note: duenoFoto is not used by the adapter, so not setting it on paseo
+                        // object.
                     } else {
-                        Log.w(TAG, "Dueno document not found or does not exist for reservation " + paseo.getReservaId());
+                        Log.w(TAG,
+                                "Dueno document not found or does not exist for reservation " + paseo.getReservaId());
                     }
                     if (mascotaDoc != null && mascotaDoc.exists()) {
                         String mascotaFotoUrl = mascotaDoc.getString("foto_principal_url");
                         if (mascotaFotoUrl == null || mascotaFotoUrl.isEmpty()) {
-                            Log.w(TAG, "Mascota " + mascotaDoc.getId() + " for reservation " + paseo.getReservaId() + " has no 'foto_principal_url' URL or it's empty.");
+                            Log.w(TAG, "Mascota " + mascotaDoc.getId() + " for reservation " + paseo.getReservaId()
+                                    + " has no 'foto_principal_url' URL or it's empty.");
                         } else {
                             Log.d(TAG, "Mascota " + mascotaDoc.getId() + " foto_principal_url: " + mascotaFotoUrl);
                         }
                         paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
                         paseo.setMascotaFoto(mascotaFotoUrl);
                     } else {
-                        Log.w(TAG, "Mascota document not found or does not exist for reservation " + paseo.getReservaId() + " (ID: " + paseo.getIdMascota() + ")");
+                        Log.w(TAG, "Mascota document not found or does not exist for reservation "
+                                + paseo.getReservaId() + " (ID: " + paseo.getIdMascota() + ")");
                         paseo.setMascotaNombre("Mascota no encontrada");
                     }
                     paseosList.add(paseo);
@@ -353,7 +371,6 @@ public class PaseosActivity extends AppCompatActivity {
             }).addOnFailureListener(this::manejarError);
         }).addOnFailureListener(this::manejarError);
     }
-
 
     private void finalizarCarga() {
         swipeRefresh.setRefreshing(false);
@@ -375,7 +392,8 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void mostrarDialogCalificacion(Paseo paseo) {
-        if (isFinishing()) return;
+        if (isFinishing())
+            return;
         new AlertDialog.Builder(this)
                 .setTitle("Calificar")
                 .setMessage("Próximamente podrás calificar este paseo.")
@@ -384,16 +402,17 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void mostrarDialogMotivoCancelacion(Paseo paseo) {
-        if (isFinishing()) return;
+        if (isFinishing())
+            return;
         String motivo = paseo.getRazonCancelacion();
-        if (motivo == null || motivo.isEmpty()) motivo = "No se especificó un motivo";
+        if (motivo == null || motivo.isEmpty())
+            motivo = "No se especificó un motivo";
         new AlertDialog.Builder(this)
                 .setTitle("Motivo de Cancelación")
                 .setMessage(motivo)
                 .setPositiveButton("Cerrar", null)
                 .show();
     }
-
 
     public static class Paseo {
         private String reservaId;
@@ -418,80 +437,239 @@ public class PaseosActivity extends AppCompatActivity {
         private Double tarifa_confirmada; // Added field
         private Boolean hasTransitionedToInCourse; // Added field
 
-        public Paseo() {}
+        public Paseo() {
+        }
 
         // Getters
-        public String getReservaId() { return reservaId; }
-        public String getPaseadorNombre() { return paseadorNombre; }
-        public String getPaseadorFoto() { return paseadorFoto; }
-        public String getDuenoNombre() { return duenoNombre; }
-        public String getMascotaNombre() { return mascotaNombre; }
-        public String getMascotaFoto() { return mascotaFoto; }
-        public String getIdMascota() { return idMascota; }
-        public DocumentReference getId_dueno() { return id_dueno; }
-        public DocumentReference getId_paseador() { return id_paseador; }
-        public Date getFecha() { return fecha; }
-        public Date getHora_inicio() { return hora_inicio; } // Corrected getter
-        public String getEstado() { return estado; }
-        public String getRazonCancelacion() { return razonCancelacion; }
-        public String getTipo_reserva() { return tipo_reserva; }
-        public String getEstado_pago() { return estado_pago; }
-        public double getCosto_total() { return costo_total; }
-        public long getDuracion_minutos() { return duracion_minutos; }
-        public String getId_pago() { return id_pago; }
-        public String getTransaction_id() { return transaction_id; }
-        public Date getFecha_pago() { return fecha_pago; }
-        public String getMetodo_pago() { return metodo_pago; }
-        public String getNotas() { return notas; }
-        public Date getFecha_creacion() { return fecha_creacion; }
-        public Date getFecha_respuesta() { return fecha_respuesta; }
-        public Double getTarifa_confirmada() { return tarifa_confirmada; }
-        public Boolean getHasTransitionedToInCourse() { return hasTransitionedToInCourse; }
+        public String getReservaId() {
+            return reservaId;
+        }
 
+        public String getPaseadorNombre() {
+            return paseadorNombre;
+        }
+
+        public String getPaseadorFoto() {
+            return paseadorFoto;
+        }
+
+        public String getDuenoNombre() {
+            return duenoNombre;
+        }
+
+        public String getMascotaNombre() {
+            return mascotaNombre;
+        }
+
+        public String getMascotaFoto() {
+            return mascotaFoto;
+        }
+
+        public String getIdMascota() {
+            return idMascota;
+        }
+
+        public DocumentReference getId_dueno() {
+            return id_dueno;
+        }
+
+        public DocumentReference getId_paseador() {
+            return id_paseador;
+        }
+
+        public Date getFecha() {
+            return fecha;
+        }
+
+        public Date getHora_inicio() {
+            return hora_inicio;
+        } // Corrected getter
+
+        public String getEstado() {
+            return estado;
+        }
+
+        public String getRazonCancelacion() {
+            return razonCancelacion;
+        }
+
+        public String getTipo_reserva() {
+            return tipo_reserva;
+        }
+
+        public String getEstado_pago() {
+            return estado_pago;
+        }
+
+        public double getCosto_total() {
+            return costo_total;
+        }
+
+        public long getDuracion_minutos() {
+            return duracion_minutos;
+        }
+
+        public String getId_pago() {
+            return id_pago;
+        }
+
+        public String getTransaction_id() {
+            return transaction_id;
+        }
+
+        public Date getFecha_pago() {
+            return fecha_pago;
+        }
+
+        public String getMetodo_pago() {
+            return metodo_pago;
+        }
+
+        public String getNotas() {
+            return notas;
+        }
+
+        public Date getFecha_creacion() {
+            return fecha_creacion;
+        }
+
+        public Date getFecha_respuesta() {
+            return fecha_respuesta;
+        }
+
+        public Double getTarifa_confirmada() {
+            return tarifa_confirmada;
+        }
+
+        public Boolean getHasTransitionedToInCourse() {
+            return hasTransitionedToInCourse;
+        }
 
         // Setters
-        public void setReservaId(String reservaId) { this.reservaId = reservaId; }
-        public void setPaseadorNombre(String paseadorNombre) { this.paseadorNombre = paseadorNombre; }
-        public void setPaseadorFoto(String paseadorFoto) { this.paseadorFoto = paseadorFoto; }
-        public void setDuenoNombre(String duenoNombre) { this.duenoNombre = duenoNombre; }
-        public void setMascotaNombre(String mascotaNombre) { this.mascotaNombre = mascotaNombre; }
-        public void setMascotaFoto(String mascotaFoto) { this.mascotaFoto = mascotaFoto; }
-        public void setIdMascota(String idMascota) { this.idMascota = idMascota; }
-        public void setId_dueno(DocumentReference id_dueno) { this.id_dueno = id_dueno; }
-        public void setId_paseador(DocumentReference id_paseador) { this.id_paseador = id_paseador; }
-        public void setFecha(Date fecha) { this.fecha = fecha; }
-        public void setHora_inicio(Date hora_inicio) { this.hora_inicio = hora_inicio; }
-        public void setEstado(String estado) { this.estado = estado; }
-        public void setRazonCancelacion(String razonCancelacion) { this.razonCancelacion = razonCancelacion; }
-        public void setTipo_reserva(String tipo_reserva) { this.tipo_reserva = tipo_reserva; }
-        public void setEstado_pago(String estado_pago) { this.estado_pago = estado_pago; }
-        public void setCosto_total(double costo_total) { this.costo_total = costo_total; }
-        public void setDuracion_minutos(long duracion_minutos) { this.duracion_minutos = duracion_minutos; }
-        public void setId_pago(String id_pago) { this.id_pago = id_pago; }
-        public void setTransaction_id(String transaction_id) { this.transaction_id = transaction_id; }
-        public void setFecha_pago(Date fecha_pago) { this.fecha_pago = fecha_pago; }
-        public void setMetodo_pago(String metodo_pago) { this.metodo_pago = metodo_pago; }
-        public void setNotas(String notas) { this.notas = notas; }
-        public void setFecha_creacion(Date fecha_creacion) { this.fecha_creacion = fecha_creacion; }
-        public void setFecha_respuesta(Date fecha_respuesta) { this.fecha_respuesta = fecha_respuesta; }
-        public void setTarifa_confirmada(Double tarifa_confirmada) { this.tarifa_confirmada = tarifa_confirmada; }
-        public void setHasTransitionedToInCourse(Boolean hasTransitionedToInCourse) { this.hasTransitionedToInCourse = hasTransitionedToInCourse; }
+        public void setReservaId(String reservaId) {
+            this.reservaId = reservaId;
+        }
 
+        public void setPaseadorNombre(String paseadorNombre) {
+            this.paseadorNombre = paseadorNombre;
+        }
+
+        public void setPaseadorFoto(String paseadorFoto) {
+            this.paseadorFoto = paseadorFoto;
+        }
+
+        public void setDuenoNombre(String duenoNombre) {
+            this.duenoNombre = duenoNombre;
+        }
+
+        public void setMascotaNombre(String mascotaNombre) {
+            this.mascotaNombre = mascotaNombre;
+        }
+
+        public void setMascotaFoto(String mascotaFoto) {
+            this.mascotaFoto = mascotaFoto;
+        }
+
+        public void setIdMascota(String idMascota) {
+            this.idMascota = idMascota;
+        }
+
+        public void setId_dueno(DocumentReference id_dueno) {
+            this.id_dueno = id_dueno;
+        }
+
+        public void setId_paseador(DocumentReference id_paseador) {
+            this.id_paseador = id_paseador;
+        }
+
+        public void setFecha(Date fecha) {
+            this.fecha = fecha;
+        }
+
+        public void setHora_inicio(Date hora_inicio) {
+            this.hora_inicio = hora_inicio;
+        }
+
+        public void setEstado(String estado) {
+            this.estado = estado;
+        }
+
+        public void setRazonCancelacion(String razonCancelacion) {
+            this.razonCancelacion = razonCancelacion;
+        }
+
+        public void setTipo_reserva(String tipo_reserva) {
+            this.tipo_reserva = tipo_reserva;
+        }
+
+        public void setEstado_pago(String estado_pago) {
+            this.estado_pago = estado_pago;
+        }
+
+        public void setCosto_total(double costo_total) {
+            this.costo_total = costo_total;
+        }
+
+        public void setDuracion_minutos(long duracion_minutos) {
+            this.duracion_minutos = duracion_minutos;
+        }
+
+        public void setId_pago(String id_pago) {
+            this.id_pago = id_pago;
+        }
+
+        public void setTransaction_id(String transaction_id) {
+            this.transaction_id = transaction_id;
+        }
+
+        public void setFecha_pago(Date fecha_pago) {
+            this.fecha_pago = fecha_pago;
+        }
+
+        public void setMetodo_pago(String metodo_pago) {
+            this.metodo_pago = metodo_pago;
+        }
+
+        public void setNotas(String notas) {
+            this.notas = notas;
+        }
+
+        public void setFecha_creacion(Date fecha_creacion) {
+            this.fecha_creacion = fecha_creacion;
+        }
+
+        public void setFecha_respuesta(Date fecha_respuesta) {
+            this.fecha_respuesta = fecha_respuesta;
+        }
+
+        public void setTarifa_confirmada(Double tarifa_confirmada) {
+            this.tarifa_confirmada = tarifa_confirmada;
+        }
+
+        public void setHasTransitionedToInCourse(Boolean hasTransitionedToInCourse) {
+            this.hasTransitionedToInCourse = hasTransitionedToInCourse;
+        }
 
         public String getFechaFormateada() {
-            if (fecha == null) return "";
+            if (fecha == null)
+                return "";
             Calendar today = Calendar.getInstance();
             Calendar tomorrow = Calendar.getInstance();
             tomorrow.add(Calendar.DAY_OF_YEAR, 1);
             Calendar paseoDate = Calendar.getInstance();
             paseoDate.setTime(fecha);
-            if (today.get(Calendar.YEAR) == paseoDate.get(Calendar.YEAR) && today.get(Calendar.DAY_OF_YEAR) == paseoDate.get(Calendar.DAY_OF_YEAR)) return "Hoy";
-            if (tomorrow.get(Calendar.YEAR) == paseoDate.get(Calendar.YEAR) && tomorrow.get(Calendar.DAY_OF_YEAR) == paseoDate.get(Calendar.DAY_OF_YEAR)) return "Mañana";
+            if (today.get(Calendar.YEAR) == paseoDate.get(Calendar.YEAR)
+                    && today.get(Calendar.DAY_OF_YEAR) == paseoDate.get(Calendar.DAY_OF_YEAR))
+                return "Hoy";
+            if (tomorrow.get(Calendar.YEAR) == paseoDate.get(Calendar.YEAR)
+                    && tomorrow.get(Calendar.DAY_OF_YEAR) == paseoDate.get(Calendar.DAY_OF_YEAR))
+                return "Mañana";
             return new SimpleDateFormat("d 'de' MMMM", new Locale("es", "ES")).format(fecha);
         }
 
         public String getHoraFormateada() {
-            if (hora_inicio == null) return ""; // Corrected to hora_inicio
+            if (hora_inicio == null)
+                return ""; // Corrected to hora_inicio
             return new SimpleDateFormat("h:mm a", Locale.US).format(hora_inicio);
         }
     }
