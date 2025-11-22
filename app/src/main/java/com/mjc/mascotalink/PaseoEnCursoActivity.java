@@ -387,33 +387,51 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     }
 
     private void cargarDatosMascota(String mascotaId) {
+        if (duenoIdActual == null || duenoIdActual.isEmpty()) {
+            Log.w(TAG, "duenoIdActual es nulo o vacío. Intentando cargar mascota desde colección global.");
+            cargarMascotaDesdeColeccionGlobal(mascotaId);
+            return;
+        }
+
         // First, try to load from the subcollection within the owner's document
         db.collection("duenos").document(duenoIdActual).collection("mascotas").document(mascotaId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc != null && doc.exists()) {
                         processMascotaDocument(doc);
                     } else {
-                        // If not found in subcollection, try top-level 'mascotas' collection (fallback)
-                        db.collection("mascotas").document(mascotaId).get()
-                                .addOnSuccessListener(globalDoc -> {
-                                    if (globalDoc != null && globalDoc.exists()) {
-                                        processMascotaDocument(globalDoc);
-                                    } else {
-                                        Log.w(TAG, "Mascota document not found in subcollection or top-level collection for ID: " + mascotaId);
-                                        tvNombreMascota.setText("Mascota");
-                                        ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
-                                    }
-                                })
-                                .addOnFailureListener(e -> Log.e(TAG, "Error cargando mascota desde colección global", e));
+                        cargarMascotaDesdeColeccionGlobal(mascotaId);
                     }
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Error cargando mascota desde subcolección", e));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando mascota desde subcolección", e);
+                    cargarMascotaDesdeColeccionGlobal(mascotaId);
+                });
+    }
+
+    private void cargarMascotaDesdeColeccionGlobal(String mascotaId) {
+        db.collection("mascotas").document(mascotaId).get()
+                .addOnSuccessListener(globalDoc -> {
+                    if (globalDoc != null && globalDoc.exists()) {
+                        processMascotaDocument(globalDoc);
+                    } else {
+                        Log.w(TAG, "Mascota document not found in subcollection or top-level collection for ID: " + mascotaId);
+                        tvNombreMascota.setText("Mascota");
+                        ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+                    }
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error cargando mascota desde colección global", e));
     }
 
     private void processMascotaDocument(@NonNull DocumentSnapshot doc) {
         nombreMascota = doc.getString("nombre") != null ? doc.getString("nombre") : "Mascota";
         tvNombreMascota.setText(nombreMascota);
-        String urlFoto = doc.getString("foto_principal_url"); // Use the correct field name
+        
+        // FIX: Usar 'foto_url' que es el campo estándar, con fallback a 'foto_principal_url' por compatibilidad
+        String urlFoto = doc.getString("foto_url");
+        if (urlFoto == null || urlFoto.isEmpty()) {
+            urlFoto = doc.getString("foto_principal_url");
+        }
+        
         if (urlFoto != null && !urlFoto.isEmpty()) {
             Glide.with(this)
                     .load(urlFoto)

@@ -268,10 +268,14 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         super.onResume();
         setupBottomNavigation();
         
-        // FIX: Asegurar que si no hay búsqueda, se muestre el contenido inicial
-        if (searchAutocomplete.getText().toString().isEmpty()) {
-            recyclerViewResultados.setVisibility(View.GONE);
-            contentScrollView.setVisibility(View.VISIBLE);
+        // FIX: Limpiar estado al volver. Si hay texto, se limpia para reiniciar la experiencia.
+        // Esto evita que se muestre un resultado "fantasma" al regresar.
+        if (searchAutocomplete != null && !searchAutocomplete.getText().toString().isEmpty()) {
+             searchAutocomplete.setText(""); // Esto disparará el TextWatcher que limpiará la UI
+        } else {
+             // Si ya está vacío, asegurar la visibilidad correcta
+             recyclerViewResultados.setVisibility(View.GONE);
+             contentScrollView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -445,7 +449,15 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void setupPullToRefresh() {
         swipeRefreshLayout.setOnRefreshListener(() -> {
-            viewModel.onSearchQueryChanged(searchAutocomplete.getText().toString());
+            if (searchAutocomplete != null) {
+                searchAutocomplete.setText(""); // Limpiar texto visualmente
+            }
+            viewModel.onSearchQueryChanged(""); // Forzar búsqueda vacía al ViewModel
+            
+            // Restaurar visibilidad manualmente por seguridad
+            recyclerViewResultados.setVisibility(View.GONE);
+            contentScrollView.setVisibility(View.VISIBLE);
+            
             swipeRefreshLayout.setRefreshing(false);
         });
     }

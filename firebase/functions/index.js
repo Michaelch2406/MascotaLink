@@ -659,7 +659,8 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
 exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
   console.log("Running scheduled job to transition CONFIRMADO reservations to EN_CURSO.");
   const now = new Date();
-  const fiveMinutesAgo = new Date(now.getTime() - (5 * 60 * 1000)); // Reservations whose start time was up to 5 minutes ago
+  // Look back up to 24 hours to catch any missed transitions, not just the last 5 minutes.
+  const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000)); 
 
   const reservationsSnapshot = await db.collection("reservas")
     .where("estado", "==", "CONFIRMADO")
@@ -680,8 +681,8 @@ exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
         continue;
     }
 
-    // If the scheduled start time is in the past (up to 5 minutes ago)
-    if (scheduledStartTime.getTime() <= now.getTime() && scheduledStartTime.getTime() >= fiveMinutesAgo.getTime()) {
+    // If the scheduled start time is in the past AND it's within the last 24 hours
+    if (scheduledStartTime.getTime() <= now.getTime() && scheduledStartTime.getTime() >= twentyFourHoursAgo.getTime()) {
       console.log(`Transitioning reservation ${reservaId} to EN_CURSO.`);
       updates.push(doc.ref.update({
         estado: "EN_CURSO",

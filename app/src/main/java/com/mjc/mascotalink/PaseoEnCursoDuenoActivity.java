@@ -423,15 +423,38 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     }
 
     private void cargarDatosMascota(String mascotaId) {
+        // Try to load from the owner's subcollection first (primary source)
+        db.collection("duenos").document(currentUserId).collection("mascotas").document(mascotaId).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        mostrarDatosMascota(doc);
+                    } else {
+                        // Fallback: Try global collection
+                        cargarMascotaGlobal(mascotaId);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.w(TAG, "Error cargando mascota de subcolección, intentando global", e);
+                    cargarMascotaGlobal(mascotaId);
+                });
+    }
+
+    private void cargarMascotaGlobal(String mascotaId) {
         db.collection("mascotas").document(mascotaId).get().addOnSuccessListener(doc -> {
             if (doc.exists()) {
-                String nombre = doc.getString("nombre");
-                String raza = doc.getString("raza");
-                String nombreSafe = (nombre != null && !nombre.isEmpty()) ? nombre : "Mascota";
-                String razaSafe = (raza != null && !raza.isEmpty()) ? raza : "raza no disponible";
-                tvInfoMascota.setText(String.format("%s, %s", nombreSafe, razaSafe));
+                mostrarDatosMascota(doc);
+            } else {
+                tvInfoMascota.setText("Información de mascota no disponible");
             }
-        });
+        }).addOnFailureListener(e -> tvInfoMascota.setText("Error cargando mascota"));
+    }
+
+    private void mostrarDatosMascota(DocumentSnapshot doc) {
+        String nombre = doc.getString("nombre");
+        String raza = doc.getString("raza");
+        String nombreSafe = (nombre != null && !nombre.isEmpty()) ? nombre : "Mascota";
+        String razaSafe = (raza != null && !raza.isEmpty()) ? raza : "raza no disponible";
+        tvInfoMascota.setText(String.format("%s, %s", nombreSafe, razaSafe));
     }
 
     private void actualizarInfoFecha(Date inicio) {

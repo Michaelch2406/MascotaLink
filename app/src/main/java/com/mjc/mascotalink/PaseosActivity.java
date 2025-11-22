@@ -317,8 +317,28 @@ public class PaseosActivity extends AppCompatActivity {
             }
 
             Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
+                Date now = new Date(); // Obtener fecha/hora actual una vez
+
                 for (int i = 0; i < paseosTemporales.size(); i++) {
                     Paseo paseo = paseosTemporales.get(i);
+
+                    // --- FIX: Autocorrección de Estado (Cliente-Servidor) ---
+                    // Si es CONFIRMADO y la hora ya pasó, forzar EN_CURSO local y remotamente.
+                    if ("CONFIRMADO".equals(paseo.getEstado()) && paseo.getHora_inicio() != null && paseo.getHora_inicio().before(now)) {
+                        Log.i(TAG, "Detectado paseo confirmado vencido: " + paseo.getReservaId() + ". Actualizando a EN_CURSO.");
+                        
+                        // Actualizar UI inmediatamente
+                        paseo.setEstado("EN_CURSO");
+                        
+                        // Actualizar Firestore en segundo plano
+                        db.collection("reservas").document(paseo.getReservaId())
+                                .update("estado", "EN_CURSO", 
+                                        "hasTransitionedToInCourse", true,
+                                        "fecha_inicio_paseo", new com.google.firebase.Timestamp(paseo.getHora_inicio()))
+                                .addOnSuccessListener(aVoid -> Log.d(TAG, "Reserva actualizada a EN_CURSO automÃ¡ticamente."))
+                                .addOnFailureListener(e -> Log.e(TAG, "Error al auto-actualizar reserva: " + e.getMessage()));
+                    }
+                    // --- FIN FIX ---
 
                     DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(i * 3);
                     DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(i * 3 + 1);

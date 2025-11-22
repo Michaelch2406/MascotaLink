@@ -51,176 +51,188 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Contenedor principal que maneja los estados -->
-    <FrameLayout
-        android:id="@+id/main_content_frame"
+    <LinearLayout
+        android:id="@+id/main_content_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:orientation="vertical"
         app:layout_constraintTop_toBottomOf="@id/appBarLayout"
         app:layout_constraintBottom_toTopOf="@+id/bottom_navigation"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Estado de Carga -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
+        <!-- Barra de Búsqueda (Siempre visible) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/search_input_layout"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone"
-            tools:visibility="visible"/>
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxStrokeWidth="0dp"
+            app:boxStrokeWidthFocused="0dp"
+            app:hintEnabled="false">
 
-        <!-- Contenido principal con Pull-to-Refresh -->
-        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-            android:id="@+id/swipe_refresh_layout"
+            <AutoCompleteTextView
+                android:id="@+id/search_autocomplete"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edit_text_background"
+                android:drawableStart="@drawable/ic_search"
+                android:drawablePadding="12dp"
+                android:hint="Buscar paseadores"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:paddingStart="16dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="14dp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- FrameLayout para contenido dinámico (Scroll vs Lista Resultados vs Errores) -->
+        <FrameLayout
+            android:id="@+id/dynamic_content_frame"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <androidx.core.widget.NestedScrollView
-                android:id="@+id/content_scroll_view"
+            <!-- Estado de Carga -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+
+            <!-- Contenido principal con Pull-to-Refresh -->
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipe_refresh_layout"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="visible"
-                tools:visibility="gone">
+                android:layout_height="match_parent">
 
-                <LinearLayout
+                <androidx.core.widget.NestedScrollView
+                    android:id="@+id/content_scroll_view"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_height="match_parent"
+                    android:visibility="visible"
+                    tools:visibility="gone">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/search_input_layout"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:boxCornerRadiusBottomEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxStrokeWidth="0dp"
-                        app:boxStrokeWidthFocused="0dp"
-                        app:hintEnabled="false">
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
-                        <AutoCompleteTextView
-                            android:id="@+id/search_autocomplete"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/edit_text_background"
-                            android:drawableStart="@drawable/ic_search"
-                            android:drawablePadding="12dp"
-                            android:hint="Buscar paseadores"
-                            android:imeOptions="actionSearch"
-                            android:inputType="text"
-                            android:paddingStart="16dp"
-                            android:paddingTop="14dp"
-                            android:paddingEnd="16dp"
-                            android:paddingBottom="14dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Paseadores Populares"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black"
+                        android:layout_marginTop="8dp"/>
 
-                    </com.google.android.material.textfield.TextInputLayout>
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recycler_paseadores_populares"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal"
+                        tools:listitem="@layout/item_paseador_popular"
+                        tools:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Paseadores Cercanos"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black"
+                        android:layout_marginTop="24dp"/>
+
+                    <fragment
+                        android:id="@+id/map_fragment"
+                        android:name="com.google.android.gms.maps.SupportMapFragment"
+                        android:layout_width="match_parent"
+                        android:layout_height="250dp"
+                        android:layout_marginTop="8dp"/>
+
+                    <!-- Aquí irían las otras secciones como los resultados de búsqueda -->
+
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+            <!-- Estado Vacío -->
+            <LinearLayout
+                android:id="@+id/emptyStateView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/ic_dog"
+                    app:tint="#CCCCCC"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Paseadores Populares"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/black"
-                    android:layout_marginTop="24dp"/>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/recycler_paseadores_populares"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal"
-                    tools:listitem="@layout/item_paseador_popular"
-                    tools:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Paseadores Cercanos"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/black"
-                    android:layout_marginTop="24dp"/>
-
-                <fragment
-                    android:id="@+id/map_fragment"
-                    android:name="com.google.android.gms.maps.SupportMapFragment"
-                    android:layout_width="match_parent"
-                    android:layout_height="250dp"
-                    android:layout_marginTop="8dp"/>
-
-                <!-- Aquí irían las otras secciones como los resultados de búsqueda -->
-
+                    android:text="No se encontraron paseadores"
+                    android:layout_marginTop="16dp"/>
             </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-        <!-- Estado Vacío -->
-        <LinearLayout
-            android:id="@+id/emptyStateView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:visibility="gone">
-
-            <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_dog"
-                app:tint="#CCCCCC"/>
-
-            <TextView
+            <!-- Estado de Error -->
+            <LinearLayout
+                android:id="@+id/errorStateView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="No se encontraron paseadores"
-                android:layout_marginTop="16dp"/>
-        </LinearLayout>
+                android:orientation="vertical"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:visibility="gone">
 
-        <!-- Estado de Error -->
-        <LinearLayout
-            android:id="@+id/errorStateView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:visibility="gone">
+                <ImageView
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="#E57373"/>
 
-            <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_check_circle"
-                app:tint="#E57373"/>
+                <TextView
+                    android:id="@+id/error_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ocurrió un error al cargar los datos"
+                    android:layout_marginTop="16dp"/>
 
-            <TextView
-                android:id="@+id/error_message"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Ocurrió un error al cargar los datos"
-                android:layout_marginTop="16dp"/>
+                <Button
+                    android:id="@+id/retryButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reintentar"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
 
-            <Button
-                android:id="@+id/retryButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Reintentar"
-                android:layout_marginTop="8dp"/>
-        </LinearLayout>
+            <!-- RecyclerView para los resultados de búsqueda (inicialmente oculto) -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_resultados_busqueda"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                tools:listitem="@layout/item_paseador_resultado"/>
 
-        <!-- RecyclerView para los resultados de búsqueda (inicialmente oculto) -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_resultados_busqueda"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone"
-            tools:listitem="@layout/item_paseador_resultado"/>
-
-    </FrameLayout>
+        </FrameLayout>
+    </LinearLayout>
 
     <View
         android:id="@+id/bottom_nav_divider"
