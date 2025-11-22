@@ -104,6 +104,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private String contactoDueno;
     private String telefonoPendiente;
     private String nombreMascota = "";
+    private String nombreDueno = "Dueno";
     private String roleActual = "PASEADOR";
     private String currentPaseadorNombre = ""; // New member variable
 
@@ -451,6 +452,11 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                     if (telefono != null && !telefono.isEmpty()) {
                         contactoDueno = telefono;
                     }
+                    // Guardar nombre para nombre de archivo
+                    String nombre = doc.getString("nombre_display");
+                    if (nombre != null && !nombre.isEmpty()) {
+                        nombreDueno = nombre.replace(" ", "_"); // Sanitizar para nombre de archivo
+                    }
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error cargando datos del dueño", e));
     }
@@ -597,7 +603,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             return;
         }
 
-        String nombreArchivo = "paseo_" + idReserva + "_" + System.currentTimeMillis() + ".jpg";
+        // Formato descriptivo: Mascota_Dueno_FechaHora.jpg
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+        String fechaHora = sdf.format(new Date());
+        String nombreMascotaSanitizado = nombreMascota.replace(" ", "_");
+        
+        String nombreArchivo = String.format("%s_%s_%s.jpg", nombreMascotaSanitizado, nombreDueno, fechaHora);
+        
         StorageReference ref = FirebaseStorage.getInstance().getReference("paseos/" + idReserva + "/" + nombreArchivo);
 
         ref.putBytes(data)
