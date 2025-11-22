@@ -71,7 +71,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     private ProgressBar pbLoading;
     private RecyclerView rvFotos;
     private RecyclerView rvActividad;
-    private MaterialButton btnContactar;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
     private BottomNavigationView bottomNav;
 
     // Adapters

@@ -382,30 +382,18 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- SECCIÓN 6: BOTÓN CONTACTAR -->
-    <LinearLayout
-        android:id="@+id/layout_actions"
-        android:layout_width="match_parent"
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_contactar_paseador"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_marginBottom="88dp"
-        android:background="@android:color/white"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:elevation="8dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_contactar_paseador"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Contactar paseador"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            app:backgroundTint="#12A3ED"
-            app:cornerRadius="8dp" />
-    </LinearLayout>
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="80dp"
+        android:src="@drawable/ic_messages"
+        app:backgroundTint="#12A3ED"
+        app:tint="@android:color/white"
+        app:fabSize="normal"
+        android:contentDescription="Contactar paseador" />
 
     <View
         android:layout_width="match_parent"

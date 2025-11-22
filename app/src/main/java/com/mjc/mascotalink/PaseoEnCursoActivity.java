@@ -427,19 +427,27 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         nombreMascota = doc.getString("nombre") != null ? doc.getString("nombre") : "Mascota";
         tvNombreMascota.setText(nombreMascota);
         
-        // FIX: Usar 'foto_url' que es el campo estándar, con fallback a 'foto_principal_url' por compatibilidad
         String urlFoto = doc.getString("foto_url");
+        String urlFotoPrincipal = doc.getString("foto_principal_url");
+        
+        Log.d(TAG, "Procesando mascota ID: " + doc.getId());
+        Log.d(TAG, " - Nombre: " + nombreMascota);
+        Log.d(TAG, " - foto_url: " + urlFoto);
+        Log.d(TAG, " - foto_principal_url: " + urlFotoPrincipal);
+
         if (urlFoto == null || urlFoto.isEmpty()) {
-            urlFoto = doc.getString("foto_principal_url");
+            urlFoto = urlFotoPrincipal;
         }
         
         if (urlFoto != null && !urlFoto.isEmpty()) {
+            Log.d(TAG, "Intentando cargar foto con Glide: " + urlFoto);
             Glide.with(this)
                     .load(urlFoto)
                     .placeholder(R.drawable.ic_pet_placeholder)
                     .error(R.drawable.ic_pet_placeholder)
                     .into(ivFotoMascota);
         } else {
+            Log.w(TAG, "No se encontró URL de foto válida para la mascota.");
             ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
         }
     }

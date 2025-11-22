@@ -25,6 +25,7 @@ import com.mjc.mascotalink.PaseosActivity;
 import com.mjc.mascotalink.SolicitudesActivity;
 import com.mjc.mascotalink.SolicitudDetalleActivity;
 import com.mjc.mascotalink.PaseoEnCursoActivity;
+import com.mjc.mascotalink.PaseoEnCursoDuenoActivity; // Add import
 import com.mjc.mascotalink.ConfirmarPagoActivity;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
@@ -104,6 +105,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     break;
                 case "OPEN_CURRENT_WALK_ACTIVITY":
                     intent = new Intent(this, PaseoEnCursoActivity.class);
+                    if (data.containsKey("reservaId")) {
+                        intent.putExtra("id_reserva", data.get("reservaId"));
+                    }
+                    break;
+                case "OPEN_CURRENT_WALK_OWNER": // New case for owners
+                    intent = new Intent(this, PaseoEnCursoDuenoActivity.class);
                     if (data.containsKey("reservaId")) {
                         intent.putExtra("id_reserva", data.get("reservaId"));
                     }

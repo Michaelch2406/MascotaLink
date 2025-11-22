@@ -31,7 +31,7 @@
         android:id="@+id/scroll_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginBottom="180dp"
+        android:layout_marginBottom="200dp"
         android:clipToPadding="false"
         android:padding="16dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -272,7 +272,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:layout_marginBottom="80dp"
-        android:elevation="8dp"
         android:background="@android:color/white"
         android:orientation="vertical"
         android:padding="16dp">
@@ -281,7 +280,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:orientation="horizontal"
-            android:weightSum="100">
+            android:weightSum="2">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_contactar"
@@ -289,10 +288,10 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_marginEnd="8dp"
-                android:layout_weight="45"
-                android:text="@string/paseo_en_curso_button_contactar_dueno"
+                android:layout_weight="1"
+                android:text="Contactar"
                 android:textColor="@color/gray_dark"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 app:cornerRadius="8dp"
                 app:strokeColor="@color/gray_light"
                 app:strokeWidth="1dp" />
@@ -302,11 +301,11 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
-                android:layout_weight="55"
+                android:layout_weight="1"
                 android:text="@string/paseo_en_curso_button_finalizar"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 app:backgroundTint="@color/blue_primary"
                 app:cornerRadius="8dp" />
