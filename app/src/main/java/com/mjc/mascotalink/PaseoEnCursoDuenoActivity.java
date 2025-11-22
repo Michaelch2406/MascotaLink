@@ -1,11 +1,9 @@
-package com.mjc.mascotalink;
+﻿package com.mjc.mascotalink;
 
-import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,8 +17,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -67,6 +63,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     private TextView tvEstado;
     private TextView tvHoras, tvMinutos, tvSegundos;
     private TextView tvNotasPaseador;
+    private View layoutFotosEmpty;
+    private TextView tvActividadEmpty;
+    private View contentContainer;
     private ShapeableImageView ivFotoPaseador;
     private ProgressBar pbProgresoPaseo;
     private ProgressBar pbLoading;
@@ -82,6 +81,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     // Logic
     private String idReserva;
     private String idPaseador;
+    private String currentUserId;
     private String telefonoPaseador;
     private String nombrePaseador;
     private Date fechaInicioPaseo;
@@ -103,12 +103,25 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         setupButtons();
         setupBottomNav();
 
+        // owner-vibe-fix: estado de carga inicial
+        mostrarLoading(true);
+        if (contentContainer != null) {
+            contentContainer.setVisibility(View.GONE);
+        }
+
         idReserva = getIntent().getStringExtra("id_reserva");
         if (idReserva == null || idReserva.isEmpty()) {
             Toast.makeText(this, "Error: Reserva no encontrada", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "Error: usuario no autenticado", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        currentUserId = user.getUid();
 
         reservaRef = db.collection("reservas").document(idReserva);
         verificarPermisosYEscuchar();
@@ -148,9 +161,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         tvMinutos = findViewById(R.id.tv_minutos);
         tvSegundos = findViewById(R.id.tv_segundos);
         tvNotasPaseador = findViewById(R.id.tv_notas_paseador);
+        layoutFotosEmpty = findViewById(R.id.layout_fotos_empty);
+        tvActividadEmpty = findViewById(R.id.tv_actividad_empty);
         ivFotoPaseador = findViewById(R.id.iv_foto_paseador);
         pbProgresoPaseo = findViewById(R.id.pb_progreso_paseo);
         pbLoading = findViewById(R.id.pb_loading);
+        contentContainer = findViewById(R.id.content_container);
         rvFotos = findViewById(R.id.rv_fotos);
         rvActividad = findViewById(R.id.rv_actividad);
         btnContactar = findViewById(R.id.btn_contactar_paseador);
@@ -203,7 +219,13 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
                 return;
             }
 
-            String currentUserId = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
+            String currentUserIdSnapshot = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
+            if (currentUserId == null || currentUserId.isEmpty() || !currentUserId.equals(currentUserIdSnapshot)) {
+                mostrarLoading(false);
+                Toast.makeText(this, "Error: usuario no autenticado", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
             DocumentReference duenoRef = snapshot.getDocumentReference("id_dueno");
             String duenoId = duenoRef != null ? duenoRef.getId() : snapshot.getString("id_dueno");
 
@@ -238,79 +260,105 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
                 Log.e(TAG, "Error escuchando reserva", error);
                 return;
             }
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
             if (snapshot != null && snapshot.exists()) {
                 manejarSnapshotReserva(snapshot);
+                mostrarLoading(false);
+                if (contentContainer != null) {
+                    contentContainer.setVisibility(View.VISIBLE);
+                }
             } else {
                 Toast.makeText(this, "El paseo ha finalizado o no existe", Toast.LENGTH_SHORT).show();
                 finish();
             }
-            mostrarLoading(false);
         });
     }
 
     private void manejarSnapshotReserva(DocumentSnapshot snapshot) {
-        // 1. Estado
+        // owner-vibe-fix: Validación de estado vigente
         String estado = snapshot.getString("estado");
         if (!"EN_CURSO".equalsIgnoreCase(estado)) {
-            Toast.makeText(this, "El paseo ha finalizado", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "El paseo ya no está en curso", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        // 2. Tiempos y Duración
+        // owner-vibe-fix: Tiempos y duracion
         Timestamp inicioTimestamp = snapshot.getTimestamp("fecha_inicio_paseo");
-        if (inicioTimestamp == null)
+        if (inicioTimestamp == null) {
             inicioTimestamp = snapshot.getTimestamp("hora_inicio");
+        }
 
         Long duracion = snapshot.getLong("duracion_minutos");
-        if (duracion != null)
+        if (duracion != null) {
             duracionMinutos = duracion;
+        }
 
         if (inicioTimestamp != null) {
             Date nuevaFecha = inicioTimestamp.toDate();
             boolean reiniciarTimer = fechaInicioPaseo == null || fechaInicioPaseo.getTime() != nuevaFecha.getTime();
             fechaInicioPaseo = nuevaFecha;
-            if (reiniciarTimer)
+            if (reiniciarTimer) {
                 startTimer();
+            }
             actualizarInfoFecha(nuevaFecha);
+        } else {
+            tvHoras.setText("00");
+            tvMinutos.setText("00");
+            tvSegundos.setText("00");
+            tvFechaHora.setText("Esperando que el paseador inicie");
         }
 
         // 3. Notas
         String notas = snapshot.getString("notas_paseador");
-        tvNotasPaseador.setText(notas != null && !notas.isEmpty() ? notas : "Sin notas por el momento.");
+        tvNotasPaseador.setText(notas != null && !notas.isEmpty() ? notas : "Sin notas aún");
 
         // 4. Fotos
         Object fotosObj = snapshot.get("fotos_paseo");
         List<String> fotos = new ArrayList<>();
         if (fotosObj instanceof List) {
             for (Object item : (List<?>) fotosObj) {
-                if (item instanceof String)
+                if (item instanceof String) {
                     fotos.add((String) item);
+                }
             }
         }
         fotosAdapter.submitList(fotos);
-        rvFotos.setVisibility(fotos.isEmpty() ? View.GONE : View.VISIBLE);
+        boolean hayFotos = !fotos.isEmpty();
+        rvFotos.setVisibility(hayFotos ? View.VISIBLE : View.GONE);
+        if (layoutFotosEmpty != null) {
+            layoutFotosEmpty.setVisibility(hayFotos ? View.GONE : View.VISIBLE);
+        }
 
         // 5. Actividad (Timeline)
         Object actividadObj = snapshot.get("actividad");
         List<Map<String, Object>> actividades = new ArrayList<>();
         if (actividadObj instanceof List) {
             for (Object item : (List<?>) actividadObj) {
-                if (item instanceof Map)
+                if (item instanceof Map) {
                     actividades.add((Map<String, Object>) item);
+                }
             }
         }
-        // Sort by timestamp descending (newest first)
         Collections.sort(actividades, (o1, o2) -> {
             Timestamp t1 = (Timestamp) o1.get("timestamp");
             Timestamp t2 = (Timestamp) o2.get("timestamp");
-            if (t1 == null)
+            if (t1 == null) {
                 return 1;
-            if (t2 == null)
+            }
+            if (t2 == null) {
                 return -1;
+            }
             return t2.compareTo(t1);
         });
         actividadAdapter.setEventos(actividades);
+        boolean hayActividad = !actividades.isEmpty();
+        rvActividad.setVisibility(hayActividad ? View.VISIBLE : View.GONE);
+        if (tvActividadEmpty != null) {
+            tvActividadEmpty.setVisibility(hayActividad ? View.GONE : View.VISIBLE);
+        }
 
         // 6. Cargar datos relacionados (Paseador, Mascota) solo si no se han cargado
         if (idPaseador == null) {
@@ -339,15 +387,24 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
                 nombrePaseador = doc.getString("nombre_display");
                 if (nombrePaseador == null)
                     nombrePaseador = doc.getString("nombre");
-                tvNombrePaseador.setText(nombrePaseador != null ? nombrePaseador : "Paseador");
+                tvNombrePaseador.setText(nombrePaseador != null ? nombrePaseador : "Paseador no disponible");
 
                 telefonoPaseador = doc.getString("telefono");
+                if (telefonoPaseador == null || telefonoPaseador.isEmpty()) {
+                    btnContactar.setEnabled(false);
+                    btnContactar.setAlpha(0.6f);
+                } else {
+                    btnContactar.setEnabled(true);
+                    btnContactar.setAlpha(1f);
+                }
 
                 Double rating = doc.getDouble("rating");
                 Long numResenas = doc.getLong("numero_resenas");
                 if (rating != null) {
                     tvRating.setText(
                             String.format(Locale.US, "%.1f (%d)", rating, numResenas != null ? numResenas : 0));
+                } else {
+                    tvRating.setText("N/A");
                 }
 
                 String fotoUrl = doc.getString("foto_perfil");
@@ -358,6 +415,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
                             .placeholder(R.drawable.ic_user_placeholder)
                             .error(R.drawable.ic_user_placeholder)
                             .into(ivFotoPaseador);
+                } else {
+                    ivFotoPaseador.setImageResource(R.drawable.ic_user_placeholder);
                 }
             }
         });
@@ -368,8 +427,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
             if (doc.exists()) {
                 String nombre = doc.getString("nombre");
                 String raza = doc.getString("raza");
-                tvInfoMascota.setText(
-                        String.format("%s, %s", nombre != null ? nombre : "Mascota", raza != null ? raza : ""));
+                String nombreSafe = (nombre != null && !nombre.isEmpty()) ? nombre : "Mascota";
+                String razaSafe = (raza != null && !raza.isEmpty()) ? raza : "raza no disponible";
+                tvInfoMascota.setText(String.format("%s, %s", nombreSafe, razaSafe));
             }
         });
     }
@@ -390,6 +450,15 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
                 if (isFinishing() || isDestroyed())
                     return;
 
+                if (fechaInicioPaseo == null) {
+                    tvHoras.setText("00");
+                    tvMinutos.setText("00");
+                    tvSegundos.setText("00");
+                    pbProgresoPaseo.setProgress(0);
+                    timerHandler.postDelayed(this, 1000);
+                    return;
+                }
+
                 long elapsed = System.currentTimeMillis() - fechaInicioPaseo.getTime();
                 long elapsedSeconds = elapsed / 1000;
                 long hours = elapsedSeconds / 3600;
@@ -405,6 +474,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
                     long totalMillis = duracionMinutos * 60 * 1000;
                     int progress = (int) ((elapsed * 100) / totalMillis);
                     pbProgresoPaseo.setProgress(Math.min(progress, 100));
+                } else {
+                    pbProgresoPaseo.setProgress(0);
                 }
 
                 timerHandler.postDelayed(this, 1000);
@@ -446,15 +517,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     }
 
     private void intentarLlamar() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.CALL_PHONE },
-                        REQUEST_PERMISSION_CALL);
-                return;
-            }
+        try {
+            Intent dialIntent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + telefonoPaseador));
+            startActivity(dialIntent);
+        } catch (Exception e) {
+            Toast.makeText(this, "No se puede realizar la llamada", Toast.LENGTH_SHORT).show();
         }
-        startActivity(new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + telefonoPaseador)));
     }
 
     private void abrirWhatsApp() {
@@ -500,3 +568,15 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+

@@ -33,13 +33,14 @@
         android:layout_height="match_parent"
         android:layout_marginBottom="120dp"
         android:clipToPadding="false"
-        android:padding="16dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
+            android:id="@+id/content_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="16dp">
 
             <!-- SECCIÓN 1: INFORMACIÓN DEL PASEADOR -->
             <com.google.android.material.card.MaterialCardView
@@ -292,6 +293,32 @@
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 tools:listitem="@layout/item_foto_paseo"
                 tools:visibility="visible" />
+            <LinearLayout
+                android:id="@+id/layout_fotos_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:padding="8dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:tint="@color/gray_text"
+                    android:src="@android:drawable/ic_menu_camera"
+                    tools:ignore="ContentDescription" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="El paseador aún no ha subido fotos"
+                    android:textColor="@color/gray_text"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <!-- SECCIÓN 4: ACTIVIDAD -->
             <TextView
@@ -310,6 +337,16 @@
                 android:nestedScrollingEnabled="false"
                 tools:itemCount="3"
                 tools:listitem="@layout/item_evento_actividad" />
+            <TextView
+                android:id="@+id/tv_actividad_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="Sin actividad registrada"
+                android:textColor="@color/gray_text"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
             <!-- SECCIÓN 5: MAPA (Opcional) -->
             <TextView
@@ -351,7 +388,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_marginBottom="56dp"
+        android:layout_marginBottom="88dp"
         android:background="@android:color/white"
         android:orientation="vertical"
         android:padding="16dp"
