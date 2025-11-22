@@ -104,7 +104,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private static final String SEARCH_QUERY_KEY = "SEARCH_QUERY_KEY";
     private static final String SEARCH_HISTORY_PREFS = "SearchHistoryPrefs";
     private static final String SEARCH_HISTORY_KEY = "SearchHistory";
-    private static final long SEARCH_DELAY_MS = 2000; // 2 segundos
+    private static final long SEARCH_DELAY_MS = 300; // 300ms para búsqueda fluida
 
     private BusquedaViewModel viewModel;
     private FirebaseAuth mAuth;
@@ -267,6 +267,12 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     protected void onResume() {
         super.onResume();
         setupBottomNavigation();
+        
+        // FIX: Asegurar que si no hay búsqueda, se muestre el contenido inicial
+        if (searchAutocomplete.getText().toString().isEmpty()) {
+            recyclerViewResultados.setVisibility(View.GONE);
+            contentScrollView.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override
@@ -377,8 +383,16 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             @Override
             public void afterTextChanged(Editable s) {
                 String query = s.toString();
-                if (query.length() > 2 || query.isEmpty()) {
+                
+                // Limpiar siempre la búsqueda anterior pendiente para evitar ejecuciones dobles
+                searchHandler.removeCallbacks(searchRunnable);
+
+                if (!query.isEmpty()) {
+                    // Buscar desde el primer caracter con un pequeño retraso (debounce)
                     searchHandler.postDelayed(searchRunnable, SEARCH_DELAY_MS);
+                } else {
+                     // Si está vacío, limpiar resultados inmediatamente
+                     viewModel.onSearchQueryChanged("");
                 }
 
                 if (query.isEmpty()) {

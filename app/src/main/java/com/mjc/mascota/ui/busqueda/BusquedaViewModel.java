@@ -68,7 +68,7 @@ public class BusquedaViewModel extends ViewModel {
         Log.d(TAG, "onSearchQueryChanged: " + query);
         debounceHandler.removeCallbacks(debounceRunnable);
         debounceRunnable = () -> executeSearch(query, false, _filtros.getValue());
-        debounceHandler.postDelayed(debounceRunnable, 500); // 500ms de delay
+        debounceHandler.postDelayed(debounceRunnable, 300); // 300ms de delay
     }
 
     public void aplicarFiltros(Filtros nuevosFiltros) {
