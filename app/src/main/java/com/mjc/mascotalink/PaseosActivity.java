@@ -54,6 +54,7 @@ public class PaseosActivity extends AppCompatActivity {
     private LinearLayout llEmptyView;
     private Button btnReservarPaseo;
     private BottomNavigationView bottomNav;
+    private android.widget.ImageView ivBack; // Added
 
     // Adapter
     private PaseosAdapter paseosAdapter;
@@ -92,6 +93,7 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        ivBack = findViewById(R.id.iv_back); // Added
         tabAceptados = findViewById(R.id.tab_aceptados);
         tabProgramados = findViewById(R.id.tab_programados);
         tabEnProgreso = findViewById(R.id.tab_en_progreso);
@@ -102,6 +104,10 @@ public class PaseosActivity extends AppCompatActivity {
         llEmptyView = findViewById(R.id.ll_empty_view);
         btnReservarPaseo = findViewById(R.id.btn_reservar_paseo);
         bottomNav = findViewById(R.id.bottom_nav);
+
+        if (ivBack != null) { // Added listener
+            ivBack.setOnClickListener(v -> finish());
+        }
 
         paseosList = new ArrayList<>();
     }

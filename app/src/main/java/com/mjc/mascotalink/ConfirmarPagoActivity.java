@@ -102,7 +102,10 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             finish();
             return;
         }
-        if (costoTotal <= 0) {
+        
+        // Si costoTotal es 0 (no vino en el intent), confiamos en que cargarDatosReserva lo obtendrá de Firestore.
+        // Solo bloqueamos si es un valor negativo explícito (error de lógica).
+        if (costoTotal < 0) {
             Toast.makeText(this, "Error: El costo total de la reserva es inválido.", Toast.LENGTH_LONG).show();
             finish();
             return;
