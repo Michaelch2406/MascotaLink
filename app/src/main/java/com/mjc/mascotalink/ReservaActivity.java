@@ -718,6 +718,7 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("id_pago", null);           // NULL inicialmente
         reserva.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_PENDIENTE); // Estado inicial de pago
         reserva.put("notas", notasAdicionalesMascota);
+        reserva.put("reminderSent", false);
 
 
         db.collection("reservas")

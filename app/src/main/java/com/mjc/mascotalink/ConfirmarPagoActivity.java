@@ -59,6 +59,8 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     private String direccionRecogida;
     private String estadoReserva;
     private String estadoPago;
+    private String idPaseador;
+    private String idDueno;
     private int intentosFallidos = 0;
     private static final int MAX_INTENTOS = 3;
 
@@ -172,6 +174,21 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
 
                     estadoReserva = documentSnapshot.getString("estado");
                     estadoPago = documentSnapshot.getString("estado_pago");
+
+                    // Extract IDs handling both DocumentReference and String
+                    Object paseadorObj = documentSnapshot.get("id_paseador");
+                    if (paseadorObj instanceof com.google.firebase.firestore.DocumentReference) {
+                        idPaseador = ((com.google.firebase.firestore.DocumentReference) paseadorObj).getId();
+                    } else if (paseadorObj instanceof String) {
+                        idPaseador = (String) paseadorObj;
+                    }
+
+                    Object duenoObj = documentSnapshot.get("id_dueno");
+                    if (duenoObj instanceof com.google.firebase.firestore.DocumentReference) {
+                        idDueno = ((com.google.firebase.firestore.DocumentReference) duenoObj).getId();
+                    } else if (duenoObj instanceof String) {
+                        idDueno = (String) duenoObj;
+                    }
 
                     mostrarDatos();
                     actualizarEstadoUI();
@@ -311,72 +328,95 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     }
 
     private void ejecutarLogicaDePago() {
-        // Simular procesamiento de 2 segundos
-        new Handler().postDelayed(() -> {
-            String pagoId = "PAGO_" + System.currentTimeMillis();
-            if (encryptedPrefs != null) {
-                encryptedPrefs.putString("transaction_id", pagoId);
-                encryptedPrefs.putString("payment_status", "PROCESSING");
-                encryptedPrefs.putLong("payment_timestamp", System.currentTimeMillis());
-            }
+        if (mAuth.getCurrentUser() == null) return;
+        String currentUid = mAuth.getCurrentUser().getUid();
 
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("estado", ReservaEstadoValidator.ESTADO_CONFIRMADO);
-            updates.put("id_pago", pagoId);
-            updates.put("transaction_id", pagoId);
-            updates.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO);
-            updates.put("fecha_pago", Timestamp.now());
-            String metodoPagoGuardado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
-            updates.put("metodo_pago", metodoPagoGuardado);
-            updates.put("hasTransitionedToInCourse", false); // Initialize for scheduled transition
+        // 1. Create Payment Document in "pagos" collection
+        Map<String, Object> pagoData = new HashMap<>();
+        pagoData.put("id_usuario", currentUid); // Required by validatePaymentOnCreate
+        pagoData.put("id_dueno", idDueno != null ? idDueno : currentUid); // For notification
+        pagoData.put("id_paseador", idPaseador); // For notification
+        pagoData.put("monto", costoTotal); // Required by validatePaymentOnCreate
+        pagoData.put("estado", "procesando"); // Initial status
+        pagoData.put("reserva_id", reservaId);
+        pagoData.put("fecha_creacion", Timestamp.now());
 
-            // RIESGO: Una falla en la actualización de la BD podría dejar al usuario en un
-            // estado de "pago en proceso" infinito.
-            // SOLUCIÓN: Se implementa on-failure-listener para reintentar o notificar.
-            db.collection("reservas").document(reservaId)
-                    .update(updates)
-                    .addOnSuccessListener(aVoid -> {
-                        progressBar.setVisibility(View.GONE);
-                        btnProcesarPago.setText("Procesar Pago");
-                        if (encryptedPrefs != null) {
-                            encryptedPrefs.putString("payment_status", "COMPLETED");
-                            encryptedPrefs.putString("payment_id", pagoId);
-                            encryptedPrefs.putString("payment_token", pagoId);
-                        }
-                        if (mAuth.getCurrentUser() != null) {
-                            sessionManager.createSession(mAuth.getCurrentUser().getUid());
-                        }
-                    Toast.makeText(this, "Pago procesado exitosamente!", 
+        db.collection("pagos").add(pagoData)
+                .addOnSuccessListener(documentReference -> {
+                    String pagoId = documentReference.getId();
+
+                    // 2. Update Payment Document to "confirmado" (Triggers Notification)
+                    documentReference.update("estado", "confirmado")
+                            .addOnSuccessListener(aVoid -> {
+                                // 3. Update Reservation Document
+                                completarReserva(pagoId);
+                            })
+                            .addOnFailureListener(e -> {
+                                manejarFalloPago("Error al confirmar estado del pago: " + e.getMessage());
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    manejarFalloPago("Error al crear registro de pago: " + e.getMessage());
+                });
+    }
+
+    private void completarReserva(String pagoId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("estado", ReservaEstadoValidator.ESTADO_CONFIRMADO);
+        updates.put("id_pago", pagoId);
+        updates.put("transaction_id", pagoId);
+        updates.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO);
+        updates.put("fecha_pago", Timestamp.now());
+        String metodoPagoGuardado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
+        updates.put("metodo_pago", metodoPagoGuardado);
+        updates.put("hasTransitionedToInCourse", false);
+
+        db.collection("reservas").document(reservaId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    progressBar.setVisibility(View.GONE);
+                    btnProcesarPago.setText("Procesar Pago");
+                    if (encryptedPrefs != null) {
+                        encryptedPrefs.putString("payment_status", "COMPLETED");
+                        encryptedPrefs.putString("payment_id", pagoId);
+                        encryptedPrefs.putString("payment_token", pagoId);
+                    }
+                    if (mAuth.getCurrentUser() != null) {
+                        sessionManager.createSession(mAuth.getCurrentUser().getUid());
+                    }
+                    Toast.makeText(this, "Pago procesado exitosamente!",
                             Toast.LENGTH_LONG).show();
                     estadoReserva = ReservaEstadoValidator.ESTADO_CONFIRMADO;
                     estadoPago = ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO;
                     actualizarEstadoUI();
 
-                        new Handler().postDelayed(() -> {
-                            Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                            startActivity(intent);
-                            finish();
-                        }, 1000);
-                    })
-                    .addOnFailureListener(e -> {
-                        if (encryptedPrefs != null) {
-                            encryptedPrefs.putString("payment_status", "FAILED");
-                            encryptedPrefs.putString("payment_error", e.getMessage());
-                        }
-                        intentosFallidos++;
-                        if (intentosFallidos >= MAX_INTENTOS) {
-                            Toast.makeText(this, "Máximo de intentos alcanzado. Contacta soporte.", 
-                                    Toast.LENGTH_LONG).show();
-                            btnProcesarPago.setEnabled(false); // Deshabilitar permanentemente
-                            btnProcesarPago.setAlpha(0.5f);
-                        } else {
-                            Toast.makeText(this, "Error al procesar pago. Intento " + intentosFallidos + "/" + MAX_INTENTOS, 
-                                    Toast.LENGTH_SHORT).show();
-                            restaurarUIAposFallo();
-                        }
-                    });
-        }, 2000);
+                    new Handler().postDelayed(() -> {
+                        Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    }, 1000);
+                })
+                .addOnFailureListener(e -> {
+                    manejarFalloPago("Error al actualizar reserva: " + e.getMessage());
+                });
+    }
+
+    private void manejarFalloPago(String errorMsg) {
+        if (encryptedPrefs != null) {
+            encryptedPrefs.putString("payment_status", "FAILED");
+            encryptedPrefs.putString("payment_error", errorMsg);
+        }
+        intentosFallidos++;
+        if (intentosFallidos >= MAX_INTENTOS) {
+            Toast.makeText(this, "Máximo de intentos alcanzado. Contacta soporte.",
+                    Toast.LENGTH_LONG).show();
+            btnProcesarPago.setEnabled(false);
+            btnProcesarPago.setAlpha(0.5f);
+        } else {
+            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+            restaurarUIAposFallo();
+        }
     }
 
     private void restaurarUIAposFallo() {
