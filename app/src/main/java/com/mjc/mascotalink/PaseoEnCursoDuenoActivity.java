@@ -1,4 +1,4 @@
-﻿package com.mjc.mascotalink;
+package com.mjc.mascotalink;
 
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -239,7 +239,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
             String estado = snapshot.getString("estado");
             if (!"EN_CURSO".equalsIgnoreCase(estado)) {
                 mostrarLoading(false);
-                Toast.makeText(this, "El paseo ya no está en curso", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "El paseo ya no estÃ¡ en curso", Toast.LENGTH_SHORT).show();
                 finish();
                 return;
             }
@@ -277,10 +277,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     }
 
     private void manejarSnapshotReserva(DocumentSnapshot snapshot) {
-        // owner-vibe-fix: Validación de estado vigente
+        // owner-vibe-fix: ValidaciÃ³n de estado vigente
         String estado = snapshot.getString("estado");
         if (!"EN_CURSO".equalsIgnoreCase(estado)) {
-            Toast.makeText(this, "El paseo ya no está en curso", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "El paseo ya no estÃ¡ en curso", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -313,7 +313,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
 
         // 3. Notas
         String notas = snapshot.getString("notas_paseador");
-        tvNotasPaseador.setText(notas != null && !notas.isEmpty() ? notas : "Sin notas aún");
+        tvNotasPaseador.setText(notas != null && !notas.isEmpty() ? notas : "Sin notas aÃºn");
 
         // 4. Fotos
         Object fotosObj = snapshot.get("fotos_paseo");
@@ -439,7 +439,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
             return;
         SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM, hh:mm a", new Locale("es", "ES"));
         String fechaStr = sdf.format(inicio);
-        tvFechaHora.setText(String.format(Locale.getDefault(), "%s | %d min Duración", fechaStr, duracionMinutos));
+        tvFechaHora.setText(String.format(Locale.getDefault(), "%s | %d min DuraciÃ³n", fechaStr, duracionMinutos));
     }
 
     private void startTimer() {
@@ -490,7 +490,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
 
     private void mostrarOpcionesContacto() {
         if (telefonoPaseador == null || telefonoPaseador.isEmpty()) {
-            Toast.makeText(this, "Teléfono del paseador no disponible", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "TelÃ©fono del paseador no disponible", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -568,6 +568,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         }
     }
 }
+
 
 
 

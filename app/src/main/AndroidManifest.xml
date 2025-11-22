@@ -8,6 +8,9 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.front" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
 
     <!-- Permisos -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -147,17 +150,17 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
+            android:name=".PaseadorRegistroPaso5Activity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
             android:name=".QuizActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".QuizResultsActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.MascotaLink" />
-        <activity
-            android:name=".PaseadorRegistroPaso5Activity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
@@ -195,6 +198,11 @@
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PerfilPaseadorActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".SolicitudesActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
@@ -279,6 +287,31 @@
 
         <activity
             android:name=".ConfirmarPagoActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".PaseosActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".PaseoEnCursoActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".PaseoEnCursoDuenoActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".SolicitudDetalleActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".VerifyEmailActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
