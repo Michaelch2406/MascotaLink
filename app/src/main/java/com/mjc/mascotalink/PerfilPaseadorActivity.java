@@ -56,6 +56,7 @@ import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.messaging.FirebaseMessaging; // Added
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
@@ -175,6 +176,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 }
                 fetchCurrentUserRoleAndSetupUI();
                 attachDataListeners();
+                updateFcmToken(); // Update token when user is signed in
             } else {
                 // User is signed out
                 currentUserId = null;
@@ -186,6 +188,32 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 finish();
             }
         };
+    }
+
+    private void updateFcmToken() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null) {
+            FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                        return;
+                    }
+
+                    // Get new FCM registration token
+                    String token = task.getResult();
+                    Log.d(TAG, "FCM Token: " + token);
+
+                    // Save to Firestore
+                    Map<String, Object> tokenMap = new HashMap<>();
+                    tokenMap.put("fcmToken", token);
+                    
+                    db.collection("usuarios").document(user.getUid())
+                            .update(tokenMap)
+                            .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token updated in Firestore"))
+                            .addOnFailureListener(e -> Log.w(TAG, "Error updating FCM token", e));
+                });
+        }
     }
 
     private void fetchCurrentUserRoleAndSetupUI() {

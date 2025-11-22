@@ -21,6 +21,12 @@ public class SplashActivity extends AppCompatActivity {
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             // Crear un Intent para iniciar LoginActivity
             Intent intent = new Intent(SplashActivity.this, LoginActivity.class);
+            
+            // Pass any extras (notification data) to the next activity
+            if (getIntent().getExtras() != null) {
+                intent.putExtras(getIntent().getExtras());
+            }
+            
             startActivity(intent);
             
             // Cerrar SplashActivity para que no se pueda volver a ella con el botón atrás

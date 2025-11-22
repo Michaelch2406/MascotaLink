@@ -154,6 +154,11 @@ exports.onPaymentConfirmed = onDocumentUpdated("pagos/{pagoId}", async (event) =
           title: "¡Pago Confirmado!",
           body: "¡Tu pago fue confirmado! El paseo está en curso.",
         },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
+        },
         data: {
           click_action: "OPEN_WALKS_ACTIVITY", // Opens PaseosActivity for owner
         },
@@ -169,6 +174,11 @@ exports.onPaymentConfirmed = onDocumentUpdated("pagos/{pagoId}", async (event) =
         notification: {
           title: "¡Pago Confirmado!",
           body: "¡Pago confirmado! Puedes iniciar el paseo.",
+        },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
         },
         data: {
           click_action: "OPEN_REQUESTS_ACTIVITY", // Opens SolicitudesActivity for walker
@@ -203,8 +213,35 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
     const idDueno = newReservation.id_dueno && typeof newReservation.id_dueno === 'object' && newReservation.id_dueno.id ? newReservation.id_dueno.id : newReservation.id_dueno;
     const idPaseador = newReservation.id_paseador && typeof newReservation.id_paseador === 'object' && newReservation.id_paseador.id ? newReservation.id_paseador.id : newReservation.id_paseador;
     const idMascota = newReservation.id_mascota;
-    const fecha = newReservation.fecha; // Assuming format "DD/MM/YYYY"
-    const hora = newReservation.hora_inicio; // Assuming format "HH:MM"
+
+    // Helper to format date from Timestamp with Timezone
+    const formatDate = (timestamp) => {
+        if (!timestamp) return "Fecha desconocida";
+        const seconds = timestamp.seconds || (timestamp.toDate && timestamp.toDate().getTime() / 1000);
+        if (seconds) {
+            const date = new Date(seconds * 1000);
+            // Use Ecuador timezone (GMT-5)
+            const options = { timeZone: "America/Guayaquil", day: '2-digit', month: '2-digit', year: 'numeric' };
+            return date.toLocaleDateString("es-ES", options);
+        }
+        return timestamp;
+    };
+
+    // Helper to format time from Timestamp with Timezone
+    const formatTime = (timestamp) => {
+        if (!timestamp) return "Hora desconocida";
+        const seconds = timestamp.seconds || (timestamp.toDate && timestamp.toDate().getTime() / 1000);
+        if (seconds) {
+             const date = new Date(seconds * 1000);
+             // Use Ecuador timezone (GMT-5)
+             const options = { timeZone: "America/Guayaquil", hour: '2-digit', minute: '2-digit', hour12: false };
+             return date.toLocaleTimeString("es-ES", options);
+        }
+        return timestamp;
+    };
+
+    const fecha = formatDate(newReservation.fecha);
+    const hora = formatTime(newReservation.hora_inicio);
 
     // Fetch walker's FCM token
     const paseadorDoc = await db.collection("usuarios").doc(idPaseador).get();
@@ -237,6 +274,11 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
         notification: {
           title: "¡Nueva solicitud de paseo!",
           body: `${nombreDueno} ha solicitado un paseo para ${nombreMascota} el ${fecha} a las ${hora}.`,
+        },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
         },
         data: {
           click_action: "OPEN_REQUESTS_ACTIVITY", // Opens SolicitudesActivity for walker
@@ -306,9 +348,15 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
         notification: {
           title: "¡Paseo aceptado!",
           body: `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota}.`,
+          // Force Android to use the app icon (if resource exists as ic_notification or similar, otherwise defaults usually work but 'icon' key helps)
+        },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario' // Try to reference your drawable resource name
+            }
         },
         data: {
-          click_action: "OPEN_REQUEST_DETAILS", // Opens SolicitudDetalleActivity for owner
+          click_action: "OPEN_PAYMENT_CONFIRMATION", // Redirects to ConfirmarPagoActivity
           reservaId: reservaId, // Pass reservaId to activity
         },
       };
@@ -366,6 +414,11 @@ exports.onWalkStarted = onDocumentUpdated("reservas/{reservaId}", async (event) 
         notification: {
           title: "¡Tu paseo ha iniciado!",
           body: `El paseo de ${nombreMascota} con ${nombrePaseador} ha comenzado.`,
+        },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
         },
         data: {
           click_action: "OPEN_CURRENT_WALK_ACTIVITY", // Opens PaseoEnCursoActivity for owner
@@ -427,6 +480,11 @@ exports.onReservationCancelled = onDocumentUpdated("reservas/{reservaId}", async
           title: "Solicitud cancelada",
           body: `${nombreDueno} ha cancelado la solicitud de paseo para ${nombreMascota}.`,
         },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
+        },
         data: {
           click_action: "OPEN_REQUESTS_ACTIVITY", // Opens SolicitudesActivity for walker
           reservaId: reservaId, // Pass reservaId to activity
@@ -465,11 +523,17 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
     const idPaseador = getIdValue(reserva.id_paseador);
     const idMascota = getIdValue(reserva.id_mascota);
 
-    // Convert date string (DD/MM/YYYY) and time string (HH:MM) to a Date object
-    const [day, month, year] = reserva.fecha.split('/').map(Number);
-    const [hour, minute] = reserva.hora_inicio.split(':').map(Number);
-    const walkDateTime = new Date(year, month - 1, day, hour, minute, 0);
-    const walkTimestamp = admin.firestore.Timestamp.fromDate(walkDateTime);
+    // Correctly handle Timestamp objects from Firestore
+    let walkTimestamp;
+    if (reserva.hora_inicio && reserva.hora_inicio.toDate) {
+        walkTimestamp = reserva.hora_inicio;
+    } else if (reserva.fecha && reserva.fecha.toDate) {
+        // Fallback to 'fecha' if 'hora_inicio' is missing (though unlikely given app logic)
+        walkTimestamp = reserva.fecha;
+    } else {
+        console.warn(`Reserva ${reservaId} has invalid date/time format.`);
+        continue; 
+    }
 
     if (walkTimestamp.toMillis() > now.toMillis() && walkTimestamp.toMillis() <= oneHourFromNow.toMillis()) {
       console.log(`Found upcoming walk ${reservaId} for reminder.`);
@@ -525,10 +589,13 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
     const idDueno = getIdValue(reserva.id_dueno);
     const idPaseador = getIdValue(reserva.id_paseador);
     const idMascota = getIdValue(reserva.id_mascota);
-    const [day, month, year] = reserva.fecha.split('/').map(Number);
-    const [hour, minute] = reserva.hora_inicio.split(':').map(Number);
-    const walkDateTime = new Date(year, month - 1, day, hour, minute, 0);
-    const walkTimestamp = admin.firestore.Timestamp.fromDate(walkDateTime);
+    
+    let walkTimestamp;
+    if (reserva.hora_inicio && reserva.hora_inicio.toDate) {
+        walkTimestamp = reserva.hora_inicio;
+    } else {
+        continue;
+    }
 
     if (walkTimestamp.toMillis() > now.toMillis() && walkTimestamp.toMillis() <= oneHourFromNow.toMillis()) {
       const dueno = idDueno ? usersData[idDueno] : null;
@@ -605,9 +672,13 @@ exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
     const reserva = doc.data();
     const reservaId = doc.id;
 
-    const [day, month, year] = reserva.fecha.split('/').map(Number);
-    const [hour, minute] = reserva.hora_inicio.split(':').map(Number);
-    const scheduledStartTime = new Date(year, month - 1, day, hour, minute, 0);
+    let scheduledStartTime;
+    if (reserva.hora_inicio && reserva.hora_inicio.toDate) {
+        scheduledStartTime = reserva.hora_inicio.toDate();
+    } else {
+        console.warn(`Reserva ${reservaId} has invalid hora_inicio format (not a Timestamp). Skipping.`);
+        continue;
+    }
 
     // If the scheduled start time is in the past (up to 5 minutes ago)
     if (scheduledStartTime.getTime() <= now.getTime() && scheduledStartTime.getTime() >= fiveMinutesAgo.getTime()) {

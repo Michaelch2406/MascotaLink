@@ -35,6 +35,11 @@ import com.mjc.mascotalink.security.BiometricAuthManager;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.security.SessionManager;
+import com.mjc.mascotalink.PaseosActivity;
+import com.mjc.mascotalink.SolicitudesActivity;
+import com.mjc.mascotalink.SolicitudDetalleActivity;
+import com.mjc.mascotalink.PaseoEnCursoActivity;
+import com.mjc.mascotalink.ConfirmarPagoActivity;
 
 public class LoginActivity extends AppCompatActivity implements BiometricAuthManager.BiometricPromptCallback {
 
@@ -282,31 +287,68 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         Intent intent = null;
         String normalizedRol = rol.toUpperCase(); // Normalizar a mayúsculas
 
-        switch (normalizedRol) {
-            case "PASEADOR":
-                if ("APROBADO".equals(estadoVerificacion)) {
-                    intent = new Intent(this, PerfilPaseadorActivity.class);
-                } else if ("PENDIENTE".equals(estadoVerificacion)){
-                    mostrarMensaje("Tu perfil está en revisión. Te notificaremos cuando sea aprobado.");
-                } else {
-                    mostrarMensaje("Tu perfil fue rechazado o está inactivo. Contacta a soporte.");
+        // 1. Verificar si hay una acción de notificación pendiente (Deep Link)
+        String clickAction = getIntent().getStringExtra("click_action");
+        
+        // Solo permitimos redirigir si el usuario está aprobado
+        if (clickAction != null && "APROBADO".equals(estadoVerificacion)) {
+            switch (clickAction) {
+                case "OPEN_WALKS_ACTIVITY":
+                    intent = new Intent(this, PaseosActivity.class);
+                    break;
+                case "OPEN_REQUESTS_ACTIVITY":
+                    intent = new Intent(this, SolicitudesActivity.class);
+                    break;
+                case "OPEN_REQUEST_DETAILS":
+                    intent = new Intent(this, SolicitudDetalleActivity.class);
+                    break;
+                case "OPEN_PAYMENT_CONFIRMATION":
+                    intent = new Intent(this, ConfirmarPagoActivity.class);
+                    if (getIntent().hasExtra("reservaId")) {
+                        intent.putExtra("reserva_id", getIntent().getStringExtra("reservaId"));
+                    }
+                    break;
+                case "OPEN_CURRENT_WALK_ACTIVITY":
+                    intent = new Intent(this, PaseoEnCursoActivity.class);
+                    break;
+            }
+
+            if (intent != null) {
+                // Importante: Pasar todos los extras (como id_reserva) a la siguiente actividad
+                if (getIntent().getExtras() != null) {
+                    intent.putExtras(getIntent().getExtras());
                 }
-                break;
-            case "DUEÑO":
-                if ("APROBADO".equals(estadoVerificacion)) {
-                    intent = new Intent(this, PerfilDuenoActivity.class);
-                } else if ("PENDIENTE".equals(estadoVerificacion)) {
-                    mostrarMensaje("Tu perfil de dueño está en revisión. Te notificaremos cuando sea aprobado.");
-                } else {
-                    mostrarMensaje("Tu perfil de dueño fue rechazado o está inactivo. Contacta a soporte.");
-                }
-                break;
-            case "ADMIN":
-                intent = new Intent(this, MainActivity.class);
-                break;
-            default:
-                mostrarError("Rol de usuario desconocido: '" + rol + "'"); // Mostrar el rol problemático
-                break;
+            }
+        }
+
+        // 2. Si no hubo acción de notificación o el intent sigue siendo nulo, flujo normal
+        if (intent == null) {
+            switch (normalizedRol) {
+                case "PASEADOR":
+                    if ("APROBADO".equals(estadoVerificacion)) {
+                        intent = new Intent(this, PerfilPaseadorActivity.class);
+                    } else if ("PENDIENTE".equals(estadoVerificacion)){
+                        mostrarMensaje("Tu perfil está en revisión. Te notificaremos cuando sea aprobado.");
+                    } else {
+                        mostrarMensaje("Tu perfil fue rechazado o está inactivo. Contacta a soporte.");
+                    }
+                    break;
+                case "DUEÑO":
+                    if ("APROBADO".equals(estadoVerificacion)) {
+                        intent = new Intent(this, PerfilDuenoActivity.class);
+                    } else if ("PENDIENTE".equals(estadoVerificacion)) {
+                        mostrarMensaje("Tu perfil de dueño está en revisión. Te notificaremos cuando sea aprobado.");
+                    } else {
+                        mostrarMensaje("Tu perfil de dueño fue rechazado o está inactivo. Contacta a soporte.");
+                    }
+                    break;
+                case "ADMIN":
+                    intent = new Intent(this, MainActivity.class);
+                    break;
+                default:
+                    mostrarError("Rol de usuario desconocido: '" + rol + "'");
+                    break;
+            }
         }
 
         if (intent != null) {

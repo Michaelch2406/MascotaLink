@@ -27,6 +27,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.messaging.FirebaseMessaging; // Added
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
@@ -34,7 +35,9 @@ import com.mjc.mascotalink.util.BottomNavManager;
 
 
 import java.util.ArrayList;
+import java.util.HashMap; // Added
 import java.util.List;
+import java.util.Map; // Added
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -100,7 +103,14 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             if (isMyProfile) {
                 // Only load sensitive data if the user is viewing their own profile
                 cargarMetodoPagoPredeterminado(duenoIdFromIntent);
+                updateFcmToken(); // Update token if viewing own profile
             }
+        } else {
+             // If no ID passed, assume it's the logged-in user
+             FirebaseUser currentUser = mAuth.getCurrentUser();
+             if (currentUser != null) {
+                 updateFcmToken();
+             }
         }
     }
 
@@ -161,6 +171,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                     cargarDatosDueno(uid);
                     cargarMascotas(uid);
                     cargarMetodoPagoPredeterminado(uid);
+                    updateFcmToken(); // Ensure token is updated
                 }
             } else {
                 Log.d(TAG, "onAuthStateChanged:signed_out");
@@ -170,6 +181,32 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 finish();
             }
         };
+    }
+
+    private void updateFcmToken() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null) {
+            FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                        return;
+                    }
+
+                    // Get new FCM registration token
+                    String token = task.getResult();
+                    Log.d(TAG, "FCM Token: " + token);
+
+                    // Save to Firestore
+                    Map<String, Object> tokenMap = new HashMap<>();
+                    tokenMap.put("fcmToken", token);
+                    
+                    db.collection("usuarios").document(user.getUid())
+                            .update(tokenMap)
+                            .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token updated in Firestore"))
+                            .addOnFailureListener(e -> Log.w(TAG, "Error updating FCM token", e));
+                });
+        }
     }
 
 

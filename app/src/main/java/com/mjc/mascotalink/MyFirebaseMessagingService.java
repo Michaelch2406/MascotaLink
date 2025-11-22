@@ -20,8 +20,12 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
+
 import com.mjc.mascotalink.PaseosActivity;
 import com.mjc.mascotalink.SolicitudesActivity;
+import com.mjc.mascotalink.SolicitudDetalleActivity;
+import com.mjc.mascotalink.PaseoEnCursoActivity;
+import com.mjc.mascotalink.ConfirmarPagoActivity;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
@@ -45,7 +49,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (remoteMessage.getData().size() > 0) {
             Log.d(TAG, "Message data payload: " + remoteMessage.getData());
             // Handle data payload messages here.
-            // You can parse the data and decide what activity to open or what content to display.
             handleDataMessage(remoteMessage);
         }
 
@@ -57,31 +60,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     /**
-     * Called if FCM registration token is updated. This may occur if the security of
-     * the previous token had been compromised. Note that this is called when the
-     * FCM registration token is initially generated on your device, and when it's
-     * refreshed.
-     *
-     * @param token The new token.
+     * Called if FCM registration token is updated.
      */
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
         Log.d(TAG, "Refreshed token: " + token);
-
-        // If you want to send messages to this application instance or
-        // manage this apps subscriptions on the server side, send the
-        // FCM registration token to your app server.
         sendRegistrationToServer(token);
-    }
-
-    /**
-     * Handle time allotted to make a network request.
-     */
-    @Override
-    public void onDeletedMessages() {
-        super.onDeletedMessages();
-        Log.d(TAG, "Deleted messages on server.");
     }
 
     private void handleDataMessage(RemoteMessage remoteMessage) {
@@ -92,8 +77,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     /**
      * Create and show a simple notification containing the received FCM message.
-     *
-     * @param messageBody FCM message body received.
      */
     private void sendNotification(String title, String messageBody, java.util.Map<String, String> data) {
         Intent intent = null;
@@ -109,20 +92,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     break;
                 case "OPEN_REQUEST_DETAILS":
                     intent = new Intent(this, SolicitudDetalleActivity.class);
-                    // Pass the reservaId to the activity
                     if (data.containsKey("reservaId")) {
-                        intent.putExtra("reservaId", data.get("reservaId"));
+                        intent.putExtra("id_reserva", data.get("reservaId"));
+                    }
+                    break;
+                case "OPEN_PAYMENT_CONFIRMATION":
+                    intent = new Intent(this, ConfirmarPagoActivity.class);
+                    if (data.containsKey("reservaId")) {
+                        intent.putExtra("reserva_id", data.get("reservaId"));
                     }
                     break;
                 case "OPEN_CURRENT_WALK_ACTIVITY":
                     intent = new Intent(this, PaseoEnCursoActivity.class);
-                    // Pass the reservaId to the activity
                     if (data.containsKey("reservaId")) {
-                        intent.putExtra("reservaId", data.get("reservaId"));
+                        intent.putExtra("id_reserva", data.get("reservaId"));
                     }
                     break;
                 default:
-                    // Default to main activity or a generic landing
                     intent = new Intent(this, MainActivity.class);
                     break;
             }
@@ -134,7 +120,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
                 PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
-        String channelId = CHANNEL_ID_PAYMENTS; // Default to payment channel for now
+        String channelId = CHANNEL_ID_PAYMENTS;
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         NotificationCompat.Builder notificationBuilder =
                 new NotificationCompat.Builder(this, channelId)
@@ -148,7 +134,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
-        // Since Android 8.0 (API level 26) and higher, notification channels are required.
         createNotificationChannel(notificationManager, channelId, CHANNEL_NAME_PAYMENTS, CHANNEL_DESCRIPTION_PAYMENTS);
 
         notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
@@ -162,14 +147,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    /**
-     * Persist token to third-party servers.
-     *
-     * Modify this method to associate the user's FCM registration token with any server-side account
-     * maintained by your application.
-     *
-     * @param token The new token.
-     */
     private void sendRegistrationToServer(String token) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) {
