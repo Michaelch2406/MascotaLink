@@ -504,6 +504,56 @@ exports.onReservationCancelled = onDocumentUpdated("reservas/{reservaId}", async
   }
 });
 
+exports.onRequestCancellation = onDocumentUpdated("reservas/{reservaId}", async (event) => {
+  const { reservaId } = event.params;
+  const newValue = event.data.after.data();
+  const oldValue = event.data.before.data();
+
+  // Check if status changed to SOLICITUD_CANCELACION
+  if (newValue.estado === "SOLICITUD_CANCELACION" && oldValue.estado !== "SOLICITUD_CANCELACION") {
+    console.log(`Solicitud de cancelación detectada para reserva ${reservaId}`);
+
+    const idPaseador = getIdValue(newValue.id_paseador);
+    const idDueno = getIdValue(newValue.id_dueno);
+
+    // Fetch walker's FCM token
+    const paseadorDoc = await db.collection("usuarios").doc(idPaseador).get();
+    const paseadorToken = paseadorDoc.exists ? paseadorDoc.data().fcmToken : null;
+    
+    // Fetch owner's name for better context
+    const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+    const nombreDueno = duenoDoc.exists ? duenoDoc.data().nombre_display : "El dueño";
+
+    if (paseadorToken) {
+      const message = {
+        token: paseadorToken,
+        notification: {
+          title: "Solicitud de cancelación",
+          body: `${nombreDueno} ha solicitado cancelar el paseo. Por favor revisa y responde.`,
+        },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
+        },
+        data: {
+          click_action: "OPEN_CURRENT_WALK_ACTIVITY", // Opens PaseoEnCursoActivity for walker
+          reservaId: reservaId,
+        },
+      };
+
+      try {
+        await admin.messaging().send(message);
+        console.log(`Notification sent to walker ${idPaseador} for cancellation request.`);
+      } catch (error) {
+        console.error(`Error sending notification to walker ${idPaseador}:`, error);
+      }
+    } else {
+      console.warn(`No FCM token found for walker ${idPaseador}`);
+    }
+  }
+});
+
 exports.onPaseoUpdate = onDocumentUpdated("reservas/{reservaId}", async (event) => {
   const { reservaId } = event.params;
   const newValue = event.data.after.data();

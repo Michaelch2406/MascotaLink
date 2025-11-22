@@ -72,6 +72,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     private RecyclerView rvFotos;
     private RecyclerView rvActividad;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnCancelar;
     private BottomNavigationView bottomNav;
 
     // Adapters
@@ -170,6 +171,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         rvFotos = findViewById(R.id.rv_fotos);
         rvActividad = findViewById(R.id.rv_actividad);
         btnContactar = findViewById(R.id.btn_contactar_paseador);
+        btnCancelar = findViewById(R.id.btn_cancelar_paseo);
         bottomNav = findViewById(R.id.bottom_nav);
     }
 
@@ -202,6 +204,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
 
     private void setupButtons() {
         btnContactar.setOnClickListener(v -> mostrarOpcionesContacto());
+        btnCancelar.setOnClickListener(v -> iniciarProcesoCancelacion());
     }
 
     private void setupBottomNav() {
@@ -277,13 +280,39 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     }
 
     private void manejarSnapshotReserva(DocumentSnapshot snapshot) {
-        // owner-vibe-fix: ValidaciÃ³n de estado vigente
         String estado = snapshot.getString("estado");
-        if (!"EN_CURSO".equalsIgnoreCase(estado)) {
-            Toast.makeText(this, "El paseo ya no estÃ¡ en curso", Toast.LENGTH_SHORT).show();
-            finish();
+        if (estado == null) estado = "";
+
+        // --- FIX: Manejo de Estado de Solicitud de Cancelación (Dueño) ---
+        if ("SOLICITUD_CANCELACION".equalsIgnoreCase(estado)) {
+            tvEstado.setText("Esperando confirmación...");
+            tvEstado.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
+            if (btnCancelar != null) {
+                btnCancelar.setEnabled(false);
+                btnCancelar.setAlpha(0.5f);
+            }
+            // Continuar cargando datos para mostrar info, pero no finalizar
+        } else if (!"EN_CURSO".equalsIgnoreCase(estado) && !"EN_PROGRESO".equalsIgnoreCase(estado)) {
+             // Bloque existente para estados finales
+            if (estado.equalsIgnoreCase("COMPLETADO") || estado.startsWith("CANCELADO")) {
+                Toast.makeText(this, "El paseo ha finalizado: " + estado, Toast.LENGTH_SHORT).show();
+                stopTimer();
+                new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1500);
+            } else {
+                Toast.makeText(this, "El paseo ya no está en curso", Toast.LENGTH_SHORT).show();
+                finish();
+            }
             return;
+        } else {
+            // Si volvió a EN_CURSO (rechazado), reactivar botón
+            if (btnCancelar != null) {
+                btnCancelar.setEnabled(true);
+                btnCancelar.setAlpha(1f);
+            }
+            tvEstado.setText("En curso"); // Restaurar texto
+            tvEstado.setTextColor(getResources().getColor(R.color.color_en_curso));
         }
+        // -------------------------------------------------------------------
 
         // owner-vibe-fix: Tiempos y duracion
         Timestamp inicioTimestamp = snapshot.getTimestamp("fecha_inicio_paseo");
@@ -468,6 +497,97 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM, hh:mm a", new Locale("es", "ES"));
         String fechaStr = sdf.format(inicio);
         tvFechaHora.setText(String.format(Locale.getDefault(), "%s | %d min DuraciÃ³n", fechaStr, duracionMinutos));
+    }
+
+    private void iniciarProcesoCancelacion() {
+        if (fechaInicioPaseo == null) {
+            Toast.makeText(this, "El paseo aún no ha iniciado correctamente", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long tiempoTranscurrido = calcularTiempoTranscurrido();
+        // Regla: Bloquear cancelación antes de 10 minutos
+        if (tiempoTranscurrido < 10 * 60 * 1000) {
+            long minutosRestantes = 10 - TimeUnit.MILLISECONDS.toMinutes(tiempoTranscurrido);
+            Toast.makeText(this, "Debes esperar " + minutosRestantes + " minutos más para cancelar.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        mostrarDialogoCancelacion();
+    }
+
+    private void mostrarDialogoCancelacion() {
+        if (isFinishing()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_cancelar_paseo, null);
+        builder.setView(view);
+
+        android.widget.RadioGroup rgMotivos = view.findViewById(R.id.rg_motivos);
+        com.google.android.material.textfield.TextInputEditText etOtroMotivo = view.findViewById(R.id.et_otro_motivo);
+        
+        // Ocultar opción de "Éxito" para el dueño
+        View rbExito = view.findViewById(R.id.rb_finalizar_exito);
+        if (rbExito != null) rbExito.setVisibility(View.GONE);
+        
+        rgMotivos.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_otro) {
+                etOtroMotivo.setVisibility(View.VISIBLE);
+            } else {
+                etOtroMotivo.setVisibility(View.GONE);
+            }
+        });
+
+        builder.setPositiveButton("Enviar Solicitud", (dialog, which) -> {
+            String motivo = "";
+            int selectedId = rgMotivos.getCheckedRadioButtonId();
+            
+            if (selectedId == -1) {
+                Toast.makeText(this, "Debes seleccionar un motivo", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (selectedId == R.id.rb_perro_no_disponible) motivo = "Perro no disponible";
+            else if (selectedId == R.id.rb_emergencia) motivo = "Emergencia con la mascota";
+            else if (selectedId == R.id.rb_seguridad) motivo = "Problema de seguridad";
+            else if (selectedId == R.id.rb_otro) motivo = etOtroMotivo.getText().toString();
+
+            if (motivo.isEmpty()) {
+                Toast.makeText(this, "Debes especificar el motivo", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            confirmarCancelacionDueno(motivo);
+        });
+
+        builder.setNegativeButton("Volver al paseo", null);
+        builder.show();
+    }
+
+    private void confirmarCancelacionDueno(String motivo) {
+        mostrarLoading(true);
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("estado", "SOLICITUD_CANCELACION"); // Estado intermedio
+        data.put("motivo_cancelacion", motivo);
+        data.put("cancelado_por", "DUENO");
+        data.put("fecha_solicitud_cancelacion", new Date());
+
+        reservaRef.update(data)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Solicitud de cancelación enviada al paseador.", Toast.LENGTH_LONG).show();
+                    mostrarLoading(false);
+                    // No cerramos la actividad inmediatamente, esperamos respuesta o actualización de estado
+                })
+                .addOnFailureListener(e -> {
+                    mostrarLoading(false);
+                    Toast.makeText(this, "Error al enviar solicitud", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error cancelando", e);
+                });
+    }
+
+    private long calcularTiempoTranscurrido() {
+        if (fechaInicioPaseo == null) return 0;
+        return Math.max(0, System.currentTimeMillis() - fechaInicioPaseo.getTime());
     }
 
     private void startTimer() {

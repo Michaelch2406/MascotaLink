@@ -266,51 +266,33 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <LinearLayout
-        android:id="@+id/layout_actions"
-        android:layout_width="match_parent"
+    <!-- FAB Cancelar (Arriba) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_cancelar_paseo"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_marginBottom="80dp"
-        android:background="@android:color/white"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="168dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        app:backgroundTint="#F44336"
+        app:tint="@android:color/white"
+        app:fabSize="normal"
+        android:contentDescription="Cancelar paseo" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:orientation="horizontal"
-            android:weightSum="2">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_contactar"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:text="Contactar"
-                android:textColor="@color/gray_dark"
-                android:textSize="13sp"
-                app:cornerRadius="8dp"
-                app:strokeColor="@color/gray_light"
-                app:strokeWidth="1dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_finalizar"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="@string/paseo_en_curso_button_finalizar"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:backgroundTint="@color/blue_primary"
-                app:cornerRadius="8dp" />
-        </LinearLayout>
-    </LinearLayout>
+    <!-- FAB Contactar (Abajo) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_contactar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="96dp"
+        android:src="@drawable/ic_messages"
+        app:backgroundTint="#12A3ED"
+        app:tint="@android:color/white"
+        app:fabSize="normal"
+        android:contentDescription="Contactar dueño" />
 
     <View
         android:layout_width="match_parent"

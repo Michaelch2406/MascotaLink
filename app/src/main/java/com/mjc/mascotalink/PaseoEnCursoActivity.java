@@ -83,8 +83,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private com.google.android.material.imageview.ShapeableImageView ivFotoMascota;
     private TextInputEditText etNotas;
     private RecyclerView rvFotos;
-    private MaterialButton btnContactar;
-    private MaterialButton btnFinalizar;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnCancelar;
     private MaterialButton btnAdjuntar;
     private BottomNavigationView bottomNav;
     private ProgressBar pbLoading;
@@ -159,7 +159,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         etNotas = findViewById(R.id.et_notas);
         rvFotos = findViewById(R.id.rv_fotos);
         btnContactar = findViewById(R.id.btn_contactar);
-        btnFinalizar = findViewById(R.id.btn_finalizar);
+        btnCancelar = findViewById(R.id.btn_cancelar_paseo);
         btnAdjuntar = findViewById(R.id.btn_adjuntar_fotos);
         bottomNav = findViewById(R.id.bottom_nav);
         pbLoading = findViewById(R.id.pb_loading);
@@ -207,14 +207,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private void setupButtons() {
         btnContactar.setOnClickListener(v -> mostrarOpcionesContacto());
-        btnFinalizar.setOnClickListener(v -> finalizarPaseo());
+        btnCancelar.setOnClickListener(v -> iniciarProcesoCancelacion());
         btnAdjuntar.setOnClickListener(v -> mostrarOpcionesAdjuntar());
-        actualizarEstadoBotonFinalizar(false);
-
+        
         // Click listeners for direct navigation
         ivFotoMascota.setOnClickListener(v -> navigateToPetProfile());
         tvNombreMascota.setOnClickListener(v -> navigateToPetProfile());
-        tvPaseador.setOnClickListener(v -> navigateToOwnerProfile()); // tvPaseador shows owner's name when viewing as PASEADOR
+        tvPaseador.setOnClickListener(v -> navigateToOwnerProfile());
     }
 
     private void navigateToPetProfile() {
@@ -288,6 +287,15 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private void manejarSnapshotReserva(@NonNull DocumentSnapshot snapshot) {
         String estado = snapshot.getString("estado");
         if (estado == null) estado = "";
+
+        // --- FIX: Manejo de Solicitud de Cancelación Bilateral ---
+        if ("SOLICITUD_CANCELACION".equalsIgnoreCase(estado)) {
+            String motivo = snapshot.getString("motivo_cancelacion");
+            mostrarDialogoSolicitudCancelacion(motivo != null ? motivo : "Sin motivo especificado");
+            return; // Detener actualización de UI normal mientras se resuelve
+        }
+        // ---------------------------------------------------------
+
         //vibe-fix: Validar transiciones de estado cuando el paseo se completa
         if (!estado.equalsIgnoreCase("EN_CURSO") && !estado.equalsIgnoreCase("EN_PROGRESO")) {
             if (estado.equalsIgnoreCase("COMPLETADO")) {
@@ -751,30 +759,95 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
     }
 
-    private void finalizarPaseo() {
+    private void iniciarProcesoCancelacion() {
         if (fechaInicioPaseo == null) {
             Toast.makeText(this, "El paseo aún no ha iniciado correctamente", Toast.LENGTH_SHORT).show();
             return;
         }
+
         long tiempoTranscurrido = calcularTiempoTranscurrido();
-        long minimo = obtenerTiempoMinimo();
-        if (tiempoTranscurrido < minimo) {
-            Toast.makeText(this, "El paseo aún no completa el tiempo pactado", Toast.LENGTH_SHORT).show();
+        // Regla: Bloquear cancelación antes de 10 minutos (600,000 ms)
+        if (tiempoTranscurrido < 10 * 60 * 1000) {
+            long minutosRestantes = 10 - TimeUnit.MILLISECONDS.toMinutes(tiempoTranscurrido);
+            Toast.makeText(this, "Debes esperar " + minutosRestantes + " minutos más para cancelar.", Toast.LENGTH_LONG).show();
             return;
         }
 
-        new AlertDialog.Builder(this)
-                .setTitle("Finalizar paseo")
-                .setMessage("¿Finalizas el paseo de " + (nombreMascota.isEmpty() ? "la mascota" : nombreMascota) + "?")
-                .setPositiveButton("Sí", (dialog, which) -> confirmarFinalizacion())
-                .setNegativeButton("No", null)
-                .show();
+        mostrarDialogoCancelacion();
     }
 
-    private void confirmarFinalizacion() {
-        mostrarLoading(true);
-        actualizarEstadoBotonFinalizar(false);
+    private void mostrarDialogoCancelacion() {
+        if (isFinishing()) return;
 
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_cancelar_paseo, null);
+        builder.setView(view);
+
+        android.widget.RadioGroup rgMotivos = view.findViewById(R.id.rg_motivos);
+        TextInputEditText etOtroMotivo = view.findViewById(R.id.et_otro_motivo);
+        
+        rgMotivos.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_otro) {
+                etOtroMotivo.setVisibility(View.VISIBLE);
+            } else {
+                etOtroMotivo.setVisibility(View.GONE);
+            }
+        });
+
+        builder.setPositiveButton("Confirmar Cancelación", (dialog, which) -> {
+            String motivo = "";
+            int selectedId = rgMotivos.getCheckedRadioButtonId();
+            
+            if (selectedId == -1) {
+                Toast.makeText(this, "Debes seleccionar un motivo", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (selectedId == R.id.rb_perro_no_disponible) motivo = "Perro no disponible";
+            else if (selectedId == R.id.rb_emergencia) motivo = "Emergencia con la mascota";
+            else if (selectedId == R.id.rb_seguridad) motivo = "Problema de seguridad";
+            else if (selectedId == R.id.rb_otro) motivo = etOtroMotivo.getText().toString();
+            else if (selectedId == R.id.rb_finalizar_exito) { // Opción para finalizar con éxito
+                 confirmarFinalizacionExito(); // Reutilizar lógica de éxito
+                 return;
+            }
+
+            if (motivo.isEmpty()) {
+                Toast.makeText(this, "Debes especificar el motivo", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            confirmarCancelacionPaseador(motivo);
+        });
+
+        builder.setNegativeButton("Volver al paseo", null);
+        builder.show();
+    }
+
+    private void confirmarCancelacionPaseador(String motivo) {
+        mostrarLoading(true);
+        Map<String, Object> data = new HashMap<>();
+        data.put("estado", "CANCELADO"); // Estado final para que el sistema lo reconozca como terminado
+        data.put("sub_estado", "CANCELADO_PASEADOR"); // Detalle para lógica interna
+        data.put("motivo_cancelacion", motivo);
+        data.put("cancelado_por", "PASEADOR");
+        data.put("fecha_fin_paseo", new Date());
+
+        reservaRef.update(data)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Paseo cancelado.", Toast.LENGTH_SHORT).show();
+                    mostrarLoading(false);
+                    new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1000);
+                })
+                .addOnFailureListener(e -> {
+                    mostrarLoading(false);
+                    Toast.makeText(this, "Error al cancelar paseo", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error cancelando paseo", e);
+                });
+    }
+
+    private void confirmarFinalizacionExito() {
+        mostrarLoading(true);
         Map<String, Object> data = new HashMap<>();
         data.put("estado", "COMPLETADO");
         data.put("fecha_fin_paseo", new Date());
@@ -782,15 +855,59 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         reservaRef.update(data)
                 .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "¡Paseo finalizado!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "¡Paseo finalizado con éxito!", Toast.LENGTH_SHORT).show();
                     mostrarLoading(false);
                     new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1000);
                 })
                 .addOnFailureListener(e -> {
                     mostrarLoading(false);
                     Toast.makeText(this, "Error al finalizar paseo", Toast.LENGTH_SHORT).show();
-                    actualizarEstadoBotonFinalizar(calcularTiempoTranscurrido() >= obtenerTiempoMinimo());
                     Log.e(TAG, "Error finalizando paseo", e);
+                });
+    }
+
+    private void mostrarDialogoSolicitudCancelacion(String motivo) {
+        if (isFinishing()) return;
+
+        new AlertDialog.Builder(this)
+                .setTitle("Solicitud de cancelación")
+                .setMessage("El dueño ha solicitado cancelar el paseo.\n\nMotivo: " + motivo)
+                .setCancelable(false)
+                .setPositiveButton("Aceptar cancelación", (dialog, which) -> aceptarCancelacionMutua())
+                .setNegativeButton("Rechazar / Continuar", (dialog, which) -> rechazarCancelacion())
+                .show();
+    }
+
+    private void aceptarCancelacionMutua() {
+        mostrarLoading(true);
+        Map<String, Object> data = new HashMap<>();
+        data.put("estado", "CANCELADO");
+        data.put("sub_estado", "CANCELADO_MUTUO");
+        data.put("fecha_fin_paseo", new Date());
+
+        reservaRef.update(data)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Paseo cancelado mutuamente.", Toast.LENGTH_SHORT).show();
+                    mostrarLoading(false);
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    mostrarLoading(false);
+                    Toast.makeText(this, "Error al aceptar cancelación", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void rechazarCancelacion() {
+        mostrarLoading(true);
+        // Volver al estado activo
+        reservaRef.update("estado", "EN_CURSO")
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Cancelación rechazada. El paseo continúa.", Toast.LENGTH_SHORT).show();
+                    mostrarLoading(false);
+                })
+                .addOnFailureListener(e -> {
+                    mostrarLoading(false);
+                    Toast.makeText(this, "Error al rechazar", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -846,7 +963,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                         tvHoras.setText(String.format(Locale.getDefault(), "%02d", horas));
                         tvMinutos.setText(String.format(Locale.getDefault(), "%02d", minutos));
                         tvSegundos.setText(String.format(Locale.getDefault(), "%02d", segundos));
-                        actualizarEstadoBotonFinalizar(elapsed >= obtenerTiempoMinimo());
+                        // La lógica de habilitar botón Finalizar ahora está en el diálogo
                     }
                 });
                 timerHandler.postDelayed(this, 1000);
@@ -861,32 +978,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
     }
 
-    private void actualizarEstadoBotonFinalizar(boolean habilitado) {
-        if (btnFinalizar == null || isFinishing()) return;
-        btnFinalizar.setEnabled(habilitado);
-        int color = ContextCompat.getColor(this, habilitado ? R.color.blue_primary : R.color.gray_light);
-        btnFinalizar.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
-        btnFinalizar.setAlpha(habilitado ? 1f : 0.7f);
-        //vibe-fix: Agregar contenido accesible al botón "Finalizar paseo" cuando está deshabilitado
-        if (habilitado) {
-            btnFinalizar.setContentDescription("Finalizar paseo. El tiempo mínimo se ha cumplido.");
-        } else {
-            long tiempoTranscurrido = calcularTiempoTranscurrido();
-            long minimo = obtenerTiempoMinimo();
-            long minutosRestantes = Math.max(0, (minimo - tiempoTranscurrido) / 60000);
-            String descripcion = "Finalizar paseo deshabilitado. " +
-                    (minutosRestantes > 0 
-                        ? String.format(Locale.getDefault(), "Faltan aproximadamente %d minutos para cumplir el tiempo mínimo.", minutosRestantes)
-                        : (fechaInicioPaseo == null 
-                            ? "Esperando inicio del paseo." 
-                            : "El tiempo mínimo aún no se ha cumplido."));
-            btnFinalizar.setContentDescription(descripcion);
-            // Agregar tooltip para Android 8.0+
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                btnFinalizar.setTooltipText(descripcion);
-            }
-        }
-    }
+
 
     private void mostrarLoading(boolean mostrar) {
         pbLoading.setVisibility(mostrar ? View.VISIBLE : View.GONE);

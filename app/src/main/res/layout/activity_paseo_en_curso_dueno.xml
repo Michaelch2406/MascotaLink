@@ -382,13 +382,28 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- FAB Cancelar (Arriba) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_cancelar_paseo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="192dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        app:backgroundTint="#F44336"
+        app:tint="@android:color/white"
+        app:fabSize="normal"
+        android:contentDescription="Cancelar paseo" />
+
+    <!-- FAB Contactar (Abajo) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btn_contactar_paseador"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="80dp"
+        android:layout_marginBottom="120dp"
         android:src="@drawable/ic_messages"
         app:backgroundTint="#12A3ED"
         app:tint="@android:color/white"
