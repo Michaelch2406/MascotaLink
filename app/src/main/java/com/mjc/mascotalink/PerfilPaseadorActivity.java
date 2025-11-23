@@ -157,6 +157,30 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         setupAuthListener();
 
         paseadorId = getIntent().getStringExtra("paseadorId");
+
+        // Initialize currentUserId and role from cache immediately to prevent bottom nav flicker
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            currentUserId = currentUser.getUid();
+            String cachedRole = BottomNavManager.getUserRole(this);
+            if (cachedRole != null) {
+                currentUserRole = cachedRole;
+                // Pre-calculate bottomNavRole based on cache
+                boolean isOwnProfile = paseadorId == null || paseadorId.equals(currentUserId);
+                if (isOwnProfile) {
+                   bottomNavRole = "PASEADOR"; 
+                } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
+                   bottomNavRole = "DUEÑO";
+                } else {
+                   bottomNavRole = currentUserRole;
+                }
+            }
+        }
+        
+        // Setup Bottom Navigation immediately to prevent flicker
+        if (bottomNav != null) {
+            setupBottomNavigation();
+        }
     }
 
     @Override

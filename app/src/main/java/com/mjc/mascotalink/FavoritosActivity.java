@@ -29,6 +29,12 @@ public class FavoritosActivity extends AppCompatActivity implements FavoritosAda
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_favoritos);
 
+        // Initialize role from cache
+        String cachedRole = BottomNavManager.getUserRole(this);
+        if (cachedRole != null) {
+            bottomNavRole = cachedRole;
+        }
+
         setupToolbar();
         setupRecyclerView();
         setupBottomNavigation();

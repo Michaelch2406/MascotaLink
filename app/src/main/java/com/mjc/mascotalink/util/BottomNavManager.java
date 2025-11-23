@@ -1,7 +1,9 @@
 package com.mjc.mascotalink.util;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -15,6 +17,19 @@ import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.SolicitudesActivity;
 
 public class BottomNavManager {
+
+    private static final String PREFS_NAME = "MascotaLinkPrefs";
+    private static final String KEY_USER_ROLE = "user_role";
+
+    public static void saveUserRole(Context context, String role) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putString(KEY_USER_ROLE, role).apply();
+    }
+
+    public static String getUserRole(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getString(KEY_USER_ROLE, null);
+    }
 
     public static void setupBottomNav(Activity activity, BottomNavigationView navView, String role, int selectedItemId) {
         if (activity == null || navView == null) {
@@ -31,8 +46,11 @@ public class BottomNavManager {
         }
 
         navView.setOnItemSelectedListener(null);
-        navView.getMenu().clear();
-        navView.inflateMenu(R.menu.menu_bottom_nav_new);
+        
+        // Ensure menu is inflated programmatically since it's removed from XML to prevent flicker.
+        if (navView.getMenu().size() == 0) {
+            navView.inflateMenu(R.menu.menu_bottom_nav_new);
+        }
 
         Menu menu = navView.getMenu();
         MenuItem secondItem = menu.findItem(R.id.menu_search);

@@ -87,13 +87,31 @@ public class PerfilMascotaActivity extends AppCompatActivity {
             return;
         }
 
+        
+
         initViews();
+
         setupRoleBasedUI();
+
+        
+
+        // Setup Bottom Navigation immediately if visible
+
+        if (bottomNav != null && bottomNav.getVisibility() == View.VISIBLE) {
+
+            setupBottomNavigation();
+
+        }
+
+        
+
         setupListeners();
+
     }
 
-    private void initViews() {
-        ivBack = findViewById(R.id.iv_back);
+
+
+    private void initViews() {        ivBack = findViewById(R.id.iv_back);
         ivEditMascota = findViewById(R.id.iv_edit_mascota);
         ivAvatarMascota = findViewById(R.id.iv_avatar_mascota);
         tvNombreMascota = findViewById(R.id.tv_nombre_mascota);

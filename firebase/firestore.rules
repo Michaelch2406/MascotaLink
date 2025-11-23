@@ -1,181 +1,149 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // --- Funciones de ayuda reutilizables ---
-    
+    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
+
     function isPaseador() {
       return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'PASEADOR';
     }
-    
+
     function isDueno() {
       return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'DUEÑO';
     }
 
     function isPaseadorVerificado() {
-        // Acceder al documento del paseador y verificar el campo 'verificacion_estado'
-        return get(/databases/$(database)/documents/paseadores/$(request.auth.uid)).data.verificacion_estado == 'aprobado';
+      return get(/databases/$(database)/documents/paseadores/$(request.auth.uid)).data.verificacion_estado == 'aprobado';
     }
 
-    // --- REGLAS GLOBALES (Collection Groups) ---
-    // Necesario para búsquedas que consultan todas las subcolecciones 'zonas_servicio' a la vez
+    // Collection group for zonas_servicio
     match /{path=**}/zonas_servicio/{zonaId} {
       allow read: if isAuthenticated();
     }
 
-    // Reglas para la colección 'usuarios'
+    // usuarios collection
     match /usuarios/{userId} {
-      // Permite leer el perfil de cualquier usuario autenticado (necesario para búsquedas y perfiles públicos)
       allow read: if isAuthenticated();
-      
-      // Permite crear un usuario solo si el ID coincide con el del usuario autenticado
-      // Y valida campos básicos
-      allow create: if isOwner(userId) && 
-                       request.resource.data.email is string &&
-                       request.resource.data.rol in ['DUEÑO', 'PASEADOR'];
-      
-      // Permite actualizar solo si es el propietario
-      // Mantiene la inmutabilidad de ciertos campos sensibles como el rol o estado de verificación
-      allow update: if isOwner(userId) &&
-                       // No permitir cambiar el rol después de la creación
-                       request.resource.data.rol == resource.data.rol &&
-                       // No permitir que el usuario se auto-verifique o cambie referencias críticas
-                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['perfil_ref', 'verificacion_estado', 'verificacion_fecha'])) &&
-                       // Si es paseador, validamos que no cambie manualmente su estado de verificación en el usuario
-                       (resource.data.rol == 'PASEADOR' ? request.resource.data.verificacion_estado == resource.data.verificacion_estado : true);
 
-      // Solo administradores deberían poder borrar usuarios (o el propio usuario en "eliminar cuenta")
+      allow create: if isOwner(userId) &&
+        request.resource.data.email is string &&
+        request.resource.data.rol in ['DUEÑO', 'PASEADOR'];
+
+      allow update: if isOwner(userId) &&
+        request.resource.data.rol == resource.data.rol &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['perfil_ref', 'verificacion_estado', 'verificacion_fecha'])) &&
+        (resource.data.rol == 'PASEADOR'
+          ? request.resource.data.verificacion_estado == resource.data.verificacion_estado
+          : true);
+
       allow delete: if isOwner(userId);
 
-      // --- REGLA CORREGIDA: Subcolección 'favoritos' ---
-      // Ahora dentro de 'usuarios' porque la app la busca ahí (usuarios/{uid}/favoritos)
       match /favoritos/{favoritoId} {
-          allow read, write, delete: if isOwner(userId);
+        allow read, write, delete: if isOwner(userId);
+      }
+
+      match /metodos_pago/{metodoId} {
+        allow read, write: if isOwner(userId);
       }
     }
 
-    // Reglas para la colección 'duenos' (perfiles detallados)
+    // duenos collection
     match /duenos/{duenoId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(duenoId) && isDueno();
       allow update: if isOwner(duenoId);
-      
-       // Reglas para subcolección 'mascotas'
+
       match /mascotas/{mascotaId} {
-        allow read: if isAuthenticated(); // Permitir lectura a autenticados (necesario para paseadores)
+        allow read: if isAuthenticated();
         allow write: if isOwner(duenoId);
       }
     }
-    
-    // Reglas para la colección 'paseadores' (perfiles detallados)
+
+    // paseadores collection
     match /paseadores/{paseadorId} {
       allow read: if isAuthenticated();
-      // Creación inicial del perfil
       allow create: if isOwner(paseadorId) && isPaseador();
-      
-      // Actualización del perfil
-      allow update: if isOwner(paseadorId) && 
-                       // Protege campos de verificación administrativa
-                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificacion_estado', 'verificacion_fecha', 'verificacion_notas']));
-                       
-      // Subcolecciones del paseador
+      allow update: if isOwner(paseadorId) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificacion_estado', 'verificacion_fecha', 'verificacion_notas']));
+
       match /disponibilidad/{diaId} {
-      	allow read: if isAuthenticated();
+        allow read: if isAuthenticated();
         allow write: if isOwner(paseadorId);
       }
       match /tarifas/{tarifaId} {
-      	allow read: if isAuthenticated();
+        allow read: if isAuthenticated();
         allow write: if isOwner(paseadorId);
       }
       match /zonas_servicio/{zonaId} {
-      	allow read: if isAuthenticated();
+        allow read: if isAuthenticated();
         allow write: if isOwner(paseadorId);
       }
       match /resenas/{resenaId} {
         allow read: if isAuthenticated();
-        // Solo los dueños que han tenido un servicio pueden crear reseñas (validación compleja, simplificada aquí)
         allow create: if isAuthenticated() && isDueno() && request.resource.data.dueno_id == request.auth.uid;
       }
     }
 
-    // Reglas para colección de búsqueda (denormalizada)
+    // Denormalized search collection
     match /paseadores_search/{docId} {
       allow read: if isAuthenticated();
-      // Solo el backend (Cloud Functions) debería escribir aquí normalmente, 
-      // pero si usamos sincronización cliente, restringimos al dueño.
-      // Idealmente: allow write: if false; (solo backend)
-      allow write: if isOwner(docId); 
+      allow write: if isOwner(docId);
     }
 
-    // Reglas para la colección 'reservas'
+    // reservas collection
     match /reservas/{reservaId} {
-      // Permitir leer si eres el dueño o el paseador involucrado
       allow read: if isAuthenticated() && (
-        resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) || 
+        resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
         resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
-        // Permitir lectura si se están creando (resource es null)
         resource == null
       );
 
-      // Creación: Solo dueños pueden crear reservas
       allow create: if isAuthenticated() && isDueno() &&
-                    // Validar que el dueño en la reserva sea el usuario actual
-                    request.resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid);
+        request.resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid);
 
-      // Actualización: Lógica de máquina de estados
       allow update: if isAuthenticated() && (
-        // El DUENO puede cancelar o completar (si aplica)
-        (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) && 
-         request.resource.data.estado in ['SOLICITADO', 'CANCELADO', 'COMPLETADO', 'CONFIRMADO']) ||
-         
-        // El PASEADOR puede aceptar, confirmar, iniciar o finalizar
-        (resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid) && 
-         request.resource.data.estado in ['ACEPTADO', 'CONFIRMADO', 'EN_PROGRESO', 'EN_CURSO', 'COMPLETADO'])
-         ||
-         // Permitir actualizaciones de sistema (ej. cambio de estado de pago) si el usuario está involucrado
-         (
-           (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
+        (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) &&
+          request.resource.data.estado in ['SOLICITADO', 'CANCELADO', 'COMPLETADO', 'CONFIRMADO']) ||
+        (resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid) &&
+          request.resource.data.estado in ['ACEPTADO', 'CONFIRMADO', 'EN_PROGRESO', 'EN_CURSO', 'COMPLETADO']) ||
+        (
+          (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
             resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
-            // Permitir cambios si solo afectan campos no críticos o transiciones permitidas
-            // (Esta es una simplificación, idealmente se valida cada transición)
-            true
-         )
+          true
+        )
       );
     }
-    
-    // Reglas para 'pagos'
+
+    // pagos collection
     match /pagos/{pagoId} {
       allow read: if isAuthenticated() && (resource.data.id_usuario == request.auth.uid);
-      // Permiso para crear pagos (dueño iniciando el pago)
       allow create: if isAuthenticated() && request.resource.data.id_usuario == request.auth.uid;
-      // Permiso para actualizar pagos (dueño confirmando el pago)
-      allow update: if isAuthenticated() && resource.data.id_usuario == request.auth.uid; 
+      allow update: if isAuthenticated() && resource.data.id_usuario == request.auth.uid;
     }
 
-    // Reglas para 'chat' (mensajería)
+    // chats collection
     match /chats/{chatId} {
       allow read, write: if isAuthenticated() && (
         resource.data.participantes[request.auth.uid] == true || resource == null
       );
-      
+
       match /mensajes/{mensajeId} {
-        allow read, write: if isAuthenticated(); // Refinar para verificar pertenencia al chat padre
+        allow read, write: if isAuthenticated();
       }
     }
-    
-    // Reglas para auditoría (solo escritura sistema/admin, lectura restringida)
+
+    // audit_logs collection
     match /audit_logs/{logId} {
-    	allow read: if false; // Solo admin
-      allow write: if isAuthenticated(); // Permitir registrar eventos
+      allow read: if false;
+      allow write: if isAuthenticated();
     }
-    
+
     match /mascotas/{mascotaId} {
       allow read: if isAuthenticated();
     }

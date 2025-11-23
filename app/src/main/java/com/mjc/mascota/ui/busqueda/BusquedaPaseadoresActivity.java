@@ -156,7 +156,19 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         setContentView(R.layout.activity_busqueda_paseadores);
 
         mAuth = FirebaseAuth.getInstance();
+        
+        // Initialize role from cache to prevent flicker
+        String cachedRole = BottomNavManager.getUserRole(this);
+        if (cachedRole != null) {
+             userRole = cachedRole;
+        }
+
         viewModel = new ViewModelProvider(this).get(BusquedaViewModel.class);
+        
+        // Setup Bottom Navigation immediately to prevent flicker
+        if (bottomNav != null) {
+             setupBottomNavigation();
+        }
 
         progressBar = findViewById(R.id.progressBar);
         emptyStateView = findViewById(R.id.emptyStateView);
@@ -304,7 +316,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         String rol = documentSnapshot.getString("rol");
-                        userRole = rol != null ? rol : userRole;
+                        if (rol != null) {
+                            userRole = rol;
+                            BottomNavManager.saveUserRole(this, rol);
+                        }
                         Log.d(TAG, "checkUserSessionAndRole: Rol encontrado: " + rol);
                         if ("DUEÑO".equals(rol)) {
                             setupObservers();

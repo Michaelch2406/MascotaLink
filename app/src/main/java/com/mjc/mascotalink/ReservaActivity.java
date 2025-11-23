@@ -134,6 +134,12 @@ public class ReservaActivity extends AppCompatActivity {
         }
         // --- FIX FIN ---
 
+        // Initialize role from cache
+        String cachedRole = BottomNavManager.getUserRole(this);
+        if (cachedRole != null) {
+            bottomNavRole = cachedRole;
+        }
+
         initViews();
         setupListeners();
         setupBottomNavigation();

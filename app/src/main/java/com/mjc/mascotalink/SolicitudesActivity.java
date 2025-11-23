@@ -69,7 +69,17 @@ public class SolicitudesActivity extends AppCompatActivity {
         
         currentUserId = currentUser.getUid();
 
+        // Initialize role from cache
+        String cachedRole = BottomNavManager.getUserRole(this);
+        if (cachedRole != null) {
+            userRole = cachedRole;
+        }
+
         initViews();
+        // Setup Bottom Navigation immediately to prevent flicker
+        if (bottomNav != null) {
+             setupBottomNavigation();
+        }
         setupRecyclerView();
         setupSwipeRefresh();
 

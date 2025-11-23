@@ -94,13 +94,12 @@
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
         android:background="#F7FAFC"
-        app:menu="@menu/menu_bottom_nav_new"
-        app:labelVisibilityMode="labeled"
+        app:itemActiveIndicatorStyle="@null"
         app:itemIconTint="@color/bottom_nav_item_color"
         app:itemTextColor="@color/bottom_nav_item_color"
-        app:itemActiveIndicatorStyle="@null"/>
+        app:labelVisibilityMode="labeled"
+        android:layout_alignParentBottom="true" />
 
 
 

@@ -83,12 +83,21 @@ public class PaseosActivity extends AppCompatActivity {
 
         initViews();
         setupSwipeRefresh();
+        
+        // Try to load role from cache first for immediate UI setup
+        String cachedRole = BottomNavManager.getUserRole(this);
+        if (cachedRole != null) {
+            userRole = cachedRole;
+            setupRoleSpecificUI(userRole);
+        }
+        
         fetchUserRoleAndSetupUI();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        // Use current userRole which might be set from cache or fetch
         setupBottomNavigation();
     }
 
@@ -116,10 +125,18 @@ public class PaseosActivity extends AppCompatActivity {
         db.collection("usuarios").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
-                        userRole = documentSnapshot.getString("rol");
-                        if (userRole != null) {
-                            setupRecyclerView(userRole);
-                            setupRoleSpecificUI(userRole);
+                        String fetchedRole = documentSnapshot.getString("rol");
+                        if (fetchedRole != null) {
+                            // Save to cache
+                            BottomNavManager.saveUserRole(this, fetchedRole);
+                            
+                            // Only update UI if role is different or wasn't set
+                            if (!fetchedRole.equalsIgnoreCase(userRole)) {
+                                userRole = fetchedRole;
+                                setupRecyclerView(userRole);
+                                setupRoleSpecificUI(userRole);
+                            }
+                            // Always load paseos
                             cargarPaseos(userRole);
                         } else {
                             handleRoleError();

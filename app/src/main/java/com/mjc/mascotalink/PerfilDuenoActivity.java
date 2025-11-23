@@ -112,6 +112,36 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                  updateFcmToken();
              }
         }
+
+        // Initialize role from cache to prevent bottom nav flicker
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            String myUid = currentUser.getUid();
+            String cachedRole = BottomNavManager.getUserRole(this);
+            
+            boolean isMyProfile = true;
+            if (duenoIdFromIntent != null && !duenoIdFromIntent.isEmpty()) {
+                isMyProfile = myUid.equals(duenoIdFromIntent);
+            }
+
+            if (isMyProfile) {
+                bottomNavRole = "DUEÑO";
+                bottomNavSelectedItem = R.id.menu_perfil;
+            } else {
+                // Viewing someone else, likely a Paseador viewing a Dueño
+                if (cachedRole != null && "PASEADOR".equalsIgnoreCase(cachedRole)) {
+                    bottomNavRole = "PASEADOR";
+                } else {
+                    bottomNavRole = "PASEADOR"; // Default assumption if viewing another profile
+                }
+                bottomNavSelectedItem = R.id.menu_search;
+            }
+        }
+        
+        // Setup Bottom Navigation immediately to prevent flicker
+        if (bottomNav != null) {
+            setupBottomNavigation();
+        }
     }
 
     @Override
