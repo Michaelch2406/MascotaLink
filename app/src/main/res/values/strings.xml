@@ -1,11 +1,11 @@
 <resources>
 <string name="app_name">Walki</string>
 
-<string name="paseo_en_curso_title">Paseo en curso</string>
+    <string name="paseo_en_curso_title">PASEO EN CURSO</string>
 <string name="paseo_en_curso_label_paseo_con">Paseo con</string>
 <string name="paseo_en_curso_label_paseador">Paseador: %1$s</string>
 <string name="paseo_en_curso_label_paseador_placeholder">Paseador: —</string>
-<string name="paseo_en_curso_state_en_progreso">EN PROGRESO</string>
+    <string name="paseo_en_curso_state_en_progreso">PASEO EN CURSO</string>
 <string name="paseo_en_curso_label_horas">Horas</string>
 <string name="paseo_en_curso_label_minutos">Minutos</string>
 <string name="paseo_en_curso_label_segundos">Segundos</string>

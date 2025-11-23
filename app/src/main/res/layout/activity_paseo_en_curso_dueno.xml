@@ -166,7 +166,7 @@
                 android:background="@drawable/bg_estado_en_curso"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
-                android:text="En curso"
+                android:text="@string/paseo_en_curso_state_en_progreso"
                 android:textColor="#4CAF50"
                 android:textSize="14sp"
                 android:textStyle="bold" />

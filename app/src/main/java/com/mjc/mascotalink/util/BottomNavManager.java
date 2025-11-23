@@ -78,7 +78,7 @@ public class BottomNavManager {
             if (intent != null) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 activity.startActivity(intent);
-                activity.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                activity.overridePendingTransition(0, 0);
                 return true;
             }
 
