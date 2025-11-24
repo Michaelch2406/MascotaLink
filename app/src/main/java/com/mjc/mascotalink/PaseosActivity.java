@@ -343,6 +343,7 @@ public class PaseosActivity extends AppCompatActivity {
 
             Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
                 Date now = new Date(); // Obtener fecha/hora actual una vez
+                List<Paseo> nuevosPaseos = new ArrayList<>();
 
                 for (int i = 0; i < paseosTemporales.size(); i++) {
                     Paseo paseo = paseosTemporales.get(i);
@@ -413,8 +414,18 @@ public class PaseosActivity extends AppCompatActivity {
                                 + paseo.getReservaId() + " (ID: " + paseo.getIdMascota() + ")");
                         paseo.setMascotaNombre("Mascota no encontrada");
                     }
-                    paseosList.add(paseo);
+                    nuevosPaseos.add(paseo);
                 }
+
+                // Sort client-side
+                java.util.Collections.sort(nuevosPaseos, (p1, p2) -> {
+                    if (p1.getFecha() == null || p2.getFecha() == null) return 0;
+                    return p2.getFecha().compareTo(p1.getFecha()); // Descending order
+                });
+
+                paseosList.clear();
+                paseosList.addAll(nuevosPaseos);
+
                 if (paseosAdapter != null) {
                     paseosAdapter.updateList(paseosList); // Corrected: Use updateList to refresh adapter data
                 }
