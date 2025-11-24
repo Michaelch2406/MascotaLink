@@ -18,6 +18,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import androidx.recyclerview.widget.DiffUtil;
+import com.mjc.mascotalink.utils.SolicitudDiffCallback;
+import java.util.ArrayList;
+
 import de.hdodenhof.circleimageview.CircleImageView;
 
 public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.SolicitudViewHolder> {
@@ -33,8 +37,15 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
 
     public SolicitudesAdapter(Context context, List<Solicitud> solicitudesList, OnSolicitudClickListener listener) {
         this.context = context;
-        this.solicitudesList = solicitudesList;
+        this.solicitudesList = new ArrayList<>(solicitudesList); // Copy for DiffUtil
         this.listener = listener;
+    }
+    
+    public void updateList(List<Solicitud> newList) {
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new SolicitudDiffCallback(this.solicitudesList, newList));
+        this.solicitudesList.clear();
+        this.solicitudesList.addAll(newList);
+        diffResult.dispatchUpdatesTo(this);
     }
 
     @NonNull
@@ -47,6 +58,7 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
     @Override
     public void onBindViewHolder(@NonNull SolicitudViewHolder holder, int position) {
         Solicitud solicitud = solicitudesList.get(position);
+        if (solicitud == null) return;
 
         // Fecha y hora
         if (solicitud.getFechaCreacion() != null && solicitud.getHoraInicio() != null) {
@@ -67,6 +79,7 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
             Glide.with(context)
                     .load(solicitud.getDuenoFotoUrl())
                     .placeholder(R.drawable.ic_person)
+                    .error(R.drawable.ic_person)
                     .circleCrop()
                     .into(holder.ivDuenoFoto);
         } else {

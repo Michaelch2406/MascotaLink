@@ -200,10 +200,12 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
 
                     fecha = reservaDoc.getTimestamp("fecha") != null ? reservaDoc.getTimestamp("fecha").toDate() : new Date();
                     horaInicio = reservaDoc.getTimestamp("hora_inicio") != null ? reservaDoc.getTimestamp("hora_inicio").toDate() : new Date();
+                    
+                    // Safe check for duration
                     Long duracion = reservaDoc.getLong("duracion_minutos");
-                    duracionMinutos = duracion != null ? duracion.intValue() : 60;
+                    duracionMinutos = duracion != null ? duracion.intValue() : 60; // Default 60 min
 
-                    idMascota = reservaDoc.getString("id_mascota"); // Assign to field
+                    idMascota = reservaDoc.getString("id_mascota");
                     String notas = reservaDoc.getString("notas");
                     estadoReserva = reservaDoc.getString("estado");
                     actualizarBotonesPorEstado();

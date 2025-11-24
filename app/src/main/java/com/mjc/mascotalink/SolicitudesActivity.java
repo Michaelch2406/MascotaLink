@@ -250,7 +250,7 @@ public class SolicitudesActivity extends AppCompatActivity {
         // Ordenar la lista por fecha de creación descendente antes de mostrar
         solicitudesList.sort((s1, s2) -> s2.getFechaCreacion().compareTo(s1.getFechaCreacion()));
         if (solicitudesAdapter != null) {
-            solicitudesAdapter.notifyDataSetChanged();
+            solicitudesAdapter.updateList(solicitudesList);
         }
         finalizarCarga();
     }
