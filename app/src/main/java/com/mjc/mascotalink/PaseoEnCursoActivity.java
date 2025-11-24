@@ -34,6 +34,13 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -67,7 +74,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_GALLERY = 2102;
     private static final int REQUEST_PERMISSION_CALL = 2201;
     private static final int REQUEST_PERMISSION_CAMERA = 2202;
+    private static final int REQUEST_PERMISSION_LOCATION = 2203;
     private static final int SAVE_DELAY_MS = 500;
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
+    private LocationRequest locationRequest;
 
     private FirebaseFirestore db;
     private FirebaseAuth auth;
@@ -116,6 +128,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_paseo_en_curso);
 
         db = FirebaseFirestore.getInstance();
@@ -137,6 +150,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         reservaRef = db.collection("reservas").document(idReserva);
         escucharReserva();
+        setupLocationUpdates();
     }
 
     @Override
@@ -146,6 +160,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         if (fechaInicioPaseo != null) {
             startTimer();
         }
+        startLocationUpdates();
     }
 
     private void initViews() {
@@ -991,16 +1006,75 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         stopTimer();
+        stopLocationUpdates();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         stopTimer();
+        stopLocationUpdates();
         saveHandler.removeCallbacksAndMessages(null);
         if (reservaListener != null) {
             reservaListener.remove();
         }
+    }
+
+    private void setupLocationUpdates() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 15000)
+                .setMinUpdateDistanceMeters(10)
+                .setWaitForAccurateLocation(false)
+                .build();
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                for (android.location.Location location : locationResult.getLocations()) {
+                    if (location != null) {
+                        actualizarUbicacionFirestore(location);
+                    }
+                }
+            }
+        };
+
+        checkLocationPermissionAndStart();
+    }
+
+    private void checkLocationPermissionAndStart() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSION_LOCATION);
+        } else {
+            startLocationUpdates();
+        }
+    }
+
+    private void startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            if (fusedLocationClient != null && locationCallback != null) {
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+            }
+        }
+    }
+
+    private void stopLocationUpdates() {
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+    }
+
+    private void actualizarUbicacionFirestore(android.location.Location location) {
+        if (reservaRef == null) return;
+
+        GeoPoint punto = new GeoPoint(location.getLatitude(), location.getLongitude());
+
+        // Usamos arrayUnion para añadir el punto al histórico de la ruta
+        reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto))
+                .addOnFailureListener(e -> Log.e(TAG, "Error actualizando ubicación", e));
     }
 
     @Override
@@ -1026,6 +1100,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "Permiso de cámara denegado. No se pueden tomar fotos.", Toast.LENGTH_LONG).show();
                 Log.d(TAG, "Usuario denegó permiso de cámara");
+            }
+        } else if (requestCode == REQUEST_PERMISSION_LOCATION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startLocationUpdates();
+            } else {
+                Toast.makeText(this, "Permiso de ubicación denegado. No se podrá rastrear el paseo.", Toast.LENGTH_LONG).show();
             }
         }
     }
