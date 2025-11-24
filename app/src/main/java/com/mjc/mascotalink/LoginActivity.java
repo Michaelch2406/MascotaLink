@@ -39,7 +39,10 @@ import com.mjc.mascotalink.PaseosActivity;
 import com.mjc.mascotalink.SolicitudesActivity;
 import com.mjc.mascotalink.SolicitudDetalleActivity;
 import com.mjc.mascotalink.PaseoEnCursoActivity;
+import java.util.HashMap;
+import java.util.Map;
 import com.mjc.mascotalink.ConfirmarPagoActivity;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class LoginActivity extends AppCompatActivity implements BiometricAuthManager.BiometricPromptCallback {
 
@@ -217,6 +220,8 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                             mostrarError("Rol no definido para este usuario.");
                             return;
                         }
+                        updateFcmTokenForCurrentUser(); // Actualiza el token FCM al iniciar sesión
+
 
                         if ("PASEADOR".equalsIgnoreCase(rol)) {
                             db.collection("paseadores").document(uid).get()
@@ -587,14 +592,37 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         refreshBiometricButtonState();
     }
 
+    private void updateFcmTokenForCurrentUser() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            FirebaseMessaging.getInstance().getToken()
+                    .addOnCompleteListener(task -> {
+                        if (!task.isSuccessful()) {
+                            Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                            return;
+                        }
+                        String token = task.getResult();
+                        Log.d(TAG, "FCM Token: " + token);
+
+                        Map<String, Object> tokenMap = new HashMap<>();
+                        tokenMap.put("fcmToken", token);
+
+                        db.collection("usuarios").document(currentUser.getUid())
+                                .update(tokenMap)
+                                .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token successfully updated for user: " + currentUser.getUid()))
+                                .addOnFailureListener(e -> Log.e(TAG, "Error updating FCM token for user: " + currentUser.getUid(), e));
+                    });
+        } else {
+            Log.d(TAG, "No user logged in, cannot save FCM token.");
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @androidx.annotation.NonNull String[] permissions, @androidx.annotation.NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "ACCESS_FINE_LOCATION permission granted by user.");
-                // Optionally, you could re-check the SSID here if needed,
-                // but MyApplication.onCreate() already handles it on app startup.
             } else {
                 Log.w(TAG, "ACCESS_FINE_LOCATION permission denied by user.");
                 mostrarMensaje("Permiso de ubicación denegado. La detección automática de red para emuladores podría no funcionar.");
