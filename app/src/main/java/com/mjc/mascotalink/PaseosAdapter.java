@@ -11,11 +11,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
+import androidx.recyclerview.widget.DiffUtil; // Added import
 
 import com.bumptech.glide.Glide;
+import com.mjc.mascotalink.utils.PaseoDiffCallback; // Added import
 
 import java.util.List;
+import java.util.ArrayList; // Added import
 
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
@@ -39,9 +41,16 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     public PaseosAdapter(Context context, List<PaseosActivity.Paseo> paseosList, OnPaseoClickListener listener, String userRole) {
         this.context = context;
-        this.paseosList = paseosList;
+        this.paseosList = new ArrayList<>(paseosList); // Create a copy
         this.listener = listener;
         this.userRole = userRole;
+    }
+    
+    public void updateList(List<PaseosActivity.Paseo> newList) {
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new PaseoDiffCallback(this.paseosList, newList));
+        this.paseosList.clear();
+        this.paseosList.addAll(newList);
+        diffResult.dispatchUpdatesTo(this);
     }
 
     @NonNull
@@ -54,17 +63,19 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
     @Override
     public void onBindViewHolder(@NonNull PaseoViewHolder holder, int position) {
         PaseosActivity.Paseo paseo = paseosList.get(position);
+        if (paseo == null) return;
 
-        holder.tvFecha.setText(paseo.getFechaFormateada());
+        holder.tvFecha.setText(paseo.getFechaFormateada() != null ? paseo.getFechaFormateada() : "");
 
         // Lógica basada en el rol
-        if ("PASEADOR".equalsIgnoreCase(userRole)) {
+        if (userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
             // Vista para el Paseador
             holder.tvPaseadorNombre.setText(paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "Dueño no asignado");
             if (paseo.getMascotaFoto() != null && !paseo.getMascotaFoto().isEmpty()) {
                 Glide.with(context)
                         .load(paseo.getMascotaFoto())
                         .placeholder(R.drawable.ic_pet_placeholder)
+                        .error(R.drawable.ic_pet_placeholder)
                         .circleCrop()
                         .into(holder.ivPaseadorFoto);
             } else {
@@ -77,6 +88,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                 Glide.with(context)
                         .load(paseo.getPaseadorFoto())
                         .placeholder(R.drawable.ic_person)
+                        .error(R.drawable.ic_person)
                         .circleCrop()
                         .into(holder.ivPaseadorFoto);
             } else {
@@ -87,7 +99,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
         String mascotaHora = "Mascota: " +
                 (paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Cargando...") +
-                ", " + paseo.getHoraFormateada();
+                ", " + (paseo.getHoraFormateada() != null ? paseo.getHoraFormateada() : "");
         holder.tvMascotaHora.setText(mascotaHora);
 
         int duracionMinutos = (int) paseo.getDuracion_minutos(); // Corrected getter
@@ -103,6 +115,8 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                     tipoReserva.equals("SEMANAL") ? "SEMANA" :
                             tipoReserva.equals("MENSUAL") ? "MES" : tipoReserva;
             holder.tvTipoReserva.setText(tipoTexto);
+        } else {
+             holder.tvTipoReserva.setText("RESERVA");
         }
 
         String estado = paseo.getEstado();
@@ -122,7 +136,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.itemView.setOnClickListener(v -> {
             boolean puedePagar = ReservaEstadoValidator.canPay(paseo.getEstado()) &&
                     !ReservaEstadoValidator.isPagoCompletado(paseo.getEstado_pago());
-            if (!"PASEADOR".equalsIgnoreCase(userRole) && puedePagar) {
+            if (userRole != null && !userRole.equalsIgnoreCase("PASEADOR") && puedePagar) {
                 listener.onProcesarPagoClick(paseo);
             } else {
                 listener.onPaseoClick(paseo);
