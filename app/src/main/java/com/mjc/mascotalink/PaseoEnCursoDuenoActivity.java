@@ -37,6 +37,17 @@ import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.modelo.PaseoActividad;
 import com.mjc.mascotalink.util.BottomNavManager;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.firebase.firestore.GeoPoint;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,7 +57,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
+public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "PaseoEnCursoDueno";
     private static final int REQUEST_PERMISSION_CALL = 2201;
@@ -55,6 +66,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private DocumentReference reservaRef;
     private ListenerRegistration reservaListener;
+    private GoogleMap mMap;
 
     // UI Elements
     private TextView tvNombrePaseador;
@@ -75,6 +87,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnCancelar;
     private BottomNavigationView bottomNav;
+    private View viewMapOverlay;
 
     // Adapters
     private FotosPaseoAdapter fotosAdapter;
@@ -90,6 +103,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
     private long duracionMinutos = 0L;
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
     private Runnable timerRunnable;
+    
+    // Map Data
+    private List<LatLng> rutaPaseo = new ArrayList<>();
+    private LatLng ultimaUbicacionConocida;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -104,6 +121,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         setupRecyclerViews();
         setupButtons();
         setupBottomNav();
+        setupMap();
 
         // owner-vibe-fix: estado de carga inicial
         mostrarLoading(true);
@@ -127,6 +145,50 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
 
         reservaRef = db.collection("reservas").document(idReserva);
         verificarPermisosYEscuchar();
+    }
+
+    private void setupMap() {
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map_fragment);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        }
+        
+        if (viewMapOverlay != null) {
+            viewMapOverlay.setOnClickListener(v -> abrirMapaFullscreen());
+        }
+    }
+
+    @Override
+    public void onMapReady(@NonNull GoogleMap googleMap) {
+        mMap = googleMap;
+        mMap.getUiSettings().setAllGesturesEnabled(false); // Disable interaction in mini-map
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+        
+        // Initial empty state or loading
+        if (!rutaPaseo.isEmpty()) {
+            actualizarMapa(rutaPaseo);
+        }
+    }
+
+    private void abrirMapaFullscreen() {
+        if (ultimaUbicacionConocida == null) {
+            Toast.makeText(this, "Ubicación no disponible", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        Uri gmmIntentUri = Uri.parse("geo:" + ultimaUbicacionConocida.latitude + "," + ultimaUbicacionConocida.longitude + "?q=" + ultimaUbicacionConocida.latitude + "," + ultimaUbicacionConocida.longitude + "(Paseador)");
+        Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+        mapIntent.setPackage("com.google.android.apps.maps");
+        
+        if (mapIntent.resolveActivity(getPackageManager()) != null) {
+            startActivity(mapIntent);
+        } else {
+            // Fallback to browser if Maps app not installed
+            Uri browserUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + ultimaUbicacionConocida.latitude + "," + ultimaUbicacionConocida.longitude);
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, browserUri);
+            startActivity(browserIntent);
+        }
     }
 
     @Override
@@ -174,7 +236,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         btnContactar = findViewById(R.id.btn_contactar_paseador);
         btnCancelar = findViewById(R.id.btn_cancelar_paseo);
         bottomNav = findViewById(R.id.bottom_nav);
+        viewMapOverlay = findViewById(R.id.view_map_overlay);
     }
+    
+    // ... (Rest of setup methods: setupToolbar, setupRecyclerViews, setupButtons, setupBottomNav) ...
 
     private void setupToolbar() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
@@ -402,6 +467,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         if (tvActividadEmpty != null) {
             tvActividadEmpty.setVisibility(hayActividad ? View.GONE : View.VISIBLE);
         }
+        
+        // 7. Actualizar Mapa
+        List<LatLng> puntosMapa = parsearUbicaciones(snapshot.get("ubicaciones"));
+        actualizarMapa(puntosMapa);
 
         // 6. Cargar datos relacionados (Paseador, Mascota) solo si no se han cargado
         if (idPaseador == null) {
@@ -421,6 +490,80 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
         String mascotaId = snapshot.getString("id_mascota");
         if (mascotaId != null) {
             cargarDatosMascota(mascotaId);
+        }
+    }
+
+    private List<LatLng> parsearUbicaciones(Object ubicacionesObj) {
+        List<LatLng> puntos = new ArrayList<>();
+        if (ubicacionesObj instanceof List) {
+            for (Object item : (List<?>) ubicacionesObj) {
+                if (item instanceof GeoPoint) {
+                    GeoPoint gp = (GeoPoint) item;
+                    puntos.add(new LatLng(gp.getLatitude(), gp.getLongitude()));
+                } else if (item instanceof Map) {
+                    try {
+                        Map<String, Object> map = (Map<String, Object>) item;
+                        // Intenta obtener lat/lng de forma segura, manejando Double o String
+                        Object latObj = map.get("lat");
+                        Object lngObj = map.get("lng"); // o "lon"
+                        if (lngObj == null) lngObj = map.get("lon");
+                        
+                        double lat = 0, lng = 0;
+                        if (latObj instanceof Number) lat = ((Number) latObj).doubleValue();
+                        if (lngObj instanceof Number) lng = ((Number) lngObj).doubleValue();
+                        
+                        if (lat != 0 && lng != 0) {
+                            puntos.add(new LatLng(lat, lng));
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Error parseando punto de mapa: " + item, e);
+                    }
+                }
+            }
+        }
+        return puntos;
+    }
+
+    private void actualizarMapa(List<LatLng> puntos) {
+        if (mMap == null || puntos == null || puntos.isEmpty()) return;
+        
+        this.rutaPaseo = puntos;
+        this.ultimaUbicacionConocida = puntos.get(puntos.size() - 1);
+
+        mMap.clear();
+
+        // Dibujar ruta
+        PolylineOptions polylineOptions = new PolylineOptions()
+                .addAll(puntos)
+                .width(10f)
+                .color(getResources().getColor(R.color.blue_primary))
+                .geodesic(true);
+        mMap.addPolyline(polylineOptions);
+
+        // Marcador de Inicio (Verde)
+        mMap.addMarker(new MarkerOptions()
+                .position(puntos.get(0))
+                .title("Inicio")
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+
+        // Marcador Actual (Azul/Foto)
+        mMap.addMarker(new MarkerOptions()
+                .position(ultimaUbicacionConocida)
+                .title("Ubicación actual")
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+
+        // Mover cámara
+        try {
+            LatLngBounds.Builder builder = new LatLngBounds.Builder();
+            for (LatLng p : puntos) {
+                builder.include(p);
+            }
+            LatLngBounds bounds = builder.build();
+            // Padding de 50px para que no quede pegado a los bordes
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+        } catch (Exception e) {
+            // Fallback si los puntos son muy cercanos o hay error en bounds
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaUbicacionConocida, 16f));
         }
     }
 

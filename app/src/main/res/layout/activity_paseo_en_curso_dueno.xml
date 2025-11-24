@@ -348,7 +348,7 @@
                 android:visibility="gone"
                 tools:visibility="visible" />
 
-            <!-- SECCIÓN 5: MAPA (Opcional) -->
+            <!-- SECCIÓN 5: MAPA DEL RECORRIDO -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -359,24 +359,39 @@
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
+                android:layout_height="300dp"
                 android:layout_marginTop="12dp"
-                android:background="#E0E0E0">
-                
-                <ImageView
+                android:background="@drawable/bg_round_12"
+                android:clipToOutline="true">
+
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/map_fragment"
+                    android:name="com.google.android.gms.maps.SupportMapFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <!-- Overlay transparente para capturar el click y evitar conflicto de scroll -->
+                <View
+                    android:id="@+id/view_map_overlay"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/map_placeholder_image" 
-                    tools:ignore="ContentDescription" /> 
-                    <!-- Placeholder image, assuming map_placeholder_image exists or use a color -->
-                    
-                <TextView
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true" />
+                
+                <!-- Botón flotante "Abrir" visual -->
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:text="Mapa no disponible"
-                    android:textColor="#757575"/>
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="16dp"
+                    app:fabSize="mini"
+                    app:backgroundTint="@color/white"
+                    app:tint="@color/blue_primary"
+                    android:src="@drawable/ic_google"
+                    android:contentDescription="Abrir en Google Maps"
+                    android:clickable="false"/> <!-- Click handled by overlay -->
+
             </FrameLayout>
 
         </LinearLayout>
