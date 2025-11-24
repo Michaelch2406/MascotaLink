@@ -199,6 +199,10 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.btnAccion1.setVisibility(View.VISIBLE);
         holder.btnAccion2.setVisibility(View.VISIBLE);
 
+        // Reset colors to default (Blue)
+        holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF12A3ED));
+        holder.btnAccion2.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF12A3ED));
+
 
         if (estado != null) {
             if (estado.equals("EN_CURSO")) {
@@ -206,6 +210,32 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                 holder.btnAccion2.setText("PASEADOR".equalsIgnoreCase(userRole) ? "Contactar Dueño 💬" : "Contactar Paseador 💬");
                 holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
                 holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+            }
+            else if (estado.equals("ACEPTADO")) {
+                if (userRole != null && !userRole.equalsIgnoreCase("PASEADOR")) {
+                    // Logic for Owner (Dueño)
+                    boolean paymentPending = !ReservaEstadoValidator.isPagoCompletado(paseo.getEstado_pago());
+                    if (paymentPending) {
+                        holder.btnAccion1.setText("Confirmar Pago 💳");
+                        // Set to Green for payment action
+                        holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50));
+                        holder.btnAccion1.setOnClickListener(v -> listener.onProcesarPagoClick(paseo));
+
+                        holder.btnAccion2.setText("Contactar 💬");
+                        holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+                    } else {
+                        // Payment done, waiting for start
+                        holder.btnAccion1.setText("Ver Detalles");
+                        holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
+                        holder.btnAccion2.setText("Contactar 💬");
+                        holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+                    }
+                } else {
+                    // Logic for Walker (Paseador)
+                    holder.btnAccion1.setText("Contactar Dueño 💬");
+                    holder.btnAccion1.setOnClickListener(v -> listener.onContactarClick(paseo));
+                    holder.btnAccion2.setVisibility(View.GONE);
+                }
             }
             else if (estado.equals("COMPLETADO")) {
                 if("PASEADOR".equalsIgnoreCase(userRole)) {

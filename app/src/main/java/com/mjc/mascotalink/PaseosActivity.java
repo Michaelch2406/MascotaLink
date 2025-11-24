@@ -24,6 +24,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.PropertyName; // Added import
 import com.google.firebase.firestore.Query;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 import com.mjc.mascotalink.ConfirmarPagoActivity;
@@ -88,6 +89,7 @@ public class PaseosActivity extends AppCompatActivity {
         String cachedRole = BottomNavManager.getUserRole(this);
         if (cachedRole != null) {
             userRole = cachedRole;
+            setupRecyclerView(userRole); // Added: Initialize adapter immediately
             setupRoleSpecificUI(userRole);
         }
         
@@ -131,7 +133,7 @@ public class PaseosActivity extends AppCompatActivity {
                             BottomNavManager.saveUserRole(this, fetchedRole);
                             
                             // Only update UI if role is different or wasn't set
-                            if (!fetchedRole.equalsIgnoreCase(userRole)) {
+                            if (!fetchedRole.equalsIgnoreCase(userRole) || paseosAdapter == null) {
                                 userRole = fetchedRole;
                                 setupRecyclerView(userRole);
                                 setupRoleSpecificUI(userRole);
@@ -289,11 +291,11 @@ public class PaseosActivity extends AppCompatActivity {
 
         Query query = db.collection("reservas")
                 .whereEqualTo(fieldToFilter, userRef)
-                .orderBy("fecha", Query.Direction.DESCENDING);
+                .whereEqualTo("estado", estadoActual);
 
-        Query finalQuery = query.whereEqualTo("estado", estadoActual);
+        // Query finalQuery = query.whereEqualTo("estado", estadoActual); // Removed redundant query assignment
 
-        finalQuery.get().addOnSuccessListener(querySnapshot -> {
+        query.get().addOnSuccessListener(querySnapshot -> {
             if (querySnapshot.isEmpty()) {
                 finalizarCarga();
                 return;
@@ -327,6 +329,12 @@ public class PaseosActivity extends AppCompatActivity {
                     tareas.add(Tasks.forResult(null));
                 }
             }
+
+            // Sort client-side to avoid composite index requirements
+            java.util.Collections.sort(paseosTemporales, (p1, p2) -> {
+                if (p1.getFecha() == null || p2.getFecha() == null) return 0;
+                return p2.getFecha().compareTo(p1.getFecha()); // Descending order
+            });
 
             if (tareas.isEmpty()) {
                 finalizarCarga();
@@ -408,7 +416,7 @@ public class PaseosActivity extends AppCompatActivity {
                     paseosList.add(paseo);
                 }
                 if (paseosAdapter != null) {
-                    paseosAdapter.notifyDataSetChanged();
+                    paseosAdapter.updateList(paseosList); // Corrected: Use updateList to refresh adapter data
                 }
                 finalizarCarga();
             }).addOnFailureListener(this::manejarError);
@@ -460,6 +468,7 @@ public class PaseosActivity extends AppCompatActivity {
     public static class Paseo {
         private String reservaId;
         private String paseadorNombre, paseadorFoto, duenoNombre, mascotaNombre, mascotaFoto;
+        @PropertyName("id_mascota")
         private String idMascota;
         private DocumentReference id_dueno; // Corrected type
         private DocumentReference id_paseador; // Corrected type
@@ -479,6 +488,8 @@ public class PaseosActivity extends AppCompatActivity {
         private Date fecha_respuesta; // Added field
         private Double tarifa_confirmada; // Added field
         private Boolean hasTransitionedToInCourse; // Added field
+        @PropertyName("reminderSent")
+        private Boolean reminderSent;
 
         public Paseo() {
         }
@@ -508,6 +519,7 @@ public class PaseosActivity extends AppCompatActivity {
             return mascotaFoto;
         }
 
+        @PropertyName("id_mascota")
         public String getIdMascota() {
             return idMascota;
         }
@@ -588,6 +600,11 @@ public class PaseosActivity extends AppCompatActivity {
             return hasTransitionedToInCourse;
         }
 
+        @PropertyName("reminderSent")
+        public Boolean getReminderSent() {
+            return reminderSent;
+        }
+
         // Setters
         public void setReservaId(String reservaId) {
             this.reservaId = reservaId;
@@ -613,6 +630,7 @@ public class PaseosActivity extends AppCompatActivity {
             this.mascotaFoto = mascotaFoto;
         }
 
+        @PropertyName("id_mascota")
         public void setIdMascota(String idMascota) {
             this.idMascota = idMascota;
         }
@@ -691,6 +709,11 @@ public class PaseosActivity extends AppCompatActivity {
 
         public void setHasTransitionedToInCourse(Boolean hasTransitionedToInCourse) {
             this.hasTransitionedToInCourse = hasTransitionedToInCourse;
+        }
+
+        @PropertyName("reminderSent")
+        public void setReminderSent(Boolean reminderSent) {
+            this.reminderSent = reminderSent;
         }
 
         public String getFechaFormateada() {
