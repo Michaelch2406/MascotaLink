@@ -34,6 +34,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascotalink.adapters.ActividadPaseoAdapter;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
+import com.mjc.mascotalink.modelo.PaseoActividad;
 import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.text.SimpleDateFormat;
@@ -363,17 +364,30 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity {
 
         // 5. Actividad (Timeline)
         Object actividadObj = snapshot.get("actividad");
-        List<Map<String, Object>> actividades = new ArrayList<>();
+        List<PaseoActividad> actividades = new ArrayList<>();
         if (actividadObj instanceof List) {
             for (Object item : (List<?>) actividadObj) {
                 if (item instanceof Map) {
-                    actividades.add((Map<String, Object>) item);
+                    Map<String, Object> map = (Map<String, Object>) item;
+                    PaseoActividad actividad = new PaseoActividad();
+                    actividad.setEvento((String) map.get("evento"));
+                    actividad.setDescripcion((String) map.get("descripcion"));
+                    
+                    Object tsObj = map.get("timestamp");
+                    if (tsObj instanceof Timestamp) {
+                        actividad.setTimestamp((Timestamp) tsObj);
+                    } else {
+                        // Manejo de error silencioso o timestamp por defecto para evitar crash
+                        actividad.setTimestamp(null); 
+                    }
+                    
+                    actividades.add(actividad);
                 }
             }
         }
         Collections.sort(actividades, (o1, o2) -> {
-            Timestamp t1 = (Timestamp) o1.get("timestamp");
-            Timestamp t2 = (Timestamp) o2.get("timestamp");
+            Timestamp t1 = o1.getTimestamp();
+            Timestamp t2 = o2.getTimestamp();
             if (t1 == null) {
                 return 1;
             }

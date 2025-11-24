@@ -9,22 +9,20 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.Timestamp;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.modelo.PaseoActividad;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 public class ActividadPaseoAdapter extends RecyclerView.Adapter<ActividadPaseoAdapter.ViewHolder> {
 
-    private List<Map<String, Object>> eventos = new ArrayList<>();
+    private List<PaseoActividad> eventos = new ArrayList<>();
 
-    public void setEventos(List<Map<String, Object>> eventos) {
-        this.eventos = eventos;
+    public void setEventos(List<PaseoActividad> eventos) {
+        this.eventos = eventos != null ? eventos : new ArrayList<>();
         notifyDataSetChanged();
     }
 
@@ -37,25 +35,22 @@ public class ActividadPaseoAdapter extends RecyclerView.Adapter<ActividadPaseoAd
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Map<String, Object> evento = eventos.get(position);
-        String descripcion = (String) evento.get("descripcion");
-        Timestamp timestamp = (Timestamp) evento.get("timestamp");
-        String tipo = (String) evento.get("evento");
+        PaseoActividad evento = eventos.get(position);
+        
+        holder.tvDescripcion.setText(evento.getDescripcion() != null ? evento.getDescripcion() : "");
 
-        holder.tvDescripcion.setText(descripcion != null ? descripcion : "Evento desconocido");
-
-        if (timestamp != null) {
-            Date date = timestamp.toDate();
+        if (evento.getDate() != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.US);
-            holder.tvTimestamp.setText(sdf.format(date));
+            holder.tvTimestamp.setText(sdf.format(evento.getDate()));
         } else {
             holder.tvTimestamp.setText("");
         }
 
-        // Set icon based on event type
+        String tipo = evento.getEvento();
         if (tipo != null) {
             switch (tipo) {
                 case "PASEADOR_LLEGÓ":
+                case "PASEADOR_LLEGO": // Handle missing accent
                     holder.ivIcon.setImageResource(R.drawable.ic_evento_llegada);
                     break;
                 case "PASEO_INICIADO":
@@ -68,9 +63,11 @@ public class ActividadPaseoAdapter extends RecyclerView.Adapter<ActividadPaseoAd
                     holder.ivIcon.setImageResource(R.drawable.ic_evento_nota);
                     break;
                 default:
-                    holder.ivIcon.setImageResource(R.drawable.ic_evento_llegada); // Default
+                    holder.ivIcon.setImageResource(R.drawable.ic_evento_llegada); 
                     break;
             }
+        } else {
+             holder.ivIcon.setImageResource(R.drawable.ic_evento_llegada);
         }
     }
 
