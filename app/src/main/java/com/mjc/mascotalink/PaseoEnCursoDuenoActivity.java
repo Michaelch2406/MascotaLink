@@ -376,7 +376,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 btnCancelar.setEnabled(true);
                 btnCancelar.setAlpha(1f);
             }
-            tvEstado.setText("En curso"); // Restaurar texto
+            tvEstado.setText(R.string.paseo_en_curso_state_en_progreso); // Restaurar texto
             tvEstado.setTextColor(getResources().getColor(R.color.color_en_curso));
         }
         // -------------------------------------------------------------------
@@ -442,6 +442,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     Object tsObj = map.get("timestamp");
                     if (tsObj instanceof Timestamp) {
                         actividad.setTimestamp((Timestamp) tsObj);
+                    } else if (tsObj instanceof Date) {
+                        actividad.setTimestamp(new Timestamp((Date) tsObj));
                     } else {
                         // Manejo de error silencioso o timestamp por defecto para evitar crash
                         actividad.setTimestamp(null); 

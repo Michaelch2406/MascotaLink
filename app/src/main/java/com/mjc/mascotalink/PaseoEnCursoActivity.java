@@ -645,7 +645,15 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     }
 
     private void agregarFotoAlArray(String url) {
-        reservaRef.update("fotos_paseo", FieldValue.arrayUnion(url))
+        Map<String, Object> nuevaActividad = new HashMap<>();
+        nuevaActividad.put("evento", "FOTO_SUBIDA");
+        nuevaActividad.put("descripcion", "El paseador ha subido una nueva foto");
+        nuevaActividad.put("timestamp", new Date());
+
+        reservaRef.update(
+                "fotos_paseo", FieldValue.arrayUnion(url),
+                "actividad", FieldValue.arrayUnion(nuevaActividad)
+        )
                 .addOnSuccessListener(unused -> {
                     mostrarLoading(false);
                     Toast.makeText(this, "Foto guardada", Toast.LENGTH_SHORT).show();
