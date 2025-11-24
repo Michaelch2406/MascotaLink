@@ -20,6 +20,9 @@ import com.mjc.mascota.modelo.Filtros;
 
 import android.util.Log;
 
+import java.text.Normalizer;
+import java.util.regex.Pattern;
+
 public class BusquedaViewModel extends ViewModel {
 
     private static final String TAG = "BusquedaViewModel";
@@ -67,8 +70,18 @@ public class BusquedaViewModel extends ViewModel {
     public void onSearchQueryChanged(String query) {
         Log.d(TAG, "onSearchQueryChanged: " + query);
         debounceHandler.removeCallbacks(debounceRunnable);
-        debounceRunnable = () -> executeSearch(query, false, _filtros.getValue());
+        debounceRunnable = () -> {
+            String normalizedQuery = normalizarTexto(query);
+            executeSearch(normalizedQuery, false, _filtros.getValue());
+        };
         debounceHandler.postDelayed(debounceRunnable, 300); // 300ms de delay
+    }
+
+    private String normalizarTexto(String texto) {
+        if (texto == null) return "";
+        String nfdNormalizedString = Normalizer.normalize(texto, Normalizer.Form.NFD);
+        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        return pattern.matcher(nfdNormalizedString).replaceAll("").toLowerCase();
     }
 
     public void aplicarFiltros(Filtros nuevosFiltros) {

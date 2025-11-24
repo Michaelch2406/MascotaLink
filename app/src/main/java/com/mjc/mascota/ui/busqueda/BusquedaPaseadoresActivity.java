@@ -82,6 +82,9 @@ import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.util.BottomNavManager;
+import android.animation.ValueAnimator;
+import android.view.MotionEvent;
+import android.view.ViewGroup;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -148,6 +151,15 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private final Handler periodicRefreshHandler = new Handler(Looper.getMainLooper());
     private Runnable periodicRefreshRunnable;
     private static final long PERIODIC_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
+
+    // Location Timeout
+    private final Handler locationTimeoutHandler = new Handler(Looper.getMainLooper());
+    private Runnable locationTimeoutRunnable;
+    private static final long LOCATION_TIMEOUT_MS = 10000; // 10 seconds
+
+    // Optimization
+    private Location lastLoadedLocation = null;
+    private float lastLoadedZoom = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -248,17 +260,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
+                locationTimeoutHandler.removeCallbacks(locationTimeoutRunnable); // Cancel timeout
                 for (Location location : locationResult.getLocations()) {
                     if (location != null) {
                         lastKnownLocation = location;
                         Log.d(TAG, "Ubicación actualizada: " + location.getLatitude() + ", " + location.getLongitude());
                         if (mMap != null) {
-                            if (lastKnownLocation != null) {
-                                // Only move camera if it's the first location update or if the user hasn't manually moved the map
-                                // For now, always move to ensure paseadores are loaded around user's location
+                            // Only move camera initially or if drastic change
+                            if (lastLoadedLocation == null) {
                                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), 12));
+                                cargarPaseadoresCercanos(new LatLng(location.getLatitude(), location.getLongitude()), currentSearchRadiusKm);
                             }
-                            cargarPaseadoresCercanos(new LatLng(location.getLatitude(), location.getLongitude()), currentSearchRadiusKm);
                         }
                     }
                 }
@@ -362,6 +374,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     @Override
     public void onItemClick(PaseadorResultado paseador) {
+        if (paseador == null) return; // Safety check
+
         Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
         intent.putExtra("paseadorId", paseador.getId());
         intent.putExtra("viewerRole", "DUEÑO");
@@ -631,16 +645,118 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void stopLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback);
+        locationTimeoutHandler.removeCallbacks(locationTimeoutRunnable);
+    }
+
+// ... existing imports
+
+    // Map Interaction Constants
+    private static final int MAP_HEIGHT_COLLAPSED_DP = 250;
+    private static final int MAP_HEIGHT_EXPANDED_DP = 500;
+    private View mapContainer;
+    private View viewMapOverlay;
+    private boolean isMapExpanded = false;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate");
+        setContentView(R.layout.activity_busqueda_paseadores);
+
+        // ... existing initialization ...
+
+        contentScrollView = findViewById(R.id.content_scroll_view);
+        bottomNav = findViewById(R.id.bottom_navigation);
+        mapContainer = findViewById(R.id.map_container);
+        viewMapOverlay = findViewById(R.id.view_map_overlay);
+
+        setupRecyclerViews();
+        setupSearch();
+        setupPullToRefresh();
+        setupPagination();
+        setupToolbar();
+        setupMapInteraction(); // New method
+
+        // ... existing code ...
+    }
+
+    private void setupMapInteraction() {
+        if (viewMapOverlay == null || contentScrollView == null || mapContainer == null) return;
+
+        // 1. Al tocar el overlay (mapa en estado colapsado)
+        viewMapOverlay.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                if (!isMapExpanded) {
+                    expandMap();
+                }
+                // Bloquear scroll del padre para permitir mover el mapa
+                contentScrollView.requestDisallowInterceptTouchEvent(true);
+                // Ocultar overlay para permitir interacción directa con el mapa
+                viewMapOverlay.setVisibility(View.GONE); 
+                return true; // Consumir evento
+            }
+            return false;
+        });
+
+        // 2. Al tocar fuera (en el ScrollView) o hacer scroll
+        contentScrollView.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_MOVE) {
+                if (isMapExpanded) {
+                    // Si se toca fuera, colapsar y restaurar overlay
+                    collapseMap();
+                    contentScrollView.requestDisallowInterceptTouchEvent(false);
+                    viewMapOverlay.setVisibility(View.VISIBLE);
+                }
+            }
+            return false; // No consumir, permitir scroll normal
+        });
+    }
+
+    private void expandMap() {
+        isMapExpanded = true;
+        animateMapHeight(MAP_HEIGHT_COLLAPSED_DP, MAP_HEIGHT_EXPANDED_DP);
+    }
+
+    private void collapseMap() {
+        isMapExpanded = false;
+        animateMapHeight(MAP_HEIGHT_EXPANDED_DP, MAP_HEIGHT_COLLAPSED_DP);
+    }
+
+    private void animateMapHeight(int startDp, int endDp) {
+        final float density = getResources().getDisplayMetrics().density;
+        int startHeight = (int) (startDp * density);
+        int endHeight = (int) (endDp * density);
+
+        ValueAnimator anim = ValueAnimator.ofInt(startHeight, endHeight);
+        anim.addUpdateListener(valueAnimator -> {
+            int val = (Integer) valueAnimator.getAnimatedValue();
+            ViewGroup.LayoutParams layoutParams = mapContainer.getLayoutParams();
+            layoutParams.height = val;
+            mapContainer.setLayoutParams(layoutParams);
+        });
+        anim.setDuration(300);
+        anim.start();
     }
 
     private void startLocationUpdates() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
-        } else {
-            checkLocationPermission();
-        }
-    }
+            
+            // Ubicación Inmediata (Última conocida)
+            fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+                if (location != null && lastKnownLocation == null) { // Solo si no tenemos una más reciente
+                    lastKnownLocation = location;
+                    Log.d(TAG, "Ubicación inmediata (LastKnown): " + location.getLatitude());
+                    if (mMap != null) {
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                new LatLng(location.getLatitude(), location.getLongitude()), 12));
+                        cargarPaseadoresCercanos(new LatLng(location.getLatitude(), location.getLongitude()), currentSearchRadiusKm);
+                    }
+                }
+            });
+
+            // Setup Timeout
+            // ... rest of existing startLocationUpdates code ...
 
     private void redirectToLogin(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
@@ -693,10 +809,35 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         mMap.setOnCameraIdleListener(() -> {
             mClusterManager.onCameraIdle();
-            if (lastKnownLocation != null) {
+            
+            LatLng center = mMap.getCameraPosition().target;
+            float zoom = mMap.getCameraPosition().zoom;
+
+            // Optimization: Reload only if moved > 500m or zoom changed significantly (> 1 level)
+            boolean shouldReload = false;
+            if (lastLoadedLocation == null) {
+                shouldReload = true;
+            } else {
+                float[] results = new float[1];
+                Location.distanceBetween(lastLoadedLocation.getLatitude(), lastLoadedLocation.getLongitude(),
+                        center.latitude, center.longitude, results);
+                if (results[0] > 500 || Math.abs(zoom - lastLoadedZoom) > 1.0) {
+                    shouldReload = true;
+                }
+            }
+
+            if (shouldReload) {
+                // Update optimization variables
+                if (lastLoadedLocation == null) {
+                    lastLoadedLocation = new Location("map_center");
+                }
+                lastLoadedLocation.setLatitude(center.latitude);
+                lastLoadedLocation.setLongitude(center.longitude);
+                lastLoadedZoom = zoom;
+
                 mapDebounceHandler.removeCallbacks(mapDebounceRunnable);
                 mapDebounceRunnable = () -> {
-                    cargarPaseadoresCercanos(new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude()), currentSearchRadiusKm);
+                    cargarPaseadoresCercanos(center, currentSearchRadiusKm);
                 };
                 mapDebounceHandler.postDelayed(mapDebounceRunnable, MAP_DEBOUNCE_DELAY_MS);
             }
@@ -746,6 +887,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void cargarPaseadoresCercanos(LatLng ubicacionUsuario, double radioKm) {
+        // Feedback visual (ProgressBar)
+        if (progressBar != null && (cachedPaseadorMarkers.isEmpty())) { // Only show if initial load or empty
+             progressBar.setVisibility(View.VISIBLE);
+        }
+
         cachedPaseadorMarkers.clear();
         mClusterManager.clearItems();
         mMap.clear();
@@ -775,11 +921,16 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                                         }
                                     }
                                     mClusterManager.cluster();
+                                    if (progressBar != null) progressBar.setVisibility(View.GONE); // Hide on success
                                 })
-                                .addOnFailureListener(e -> Log.e(TAG, "Error al construir PaseadorMarkers: " + e.getMessage()));
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Error al construir PaseadorMarkers: " + e.getMessage());
+                                    if (progressBar != null) progressBar.setVisibility(View.GONE); // Hide on failure
+                                });
 
                     } else {
                         Log.e(TAG, "Error getting documents: ", task.getException());
+                        if (progressBar != null) progressBar.setVisibility(View.GONE); // Hide on failure
                     }
                 });
     }
