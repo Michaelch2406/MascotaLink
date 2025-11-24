@@ -1104,7 +1104,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             markerOptions.zIndex(item.getZIndex());
             // markerOptions.tag(paseador.getPaseadorId()); // Removido: El tag se establece en onClusterItemRendered
 
-            PaseadorMarkersCache.getInstance().addPaseadorMarker(paseador);
+            cachedPaseadorMarkers.put(paseador.getPaseadorId(), paseador);
         }
 
         @Override
