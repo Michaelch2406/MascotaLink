@@ -1,5 +1,6 @@
 package com.mjc.mascota.ui.busqueda;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -18,6 +19,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -82,9 +84,6 @@ import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.util.BottomNavManager;
-import android.animation.ValueAnimator;
-import android.view.MotionEvent;
-import android.view.ViewGroup;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -147,6 +146,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private BottomNavigationView bottomNav;
     private String userRole = "DUEÑO";
 
+    // Map Interaction Constants & Views
+    private static final int MAP_HEIGHT_COLLAPSED_DP = 250;
+    private static final int MAP_HEIGHT_EXPANDED_DP = 500;
+    private View mapContainer;
+    private View viewMapOverlay;
+    private boolean isMapExpanded = false;
+
     // Handler y Runnable para la actualización periódica del mapa
     private final Handler periodicRefreshHandler = new Handler(Looper.getMainLooper());
     private Runnable periodicRefreshRunnable;
@@ -192,12 +198,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         contentScrollView = findViewById(R.id.content_scroll_view);
         bottomNav = findViewById(R.id.bottom_navigation);
+        
+        // Map Views
+        mapContainer = findViewById(R.id.map_container);
+        viewMapOverlay = findViewById(R.id.view_map_overlay);
 
         setupRecyclerViews();
         setupSearch();
         setupPullToRefresh();
         setupPagination();
         setupToolbar();
+        setupMapInteraction();
 
         retryButton.setOnClickListener(v -> {
             viewModel.onSearchQueryChanged(searchAutocomplete.getText().toString());
@@ -240,6 +251,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         mapDebounceHandler.removeCallbacksAndMessages(null);
         searchHandler.removeCallbacksAndMessages(null);
         periodicRefreshHandler.removeCallbacksAndMessages(null);
+        locationTimeoutHandler.removeCallbacks(locationTimeoutRunnable);
         cachedPaseadorMarkers.clear();
         if (mClusterManager != null) {
             mClusterManager.clearItems();
@@ -247,6 +259,64 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         if (mMap != null) {
             mMap.clear();
         }
+    }
+
+    private void setupMapInteraction() {
+        if (viewMapOverlay == null || contentScrollView == null || mapContainer == null) return;
+
+        // 1. Al tocar el overlay (mapa en estado colapsado)
+        viewMapOverlay.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                if (!isMapExpanded) {
+                    expandMap();
+                }
+                // Bloquear scroll del padre para permitir mover el mapa
+                contentScrollView.requestDisallowInterceptTouchEvent(true);
+                // Ocultar overlay para permitir interacción directa con el mapa
+                viewMapOverlay.setVisibility(View.GONE); 
+                return true; // Consumir evento
+            }
+            return false;
+        });
+
+        // 2. Al tocar fuera (en el ScrollView) o hacer scroll
+        contentScrollView.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_MOVE) {
+                if (isMapExpanded) {
+                    // Si se toca fuera, colapsar y restaurar overlay
+                    collapseMap();
+                    contentScrollView.requestDisallowInterceptTouchEvent(false);
+                    viewMapOverlay.setVisibility(View.VISIBLE);
+                }
+            }
+            return false; // No consumir, permitir scroll normal
+        });
+    }
+
+    private void expandMap() {
+        isMapExpanded = true;
+        animateMapHeight(MAP_HEIGHT_COLLAPSED_DP, MAP_HEIGHT_EXPANDED_DP);
+    }
+
+    private void collapseMap() {
+        isMapExpanded = false;
+        animateMapHeight(MAP_HEIGHT_EXPANDED_DP, MAP_HEIGHT_COLLAPSED_DP);
+    }
+
+    private void animateMapHeight(int startDp, int endDp) {
+        final float density = getResources().getDisplayMetrics().density;
+        int startHeight = (int) (startDp * density);
+        int endHeight = (int) (endDp * density);
+
+        ValueAnimator anim = ValueAnimator.ofInt(startHeight, endHeight);
+        anim.addUpdateListener(valueAnimator -> {
+            int val = (Integer) valueAnimator.getAnimatedValue();
+            ViewGroup.LayoutParams layoutParams = mapContainer.getLayoutParams();
+            layoutParams.height = val;
+            mapContainer.setLayoutParams(layoutParams);
+        });
+        anim.setDuration(300);
+        anim.start();
     }
 
     private void createLocationRequest() {
@@ -648,96 +718,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         locationTimeoutHandler.removeCallbacks(locationTimeoutRunnable);
     }
 
-// ... existing imports
-
-    // Map Interaction Constants
-    private static final int MAP_HEIGHT_COLLAPSED_DP = 250;
-    private static final int MAP_HEIGHT_EXPANDED_DP = 500;
-    private View mapContainer;
-    private View viewMapOverlay;
-    private boolean isMapExpanded = false;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate");
-        setContentView(R.layout.activity_busqueda_paseadores);
-
-        // ... existing initialization ...
-
-        contentScrollView = findViewById(R.id.content_scroll_view);
-        bottomNav = findViewById(R.id.bottom_navigation);
-        mapContainer = findViewById(R.id.map_container);
-        viewMapOverlay = findViewById(R.id.view_map_overlay);
-
-        setupRecyclerViews();
-        setupSearch();
-        setupPullToRefresh();
-        setupPagination();
-        setupToolbar();
-        setupMapInteraction(); // New method
-
-        // ... existing code ...
-    }
-
-    private void setupMapInteraction() {
-        if (viewMapOverlay == null || contentScrollView == null || mapContainer == null) return;
-
-        // 1. Al tocar el overlay (mapa en estado colapsado)
-        viewMapOverlay.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                if (!isMapExpanded) {
-                    expandMap();
-                }
-                // Bloquear scroll del padre para permitir mover el mapa
-                contentScrollView.requestDisallowInterceptTouchEvent(true);
-                // Ocultar overlay para permitir interacción directa con el mapa
-                viewMapOverlay.setVisibility(View.GONE); 
-                return true; // Consumir evento
-            }
-            return false;
-        });
-
-        // 2. Al tocar fuera (en el ScrollView) o hacer scroll
-        contentScrollView.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_MOVE) {
-                if (isMapExpanded) {
-                    // Si se toca fuera, colapsar y restaurar overlay
-                    collapseMap();
-                    contentScrollView.requestDisallowInterceptTouchEvent(false);
-                    viewMapOverlay.setVisibility(View.VISIBLE);
-                }
-            }
-            return false; // No consumir, permitir scroll normal
-        });
-    }
-
-    private void expandMap() {
-        isMapExpanded = true;
-        animateMapHeight(MAP_HEIGHT_COLLAPSED_DP, MAP_HEIGHT_EXPANDED_DP);
-    }
-
-    private void collapseMap() {
-        isMapExpanded = false;
-        animateMapHeight(MAP_HEIGHT_EXPANDED_DP, MAP_HEIGHT_COLLAPSED_DP);
-    }
-
-    private void animateMapHeight(int startDp, int endDp) {
-        final float density = getResources().getDisplayMetrics().density;
-        int startHeight = (int) (startDp * density);
-        int endHeight = (int) (endDp * density);
-
-        ValueAnimator anim = ValueAnimator.ofInt(startHeight, endHeight);
-        anim.addUpdateListener(valueAnimator -> {
-            int val = (Integer) valueAnimator.getAnimatedValue();
-            ViewGroup.LayoutParams layoutParams = mapContainer.getLayoutParams();
-            layoutParams.height = val;
-            mapContainer.setLayoutParams(layoutParams);
-        });
-        anim.setDuration(300);
-        anim.start();
-    }
-
     private void startLocationUpdates() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -756,7 +736,25 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             });
 
             // Setup Timeout
-            // ... rest of existing startLocationUpdates code ...
+            locationTimeoutRunnable = () -> {
+                stopLocationUpdates();
+                Log.w(TAG, "Location timeout reached. Defaulting to Quito.");
+                Toast.makeText(this, "No se pudo obtener ubicación precisa. Mostrando zona por defecto.", Toast.LENGTH_LONG).show();
+                
+                // Default to Quito
+                LatLng quito = new LatLng(-0.180653, -78.467834);
+                if (mMap != null) {
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(quito, 12));
+                }
+                cargarPaseadoresCercanos(quito, currentSearchRadiusKm);
+            };
+            locationTimeoutHandler.postDelayed(locationTimeoutRunnable, LOCATION_TIMEOUT_MS);
+
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+        } else {
+            checkLocationPermission();
+        }
+    }
 
     private void redirectToLogin(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
