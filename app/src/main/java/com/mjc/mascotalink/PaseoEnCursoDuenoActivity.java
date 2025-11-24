@@ -36,6 +36,7 @@ import com.mjc.mascotalink.adapters.ActividadPaseoAdapter;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.modelo.PaseoActividad;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.WhatsAppUtil;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -808,7 +809,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                             intentarLlamar();
                             break;
                         case 1:
-                            abrirWhatsApp();
+                            enviarWhatsApp(telefonoPaseador);
                             break;
                         case 2:
                             enviarSMS();
@@ -830,13 +831,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         }
     }
 
-    private void abrirWhatsApp() {
-        try {
-            String url = "https://wa.me/" + telefonoPaseador + "?text=Hola, tengo una consulta sobre el paseo.";
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-        } catch (Exception e) {
-            Toast.makeText(this, "WhatsApp no instalado", Toast.LENGTH_SHORT).show();
-        }
+    private void enviarWhatsApp(String telefono) {
+        WhatsAppUtil.abrirWhatsApp(this, telefono, "Hola, tengo una consulta sobre el paseo.");
     }
 
     private void enviarSMS() {

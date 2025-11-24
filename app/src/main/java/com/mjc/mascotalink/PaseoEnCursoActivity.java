@@ -46,6 +46,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.WhatsAppUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -734,16 +735,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     }
 
     private void enviarWhatsApp(String telefono) {
-        try {
-            String mensaje = String.format(Locale.getDefault(),
-                    "¡Hola! Soy %s, el paseador a cargo de %s el día de hoy.",
-                    currentPaseadorNombre, nombreMascota);
-            String url = "https://wa.me/" + telefono + "?text=" + Uri.encode(mensaje);
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            startActivity(intent);
-        } catch (Exception e) {
-            Toast.makeText(this, "No se pudo abrir WhatsApp", Toast.LENGTH_SHORT).show();
-        }
+        String mensaje = String.format(Locale.getDefault(),
+                "¡Hola! Soy %s, el paseador a cargo de %s el día de hoy.",
+                currentPaseadorNombre, nombreMascota);
+        WhatsAppUtil.abrirWhatsApp(this, telefono, mensaje);
     }
 
     private void enviarSms(String telefono) {
