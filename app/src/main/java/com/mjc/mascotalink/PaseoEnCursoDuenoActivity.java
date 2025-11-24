@@ -47,6 +47,14 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.JointType;
+import com.google.android.gms.maps.model.RoundCap;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
+import androidx.core.content.ContextCompat;
 import com.google.firebase.firestore.GeoPoint;
 
 import java.text.SimpleDateFormat;
@@ -529,44 +537,80 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
     private void actualizarMapa(List<LatLng> puntos) {
         if (mMap == null || puntos == null || puntos.isEmpty()) return;
-        
+
         this.rutaPaseo = puntos;
         this.ultimaUbicacionConocida = puntos.get(puntos.size() - 1);
 
         mMap.clear();
 
-        // Dibujar ruta
+        // Dibujar ruta modernizada ("Tubular")
         PolylineOptions polylineOptions = new PolylineOptions()
                 .addAll(puntos)
-                .width(10f)
+                .width(16f) // Más grueso
                 .color(getResources().getColor(R.color.blue_primary))
+                .jointType(JointType.ROUND) // Uniones redondeadas
+                .startCap(new RoundCap())
+                .endCap(new RoundCap())
                 .geodesic(true);
         mMap.addPolyline(polylineOptions);
 
-        // Marcador de Inicio (Verde)
+        // Marcador de Inicio (Punto limpio)
+        // Usamos un marcador verde estándar por ahora, pero más pequeño si fuera posible.
         mMap.addMarker(new MarkerOptions()
                 .position(puntos.get(0))
                 .title("Inicio")
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
 
-        // Marcador Actual (Azul/Foto)
-        mMap.addMarker(new MarkerOptions()
-                .position(ultimaUbicacionConocida)
-                .title("Ubicación actual")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+        // Marcador Actual (Paseador 3D)
+        BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120); // 120px de ancho
+        if (walkerIcon != null) {
+            mMap.addMarker(new MarkerOptions()
+                    .position(ultimaUbicacionConocida)
+                    .title("Paseador")
+                    .icon(walkerIcon)
+                    .anchor(0.5f, 1.0f)); // Anclar al centro inferior (pies del muñeco)
+        } else {
+            // Fallback si falla la imagen
+            mMap.addMarker(new MarkerOptions()
+                    .position(ultimaUbicacionConocida)
+                    .title("Paseador")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+        }
 
-        // Mover cámara
+        // Mover cámara suavemente
         try {
-            LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            for (LatLng p : puntos) {
-                builder.include(p);
-            }
-            LatLngBounds bounds = builder.build();
-            // Padding de 50px para que no quede pegado a los bordes
-            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+            // Si es la primera carga o queremos seguir al paseador de cerca
+            float zoomLevel = 17.0f;
+            com.google.android.gms.maps.model.CameraPosition cameraPosition = 
+                new com.google.android.gms.maps.model.CameraPosition.Builder()
+                    .target(ultimaUbicacionConocida)
+                    .zoom(zoomLevel)
+                    .bearing(0) // Podríamos orientarlo según el rumbo si tuviéramos ese dato
+                    .tilt(45) // Inclinación para efecto 3D
+                    .build();
+            
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 1000, null);
         } catch (Exception e) {
-            // Fallback si los puntos son muy cercanos o hay error en bounds
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaUbicacionConocida, 16f));
+        }
+    }
+
+    private BitmapDescriptor getResizedBitmapDescriptor(int resourceId, int widthPx) {
+        try {
+            Drawable drawable = ContextCompat.getDrawable(this, resourceId);
+            if (drawable == null) return null;
+
+            int heightPx = (int) ((float) widthPx * ((float) drawable.getIntrinsicHeight() / (float) drawable.getIntrinsicWidth()));
+
+            drawable.setBounds(0, 0, widthPx, heightPx);
+            Bitmap bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            drawable.draw(canvas);
+
+            return BitmapDescriptorFactory.fromBitmap(bitmap);
+        } catch (Exception e) {
+            Log.e(TAG, "Error creando icono personalizado", e);
+            return null;
         }
     }
 
