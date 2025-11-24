@@ -369,18 +369,10 @@
                     android:name="com.google.android.gms.maps.SupportMapFragment"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />
-
-                <!-- Overlay transparente para capturar el click y evitar conflicto de scroll -->
-                <View
-                    android:id="@+id/view_map_overlay"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true" />
                 
                 <!-- Botón flotante "Abrir" visual -->
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/btn_abrir_maps"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom|start"
@@ -390,7 +382,8 @@
                     app:tint="@color/blue_primary"
                     android:src="@drawable/ic_google"
                     android:contentDescription="Abrir en Google Maps"
-                    android:clickable="false"/> <!-- Click handled by overlay -->
+                    android:clickable="true"
+                    android:focusable="true"/>
 
             </FrameLayout>
 

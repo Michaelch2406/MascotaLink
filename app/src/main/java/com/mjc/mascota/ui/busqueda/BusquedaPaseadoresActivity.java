@@ -939,9 +939,21 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 DocumentSnapshot userDoc = task.getResult();
                 if (userDoc.exists() && "PASEADOR".equals(userDoc.getString("rol"))) {
 
-                    LatLng ubicacionPaseador = zonaServicioDoc.getGeoPoint("ubicacion_centro") != null ?
-                            new LatLng(zonaServicioDoc.getGeoPoint("ubicacion_centro").getLatitude(),
-                                    zonaServicioDoc.getGeoPoint("ubicacion_centro").getLongitude()) : null;
+                    // PRIORITY: Try to get real-time location first
+                    LatLng ubicacionPaseador = null;
+                    if (userDoc.contains("ubicacion_actual")) {
+                        com.google.firebase.firestore.GeoPoint gp = userDoc.getGeoPoint("ubicacion_actual");
+                        if (gp != null) {
+                            ubicacionPaseador = new LatLng(gp.getLatitude(), gp.getLongitude());
+                        }
+                    }
+
+                    // Fallback: Use service zone center
+                    if (ubicacionPaseador == null) {
+                        ubicacionPaseador = zonaServicioDoc.getGeoPoint("ubicacion_centro") != null ?
+                                new LatLng(zonaServicioDoc.getGeoPoint("ubicacion_centro").getLatitude(),
+                                        zonaServicioDoc.getGeoPoint("ubicacion_centro").getLongitude()) : null;
+                    }
 
                     if (ubicacionPaseador == null) return Tasks.forResult(null);
 
@@ -954,6 +966,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         String nombre = userDoc.getString("nombre_display");
                         String fotoUrl = userDoc.getString("foto_perfil");
 
+                        // Capture final variable for lambda
+                        final LatLng finalUbicacion = ubicacionPaseador;
+
                         return FirebaseFirestore.getInstance().collection("paseadores").document(userId).get().continueWithTask(task1 -> {
                             if (task1.isSuccessful()) {
                                 DocumentSnapshot paseadorDoc = task1.getResult();
@@ -961,7 +976,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                                     double calificacion = paseadorDoc.getDouble("calificacion_promedio") != null ? paseadorDoc.getDouble("calificacion_promedio") : 0.0;
                                     return verificarDisponibilidadActual(userId).continueWith(task2 -> {
                                         boolean disponible = task2.isSuccessful() && task2.getResult();
-                                        return new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm);
+                                        return new PaseadorMarker(userId, nombre, finalUbicacion, calificacion, fotoUrl, disponible, distanciaKm);
                                     });
                                 }
                             }
@@ -1263,33 +1278,50 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
 
         private Bitmap createCompositeBitmap(Bitmap profileBitmap, double calificacion, boolean disponible) {
-            int badgeSize = (int) (20 * mDensity);
-            int imageSize = (int) (MAP_MARKER_IMAGE_SIZE_DP * mDensity);
+            // Diseño Moderno: Pin Flotante (Estilo Airbnb/Uber)
+            int imageSize = (int) (60 * mDensity); // Tamaño de la foto (60dp)
+            int borderSize = (int) (3 * mDensity); // Borde blanco (3dp)
+            int shadowOffset = (int) (2 * mDensity); // Desplazamiento sombra
+            int totalSize = imageSize + (borderSize * 2);
+            int canvasSize = totalSize + shadowOffset + 10; // Espacio extra para sombra
 
-            if (profileBitmap.getWidth() != imageSize || profileBitmap.getHeight() != imageSize) {
-                profileBitmap = Bitmap.createScaledBitmap(profileBitmap, imageSize, imageSize, false);
-            }
-
-            Bitmap finalBitmap = Bitmap.createBitmap(imageSize + badgeSize / 2, imageSize + badgeSize / 2, Bitmap.Config.ARGB_8888);
+            Bitmap finalBitmap = Bitmap.createBitmap(canvasSize, canvasSize, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(finalBitmap);
 
-            canvas.drawBitmap(profileBitmap, 0, 0, null);
+            float centerX = canvasSize / 2f;
+            float centerY = (canvasSize - shadowOffset) / 2f;
+            float radius = imageSize / 2f;
 
-            // Dibujar el badge de calificación
-            String ratingText = String.format(Locale.getDefault(), "%.1f", calificacion);
             Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(disponible ? Color.parseColor("#8BC34A") : Color.GRAY); // Verde si disponible, gris si no
+
+            // 1. Sombra (Círculo gris semitransparente desplazado)
+            paint.setColor(Color.parseColor("#40000000")); // Negro 25%
             paint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(imageSize, imageSize, badgeSize / 2f, paint);
+            canvas.drawCircle(centerX, centerY + shadowOffset, radius + borderSize, paint);
 
+            // 2. Borde Blanco (Base del Pin)
             paint.setColor(Color.WHITE);
-            paint.setTextSize(badgeSize * 0.7f);
-            paint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawCircle(centerX, centerY, radius + borderSize, paint);
 
-            Rect textBounds = new Rect();
-            paint.getTextBounds(ratingText, 0, ratingText.length(), textBounds);
+            // 3. Foto de Perfil
+            if (profileBitmap.getWidth() != imageSize || profileBitmap.getHeight() != imageSize) {
+                profileBitmap = Bitmap.createScaledBitmap(profileBitmap, imageSize, imageSize, true);
+            }
+            canvas.drawBitmap(profileBitmap, centerX - radius, centerY - radius, null);
 
-            canvas.drawText(ratingText, imageSize, imageSize + textBounds.height() / 2f, paint);
+            // 4. Badge de Estado (Punto Verde/Gris)
+            float badgeRadius = (int) (7 * mDensity); // Tamaño del punto
+            // Posición: Esquina inferior derecha (45 grados)
+            float badgeX = centerX + (radius * 0.707f); 
+            float badgeY = centerY + (radius * 0.707f);
+
+            // Borde blanco del badge para separar de la foto
+            paint.setColor(Color.WHITE);
+            canvas.drawCircle(badgeX, badgeY, badgeRadius + (2 * mDensity), paint);
+
+            // Color del estado
+            paint.setColor(disponible ? Color.parseColor("#4CAF50") : Color.GRAY);
+            canvas.drawCircle(badgeX, badgeY, badgeRadius, paint);
 
             return finalBitmap;
         }

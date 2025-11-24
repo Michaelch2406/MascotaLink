@@ -96,7 +96,6 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnCancelar;
     private BottomNavigationView bottomNav;
-    private View viewMapOverlay;
 
     // Adapters
     private FotosPaseoAdapter fotosAdapter;
@@ -163,15 +162,16 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             mapFragment.getMapAsync(this);
         }
         
-        if (viewMapOverlay != null) {
-            viewMapOverlay.setOnClickListener(v -> abrirMapaFullscreen());
+        View btnAbrirMaps = findViewById(R.id.btn_abrir_maps);
+        if (btnAbrirMaps != null) {
+            btnAbrirMaps.setOnClickListener(v -> abrirMapaFullscreen());
         }
     }
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
-        mMap.getUiSettings().setAllGesturesEnabled(false); // Disable interaction in mini-map
+        mMap.getUiSettings().setAllGesturesEnabled(true); // Enable interaction in mini-map
         mMap.getUiSettings().setMapToolbarEnabled(false);
         
         // Initial empty state or loading
@@ -245,7 +245,6 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         btnContactar = findViewById(R.id.btn_contactar_paseador);
         btnCancelar = findViewById(R.id.btn_cancelar_paseo);
         bottomNav = findViewById(R.id.bottom_nav);
-        viewMapOverlay = findViewById(R.id.view_map_overlay);
     }
     
     // ... (Rest of setup methods: setupToolbar, setupRecyclerViews, setupButtons, setupBottomNav) ...
