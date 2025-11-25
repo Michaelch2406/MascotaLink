@@ -35,4 +35,8 @@
     <color name="color_cancelado">#F44336</color>
     <color name="color_costo">#4CAF50</color>
     <color name="bottom_nav_background">#F7FAFC</color>
+    
+    <!-- New Colors -->
+    <color name="gray_border">#E0E0E0</color>
+    <color name="light_blue_bg">#E3F2FD</color>
 </resources>

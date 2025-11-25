@@ -240,7 +240,9 @@ public class PaseosActivity extends AppCompatActivity {
 
             @Override
             public void onCalificarClick(PaseosActivity.Paseo paseo) {
-                mostrarDialogCalificacion(paseo);
+                Intent intent = new Intent(PaseosActivity.this, ResumenPaseoActivity.class);
+                intent.putExtra("id_reserva", paseo.getReservaId());
+                startActivity(intent);
             }
 
             @Override

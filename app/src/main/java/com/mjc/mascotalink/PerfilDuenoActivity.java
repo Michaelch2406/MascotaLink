@@ -407,7 +407,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
                 String fotoUrl = document.getString("foto_perfil");
                 if (fotoUrl != null && !fotoUrl.isEmpty()) {
-                    Glide.with(this).load(fotoUrl).circleCrop().into(ivAvatar);
+                    if (!isDestroyed() && !isFinishing()) {
+                        Glide.with(this).load(fotoUrl).circleCrop().into(ivAvatar);
+                    }
                 }
 
                 String verificacion = document.getString("verificacion_estado");

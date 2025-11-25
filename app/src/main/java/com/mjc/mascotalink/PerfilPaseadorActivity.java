@@ -299,8 +299,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     protected void onStop() {
         super.onStop();
         // Clear Glide load to prevent crash on destroy
-        if (ivAvatar != null) {
-            Glide.with(this).clear(ivAvatar);
+        if (ivAvatar != null && !isDestroyed() && !isFinishing()) {
+            try {
+                Glide.with(this).clear(ivAvatar);
+            } catch (Exception e) {
+                Log.w(TAG, "Error clearing Glide request in onStop", e);
+            }
         }
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
@@ -718,7 +722,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 if (perfil != null) {
                     tvDescripcion.setText((String) perfil.get("motivacion"));
                     videoUrl = (String) perfil.get("video_presentacion_url");
-                    Glide.with(this).load(videoUrl).centerCrop().placeholder(R.drawable.galeria_paseos_foto1).into(ivVideoThumbnail);
+                    if (!isDestroyed() && !isFinishing()) {
+                        Glide.with(this).load(videoUrl).centerCrop().placeholder(R.drawable.galeria_paseos_foto1).into(ivVideoThumbnail);
+                    }
                     Timestamp inicioExpTimestamp = (Timestamp) perfil.get("fecha_inicio_experiencia");
                     if (inicioExpTimestamp != null) {
                         int years = Period.between(inicioExpTimestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()).getYears();

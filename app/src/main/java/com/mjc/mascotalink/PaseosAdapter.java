@@ -238,14 +238,13 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                 }
             }
             else if (estado.equals("COMPLETADO")) {
-                if("PASEADOR".equalsIgnoreCase(userRole)) {
-                    holder.layoutBotonesAccion.setVisibility(View.GONE);
-                } else {
-                    holder.btnAccion1.setText("Calificar ⭐");
-                    holder.btnAccion2.setText("Ver Feedback");
-                    holder.btnAccion1.setOnClickListener(v -> listener.onCalificarClick(paseo));
-                    holder.btnAccion2.setOnClickListener(v -> Toast.makeText(context, "Próximamente: Ver feedback", Toast.LENGTH_SHORT).show());
-                }
+                holder.layoutBotonesAccion.setVisibility(View.VISIBLE);
+                holder.btnAccion1.setText("Calificar / Resumen ⭐");
+                holder.btnAccion1.setOnClickListener(v -> listener.onCalificarClick(paseo));
+                
+                // Optional: Disable if already rated? Not checked here, activity handles it.
+                holder.btnAccion2.setText("Ver Feedback");
+                holder.btnAccion2.setOnClickListener(v -> Toast.makeText(context, "Próximamente: Ver feedback", Toast.LENGTH_SHORT).show());
             }
             else if (estado.equals("CANCELADO")) {
                 holder.btnAccion1.setText("Ver Motivo ℹ️");

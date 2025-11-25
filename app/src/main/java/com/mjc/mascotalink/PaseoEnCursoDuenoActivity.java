@@ -368,8 +368,16 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             // Continuar cargando datos para mostrar info, pero no finalizar
         } else if (!"EN_CURSO".equalsIgnoreCase(estado) && !"EN_PROGRESO".equalsIgnoreCase(estado)) {
              // Bloque existente para estados finales
-            if (estado.equalsIgnoreCase("COMPLETADO") || estado.startsWith("CANCELADO")) {
-                Toast.makeText(this, "El paseo ha finalizado: " + estado, Toast.LENGTH_SHORT).show();
+            if (estado.equalsIgnoreCase("COMPLETADO")) {
+                Toast.makeText(this, "El paseo ha finalizado con éxito.", Toast.LENGTH_SHORT).show();
+                stopTimer();
+                
+                Intent intent = new Intent(PaseoEnCursoDuenoActivity.this, ResumenPaseoActivity.class);
+                intent.putExtra("id_reserva", idReserva);
+                startActivity(intent);
+                finish();
+            } else if (estado.startsWith("CANCELADO")) {
+                Toast.makeText(this, "El paseo ha sido cancelado: " + estado, Toast.LENGTH_SHORT).show();
                 stopTimer();
                 new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1500);
             } else {
@@ -599,7 +607,19 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             Drawable drawable = ContextCompat.getDrawable(this, resourceId);
             if (drawable == null) return null;
 
-            int heightPx = (int) ((float) widthPx * ((float) drawable.getIntrinsicHeight() / (float) drawable.getIntrinsicWidth()));
+            int intrinsicWidth = drawable.getIntrinsicWidth();
+            int intrinsicHeight = drawable.getIntrinsicHeight();
+
+            if (widthPx <= 0 || intrinsicWidth <= 0 || intrinsicHeight <= 0) {
+                Log.w(TAG, "Dimensiones inválidas para el marcador. Width: " + widthPx + ", Intrinsic: " + intrinsicWidth + "x" + intrinsicHeight);
+                return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
+            }
+
+            int heightPx = (int) ((float) widthPx * ((float) intrinsicHeight / (float) intrinsicWidth));
+
+            if (heightPx <= 0) {
+                 heightPx = widthPx; // Fallback to square
+            }
 
             drawable.setBounds(0, 0, widthPx, heightPx);
             Bitmap bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888);
@@ -641,12 +661,14 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
                 String fotoUrl = doc.getString("foto_perfil");
                 if (fotoUrl != null && !fotoUrl.isEmpty()) {
-                    Glide.with(this)
-                            .load(fotoUrl)
-                            .circleCrop()
-                            .placeholder(R.drawable.ic_user_placeholder)
-                            .error(R.drawable.ic_user_placeholder)
-                            .into(ivFotoPaseador);
+                    if (!isDestroyed() && !isFinishing()) {
+                        Glide.with(this)
+                                .load(fotoUrl)
+                                .circleCrop()
+                                .placeholder(R.drawable.ic_user_placeholder)
+                                .error(R.drawable.ic_user_placeholder)
+                                .into(ivFotoPaseador);
+                    }
                 } else {
                     ivFotoPaseador.setImageResource(R.drawable.ic_user_placeholder);
                 }

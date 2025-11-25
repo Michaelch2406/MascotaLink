@@ -57,7 +57,7 @@ service cloud.firestore {
     match /duenos/{duenoId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(duenoId) && getAfter(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'DUEÑO';
-      allow update: if isOwner(duenoId);
+      allow update: if isOwner(duenoId) || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['calificacion_promedio', 'total_resenas']));
 
       match /mascotas/{mascotaId} {
         allow read: if isAuthenticated();
@@ -69,8 +69,9 @@ service cloud.firestore {
     match /paseadores/{paseadorId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(paseadorId) && getAfter(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'PASEADOR';
-      allow update: if isOwner(paseadorId) &&
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificacion_estado', 'verificacion_fecha', 'verificacion_notas']));
+      allow update: if (isOwner(paseadorId) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificacion_estado', 'verificacion_fecha', 'verificacion_notas'])))
+        || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['calificacion_promedio', 'total_resenas']));
 
       match /disponibilidad/{diaId} {
         allow read: if isAuthenticated();
@@ -88,6 +89,19 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isDueno() && request.resource.data.dueno_id == request.auth.uid;
       }
+    }
+
+    // Reviews Root Collections
+    match /resenas_paseadores/{resenaId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.autorId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /resenas_duenos/{resenaId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.autorId == request.auth.uid;
+      allow update, delete: if false;
     }
 
     // Denormalized search collection

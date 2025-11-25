@@ -166,6 +166,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     // Optimization
     private Location lastLoadedLocation = null;
     private float lastLoadedZoom = -1;
+    private String selectedPaseadorId = null; // Track selected marker
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -781,7 +782,66 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         mMap.setOnCameraIdleListener(mClusterManager);
         mMap.setOnMarkerClickListener(mClusterManager);
 
-        // Configurar el InfoWindowAdapter personalizado
+        // Two-stage selection logic
+        mClusterManager.setOnClusterItemClickListener(item -> {
+            String clickedId = item.getPaseadorMarker().getPaseadorId();
+            
+            if (clickedId.equals(selectedPaseadorId)) {
+                // Second click: Navigate to Profile
+                Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
+                intent.putExtra("paseadorId", clickedId);
+                intent.putExtra("viewerRole", "DUEÑO");
+                startActivity(intent);
+                return true;
+            } else {
+                // First click: Select and Center
+                selectedPaseadorId = clickedId;
+                
+                // Animate Camera
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(item.getPosition(), 15f));
+                
+                // Re-render to update icons (Normal vs Selected)
+                // We iterate to find the marker and update it specifically if possible, 
+                // but simplest robust way is to re-render or update specific markers.
+                // Since createCompositeBitmap checks 'selectedPaseadorId', we just need to refresh.
+                Marker marker = renderer.getMarker(item);
+                if (marker != null) {
+                    marker.showInfoWindow();
+                    // Force icon update
+                    renderer.onBeforeClusterItemRendered(item, new MarkerOptions()); // Trigger icon update logic manually or rely on cluster re-render
+                    // Actually, we need to manually update the icon on the existing marker object
+                    renderer.updateMarkerIcon(marker, item);
+                }
+                
+                // Deselect others (reset their icons)
+                for (PaseadorClusterItem otherItem : mClusterManager.getAlgorithm().getItems()) {
+                    if (!otherItem.getPaseadorMarker().getPaseadorId().equals(clickedId)) {
+                        Marker otherMarker = renderer.getMarker(otherItem);
+                        if (otherMarker != null) {
+                            renderer.updateMarkerIcon(otherMarker, otherItem);
+                        }
+                    }
+                }
+                
+                return true; // Consume event (don't do default behavior)
+            }
+        });
+
+        // Deselect on map click
+        mMap.setOnMapClickListener(latLng -> {
+            if (selectedPaseadorId != null) {
+                selectedPaseadorId = null;
+                // Reset all icons
+                for (PaseadorClusterItem item : mClusterManager.getAlgorithm().getItems()) {
+                    Marker marker = renderer.getMarker(item);
+                    if (marker != null) {
+                        renderer.updateMarkerIcon(marker, item);
+                    }
+                }
+            }
+        });
+
+        // Configurar el InfoWindowAdapter personalizado (Keep existing logic for InfoWindow click as backup)
         PaseadorInfoWindowAdapter infoWindowAdapter = new PaseadorInfoWindowAdapter(BusquedaPaseadoresActivity.this, paseadorId -> {
             Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
             intent.putExtra("paseadorId", paseadorId);
@@ -982,9 +1042,25 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     DocumentSnapshot paseadorDoc = task1.getResult();
                     if (paseadorDoc.exists()) {
                         double calificacion = paseadorDoc.getDouble("calificacion_promedio") != null ? paseadorDoc.getDouble("calificacion_promedio") : 0.0;
-                        return verificarDisponibilidadActual(userId).continueWith(task2 -> {
+                        
+                        // Chain 1: Check Availability (Schedule)
+                        return verificarDisponibilidadActual(userId).continueWithTask(task2 -> {
                             boolean disponible = task2.isSuccessful() && task2.getResult();
-                            return new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm);
+                            
+                            // Chain 2: Check Active Walks (Real-time "Busy" status)
+                            return FirebaseFirestore.getInstance().collection("reservas")
+                                    .whereEqualTo("id_paseador", FirebaseFirestore.getInstance().collection("usuarios").document(userId))
+                                    .whereEqualTo("estado", "EN_CURSO")
+                                    .limit(1)
+                                    .get()
+                                    .continueWith(task3 -> {
+                                        boolean enPaseo = false;
+                                        if (task3.isSuccessful() && !task3.getResult().isEmpty()) {
+                                            enPaseo = true;
+                                        }
+                                        
+                                        return new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm, enPaseo);
+                                    });
                         });
                     }
                 }
@@ -1174,7 +1250,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         @Nullable
         @Override
         public String getSnippet() {
-            return String.format(Locale.getDefault(), "%.1f km - %.1f ★", mPaseadorMarker.getDistanciaKm(), mPaseadorMarker.getCalificacion());
+            String estado = mPaseadorMarker.isEnPaseo() ? "🚶 En un paseo" : (mPaseadorMarker.isDisponible() ? "✅ Disponible" : "⛔ No disponible");
+            return String.format(Locale.getDefault(), "%.1f km - %.1f ★\n%s", mPaseadorMarker.getDistanciaKm(), mPaseadorMarker.getCalificacion(), estado);
         }
 
         @Nullable
@@ -1225,9 +1302,37 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         private static final int MAP_MARKER_IMAGE_SIZE_DP = 50;
 
+        public void updateMarkerIcon(Marker marker, PaseadorClusterItem item) {
+            PaseadorMarker paseador = item.getPaseadorMarker();
+            boolean isSelected = paseador.getPaseadorId().equals(selectedPaseadorId);
+            
+            Glide.with(BusquedaPaseadoresActivity.this)
+                .asBitmap()
+                .load(paseador.getFotoUrl())
+                .apply(RequestOptions.circleCropTransform()
+                        .placeholder(R.drawable.ic_person)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL))
+                .into(new CustomTarget<Bitmap>() {
+                    @Override
+                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                        if (marker != null && marker.getTag() != null) { // Check validity
+                             Bitmap finalBitmap = createCompositeBitmap(resource, paseador.getCalificacion(), paseador.isDisponible(), paseador.isEnPaseo(), isSelected);
+                             try {
+                                marker.setIcon(BitmapDescriptorFactory.fromBitmap(finalBitmap));
+                             } catch (IllegalArgumentException e) {
+                                Log.e(TAG, "Error updating marker icon", e);
+                             }
+                        }
+                    }
+                    @Override public void onLoadCleared(@Nullable Drawable placeholder) {}
+                    @Override public void onLoadFailed(@Nullable Drawable errorDrawable) {}
+                });
+        }
+
         @Override
         protected void onBeforeClusterItemRendered(@NonNull PaseadorClusterItem item, @NonNull MarkerOptions markerOptions) {
             final PaseadorMarker paseador = item.getPaseadorMarker();
+            boolean isSelected = paseador.getPaseadorId().equals(selectedPaseadorId);
 
             Glide.with(BusquedaPaseadoresActivity.this)
                     .asBitmap()
@@ -1238,7 +1343,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     .into(new CustomTarget<Bitmap>() {
                         @Override
                         public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                            Bitmap finalBitmap = createCompositeBitmap(resource, paseador.getCalificacion(), paseador.isDisponible());
+                            Bitmap finalBitmap = createCompositeBitmap(resource, paseador.getCalificacion(), paseador.isDisponible(), paseador.isEnPaseo(), isSelected);
                             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(finalBitmap));
                             Marker existingMarker = getMarker(item);
                             if (existingMarker != null) {
@@ -1248,7 +1353,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
                         @Override
                         public void onLoadCleared(@Nullable Drawable placeholder) {
-                            Bitmap defaultBitmap = createCompositeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.ic_person), paseador.getCalificacion(), paseador.isDisponible());
+                            Bitmap defaultBitmap = createCompositeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.ic_person), paseador.getCalificacion(), paseador.isDisponible(), paseador.isEnPaseo(), isSelected);
                             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(defaultBitmap));
                             Marker existingMarker = getMarker(item);
                             if (existingMarker != null) {
@@ -1259,7 +1364,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         @Override
                         public void onLoadFailed(@Nullable Drawable errorDrawable) {
                             Log.e(TAG, "Error al cargar imagen de paseador: " + paseador.getFotoUrl());
-                            Bitmap defaultBitmap = createCompositeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.ic_person), paseador.getCalificacion(), paseador.isDisponible());
+                            Bitmap defaultBitmap = createCompositeBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.ic_person), paseador.getCalificacion(), paseador.isDisponible(), paseador.isEnPaseo(), isSelected);
                             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(defaultBitmap));
                             Marker existingMarker = getMarker(item);
                             if (existingMarker != null) {
@@ -1270,9 +1375,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
             markerOptions.title(item.getTitle());
             markerOptions.snippet(item.getSnippet());
-            markerOptions.zIndex(item.getZIndex());
-            // markerOptions.tag(paseador.getPaseadorId()); // Removido: El tag se establece en onClusterItemRendered
-
             cachedPaseadorMarkers.put(paseador.getPaseadorId(), paseador);
         }
 
@@ -1282,13 +1384,21 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             marker.setTag(clusterItem.getPaseadorMarker().getPaseadorId()); // CRÍTICO: Establecer el tag del marcador
         }
 
-        private Bitmap createCompositeBitmap(Bitmap profileBitmap, double calificacion, boolean disponible) {
+        private Bitmap createCompositeBitmap(Bitmap profileBitmap, double calificacion, boolean disponible, boolean enPaseo, boolean isSelected) {
+            // Prevent NullPointerException if bitmap loading failed completely
+            if (profileBitmap == null) {
+                profileBitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+                profileBitmap.eraseColor(Color.GRAY);
+            }
+
             // Diseño Moderno: Pin Flotante (Estilo Airbnb/Uber)
-            int imageSize = (int) (60 * mDensity); // Tamaño de la foto (60dp)
-            int borderSize = (int) (3 * mDensity); // Borde blanco (3dp)
-            int shadowOffset = (int) (2 * mDensity); // Desplazamiento sombra
+            // Base size: 60dp Normal, 80dp Selected
+            int baseSizeDp = isSelected ? 80 : 60;
+            int imageSize = (int) (baseSizeDp * mDensity); 
+            int borderSize = (int) ((isSelected ? 4 : 3) * mDensity); // Thicker border if selected
+            int shadowOffset = (int) ((isSelected ? 4 : 2) * mDensity); // Deeper shadow if selected
             int totalSize = imageSize + (borderSize * 2);
-            int canvasSize = totalSize + shadowOffset + 10; // Espacio extra para sombra
+            int canvasSize = totalSize + shadowOffset + 10; 
 
             Bitmap finalBitmap = Bitmap.createBitmap(canvasSize, canvasSize, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(finalBitmap);
@@ -1299,14 +1409,21 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
             Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-            // 1. Sombra (Círculo gris semitransparente desplazado)
-            paint.setColor(Color.parseColor("#40000000")); // Negro 25%
+            // 1. Sombra
+            paint.setColor(Color.parseColor("#40000000")); 
             paint.setStyle(Paint.Style.FILL);
             canvas.drawCircle(centerX, centerY + shadowOffset, radius + borderSize, paint);
 
-            // 2. Borde Blanco (Base del Pin)
-            paint.setColor(Color.WHITE);
+            // 2. Borde (Base del Pin)
+            // Blue if selected, White if normal
+            paint.setColor(isSelected ? ContextCompat.getColor(BusquedaPaseadoresActivity.this, R.color.blue_primary) : Color.WHITE);
             canvas.drawCircle(centerX, centerY, radius + borderSize, paint);
+            
+            // Inner white border for selected state to separate blue from image
+            if (isSelected) {
+                 paint.setColor(Color.WHITE);
+                 canvas.drawCircle(centerX, centerY, radius + (borderSize / 2f), paint);
+            }
 
             // 3. Foto de Perfil
             if (profileBitmap.getWidth() != imageSize || profileBitmap.getHeight() != imageSize) {
@@ -1314,18 +1431,23 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             }
             canvas.drawBitmap(profileBitmap, centerX - radius, centerY - radius, null);
 
-            // 4. Badge de Estado (Punto Verde/Gris)
-            float badgeRadius = (int) (7 * mDensity); // Tamaño del punto
-            // Posición: Esquina inferior derecha (45 grados)
+            // 4. Badge de Estado
+            float badgeRadius = (int) ((isSelected ? 9 : 7) * mDensity); 
             float badgeX = centerX + (radius * 0.707f); 
             float badgeY = centerY + (radius * 0.707f);
 
-            // Borde blanco del badge para separar de la foto
             paint.setColor(Color.WHITE);
             canvas.drawCircle(badgeX, badgeY, badgeRadius + (2 * mDensity), paint);
 
-            // Color del estado
-            paint.setColor(disponible ? Color.parseColor("#4CAF50") : Color.GRAY);
+            int colorEstado;
+            if (enPaseo) {
+                colorEstado = Color.parseColor("#FF9800"); 
+            } else if (disponible) {
+                colorEstado = Color.parseColor("#4CAF50"); 
+            } else {
+                colorEstado = Color.GRAY; 
+            }
+            paint.setColor(colorEstado);
             canvas.drawCircle(badgeX, badgeY, badgeRadius, paint);
 
             return finalBitmap;

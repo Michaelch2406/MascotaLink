@@ -465,11 +465,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         
         if (urlFoto != null && !urlFoto.isEmpty()) {
             Log.d(TAG, "Intentando cargar foto con Glide: " + urlFoto);
-            Glide.with(this)
-                    .load(urlFoto)
-                    .placeholder(R.drawable.ic_pet_placeholder)
-                    .error(R.drawable.ic_pet_placeholder)
-                    .into(ivFotoMascota);
+            if (!isDestroyed() && !isFinishing()) {
+                Glide.with(this)
+                        .load(urlFoto)
+                        .placeholder(R.drawable.ic_pet_placeholder)
+                        .error(R.drawable.ic_pet_placeholder)
+                        .into(ivFotoMascota);
+            }
         } else {
             Log.w(TAG, "No se encontró URL de foto válida para la mascota.");
             ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
@@ -875,7 +877,11 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "¡Paseo finalizado con éxito!", Toast.LENGTH_SHORT).show();
                     mostrarLoading(false);
-                    new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1000);
+                    
+                    Intent intent = new Intent(PaseoEnCursoActivity.this, ResumenPaseoActivity.class);
+                    intent.putExtra("id_reserva", idReserva);
+                    startActivity(intent);
+                    finish();
                 })
                 .addOnFailureListener(e -> {
                     mostrarLoading(false);

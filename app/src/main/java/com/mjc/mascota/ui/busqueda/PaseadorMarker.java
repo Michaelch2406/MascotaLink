@@ -11,8 +11,9 @@ public class PaseadorMarker {
     private String fotoUrl;
     private boolean disponible;
     private double distanciaKm;
+    private boolean enPaseo; // Nuevo campo
 
-    public PaseadorMarker(String paseadorId, String nombre, LatLng ubicacion, double calificacion, String fotoUrl, boolean disponible, double distanciaKm) {
+    public PaseadorMarker(String paseadorId, String nombre, LatLng ubicacion, double calificacion, String fotoUrl, boolean disponible, double distanciaKm, boolean enPaseo) {
         this.paseadorId = paseadorId;
         this.nombre = nombre;
         this.ubicacion = ubicacion;
@@ -20,6 +21,7 @@ public class PaseadorMarker {
         this.fotoUrl = fotoUrl;
         this.disponible = disponible;
         this.distanciaKm = distanciaKm;
+        this.enPaseo = enPaseo;
     }
 
     public String getPaseadorId() {
@@ -76,5 +78,13 @@ public class PaseadorMarker {
 
     public void setDistanciaKm(double distanciaKm) {
         this.distanciaKm = distanciaKm;
+    }
+
+    public boolean isEnPaseo() {
+        return enPaseo;
+    }
+
+    public void setEnPaseo(boolean enPaseo) {
+        this.enPaseo = enPaseo;
     }
 }
