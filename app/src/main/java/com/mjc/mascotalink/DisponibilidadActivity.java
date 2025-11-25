@@ -136,8 +136,18 @@ public class DisponibilidadActivity extends AppCompatActivity {
             return;
         }
 
+        // Persistir siempre en SharedPreferences para el flujo de registro
+        SharedPreferences.Editor editor = getSharedPreferences("WizardPaseador", MODE_PRIVATE).edit();
+        editor.putBoolean("disponibilidad_completa", true);
+        editor.putStringSet("disponibilidad_dias", new HashSet<>(diasSeleccionados));
+        editor.putString("disponibilidad_inicio", inicio);
+        editor.putString("disponibilidad_fin", fin);
+        editor.apply();
+
         if (currentUserId == null) {
-            Toast.makeText(this, "Error: No se pudo identificar al usuario.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Disponibilidad guardada para el registro", Toast.LENGTH_SHORT).show();
+            setResult(RESULT_OK);
+            finish();
             return;
         }
 

@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:keepScreenOn="true"
+        app:implementationMode="performance"
+        app:scaleType="fitCenter"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.mjc.mascotalink.ui.camera.OverlayView
+        android:id="@+id/overlayView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/headerContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:paddingStart="24dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp"
+        android:background="#32000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:text="@string/selfie_title"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btnClose" />
+
+        <TextView
+            android:id="@+id/tvSubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="@string/selfie_subtitle"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@id/tvTitle"
+            app:layout_constraintStart_toStartOf="@id/tvTitle"
+            app:layout_constraintEnd_toStartOf="@+id/btnClose" />
+
+        <ImageButton
+            android:id="@+id/btnClose"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/selfie_close"
+            android:padding="8dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            app:tint="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:id="@+id/challengeContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_panel_round"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="14dp"
+        app:layout_constraintBottom_toTopOf="@+id/statusContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/imgChallenge"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="@string/selfie_title"
+            android:padding="2dp"
+            android:src="@android:drawable/ic_menu_recent_history"
+            app:tint="@color/green_accent" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvChallengeStep"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/gray_light"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvChallengeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/selfie_challenge_smile_title"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvChallengeHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/selfie_challenge_smile_hint"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvChallengeStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/gray_light"
+                android:textSize="13sp" />
+
+            <ProgressBar
+                android:id="@+id/progressChallenge"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progress="0"
+                android:progressTint="@color/green_accent"
+                android:indeterminate="false"
+                android:backgroundTint="@color/gray_disabled" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/statusContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_status_chip"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="10dp"
+        app:layout_constraintTop_toBottomOf="@+id/headerContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <View
+            android:id="@+id/badgePulse"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/bg_badge_pulse" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/selfie_status_position"
+            android:textColor="@android:color/white"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvTips"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="12dp"
+        android:text="@string/selfie_tips"
+        android:textColor="@color/gray_light"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toTopOf="@+id/btnCapture"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCapture"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="28dp"
+        android:enabled="false"
+        android:text="@string/selfie_button_capture"
+        android:textAllCaps="false"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

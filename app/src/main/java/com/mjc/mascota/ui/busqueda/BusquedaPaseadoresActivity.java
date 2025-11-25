@@ -886,7 +886,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void cargarPaseadoresCercanos(LatLng ubicacionUsuario, double radioKm) {
         // Feedback visual (ProgressBar)
-        if (progressBar != null && (cachedPaseadorMarkers.isEmpty())) { // Only show if initial load or empty
+        if (progressBar != null && (cachedPaseadorMarkers.isEmpty())) {
              progressBar.setVisibility(View.VISIBLE);
         }
 
@@ -894,17 +894,18 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         mClusterManager.clearItems();
         mMap.clear();
 
-        FirebaseFirestore.getInstance().collectionGroup("zonas_servicio")
+        // CAMBIO CLAVE: Consultar directamente a los USUARIOS (Paseadores)
+        // Filtros: Rol = PASEADOR y Activo = TRUE
+        FirebaseFirestore.getInstance().collection("usuarios")
+                .whereEqualTo("rol", "PASEADOR")
                 .whereEqualTo("activo", true)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         List<Task<PaseadorMarker>> paseadorMarkerTasks = new ArrayList<>();
-                        for (QueryDocumentSnapshot document : task.getResult()) {
-                            String userId = document.getReference().getParent().getParent().getId();
-                            if (userId != null) {
-                                paseadorMarkerTasks.add(buildPaseadorMarker(userId, document, ubicacionUsuario));
-                            }
+                        for (QueryDocumentSnapshot userDoc : task.getResult()) {
+                            // Construir marcador directamente desde el usuario
+                            paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(userDoc, ubicacionUsuario));
                         }
 
                         Tasks.whenAllSuccess(paseadorMarkerTasks)
@@ -919,74 +920,78 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                                         }
                                     }
                                     mClusterManager.cluster();
-                                    if (progressBar != null) progressBar.setVisibility(View.GONE); // Hide on success
+                                    if (progressBar != null) progressBar.setVisibility(View.GONE);
                                 })
                                 .addOnFailureListener(e -> {
                                     Log.e(TAG, "Error al construir PaseadorMarkers: " + e.getMessage());
-                                    if (progressBar != null) progressBar.setVisibility(View.GONE); // Hide on failure
+                                    if (progressBar != null) progressBar.setVisibility(View.GONE);
                                 });
 
                     } else {
-                        Log.e(TAG, "Error getting documents: ", task.getException());
-                        if (progressBar != null) progressBar.setVisibility(View.GONE); // Hide on failure
+                        Log.e(TAG, "Error getting users: ", task.getException());
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
                     }
                 });
     }
 
-    private Task<PaseadorMarker> buildPaseadorMarker(String userId, QueryDocumentSnapshot zonaServicioDoc, LatLng ubicacionUsuario) {
-        return FirebaseFirestore.getInstance().collection("usuarios").document(userId).get().continueWithTask(task -> {
-            if (task.isSuccessful()) {
-                DocumentSnapshot userDoc = task.getResult();
-                if (userDoc.exists() && "PASEADOR".equals(userDoc.getString("rol"))) {
+    // Método renombrado y adaptado
+    private Task<PaseadorMarker> buildPaseadorMarkerFromUser(DocumentSnapshot userDoc, LatLng ubicacionUsuario) {
+        String userId = userDoc.getId();
+        
+        // 1. Intentar obtener ubicación en tiempo real del perfil
+        com.google.firebase.firestore.GeoPoint gp = userDoc.getGeoPoint("ubicacion_actual");
+        LatLng ubicacionRealtime = (gp != null) ? new LatLng(gp.getLatitude(), gp.getLongitude()) : null;
 
-                    // PRIORITY: Try to get real-time location first
-                    LatLng ubicacionPaseador = null;
-                    if (userDoc.contains("ubicacion_actual")) {
-                        com.google.firebase.firestore.GeoPoint gp = userDoc.getGeoPoint("ubicacion_actual");
-                        if (gp != null) {
-                            ubicacionPaseador = new LatLng(gp.getLatitude(), gp.getLongitude());
-                        }
-                    }
-
-                    // Fallback: Use service zone center
-                    if (ubicacionPaseador == null) {
-                        ubicacionPaseador = zonaServicioDoc.getGeoPoint("ubicacion_centro") != null ?
-                                new LatLng(zonaServicioDoc.getGeoPoint("ubicacion_centro").getLatitude(),
-                                        zonaServicioDoc.getGeoPoint("ubicacion_centro").getLongitude()) : null;
-                    }
-
-                    if (ubicacionPaseador == null) return Tasks.forResult(null);
-
-                    float[] results = new float[1];
-                    Location.distanceBetween(ubicacionUsuario.latitude, ubicacionUsuario.longitude,
-                            ubicacionPaseador.latitude, ubicacionPaseador.longitude, results);
-                    double distanciaKm = results[0] / 1000;
-
-                    if (distanciaKm <= currentSearchRadiusKm) {
-                        String nombre = userDoc.getString("nombre_display");
-                        String fotoUrl = userDoc.getString("foto_perfil");
-
-                        // Capture final variable for lambda
-                        final LatLng finalUbicacion = ubicacionPaseador;
-
-                        return FirebaseFirestore.getInstance().collection("paseadores").document(userId).get().continueWithTask(task1 -> {
-                            if (task1.isSuccessful()) {
-                                DocumentSnapshot paseadorDoc = task1.getResult();
-                                if (paseadorDoc.exists()) {
-                                    double calificacion = paseadorDoc.getDouble("calificacion_promedio") != null ? paseadorDoc.getDouble("calificacion_promedio") : 0.0;
-                                    return verificarDisponibilidadActual(userId).continueWith(task2 -> {
-                                        boolean disponible = task2.isSuccessful() && task2.getResult();
-                                        return new PaseadorMarker(userId, nombre, finalUbicacion, calificacion, fotoUrl, disponible, distanciaKm);
-                                    });
-                                }
+        if (ubicacionRealtime != null) {
+            // ¡Tenemos ubicación real! Usarla directamente.
+            return crearMarcador(userId, userDoc, ubicacionRealtime, ubicacionUsuario, true);
+        } else {
+            // 2. Fallback: Buscar zona de servicio principal si no hay ubicación real
+            return FirebaseFirestore.getInstance().collection("paseadores").document(userId)
+                    .collection("zonas_servicio")
+                    .limit(1) // Solo necesitamos una referencia
+                    .get()
+                    .continueWithTask(task -> {
+                        if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                            DocumentSnapshot zonaDoc = task.getResult().getDocuments().get(0);
+                            com.google.firebase.firestore.GeoPoint zonaGp = zonaDoc.getGeoPoint("ubicacion_centro");
+                            if (zonaGp != null) {
+                                LatLng ubicacionZona = new LatLng(zonaGp.getLatitude(), zonaGp.getLongitude());
+                                return crearMarcador(userId, userDoc, ubicacionZona, ubicacionUsuario, false);
                             }
-                            return Tasks.forResult(null);
+                        }
+                        // Si no tiene ubicación real ni zonas, no lo mostramos en el mapa
+                        return Tasks.forResult(null);
+                    });
+        }
+    }
+
+    private Task<PaseadorMarker> crearMarcador(String userId, DocumentSnapshot userDoc, LatLng ubicacionPaseador, LatLng ubicacionUsuario, boolean esRealtime) {
+        float[] results = new float[1];
+        Location.distanceBetween(ubicacionUsuario.latitude, ubicacionUsuario.longitude,
+                ubicacionPaseador.latitude, ubicacionPaseador.longitude, results);
+        double distanciaKm = results[0] / 1000;
+
+        // Filtro de radio
+        if (distanciaKm <= currentSearchRadiusKm) {
+            String nombre = userDoc.getString("nombre_display");
+            String fotoUrl = userDoc.getString("foto_perfil");
+
+            return FirebaseFirestore.getInstance().collection("paseadores").document(userId).get().continueWithTask(task1 -> {
+                if (task1.isSuccessful()) {
+                    DocumentSnapshot paseadorDoc = task1.getResult();
+                    if (paseadorDoc.exists()) {
+                        double calificacion = paseadorDoc.getDouble("calificacion_promedio") != null ? paseadorDoc.getDouble("calificacion_promedio") : 0.0;
+                        return verificarDisponibilidadActual(userId).continueWith(task2 -> {
+                            boolean disponible = task2.isSuccessful() && task2.getResult();
+                            return new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm);
                         });
                     }
                 }
-            }
-            return Tasks.forResult(null);
-        });
+                return Tasks.forResult(null);
+            });
+        }
+        return Tasks.forResult(null);
     }
 
     /**

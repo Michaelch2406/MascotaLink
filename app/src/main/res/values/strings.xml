@@ -126,4 +126,33 @@
     <string name="cd_go_home">Ir al inicio</string>
     <string name="cd_pet_avatar">Avatar de la mascota</string>
 
+    <!-- Selfie / Liveness -->
+    <string name="selfie_title">Verificación biométrica</string>
+    <string name="selfie_subtitle">Alinea tu rostro en el óvalo y mantén buena luz</string>
+    <string name="selfie_status_position">Ubica tu rostro dentro del óvalo</string>
+    <string name="selfie_status_one_face">Solo una persona en cuadro</string>
+    <string name="selfie_status_move_closer">Acércate un poco</string>
+    <string name="selfie_status_move_back">Aléjate un poco</string>
+    <string name="selfie_status_center">Centra tu rostro</string>
+    <string name="selfie_status_open_eyes">Abre bien los ojos</string>
+    <string name="selfie_status_ready">Listo, mantente firme</string>
+    <string name="selfie_status_hold_still">Mantente quieto 1.5s</string>
+    <string name="selfie_status_dark">Ilumina mejor tu rostro</string>
+    <string name="selfie_status_blurry">Imagen borrosa, estabiliza</string>
+    <string name="selfie_challenge_smile_title">Desafío: sonrisa suave</string>
+    <string name="selfie_challenge_smile_hint">Sonríe levemente para continuar</string>
+    <string name="selfie_challenge_smile_detected">¡Sonrisa detectada! Puedes tomar la foto</string>
+    <string name="selfie_challenge_blink_title">Desafío: parpadeo</string>
+    <string name="selfie_challenge_blink_hint">Parpadea una vez para continuar</string>
+    <string name="selfie_challenge_blink_detected">Parpadeo detectado, ¡puedes tomar la foto!</string>
+    <string name="selfie_challenge_turn_title">Desafío: gira un poco la cabeza</string>
+    <string name="selfie_challenge_turn_hint">Gira suavemente a un lado</string>
+    <string name="selfie_challenge_turn_detected">Giro detectado, siguiente paso</string>
+    <string name="selfie_challenge_step">Paso %1$d de %2$d</string>
+    <string name="selfie_challenge_done">Reto completado, toma la foto</string>
+    <string name="selfie_challenge_timeout">Si no funciona, intenta otro gesto o mejora la luz</string>
+    <string name="selfie_tips">Tip: limpia la cámara, busca buena luz y mantén tu cara centrada.</string>
+    <string name="selfie_button_capture">Tomar selfie</string>
+    <string name="selfie_close">Cerrar</string>
+    <string name="selfie_capturing">Capturando...</string>
 </resources>

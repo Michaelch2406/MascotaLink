@@ -61,13 +61,13 @@ public class MetodoPagoActivity extends AppCompatActivity {
         } else {
             // CREATE MODE (for registration wizard)
             setTitle("Añadir Método de Pago");
+        }
         String passedPrefs = getIntent().getStringExtra("prefs");
         if (passedPrefs != null && !passedPrefs.trim().isEmpty()) {
             PREFS = passedPrefs.trim();
         }
         encryptedPrefs = EncryptedPreferencesHelper.getInstance(this);
         loadStateFromPrefs();
-        }
 
         btnGuardar.setOnClickListener(v -> guardarMetodoPago());
     }
@@ -81,21 +81,21 @@ public class MetodoPagoActivity extends AppCompatActivity {
         }
         String uid = user.getUid();
         db.collection("usuarios").document(uid).collection("metodos_pago").document(id).get()
-            .addOnSuccessListener(document -> {
-                if (document.exists()) {
-                    String banco = document.getString("banco");
-                    String cuenta = document.getString("numero_cuenta");
-                    etBanco.setText(banco, false); // false to not filter
-                    etCuenta.setText(cuenta);
-                } else {
-                    Toast.makeText(this, "Error: No se encontró el método de pago.", Toast.LENGTH_LONG).show();
+                .addOnSuccessListener(document -> {
+                    if (document.exists()) {
+                        String banco = document.getString("banco");
+                        String cuenta = document.getString("numero_cuenta");
+                        etBanco.setText(banco, false); // false to not filter
+                        etCuenta.setText(cuenta);
+                    } else {
+                        Toast.makeText(this, "Error: No se encontró el método de pago.", Toast.LENGTH_LONG).show();
+                        finish();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error al cargar datos: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     finish();
-                }
-            })
-            .addOnFailureListener(e -> {
-                Toast.makeText(this, "Error al cargar datos: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                finish();
-            });
+                });
     }
 
     private void loadStateFromPrefs() {
@@ -126,22 +126,21 @@ public class MetodoPagoActivity extends AppCompatActivity {
                 mp.put("fecha_actualizacion", Timestamp.now());
 
                 db.collection("usuarios").document(uid).collection("metodos_pago").document(metodoPagoId)
-                    .update(mp)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Método de pago actualizado", Toast.LENGTH_SHORT).show();
-                        setResult(RESULT_OK);
-                        finish();
-                    })
-                    .addOnFailureListener(e -> Toast.makeText(this, "Error al actualizar: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                        .update(mp)
+                        .addOnSuccessListener(aVoid -> {
+                            Toast.makeText(this, "Método de pago actualizado", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        })
+                        .addOnFailureListener(e -> Toast.makeText(this, "Error al actualizar: " + e.getMessage(), Toast.LENGTH_LONG).show());
             } else {
                 Toast.makeText(this, "Error: No hay sesión de usuario para actualizar.", Toast.LENGTH_LONG).show();
             }
             return;
         }
 
-        // CREATE case
+        // CREATE case (registration wizard, no user yet)
         if (user == null) {
-            // From REGISTRATION WIZARD (user not logged in yet) -> Save to SharedPreferences
             if (encryptedPrefs != null) {
                 encryptedPrefs.putBoolean(prefKey("metodo_pago_completo"), true);
                 encryptedPrefs.putString(prefKey("pago_banco"), banco);
@@ -150,6 +149,12 @@ public class MetodoPagoActivity extends AppCompatActivity {
                 encryptedPrefs.putString(prefKey("card_last_four"), getLastFourDigits(cuenta));
                 encryptedPrefs.putString(prefKey("card_holder_name"), "");
             }
+            // Plain prefs for paso 5 validation
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putBoolean("metodo_pago_completo", true)
+                    .putString("pago_banco", banco)
+                    .putString("pago_cuenta", cuenta)
+                    .apply();
 
             Toast.makeText(this, "Método de pago guardado", Toast.LENGTH_SHORT).show();
             setResult(RESULT_OK);
@@ -164,13 +169,13 @@ public class MetodoPagoActivity extends AppCompatActivity {
             mp.put("fecha_registro", Timestamp.now());
 
             db.collection("usuarios").document(uid).collection("metodos_pago")
-                .add(mp)
-                .addOnSuccessListener(ref -> {
-                    Toast.makeText(this, "Nuevo método de pago añadido", Toast.LENGTH_SHORT).show();
-                    setResult(RESULT_OK);
-                    finish();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                    .add(mp)
+                    .addOnSuccessListener(ref -> {
+                        Toast.makeText(this, "Nuevo método de pago añadido", Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);
+                        finish();
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show());
         }
     }
 

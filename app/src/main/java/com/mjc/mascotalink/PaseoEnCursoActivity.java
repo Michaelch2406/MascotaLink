@@ -1072,9 +1072,16 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         GeoPoint punto = new GeoPoint(location.getLatitude(), location.getLongitude());
 
-        // Usamos arrayUnion para añadir el punto al histórico de la ruta
+        // 1. Guardar en el historial del paseo (para el dueño de este paseo)
         reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto))
-                .addOnFailureListener(e -> Log.e(TAG, "Error actualizando ubicación", e));
+                .addOnFailureListener(e -> Log.e(TAG, "Error actualizando historial de ubicación", e));
+
+        // 2. Publicar ubicación en tiempo real en el perfil del usuario (para la búsqueda global)
+        if (auth.getCurrentUser() != null) {
+            db.collection("usuarios").document(auth.getCurrentUser().getUid())
+                    .update("ubicacion_actual", punto)
+                    .addOnFailureListener(e -> Log.e(TAG, "Error publicando ubicación en tiempo real", e));
+        }
     }
 
     @Override

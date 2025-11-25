@@ -60,6 +60,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
 
     private static final String TAG = "ZonasServicioActivity";
     private static final String PREFS = "WizardPaseador";
+    private static final String PREF_ZONAS_SET = "zonas_servicio";
+    private static final String PREF_ZONAS_COMPLETO = "zonas_servicio_completo";
     private static final LatLng ECUADOR_CENTER = new LatLng(-1.8312, -78.1834);
 
     private GoogleMap mMap;
@@ -127,7 +129,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         ivGeolocateZona.setOnClickListener(v -> onGeolocateClick());
         ivMyLocation.setOnClickListener(v -> centerOnUserLocation());
         btnAgregarZona.setOnClickListener(v -> agregarZona());
-        btnGuardarZonas.setOnClickListener(v -> guardarZonas());
+        btnGuardarZonas.setOnClickListener(v -> guardarZonasSeguro());
     }
 
     private void setupLocationServices() {
@@ -254,7 +256,10 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     }
 
     private void loadZonasFromFirestore() {
-        if (currentUserId == null) return;
+        if (currentUserId == null) {
+            loadZonasFromPrefs();
+            return;
+        }
 
         db.collection("paseadores").document(currentUserId).collection("zonas_servicio")
                 .get()
@@ -358,6 +363,61 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         Toast.makeText(this, "Zona eliminada", Toast.LENGTH_SHORT).show();
     }
 
+    // Nuevo flujo seguro: guarda en prefs para el registro y, si hay usuario logueado, en Firestore.
+    private void guardarZonasSeguro() {
+        if (zonasSeleccionadas.isEmpty()) {
+            Toast.makeText(this, "Agrega al menos una zona.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        persistZonasInPrefs();
+
+        if (currentUserId == null) {
+            Toast.makeText(this, "Zonas guardadas para el registro.", Toast.LENGTH_SHORT).show();
+            setResult(RESULT_OK);
+            finish();
+            return;
+        }
+
+        btnGuardarZonas.setEnabled(false);
+
+        com.google.firebase.firestore.CollectionReference zonasRef = db.collection("paseadores").document(currentUserId).collection("zonas_servicio");
+
+        zonasRef.get().addOnSuccessListener(queryDocumentSnapshots -> {
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
+
+            // Delete all old zones
+            for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                batch.delete(doc.getReference());
+            }
+
+            // Add all new zones
+            for (ZonaServicio zona : zonasSeleccionadas) {
+                com.google.firebase.firestore.DocumentReference newZoneRef = zonasRef.document();
+                java.util.Map<String, Object> zonaData = new java.util.HashMap<>();
+                zonaData.put("nombre", zona.direccion);
+                zonaData.put("radio_km", zona.radio);
+                zonaData.put("centro", new com.google.firebase.firestore.GeoPoint(zona.latitud, zona.longitud));
+                zonaData.put("activo", true);
+                batch.set(newZoneRef, zonaData);
+            }
+
+            batch.commit().addOnSuccessListener(aVoid -> {
+                Toast.makeText(this, "Zonas de servicio guardadas con Ǹxito", Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK);
+                finish();
+            }).addOnFailureListener(e -> {
+                Toast.makeText(this, "Error al guardar las zonas: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                btnGuardarZonas.setEnabled(true);
+            });
+
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Error al consultar zonas anteriores: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            btnGuardarZonas.setEnabled(true);
+        });
+    }
+
+    // Método anterior (no usado) se mantiene para compatibilidad, pero el click usa guardarZonasSeguro()
     private void guardarZonas() {
         if (currentUserId == null) {
             Toast.makeText(this, "Error: Usuario no identificado.", Toast.LENGTH_SHORT).show();
@@ -413,6 +473,31 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             mMap.addCircle(new CircleOptions().center(posicion).radius(zona.radio * 1000).strokeColor(Color.GREEN).fillColor(0x2200FF00));
         }
         btnGuardarZonas.setEnabled(!zonasSeleccionadas.isEmpty());
+    }
+
+    private void persistZonasInPrefs() {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        Set<String> zonaStrings = new HashSet<>();
+        for (ZonaServicio z : zonasSeleccionadas) {
+            zonaStrings.add(z.toString());
+        }
+        prefs.edit()
+                .putStringSet(PREF_ZONAS_SET, zonaStrings)
+                .putBoolean(PREF_ZONAS_COMPLETO, !zonaStrings.isEmpty())
+                .apply();
+    }
+
+    private void loadZonasFromPrefs() {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        Set<String> zonaStrings = prefs.getStringSet(PREF_ZONAS_SET, new HashSet<>());
+        zonasSeleccionadas.clear();
+        for (String zStr : zonaStrings) {
+            ZonaServicio z = ZonaServicio.fromString(zStr);
+            if (z != null) {
+                zonasSeleccionadas.add(z);
+            }
+        }
+        displaySavedZones();
     }
 
     private static class ZonaServicio {
