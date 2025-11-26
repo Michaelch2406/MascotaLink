@@ -88,6 +88,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     // Reseñas
     private RecyclerView recyclerViewResenas;
+    private LinearLayout llEmptyReviews;
     private ResenaAdapter resenaAdapter;
     private List<Resena> resenasList = new ArrayList<>();
     private DocumentSnapshot lastVisibleResena = null;
@@ -218,6 +219,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         
         // Reseñas content
         recyclerViewResenas = findViewById(R.id.recycler_view_resenas);
+        llEmptyReviews = findViewById(R.id.ll_empty_reviews);
         btnVerMasResenas = findViewById(R.id.btn_ver_mas_resenas);
         
         skeletonLayout = findViewById(R.id.skeleton_layout);
@@ -509,8 +511,15 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         query.get().addOnSuccessListener(queryDocumentSnapshots -> {
             if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
                 isLoadingResenas = false;
+                if (resenasList.isEmpty()) {
+                    llEmptyReviews.setVisibility(View.VISIBLE);
+                    recyclerViewResenas.setVisibility(View.GONE);
+                }
                 return;
             }
+            
+            llEmptyReviews.setVisibility(View.GONE);
+            recyclerViewResenas.setVisibility(View.VISIBLE);
             
             lastVisibleResena = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
             

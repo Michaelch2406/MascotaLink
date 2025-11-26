@@ -131,6 +131,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private List<String> galleryPreviewList = new ArrayList<>();
 
     private RecyclerView recyclerViewResenas;
+    private LinearLayout llEmptyReviews;
     private ResenaAdapter resenaAdapter;
     private List<Resena> resenasList = new ArrayList<>();
     private DocumentSnapshot lastVisibleResena = null;
@@ -247,6 +248,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         rvGalleryPreview.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         galleryPreviewAdapter = new GalleryPreviewAdapter(this, galleryPreviewList);
         rvGalleryPreview.setAdapter(galleryPreviewAdapter);
+        
+        llEmptyReviews = findViewById(R.id.ll_empty_reviews);
 
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
@@ -871,8 +874,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         query.get().addOnSuccessListener(queryDocumentSnapshots -> {
             if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
                 isLoadingResenas = false;
+                if (resenasList.isEmpty()) {
+                    llEmptyReviews.setVisibility(View.VISIBLE);
+                    recyclerViewResenas.setVisibility(View.GONE);
+                }
                 return;
             }
+            
+            llEmptyReviews.setVisibility(View.GONE);
+            recyclerViewResenas.setVisibility(View.VISIBLE);
             
             lastVisibleResena = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
             

@@ -860,6 +860,41 @@
                     android:padding="16dp"
                     android:visibility="gone">
 
+                    <!-- Estado Vacío (Sin reseñas) -->
+                    <LinearLayout
+                        android:id="@+id/ll_empty_reviews"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="32dp"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:layout_width="64dp"
+                            android:layout_height="64dp"
+                            android:src="@drawable/ic_empty_reviews"
+                            app:tint="#9CA3AF" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="Aún no hay reseñas"
+                            android:textColor="@color/black"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Las calificaciones de los clientes aparecerán aquí."
+                            android:textAlignment="center"
+                            android:textColor="@color/gray_dark" />
+
+                    </LinearLayout>
+
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/recycler_view_resenas"
                         android:layout_width="match_parent"
