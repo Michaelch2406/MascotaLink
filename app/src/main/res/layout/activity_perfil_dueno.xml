@@ -361,9 +361,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:layout_marginHorizontal="16dp"
+                android:background="@android:color/transparent"
+                app:tabIndicator="@drawable/tab_indicator_rounded"
                 app:tabIndicatorColor="@color/blue_primary"
+                app:tabIndicatorFullWidth="false"
+                app:tabIndicatorHeight="4dp"
+                app:tabMode="fixed"
+                app:tabRippleColor="#1A2196F3"
                 app:tabSelectedTextColor="@color/blue_primary"
-                app:tabTextColor="@color/gray_dark" />
+                app:tabTextColor="@color/gray_dark"
+                app:tabTextAppearance="@style/TextAppearance.AppCompat.Medium" />
 
             <!-- Contenido Tabs -->
             <FrameLayout
@@ -444,11 +452,24 @@
 
                             <TextView
                                 android:id="@+id/tv_email_dueno"
-                                android:layout_width="wrap_content"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="12dp"
+                                android:layout_weight="1"
                                 android:text="email@ejemplo.com"
                                 android:textColor="@color/gray_dark" />
+                                
+                            <ImageView
+                                android:id="@+id/btn_copy_email"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="8dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:padding="4dp"
+                                android:src="@drawable/ic_content_copy"
+                                app:tint="@color/blue_primary" />
                         </LinearLayout>
 
                          <!-- Telefono -->
@@ -466,11 +487,24 @@
 
                             <TextView
                                 android:id="@+id/tv_telefono_dueno"
-                                android:layout_width="wrap_content"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="12dp"
+                                android:layout_weight="1"
                                 android:text="+593 99 999 9999"
                                 android:textColor="@color/gray_dark" />
+                                
+                            <ImageView
+                                android:id="@+id/btn_copy_telefono"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="8dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:padding="4dp"
+                                android:src="@drawable/ic_content_copy"
+                                app:tint="@color/blue_primary" />
                         </LinearLayout>
 
                     </LinearLayout>

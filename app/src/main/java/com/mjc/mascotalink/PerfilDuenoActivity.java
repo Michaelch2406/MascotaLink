@@ -75,6 +75,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private Button btnCerrarSesion;
     private TextView btnFavoritos, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
     private TextView tvEmailDueno, tvTelefonoDueno;
+    private ImageView btnCopyEmail, btnCopyTelefono;
     private View skeletonLayout;
     private NestedScrollView scrollViewContent;
     private BottomNavigationView bottomNav;
@@ -202,6 +203,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         
         tvEmailDueno = findViewById(R.id.tv_email_dueno);
         tvTelefonoDueno = findViewById(R.id.tv_telefono_dueno);
+        btnCopyEmail = findViewById(R.id.btn_copy_email);
+        btnCopyTelefono = findViewById(R.id.btn_copy_telefono);
         
         ajustes_section = findViewById(R.id.ajustes_section);
         btnFavoritos = findViewById(R.id.btn_favoritos);
@@ -273,6 +276,18 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         });
         
         btnVerTodasMascotas.setOnClickListener(v -> Toast.makeText(this, "Mostrar lista completa de mascotas", Toast.LENGTH_SHORT).show());
+
+        btnCopyEmail.setOnClickListener(v -> copyToClipboard("Correo", tvEmailDueno.getText().toString()));
+        btnCopyTelefono.setOnClickListener(v -> copyToClipboard("Teléfono", tvTelefonoDueno.getText().toString()));
+    }
+
+    private void copyToClipboard(String label, String text) {
+        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        android.content.ClipData clip = android.content.ClipData.newPlainText(label, text);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, label + " copiado al portapapeles", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setupTabs() {

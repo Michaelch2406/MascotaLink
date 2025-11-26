@@ -403,9 +403,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:layout_marginHorizontal="16dp"
+                android:background="@android:color/transparent"
+                app:tabIndicator="@drawable/tab_indicator_rounded"
                 app:tabIndicatorColor="@color/blue_primary"
+                app:tabIndicatorFullWidth="false"
+                app:tabIndicatorHeight="4dp"
+                app:tabMode="fixed"
+                app:tabRippleColor="#1A2196F3"
                 app:tabSelectedTextColor="@color/blue_primary"
-                app:tabTextColor="@color/gray_dark" />
+                app:tabTextColor="@color/gray_dark"
+                app:tabTextAppearance="@style/TextAppearance.AppCompat.Medium" />
 
             <!-- Contenido Tabs -->
             <FrameLayout
