@@ -2,6 +2,7 @@ package com.mjc.mascotalink;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -281,12 +282,13 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         float stars = ratingBar.getRating();
         String comment = etComentario.getText().toString().trim();
 
-        if (stars < 1) {
-            Toast.makeText(this, "Por favor selecciona al menos 1 estrella", Toast.LENGTH_SHORT).show();
+        if (stars < 0.5) {
+            Toast.makeText(this, "Por favor selecciona al menos media estrella", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (comment.length() < 10) {
-            tilComentario.setError("El comentario debe tener al menos 10 caracteres");
+        // Comentario opcional: Solo validar longitud si no está vacío
+        if (!comment.isEmpty() && comment.length() < 10) {
+            tilComentario.setError("Si dejas un comentario, debe tener al menos 10 caracteres");
             return;
         }
         tilComentario.setError(null);
@@ -357,8 +359,8 @@ public class ResumenPaseoActivity extends AppCompatActivity {
             // Send Notification (Simulated / Placeholder)
             sendNotificationToCounterpart();
             
-            // Optional: Finish after delay
-            // new Handler().postDelayed(this::finish, 2000);
+            // Cierre automático al completar
+            new Handler().postDelayed(this::finish, 1500);
         }).addOnFailureListener(e -> {
             isRatingSubmitting = false;
             btnEnviarCalificacion.setEnabled(true);

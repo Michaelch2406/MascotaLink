@@ -651,6 +651,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         });
     }
 
+    @SuppressWarnings("unchecked")
     private void setupObservers() {
         viewModel.getPaseadoresPopularesState().observe(this, uiState -> {
             if (uiState instanceof UiState.Success) {

@@ -56,7 +56,7 @@ import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.messaging.FirebaseMessaging; // Added
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
@@ -139,7 +139,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private ListenerRegistration zonasListener;
     private ListenerRegistration metodoPagoListener;
 
-    private static final int REQUEST_NOTIFICATION_PERMISSION = 123; // Added constant
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 123; 
+
+    private Button btnVerMasResenas;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -150,7 +152,14 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         db = FirebaseFirestore.getInstance();
 
         initViews();
-        setupToolbar();
+        
+        // Manual Toolbar Setup
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        }
+        ivBack.setOnClickListener(v -> finish());
+
         setupListeners();
         setupTabs();
         setupResenasRecyclerView();
@@ -168,11 +177,14 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 // Pre-calculate bottomNavRole based on cache
                 boolean isOwnProfile = paseadorId == null || paseadorId.equals(currentUserId);
                 if (isOwnProfile) {
-                   bottomNavRole = "PASEADOR"; 
+                    bottomNavRole = "PASEADOR";
+                    bottomNavSelectedItem = R.id.menu_perfil;
                 } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
-                   bottomNavRole = "DUEÑO";
+                    bottomNavRole = "DUEÑO";
+                    bottomNavSelectedItem = R.id.menu_search;
                 } else {
-                   bottomNavRole = currentUserRole;
+                    bottomNavRole = currentUserRole;
+                    bottomNavSelectedItem = R.id.menu_search;
                 }
             }
         }
@@ -181,135 +193,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         if (bottomNav != null) {
             setupBottomNavigation();
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        setupBottomNavigation();
-    }
-
-    private void setupAuthListener() {
-        mAuthListener = firebaseAuth -> {
-            FirebaseUser user = firebaseAuth.getCurrentUser();
-            if (user != null) {
-                // User is signed in
-                currentUserId = user.getUid();
-                if (paseadorId == null) {
-                    paseadorId = currentUserId; // Default to viewing own profile
-                }
-                fetchCurrentUserRoleAndSetupUI();
-                attachDataListeners();
-                updateFcmToken(); // Update token when user is signed in
-            } else {
-                // User is signed out
-                currentUserId = null;
-                currentUserRole = null;
-                // If we are on a profile screen and the user signs out, redirect to Login
-                Intent intent = new Intent(PerfilPaseadorActivity.this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-            }
-        };
-    }
-
-    private void updateFcmToken() {
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user != null) {
-            FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
-                        return;
-                    }
-
-                    // Get new FCM registration token
-                    String token = task.getResult();
-                    Log.d(TAG, "FCM Token: " + token);
-
-                    // Save to Firestore
-                    Map<String, Object> tokenMap = new HashMap<>();
-                    tokenMap.put("fcmToken", token);
-                    
-                    db.collection("usuarios").document(user.getUid())
-                            .update(tokenMap)
-                            .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token updated in Firestore"))
-                            .addOnFailureListener(e -> Log.w(TAG, "Error updating FCM token", e));
-                });
-        }
-    }
-
-    private void fetchCurrentUserRoleAndSetupUI() {
-        if (currentUserId == null) {
-            setupRoleBasedUI(); // Setup as guest
-            return;
-        }
-        db.collection("usuarios").document(currentUserId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        currentUserRole = documentSnapshot.getString("rol");
-                    }
-                    setupRoleBasedUI();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error fetching user role", e);
-                    setupRoleBasedUI(); // Setup UI even if role fetch fails (read-only mode)
-                });
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        mAuth.addAuthStateListener(mAuthListener);
-
-        // Request POST_NOTIFICATIONS permission for Android 13 (API 33) and above
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // TIRAMISU is API 33
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
-                    new AlertDialog.Builder(this)
-                            .setTitle("Permiso de Notificaciones")
-                            .setMessage("Para recibir actualizaciones importantes sobre tus paseos y solicitudes, por favor, habilita las notificaciones.")
-                            .setPositiveButton("Aceptar", (dialog, which) -> {
-                                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
-                            })
-                            .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
-                            .show();
-                } else {
-                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d("PerfilPaseadorActivity", "POST_NOTIFICATIONS permission granted.");
-            } else {
-                Log.w("PerfilPaseadorActivity", "POST_NOTIFICATIONS permission denied.");
-                Toast.makeText(this, "Las notificaciones están deshabilitadas. Es posible que no recibas actualizaciones importantes.", Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        // Clear Glide load to prevent crash on destroy
-        if (ivAvatar != null && !isDestroyed() && !isFinishing()) {
-            try {
-                Glide.with(this).clear(ivAvatar);
-            } catch (Exception e) {
-                Log.w(TAG, "Error clearing Glide request in onStop", e);
-            }
-        }
-        if (mAuthListener != null) {
-            mAuth.removeAuthStateListener(mAuthListener);
-        }
-        detachDataListeners();
     }
 
     private void initViews() {
@@ -362,6 +245,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         skeletonLayout = findViewById(R.id.skeleton_layout);
         scrollViewContent = findViewById(R.id.scroll_view_content);
         recyclerViewResenas = findViewById(R.id.recycler_view_resenas);
+        btnVerMasResenas = findViewById(R.id.btn_ver_mas_resenas);
         bottomNav = findViewById(R.id.bottom_nav);
 
 
@@ -371,133 +255,30 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
     }
 
-    private void setupToolbar() {
-        setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayShowTitleEnabled(false); // Use custom TextView for title
-        ivBack.setOnClickListener(v -> finish());
-    }
+    private void setupTabs() {
+        llAcercaDe.setVisibility(View.VISIBLE);
+        llResenas.setVisibility(View.GONE);
+        tabLayout.addTab(tabLayout.newTab().setText("Acerca de"), true);
+        tabLayout.addTab(tabLayout.newTab().setText("Reseñas"));
 
-    private void setupRoleBasedUI() {
-        boolean isOwnProfile = paseadorId.equals(currentUserId);
-
-        // Set Toolbar Title
-        if (isOwnProfile) {
-            toolbarTitle.setText("Perfil");
-        } else {
-            toolbarTitle.setText("Paseador");
-        }
-
-        // Configure button visibility based on role
-        if (isOwnProfile) {
-            // Case 1: PASEADOR viewing their own profile
-            ivEditPerfil.setVisibility(View.VISIBLE);
-            btnMensaje.setVisibility(View.GONE);
-            btnFavorito.setVisibility(View.GONE); // Cannot favorite oneself
-            fabReservar.setVisibility(View.GONE);
-
-            ivEditZonas.setVisibility(View.VISIBLE);
-            ivEditDisponibilidad.setVisibility(View.VISIBLE);
-            ajustes_section.setVisibility(View.VISIBLE);
-            soporte_section.setVisibility(View.VISIBLE);
-            btnCerrarSesion.setVisibility(View.VISIBLE);
-            bottomNavRole = "PASEADOR";
-
-        } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
-            // Case 2: DUEÑO viewing a PASEADOR's profile
-            ivEditPerfil.setVisibility(View.GONE);
-            btnMensaje.setVisibility(View.VISIBLE);
-            btnFavorito.setVisibility(View.VISIBLE); // Can add to favorites
-            fabReservar.setVisibility(View.VISIBLE);
-
-            ivEditZonas.setVisibility(View.GONE);
-            ivEditDisponibilidad.setVisibility(View.GONE);
-            ajustes_section.setVisibility(View.GONE);
-            soporte_section.setVisibility(View.GONE);
-            btnCerrarSesion.setVisibility(View.GONE);
-
-            configurarBotonFavorito(currentUserId, paseadorId);
-            bottomNavRole = "DUEÑO";
-
-        } else {
-            // Case 3: Read-only view (not logged in, another paseador, etc.)
-            ivEditPerfil.setVisibility(View.GONE);
-            btnMensaje.setVisibility(View.GONE);
-            btnFavorito.setVisibility(View.GONE);
-            fabReservar.setVisibility(View.GONE);
-
-            ivEditZonas.setVisibility(View.GONE);
-            ivEditDisponibilidad.setVisibility(View.GONE);
-            ajustes_section.setVisibility(View.GONE);
-            soporte_section.setVisibility(View.GONE);
-            btnCerrarSesion.setVisibility(View.GONE);
-            bottomNavRole = currentUserRole != null ? currentUserRole : "DUEÑO";
-        }
-        setupBottomNavigation();
-    }
-
-    private void setupBottomNavigation() {
-        if (bottomNav == null) {
-            return;
-        }
-        String roleForNav = bottomNavRole != null ? bottomNavRole : (currentUserRole != null ? currentUserRole : "PASEADOR");
-        BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, bottomNavSelectedItem);
-    }
-
-    private void configurarBotonFavorito(String duenoId, String paseadorId) {
-        DocumentReference favRef = db.collection("usuarios").document(duenoId)
-                .collection("favoritos").document(paseadorId);
-
-        favRef.get().addOnSuccessListener(doc -> {
-            if (doc.exists()) {
-                btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
-            } else {
-                btnFavorito.setImageResource(R.drawable.ic_corazon);
-            }
-        });
-
-        // Set click listener to toggle favorite status
-        btnFavorito.setOnClickListener(v -> toggleFavorito(duenoId, paseadorId, favRef));
-    }
-
-    private void toggleFavorito(String duenoId, String paseadorId, DocumentReference favRef) {
-        favRef.get().addOnSuccessListener(doc -> {
-            if (doc.exists()) {
-                // El paseador ya está en favoritos, así que lo eliminamos
-                favRef.delete().addOnSuccessListener(aVoid -> {
-                    btnFavorito.setImageResource(R.drawable.ic_corazon);
-                    Toast.makeText(this, "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
-                });
-            } else {
-                // El paseador no está en favoritos, así que lo agregamos con datos desnormalizados
-                DocumentReference usuarioPaseadorRef = db.collection("usuarios").document(paseadorId);
-                DocumentReference perfilPaseadorRef = db.collection("paseadores").document(paseadorId);
-
-                Task<DocumentSnapshot> usuarioTask = usuarioPaseadorRef.get();
-                Task<DocumentSnapshot> paseadorTask = perfilPaseadorRef.get();
-
-                Tasks.whenAllSuccess(usuarioTask, paseadorTask).addOnSuccessListener(results -> {
-                    DocumentSnapshot usuarioDoc = (DocumentSnapshot) results.get(0);
-                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
-
-                    if (usuarioDoc.exists() && paseadorDoc.exists()) {
-                        Map<String, Object> favoritoData = new HashMap<>();
-                        favoritoData.put("fecha_agregado", FieldValue.serverTimestamp());
-                        favoritoData.put("paseador_ref", perfilPaseadorRef);
-                        favoritoData.put("nombre_display", usuarioDoc.getString("nombre_display"));
-                        favoritoData.put("foto_perfil_url", usuarioDoc.getString("foto_perfil"));
-                        favoritoData.put("calificacion_promedio", paseadorDoc.getDouble("calificacion_promedio"));
-                        favoritoData.put("precio_hora", paseadorDoc.getDouble("precio_hora"));
-
-                        favRef.set(favoritoData).addOnSuccessListener(aVoid -> {
-                            btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
-                            Toast.makeText(PerfilPaseadorActivity.this, "Agregado a favoritos", Toast.LENGTH_SHORT).show();
-                        });
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                if (tab.getPosition() == 0) {
+                    llAcercaDe.setVisibility(View.VISIBLE);
+                    llResenas.setVisibility(View.GONE);
+                } else {
+                    llAcercaDe.setVisibility(View.GONE);
+                    llResenas.setVisibility(View.VISIBLE);
+                    if (resenasList.isEmpty()) {
+                        cargarMasResenas(4); // Cargar inicialmente 4 para ver si hay más de 3
                     }
-                });
+                }
             }
+            @Override public void onTabUnselected(TabLayout.Tab tab) { }
+            @Override public void onTabReselected(TabLayout.Tab tab) { }
         });
     }
-
 
     private void setupListeners() {
         ivEditPerfil.setOnClickListener(v -> {
@@ -522,7 +303,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     mp.start();
                 });
                 videoView.setOnCompletionListener(mp -> {
-                    // Opcional: volver a mostrar la miniatura cuando el video termina
                     videoView.setVisibility(View.GONE);
                     ivVideoThumbnail.setVisibility(View.VISIBLE);
                     ivPlayButton.setVisibility(View.VISIBLE);
@@ -552,7 +332,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
 
         fabReservar.setOnClickListener(v -> {
-            // --- FIX INICIO: Implementación de la navegación a la pantalla de Reserva ---
             if (paseadorId == null || paseadorPrecioHora == null) {
                 Toast.makeText(this, "Cargando datos del paseador...", Toast.LENGTH_SHORT).show();
                 return;
@@ -563,7 +342,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             intent.putExtra("paseador_nombre", tvNombre.getText().toString());
             intent.putExtra("precio_hora", paseadorPrecioHora);
             startActivity(intent);
-            // --- FIX FIN ---
         });
 
         ivEditZonas.setOnClickListener(v -> {
@@ -577,19 +355,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
 
         btnCerrarSesion.setOnClickListener(v -> {
-            // Detach listeners FIRST to prevent PERMISSION_DENIED noise on logout
             detachDataListeners();
-
             new CredentialManager(PerfilPaseadorActivity.this).clearCredentials();
-
-            // Limpiar preferencias de "recordar sesión"
             try {
                 EncryptedPreferencesHelper.getInstance(PerfilPaseadorActivity.this).clear();
             } catch (Exception e) {
                 Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
             }
-
-            // Sign out AFTER detaching listeners. The AuthStateListener will handle navigation.
             mAuth.signOut();
         });
 
@@ -607,53 +379,250 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
 
         scrollViewContent.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-            if (v.getChildAt(v.getChildCount() - 1) != null) {
+            if (btnVerMasResenas.getVisibility() == View.GONE && v.getChildAt(v.getChildCount() - 1) != null) {
                 if ((scrollY >= (v.getChildAt(v.getChildCount() - 1).getMeasuredHeight() - v.getMeasuredHeight())) &&
                         scrollY > oldScrollY) {
-                    cargarMasResenas();
+                    cargarMasResenas(10); 
                 }
             }
         });
+
+        btnVerMasResenas.setOnClickListener(v -> {
+            btnVerMasResenas.setVisibility(View.GONE);
+            cargarMasResenas(10);
+        });
     }
 
-    private void setupTabs() {
-        llAcercaDe.setVisibility(View.VISIBLE);
-        llResenas.setVisibility(View.GONE);
-        tabLayout.addTab(tabLayout.newTab().setText("Acerca de"), true);
-        tabLayout.addTab(tabLayout.newTab().setText("Reseñas"));
+    private void setupAuthListener() {
+        mAuthListener = firebaseAuth -> {
+            FirebaseUser user = firebaseAuth.getCurrentUser();
+            if (user != null) {
+                currentUserId = user.getUid();
+                if (paseadorId == null) {
+                    paseadorId = currentUserId;
+                }
+                fetchCurrentUserRoleAndSetupUI();
+                attachDataListeners();
+                updateFcmToken();
+            } else {
+                currentUserId = null;
+                currentUserRole = null;
+                Intent intent = new Intent(PerfilPaseadorActivity.this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            }
+        };
+    }
 
-        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                if (tab.getPosition() == 0) {
-                    llAcercaDe.setVisibility(View.VISIBLE);
-                    llResenas.setVisibility(View.GONE);
-                } else {
-                    llAcercaDe.setVisibility(View.GONE);
-                    llResenas.setVisibility(View.VISIBLE);
-                    if (resenasList.isEmpty()) {
-                        cargarMasResenas();
+    private void updateFcmToken() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null) {
+            FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                        return;
                     }
+                    String token = task.getResult();
+                    Log.d(TAG, "FCM Token: " + token);
+                    Map<String, Object> tokenMap = new HashMap<>();
+                    tokenMap.put("fcmToken", token);
+                    db.collection("usuarios").document(user.getUid())
+                            .update(tokenMap)
+                            .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token updated in Firestore"))
+                            .addOnFailureListener(e -> Log.w(TAG, "Error updating FCM token", e));
+                });
+        }
+    }
+
+    private void fetchCurrentUserRoleAndSetupUI() {
+        if (currentUserId == null) {
+            setupRoleBasedUI(); 
+            return;
+        }
+        db.collection("usuarios").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        currentUserRole = documentSnapshot.getString("rol");
+                    }
+                    setupRoleBasedUI();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching user role", e);
+                    setupRoleBasedUI();
+                });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mAuth.addAuthStateListener(mAuthListener);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("Permiso de Notificaciones")
+                            .setMessage("Para recibir actualizaciones importantes, habilita las notificaciones.")
+                            .setPositiveButton("Aceptar", (dialog, which) -> {
+                                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                            })
+                            .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
+                            .show();
+                } else {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
                 }
             }
-            @Override public void onTabUnselected(TabLayout.Tab tab) { }
-            @Override public void onTabReselected(TabLayout.Tab tab) { }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("PerfilPaseadorActivity", "POST_NOTIFICATIONS permission granted.");
+            } else {
+                Log.w("PerfilPaseadorActivity", "POST_NOTIFICATIONS permission denied.");
+                Toast.makeText(this, "Las notificaciones están deshabilitadas.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setupBottomNavigation();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (ivAvatar != null && !isDestroyed() && !isFinishing()) {
+            try {
+                Glide.with(this).clear(ivAvatar);
+            } catch (Exception e) {
+                Log.w(TAG, "Error clearing Glide request in onStop", e);
+            }
+        }
+        if (mAuthListener != null) {
+            mAuth.removeAuthStateListener(mAuthListener);
+        }
+        detachDataListeners();
+    }
+
+    private void setupRoleBasedUI() {
+        boolean isOwnProfile = paseadorId != null && paseadorId.equals(currentUserId);
+
+        if (isOwnProfile) {
+            toolbarTitle.setText("Perfil");
+        } else {
+            toolbarTitle.setText("Paseador");
+        }
+
+        if (isOwnProfile) {
+            ivEditPerfil.setVisibility(View.VISIBLE);
+            btnMensaje.setVisibility(View.GONE);
+            btnFavorito.setVisibility(View.GONE);
+            fabReservar.setVisibility(View.GONE);
+            ivEditZonas.setVisibility(View.VISIBLE);
+            ivEditDisponibilidad.setVisibility(View.VISIBLE);
+            ajustes_section.setVisibility(View.VISIBLE);
+            soporte_section.setVisibility(View.VISIBLE);
+            btnCerrarSesion.setVisibility(View.VISIBLE);
+            bottomNavRole = "PASEADOR";
+            bottomNavSelectedItem = R.id.menu_perfil;
+        } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
+            ivEditPerfil.setVisibility(View.GONE);
+            btnMensaje.setVisibility(View.VISIBLE);
+            btnFavorito.setVisibility(View.VISIBLE);
+            fabReservar.setVisibility(View.VISIBLE);
+            ivEditZonas.setVisibility(View.GONE);
+            ivEditDisponibilidad.setVisibility(View.GONE);
+            ajustes_section.setVisibility(View.GONE);
+            soporte_section.setVisibility(View.GONE);
+            btnCerrarSesion.setVisibility(View.GONE);
+            configurarBotonFavorito(currentUserId, paseadorId);
+            bottomNavRole = "DUEÑO";
+            bottomNavSelectedItem = R.id.menu_search;
+        } else {
+            ivEditPerfil.setVisibility(View.GONE);
+            btnMensaje.setVisibility(View.GONE);
+            btnFavorito.setVisibility(View.GONE);
+            fabReservar.setVisibility(View.GONE);
+            ivEditZonas.setVisibility(View.GONE);
+            ivEditDisponibilidad.setVisibility(View.GONE);
+            ajustes_section.setVisibility(View.GONE);
+            soporte_section.setVisibility(View.GONE);
+            btnCerrarSesion.setVisibility(View.GONE);
+            bottomNavRole = currentUserRole != null ? currentUserRole : "DUEÑO";
+            bottomNavSelectedItem = R.id.menu_search;
+        }
+        setupBottomNavigation();
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNav == null) return;
+        String roleForNav = bottomNavRole != null ? bottomNavRole : (currentUserRole != null ? currentUserRole : "PASEADOR");
+        BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, bottomNavSelectedItem);
+    }
+
+    private void configurarBotonFavorito(String duenoId, String paseadorId) {
+        DocumentReference favRef = db.collection("usuarios").document(duenoId)
+                .collection("favoritos").document(paseadorId);
+        favRef.get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
+            } else {
+                btnFavorito.setImageResource(R.drawable.ic_corazon);
+            }
+        });
+        btnFavorito.setOnClickListener(v -> toggleFavorito(duenoId, paseadorId, favRef));
+    }
+
+    private void toggleFavorito(String duenoId, String paseadorId, DocumentReference favRef) {
+        favRef.get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                favRef.delete().addOnSuccessListener(aVoid -> {
+                    btnFavorito.setImageResource(R.drawable.ic_corazon);
+                    Toast.makeText(this, "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
+                });
+            } else {
+                DocumentReference usuarioPaseadorRef = db.collection("usuarios").document(paseadorId);
+                DocumentReference perfilPaseadorRef = db.collection("paseadores").document(paseadorId);
+                Task<DocumentSnapshot> usuarioTask = usuarioPaseadorRef.get();
+                Task<DocumentSnapshot> paseadorTask = perfilPaseadorRef.get();
+                Tasks.whenAllSuccess(usuarioTask, paseadorTask).addOnSuccessListener(results -> {
+                    DocumentSnapshot usuarioDoc = (DocumentSnapshot) results.get(0);
+                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
+                    if (usuarioDoc.exists() && paseadorDoc.exists()) {
+                        Map<String, Object> favoritoData = new HashMap<>();
+                        favoritoData.put("fecha_agregado", FieldValue.serverTimestamp());
+                        favoritoData.put("paseador_ref", perfilPaseadorRef);
+                        favoritoData.put("nombre_display", usuarioDoc.getString("nombre_display"));
+                        favoritoData.put("foto_perfil_url", usuarioDoc.getString("foto_perfil"));
+                        favoritoData.put("calificacion_promedio", paseadorDoc.getDouble("calificacion_promedio"));
+                        favoritoData.put("precio_hora", paseadorDoc.getDouble("precio_hora"));
+                        favRef.set(favoritoData).addOnSuccessListener(aVoid -> {
+                            btnFavorito.setImageResource(R.drawable.ic_corazon_lleno);
+                            Toast.makeText(PerfilPaseadorActivity.this, "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                });
+            }
         });
     }
 
     private void attachDataListeners() {
-        detachDataListeners(); // Ensure no duplicate listeners
-
-        // Listener for the 'usuarios' document
+        detachDataListeners();
         DocumentReference userDocRef = db.collection("usuarios").document(paseadorId);
         usuarioListener = userDocRef.addSnapshotListener((usuarioDoc, e) -> {
-            if (e != null) {
-                Log.e(TAG, "Error al escuchar documento de usuario", e);
-                return;
-            }
+            if (e != null) return;
             if (usuarioDoc != null && usuarioDoc.exists()) {
                 tvNombre.setText(usuarioDoc.getString("nombre_display"));
-                Glide.with(this).load(usuarioDoc.getString("foto_perfil")).placeholder(R.drawable.ic_person).into(ivAvatar);
+                if (!isDestroyed() && !isFinishing()) {
+                    Glide.with(this).load(usuarioDoc.getString("foto_perfil")).placeholder(R.drawable.ic_person).into(ivAvatar);
+                }
                 Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
                 if (fechaRegistro != null) {
                     tvMiembroDesde.setText(String.format("Se unió en %s", formatMiembroDesde(fechaRegistro)));
@@ -685,13 +654,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
         });
 
-        // Listener for the 'paseadores' document
         DocumentReference paseadorDocRef = db.collection("paseadores").document(paseadorId);
         paseadorListener = paseadorDocRef.addSnapshotListener((paseadorDoc, error) -> {
-            if (error != null) {
-                Log.e(TAG, "Error al escuchar documento de paseador", error);
-                return;
-            }
+            if (error != null) return;
             if (paseadorDoc != null && paseadorDoc.exists()) {
                 String verificacion = paseadorDoc.getString("verificacion_estado");
                 if ("APROBADO".equalsIgnoreCase(verificacion)) {
@@ -702,7 +667,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     tvVerificado.setVisibility(View.GONE);
                 }
                 Double precio = paseadorDoc.getDouble("precio_hora");
-                this.paseadorPrecioHora = precio; // Guardar el precio en la variable de instancia
+                this.paseadorPrecioHora = precio;
                 tvPrecio.setText(precio != null ? String.format(Locale.getDefault(), "• $%.2f/hora", precio) : "");
                 tvPrecio.setVisibility(precio != null ? View.VISIBLE : View.GONE);
 
@@ -745,7 +710,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
         });
 
-        // Listeners for sub-collections
         cargarDisponibilidad(paseadorId);
         cargarZonasServicio(paseadorId);
         cargarMetodoPagoPredeterminado(currentUserId != null ? currentUserId : paseadorId);
@@ -850,44 +814,93 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         recyclerViewResenas.setAdapter(resenaAdapter);
     }
 
-    private void cargarMasResenas() {
+    private void cargarMasResenas(int limit) {
         if (isLoadingResenas) return;
         isLoadingResenas = true;
-        Query query = db.collection("resenas").whereEqualTo("paseador_ref", db.collection("paseadores").document(paseadorId)).orderBy("fecha_creacion", Query.Direction.DESCENDING).limit(10);
+        
+        Query query = db.collection("resenas_paseadores")
+                .whereEqualTo("paseadorId", paseadorId)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(limit);
+                
         if (lastVisibleResena != null) {
             query = query.startAfter(lastVisibleResena);
         }
+        
         query.get().addOnSuccessListener(queryDocumentSnapshots -> {
             if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
                 isLoadingResenas = false;
                 return;
             }
+            
             lastVisibleResena = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
+            
             List<Resena> nuevasResenas = new ArrayList<>();
             List<Task<DocumentSnapshot>> userTasks = new ArrayList<>();
-            for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                Resena resena = doc.toObject(Resena.class);
-                resena.setId(doc.getId());
-                nuevasResenas.add(resena);
-                DocumentReference userRef = doc.getDocumentReference("dueño_ref");
-                if (userRef != null) userTasks.add(userRef.get());
+            
+            int fetchCount = queryDocumentSnapshots.size();
+            boolean hasMore = false;
+            
+            if (limit == 4 && fetchCount == 4) {
+                fetchCount = 3; 
+                hasMore = true;
+                lastVisibleResena = queryDocumentSnapshots.getDocuments().get(2);
             }
+
+            for (int i = 0; i < fetchCount; i++) {
+                DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(i);
+                Resena resena = new Resena();
+                resena.setId(doc.getId());
+                resena.setComentario(doc.getString("comentario"));
+                Double calif = doc.getDouble("calificacion");
+                resena.setCalificacion(calif != null ? calif.floatValue() : 0f);
+                resena.setFecha(doc.getTimestamp("timestamp"));
+                
+                nuevasResenas.add(resena);
+                
+                String autorId = doc.getString("duenoId");
+                if (autorId == null) autorId = doc.getString("autorId");
+                
+                if (autorId != null) {
+                    userTasks.add(db.collection("usuarios").document(autorId).get());
+                } else {
+                    userTasks.add(Tasks.forResult(null));
+                }
+            }
+            
+            final boolean showButton = hasMore;
+
             if (!userTasks.isEmpty()) {
                 Tasks.whenAllSuccess(userTasks).addOnSuccessListener(userDocs -> {
                     for (int i = 0; i < userDocs.size(); i++) {
-                        DocumentSnapshot userDoc = (DocumentSnapshot) userDocs.get(i);
-                        if (userDoc.exists()) {
-                            nuevasResenas.get(i).setAutorNombre(userDoc.getString("nombre_display"));
-                            nuevasResenas.get(i).setAutorFotoUrl(userDoc.getString("foto_perfil"));
+                        if (userDocs.get(i) instanceof DocumentSnapshot) {
+                            DocumentSnapshot userDoc = (DocumentSnapshot) userDocs.get(i);
+                            if (userDoc != null && userDoc.exists()) {
+                                nuevasResenas.get(i).setAutorNombre(userDoc.getString("nombre_display"));
+                                nuevasResenas.get(i).setAutorFotoUrl(userDoc.getString("foto_perfil"));
+                            } else {
+                                nuevasResenas.get(i).setAutorNombre("Usuario de MascotaLink");
+                            }
                         }
                     }
                     resenaAdapter.addResenas(nuevasResenas);
                     isLoadingResenas = false;
+                    
+                    if (showButton) {
+                        btnVerMasResenas.setVisibility(View.VISIBLE);
+                    }
                 });
             } else {
+                resenaAdapter.addResenas(nuevasResenas);
                 isLoadingResenas = false;
+                if (showButton) {
+                    btnVerMasResenas.setVisibility(View.VISIBLE);
+                }
             }
-        }).addOnFailureListener(e -> isLoadingResenas = false);
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error cargando reseñas", e);
+            isLoadingResenas = false;
+        });
     }
 
     private String formatMiembroDesde(Timestamp timestamp) {

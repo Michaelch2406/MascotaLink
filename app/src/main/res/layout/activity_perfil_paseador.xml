@@ -1,268 +1,433 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
+    android:background="@color/white"
+    tools:context=".PerfilPaseadorActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#F7FAFC"
-        app:elevation="0dp">
+        android:theme="@style/Theme.MascotaLink">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize">
+            android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/white"
+            app:contentInsetStart="0dp">
 
-            <ImageView
-                android:id="@+id/iv_back"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_arrow_back"
-                android:layout_gravity="start"
-                android:contentDescription="Atrás"
-                android:padding="8dp"
-                app:tint="@color/gray_dark" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
-            <TextView
-                android:id="@+id/toolbar_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="Paseador"
-                android:textColor="@android:color/black"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                <ImageView
+                    android:id="@+id/iv_back"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@color/black" />
 
-            <ImageButton
-                android:id="@+id/iv_edit_perfil"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="end"
-                android:layout_marginEnd="12dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Editar perfil"
-                android:padding="8dp"
-                android:src="@android:drawable/ic_menu_edit"
-                android:visibility="gone"
-                app:tint="@color/blue_primary"
-                tools:visibility="visible" />
+                <TextView
+                    android:id="@+id/toolbar_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="Perfil"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-            <ImageButton
-                android:id="@+id/btn_mensaje"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="end"
-                android:layout_marginEnd="12dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Enviar mensaje"
-                android:padding="8dp"
-                android:src="@drawable/ic_messages"
-                android:visibility="gone"
-                app:tint="@color/icon_color"
-                tools:visibility="visible" />
+                <ImageButton
+                    android:id="@+id/iv_edit_perfil"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_settings"
+                    android:visibility="gone"
+                    app:tint="@color/black" />
 
+                <ImageButton
+                    android:id="@+id/btn_mensaje"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_messages"
+                    app:tint="@color/black" />
+
+            </RelativeLayout>
         </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 
-
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_reservar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="85dp"
-        android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/blue_primary" />
-
-
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E5E7EB"
-        android:layout_above="@id/bottom_nav"/>
-
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_nav"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#F7FAFC"
-        app:itemActiveIndicatorStyle="@null"
-        app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color"
-        app:labelVisibilityMode="labeled"
-        android:layout_alignParentBottom="true" />
-
-
-
-    <FrameLayout
+    <!-- Skeleton Loading View -->
+    <LinearLayout
+        android:id="@+id/skeleton_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/bottom_nav"
-        android:layout_below="@id/app_bar">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="visible"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <include
-            android:id="@+id/skeleton_layout"
-            layout="@layout/skeleton_perfil_paseador"
-            android:visibility="visible" />
+        <View
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_avatar_circle_skeleton" />
+
+        <View
+            android:layout_width="200dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:background="@color/skeleton_color" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_round_12"
+            android:backgroundTint="@color/skeleton_color_light" />
+    </LinearLayout>
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll_view_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone">
+        android:visibility="gone"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingBottom="80dp">
 
-            <LinearLayout
+            <!-- Header Perfil -->
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp">
+                android:padding="16dp">
 
                 <de.hdodenhof.circleimageview.CircleImageView
                     android:id="@+id/iv_avatar"
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
-                    android:src="@drawable/paseador_mascota" />
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/ic_user_placeholder"
+                    app:civ_border_color="@color/gray_light"
+                    app:civ_border_width="1dp" />
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="16dp">
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="16dp"
+                    android:layout_toEndOf="@id/iv_avatar"
+                    android:orientation="vertical">
 
-                    <RelativeLayout
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:id="@+id/tv_nombre"
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_alignParentStart="true"
-                            android:layout_toStartOf="@+id/btn_favorito"
-                            android:text="Sofia Ramirez"
-                            android:textAppearance="@style/TextAppearance.Mascota.TitleLarge" />
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="Cargando..."
+                            android:textColor="@color/black"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
 
-                        <ImageButton
-                            android:id="@+id/btn_favorito"
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:layout_alignParentEnd="true"
-                            android:layout_alignTop="@+id/tv_nombre"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="Agregar a favoritos"
-                            android:padding="4dp"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/ic_corazon"
-                            android:visibility="gone"
-                            tools:visibility="visible" />
-                    </RelativeLayout>
+                        <RelativeLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_gravity="top"> <!-- Ensure stable vertical alignment -->
+
+                            <ImageButton
+                                android:id="@+id/btn_favorito"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:layout_alignParentTop="true" 
+                                android:layout_alignParentEnd="true"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="Añadir a favoritos"
+                                android:padding="8dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/ic_corazon"
+                                app:tint="@color/red_error" />
+                        </RelativeLayout>
+
+                    </LinearLayout>
+
 
                     <TextView
                         android:id="@+id/tv_rol"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:text="Paseador de Perros"
+                        android:textColor="@color/gray_dark" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Paseador de perros"
-                        android:textColor="#6B7280" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:id="@+id/iv_verificado_badge"
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_check_circle"
+                            android:visibility="gone"
+                            app:tint="@color/blue_primary" />
+
+                        <TextView
+                            android:id="@+id/tv_verificado"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="Verificado"
+                            android:textColor="@color/blue_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/tv_precio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="• $15.00/hora"
+                            android:textColor="@color/black"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
-            </LinearLayout>
+            </RelativeLayout>
 
-            <Button
-                android:id="@+id/btn_ver_galeria"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
+            <!-- Stats Grid -->
+            <GridLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="Ver galería" />
+                android:columnCount="2"
+                android:padding="8dp"
+                android:rowCount="2">
 
-            <!-- Badge verificado + precio -->
+                <!-- Paseos -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:background="@drawable/bg_round_12"
+                    android:backgroundTint="#F3F4F6"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_walk"
+                        app:tint="@color/blue_primary" />
+
+                    <TextView
+                        android:id="@+id/tv_paseos_completados"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0 Paseos"
+                        android:textAlignment="center"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Respuesta -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:background="@drawable/bg_round_12"
+                    android:backgroundTint="#F3F4F6"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_access_time"
+                        app:tint="@color/green_success" />
+
+                    <TextView
+                        android:id="@+id/tv_tiempo_respuesta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Resp. &lt; 1h"
+                        android:textAlignment="center"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Experiencia -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:background="@drawable/bg_round_12"
+                    android:backgroundTint="#F3F4F6"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_star_filled"
+                        app:tint="#F59E0B" />
+
+                    <TextView
+                        android:id="@+id/tv_experiencia_anos"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="2 Años Exp."
+                        android:textAlignment="center"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Info Extra -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:background="@drawable/bg_round_12"
+                    android:backgroundTint="#F3F4F6"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_dog"
+                        app:tint="@color/gray_dark" />
+
+                    <TextView
+                        android:id="@+id/tv_tipos_perros"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Todos"
+                        android:textAlignment="center"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+            </GridLayout>
+
+            <!-- Rating Summary -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:id="@+id/barras_ratings"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
+                android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <ImageView
-                    android:id="@+id/iv_verificado_badge"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_check_circle"
-                    app:tint="@color/blue_primary" />
-
                 <TextView
-                    android:id="@+id/tv_verificado"
+                    android:id="@+id/tv_rating_valor"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="Verificado"
-                    android:textColor="@color/blue_primary"
+                    android:text="4.9"
+                    android:textColor="@color/black"
+                    android:textSize="24sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tv_precio"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:text="• $8/hora"
-                    android:textColor="@color/green_success"
-                    android:textStyle="bold" />
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical">
+
+                    <RatingBar
+                        android:id="@+id/rating_bar"
+                        style="?android:attr/ratingBarStyleSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:isIndicator="true"
+                        android:numStars="5"
+                        android:progressTint="#F59E0B"
+                        android:rating="4.5" />
+
+                    <TextView
+                        android:id="@+id/tv_resenas_total"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="12 reviews"
+                        android:textColor="@color/gray_dark"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
 
+            <!-- Tabs -->
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/tab_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                app:tabGravity="fill"
-                app:tabMode="fixed" />
+                android:layout_marginTop="16dp"
+                app:tabIndicatorColor="@color/blue_primary"
+                app:tabSelectedTextColor="@color/blue_primary"
+                app:tabTextColor="@color/gray_dark" />
 
-            <!-- Contenido de las pestañas -->
+            <!-- Contenido Tabs -->
             <FrameLayout
-                android:id="@+id/tab_content_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <!-- Pestaña "Acerca de" -->
+                <!-- Tab: Acerca de -->
                 <LinearLayout
                     android:id="@+id/ll_acerca_de"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:visibility="visible">
 
-                    <!-- Video de presentación -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="Video de presentación"
-                        android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
+                    <!-- Video -->
                     <FrameLayout
                         android:id="@+id/video_container"
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
-                        android:layout_marginTop="8dp"
-                        android:background="@android:color/black">
+                        android:layout_marginBottom="16dp"
+                        android:background="@color/black">
 
                         <VideoView
                             android:id="@+id/video_view"
@@ -280,10 +445,11 @@
 
                         <ImageView
                             android:id="@+id/iv_play_button"
-                            android:layout_width="60dp"
-                            android:layout_height="60dp"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
                             android:layout_gravity="center"
-                            android:src="@android:drawable/ic_media_play" />
+                            android:src="@drawable/ic_play_circle_outline"
+                            app:tint="@color/white" />
 
                         <ProgressBar
                             android:id="@+id/video_progress_bar"
@@ -293,22 +459,13 @@
                             android:visibility="gone" />
                     </FrameLayout>
 
-                    <!-- Acerca de mí -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Acerca de mí"
-                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                    </LinearLayout>
+                        android:text="Sobre mí"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_descripcion"
@@ -316,435 +473,338 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="4dp"
-                        android:text="Soy una amante de los animales con experiencia en el cuidado de perros de todos los tamaños y razas. Ofrezco paseos personalizados adaptados a las necesidades de cada perro, asegurando ejercicio, diversión y seguridad en cada salida." />
+                        android:text="¡Hola! Soy un amante de los animales con más de 2 años de experiencia paseando perros de todas las razas..."
+                        android:textColor="@color/gray_dark" />
 
-                    <!-- Experiencia -->
+                    <Button
+                        android:id="@+id/btn_ver_galeria"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Ver Galería de Fotos"
+                        android:textColor="@color/blue_primary"
+                        app:strokeColor="@color/blue_primary" />
+
+                    <!-- Info Adicional -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:text="Información Adicional"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
+                        android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/tv_experiencia_anos"
-                            android:layout_width="wrap_content"
+                        <!-- Disponibilidad -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Experiencia: 3 años"
-                            android:textColor="@color/gray_dark"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:paddingVertical="8dp">
 
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_calendar"
+                                app:tint="@color/gray_dark" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Disponibilidad"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tv_disponibilidad"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Lun-Vie: 8:00 - 18:00"
+                                    android:textColor="@color/gray_dark" />
+                            </LinearLayout>
+
+                            <ImageView
+                                android:id="@+id/iv_edit_disponibilidad"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:src="@drawable/ic_edit"
+                                android:visibility="gone"
+                                app:tint="@color/blue_primary" />
+                        </LinearLayout>
+
+                        <!-- Zonas -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="8dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_map"
+                                app:tint="@color/gray_dark" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Zonas de Servicio"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tv_zonas_servicio_nombres"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="La Carolina, El Batán"
+                                    android:textColor="@color/gray_dark" />
+                            </LinearLayout>
+
+                            <ImageView
+                                android:id="@+id/iv_edit_zonas"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:src="@drawable/ic_edit"
+                                android:visibility="gone"
+                                app:tint="@color/blue_primary" />
+                        </LinearLayout>
+
+                        <!-- Mapa -->
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="150dp"
+                            android:layout_marginTop="8dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardElevation="0dp">
+
+                            <fragment
+                                android:id="@+id/map_container"
+                                android:name="com.google.android.gms.maps.SupportMapFragment"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent" />
+                            
+                            <!-- Overlay to intercept touches if needed, or just let map handle it -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@android:color/transparent" 
+                                android:clickable="true"
+                                android:focusable="true"/> 
+                                
+                        </androidx.cardview.widget.CardView>
+
+                        <!-- Otros detalles -->
                         <TextView
                             android:id="@+id/tv_experiencia_desde"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:text="• Desde 2022"
-                            android:textColor="@color/secondary" />
-                    </LinearLayout>
-
-                    <!-- Zona de servicio -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Zona de servicio"
-                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                        <ImageView
-                            android:id="@+id/iv_edit_zonas"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@android:drawable/ic_menu_edit"
-                            app:tint="@color/blue_primary" />
-
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tv_zonas_servicio_nombres"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textColor="@color/gray_dark"
-                        android:textSize="16sp"
-                        tools:text="La Carolina, La Floresta, Cumbayá" />
-
-                    <androidx.fragment.app.FragmentContainerView
-                        android:id="@+id/map_container"
-                        android:name="com.google.android.gms.maps.SupportMapFragment"
-                        android:layout_width="match_parent"
-                        android:layout_height="180dp"
-                        android:layout_marginTop="8dp" />
-
-                    <!-- Disponibilidad -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Disponibilidad"
-                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                        <ImageView
-                            android:id="@+id/iv_edit_disponibilidad"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@android:drawable/ic_menu_edit"
-                            app:tint="@color/blue_primary" />
-
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tv_disponibilidad"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Lunes a Viernes: 9 AM - 6 PM" />
-
-                    <!-- Tipos de perros -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Tipos de perros"
-                            android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tv_tipos_perros"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Pequeños, Medianos, Grandes" />
-
-                    <!-- Estadísticas -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:text="Estadísticas"
-                        android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                    <GridLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:columnCount="2"
-                        android:rowCount="2"
-                        android:useDefaultMargins="true">
-
-                        <TextView
-                            android:id="@+id/tv_paseos_completados"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:drawablePadding="8dp"
-                            android:gravity="center_vertical"
-                            android:text="0 Paseos completados"
+                            android:layout_marginTop="8dp"
+                            android:text="Experiencia desde: 2021"
                             android:textColor="@color/gray_dark"
-                            app:drawableStartCompat="@android:drawable/ic_menu_myplaces" />
-
-                        <TextView
-                            android:id="@+id/tv_tiempo_respuesta"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:drawablePadding="8dp"
-                            android:gravity="center_vertical"
-                            android:text="Respuesta en -- min"
-                            android:textColor="@color/gray_dark"
-                            app:drawableStartCompat="@android:drawable/ic_menu_recent_history" />
-
-                        <TextView
-                            android:id="@+id/tv_ultima_conexion"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:drawablePadding="8dp"
-                            android:gravity="center_vertical"
-                            android:text="Últ. conexión: --"
-                            android:textColor="@color/gray_dark"
-                            app:drawableStartCompat="@android:drawable/ic_menu_recent_history" />
+                            android:textSize="12sp" />
 
                         <TextView
                             android:id="@+id/tv_miembro_desde"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Se unió en Marzo 2023"
+                            android:textColor="@color/gray_dark"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tv_ultima_conexion"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Últ. conexión: hace 2 horas"
+                            android:textColor="@color/gray_dark"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <!-- Secciones de Ajustes (Solo visibles para el dueño del perfil) -->
+                    <LinearLayout
+                        android:id="@+id/ajustes_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:drawablePadding="8dp"
-                            android:gravity="center_vertical"
-                            android:text="Se unió en --"
+                            android:text="Ajustes y Cuenta"
+                            android:textColor="@color/black"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btn_notificaciones"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:drawablePadding="12dp"
+                            android:paddingVertical="12dp"
+                            android:text="Notificaciones"
                             android:textColor="@color/gray_dark"
-                            app:drawableStartCompat="@android:drawable/ic_menu_my_calendar" />
-                    </GridLayout>
+                            app:drawableStartCompat="@drawable/ic_notifications"
+                            app:drawableTint="@color/gray_dark" />
+
+                        <TextView
+                            android:id="@+id/btn_metodos_pago"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:drawablePadding="12dp"
+                            android:paddingVertical="12dp"
+                            android:text="Métodos de Pago"
+                            android:textColor="@color/gray_dark"
+                            app:drawableStartCompat="@drawable/ic_payment"
+                            app:drawableTint="@color/gray_dark" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/soporte_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Soporte y Legal"
+                            android:textColor="@color/black"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btn_privacidad"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:drawablePadding="12dp"
+                            android:paddingVertical="12dp"
+                            android:text="Política de Privacidad"
+                            android:textColor="@color/gray_dark"
+                            app:drawableStartCompat="@drawable/ic_privacy"
+                            app:drawableTint="@color/gray_dark" />
+
+                        <TextView
+                            android:id="@+id/btn_centro_ayuda"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:drawablePadding="12dp"
+                            android:paddingVertical="12dp"
+                            android:text="Centro de Ayuda"
+                            android:textColor="@color/gray_dark"
+                            app:drawableStartCompat="@drawable/ic_help"
+                            app:drawableTint="@color/gray_dark" />
+
+                        <TextView
+                            android:id="@+id/btn_terminos"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:drawablePadding="12dp"
+                            android:paddingVertical="12dp"
+                            android:text="Términos y Condiciones"
+                            android:textColor="@color/gray_dark"
+                            app:drawableStartCompat="@drawable/ic_description"
+                            app:drawableTint="@color/gray_dark" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btn_cerrar_sesion"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:text="Cerrar Sesión"
+                        android:textColor="@color/red_error"
+                        android:visibility="gone"
+                        app:strokeColor="@color/red_error" />
 
                 </LinearLayout>
 
-                <!-- Pestaña "Reseñas" -->
+                <!-- Tab: Reseñas -->
                 <LinearLayout
                     android:id="@+id/ll_resenas"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
+                    android:padding="16dp"
                     android:visibility="gone">
 
-                    <!-- Calificaciones -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:text="Calificaciones"
-                        android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_horizontal"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/tv_rating_valor"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="4.8"
-                                android:textSize="48sp"
-                                android:textStyle="bold" />
-
-                            <RatingBar
-                                android:id="@+id/rating_bar"
-                                style="?android:attr/ratingBarStyleSmall"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:numStars="5"
-                                android:rating="4.8"
-                                android:stepSize="0.1" />
-
-                            <TextView
-                                android:id="@+id/tv_resenas_total"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="125 reviews"
-                                android:textColor="#6B7280" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/barras_ratings"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="24dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical" />
-                    </LinearLayout>
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/recycler_view_resenas"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
                         android:nestedScrollingEnabled="false" />
+
+                    <Button
+                        android:id="@+id/btn_ver_mas_resenas"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Ver más reseñas"
+                        android:textColor="@color/blue_primary"
+                        android:visibility="gone" />
+
                 </LinearLayout>
 
             </FrameLayout>
-
-            <!-- Ajustes y Cuenta -->
-            <LinearLayout
-                android:id="@+id/ajustes_section"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="Ajustes y Cuenta"
-                    android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                <RelativeLayout
-                    android:id="@+id/btn_notificaciones"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="#E7EEF2"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:text="Configurar notificaciones"
-                        android:textColor="#111827" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="#9CA3AF" />
-                </RelativeLayout>
-
-                <RelativeLayout
-                    android:id="@+id/btn_metodos_pago"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="#E7EEF2"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:text="Métodos de pago"
-                        android:textColor="#111827" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="#9CA3AF" />
-                </RelativeLayout>
-
-                <RelativeLayout
-                    android:id="@+id/btn_privacidad"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="#E7EEF2"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:text="Preferencias de privacidad"
-                        android:textColor="#111827" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="#9CA3AF" />
-                </RelativeLayout>
-            </LinearLayout>
-
-            <!-- Soporte y Legal -->
-            <LinearLayout
-                android:id="@+id/soporte_section"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="Soporte y Legal"
-                    android:textAppearance="@style/TextAppearance.Mascota.Title" />
-
-                <RelativeLayout
-                    android:id="@+id/btn_centro_ayuda"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="#E7EEF2"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:text="Centro de ayuda"
-                        android:textColor="#111827" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="#9CA3AF" />
-                </RelativeLayout>
-
-                <RelativeLayout
-                    android:id="@+id/btn_terminos"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="#E7EEF2"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:text="Términos y condiciones"
-                        android:textColor="#111827" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/ic_arrow_forward"
-                        app:tint="#9CA3AF" />
-                </RelativeLayout>
-            </LinearLayout>
-
-            <!-- Cerrar Sesión -->
-            <Button
-                android:id="@+id/btn_cerrar_sesion"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="16dp"
-                android:text="Cerrar sesión"
-                android:textColor="@color/colorError" />
 
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
 
-    </FrameLayout>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_reservar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:translationY="-36dp"
+        app:layout_anchor="@id/bottom_nav"
+        app:layout_anchorGravity="top|end"
+        android:src="@drawable/ic_calendar"
+        app:backgroundTint="@color/blue_primary"
+        app:tint="@color/white" />
 
-</RelativeLayout>
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/white"
+        app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/bottom_nav_item_color"
+        app:itemTextColor="@color/bottom_nav_item_color"
+        app:itemActiveIndicatorStyle="@null" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
