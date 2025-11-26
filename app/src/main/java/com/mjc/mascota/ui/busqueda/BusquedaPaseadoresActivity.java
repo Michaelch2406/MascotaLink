@@ -145,6 +145,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private NestedScrollView contentScrollView;
     private BottomNavigationView bottomNav;
     private String userRole = "DUEÑO";
+    private Context glideContext;
 
     // Map Interaction Constants & Views
     private static final int MAP_HEIGHT_COLLAPSED_DP = 250;
@@ -175,6 +176,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         setContentView(R.layout.activity_busqueda_paseadores);
 
         mAuth = FirebaseAuth.getInstance();
+        glideContext = getApplicationContext();
         
         // Initialize role from cache to prevent flicker
         String cachedRole = BottomNavManager.getUserRole(this);
@@ -1180,7 +1182,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private BitmapDescriptor crearMarkerIconPersonalizado(PaseadorMarker paseador) {
         try {
-            Bitmap bitmap = Glide.with(this)
+            Context glideCtx = glideContext != null ? glideContext : getApplicationContext();
+            Bitmap bitmap = Glide.with(glideCtx)
                     .asBitmap()
                     .load(paseador.getFotoUrl())
                     .apply(RequestOptions.circleCropTransform())
@@ -1306,8 +1309,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         public void updateMarkerIcon(Marker marker, PaseadorClusterItem item) {
             PaseadorMarker paseador = item.getPaseadorMarker();
             boolean isSelected = paseador.getPaseadorId().equals(selectedPaseadorId);
+            Context glideCtx = glideContext != null ? glideContext : getApplicationContext();
             
-            Glide.with(BusquedaPaseadoresActivity.this)
+            Glide.with(glideCtx)
                 .asBitmap()
                 .load(paseador.getFotoUrl())
                 .apply(RequestOptions.circleCropTransform()
@@ -1334,8 +1338,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         protected void onBeforeClusterItemRendered(@NonNull PaseadorClusterItem item, @NonNull MarkerOptions markerOptions) {
             final PaseadorMarker paseador = item.getPaseadorMarker();
             boolean isSelected = paseador.getPaseadorId().equals(selectedPaseadorId);
+            Context glideCtx = glideContext != null ? glideContext : getApplicationContext();
 
-            Glide.with(BusquedaPaseadoresActivity.this)
+            Glide.with(glideCtx)
                     .asBitmap()
                     .load(paseador.getFotoUrl())
                     .apply(RequestOptions.circleCropTransform()
