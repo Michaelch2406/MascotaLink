@@ -92,13 +92,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private ImageButton btnFavorito;
     private ImageView ivVerificadoBadge, ivVideoThumbnail, ivPlayButton;
     private TextView tvNombre, tvRol, tvVerificado, tvPrecio, tvDescripcion, tvDisponibilidad, tvTiposPerros, tvZonasServicioNombres;
-    private TextView tvExperienciaAnos, tvExperienciaDesde;
+    private TextView tvExperienciaDesde;
     private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
     private TextView tvRatingValor, tvResenasTotal;
     private TextView tvEmailPaseador, tvTelefonoPaseador;
     private ImageView btnCopyEmailPaseador, btnCopyTelefonoPaseador;
     private RatingBar ratingBar;
-    private LinearLayout barrasRatings, llAcercaDe, llResenas, ajustes_section, soporte_section;
+    private LinearLayout llAcercaDe, llResenas, ajustes_section, soporte_section;
     private FrameLayout videoContainer;
     private android.widget.VideoView videoView;
     private android.widget.ProgressBar videoProgressBar;
@@ -224,7 +224,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         videoView = findViewById(R.id.video_view);
         videoProgressBar = findViewById(R.id.video_progress_bar);
         tvDescripcion = findViewById(R.id.tv_descripcion);
-        tvExperienciaAnos = findViewById(R.id.tv_experiencia_anos);
         tvExperienciaDesde = findViewById(R.id.tv_experiencia_desde);
         tvDisponibilidad = findViewById(R.id.tv_disponibilidad);
         tvTiposPerros = findViewById(R.id.tv_tipos_perros);
@@ -236,7 +235,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         tvRatingValor = findViewById(R.id.tv_rating_valor);
         ratingBar = findViewById(R.id.rating_bar);
         tvResenasTotal = findViewById(R.id.tv_resenas_total);
-        barrasRatings = findViewById(R.id.barras_ratings);
         
         tvEmailPaseador = findViewById(R.id.tv_email_paseador);
         tvTelefonoPaseador = findViewById(R.id.tv_telefono_paseador);
@@ -716,14 +714,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     if (!isDestroyed() && !isFinishing()) {
                         Glide.with(this).load(videoUrl).centerCrop().placeholder(R.drawable.galeria_paseos_foto1).into(ivVideoThumbnail);
                     }
-                    Timestamp inicioExpTimestamp = (Timestamp) perfil.get("fecha_inicio_experiencia");
-                    if (inicioExpTimestamp != null) {
-                        int years = Period.between(inicioExpTimestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()).getYears();
-                        tvExperienciaAnos.setText(String.format(Locale.getDefault(), "Experiencia: %d años", years));
-                        tvExperienciaAnos.setVisibility(View.VISIBLE);
-                    } else {
-                        tvExperienciaAnos.setVisibility(View.GONE);
-                    }
+                    // Experiencia Anos logic removed
                     tvExperienciaDesde.setVisibility(View.GONE);
 
                     // Cargar Galería desde URLs guardadas

@@ -67,7 +67,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private de.hdodenhof.circleimageview.CircleImageView ivAvatar;
     private ImageView ivVerificadoBadge;
     private TextView tvNombre, tvRol, tvVerificado;
-    private TextView tvMascotasRegistradas, tvPaseosSolicitados, tvMiembroDesdeStat, tvCalificacionPromedioStat;
+    private TextView tvMascotasRegistradas, tvPaseosSolicitados, tvMiembroDesdeStat;
     private TextView tvRatingValor, tvResenasTotal;
     private RatingBar ratingBar;
     private LinearLayout llAcercaDe, llResenas, ajustes_section, soporte_section;
@@ -184,7 +184,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         tvMascotasRegistradas = findViewById(R.id.tv_mascotas_registradas);
         tvPaseosSolicitados = findViewById(R.id.tv_paseos_solicitados);
         tvMiembroDesdeStat = findViewById(R.id.tv_miembro_desde_stat);
-        tvCalificacionPromedioStat = findViewById(R.id.tv_calificacion_promedio_stat);
         
         tvRatingValor = findViewById(R.id.tv_rating_valor);
         ratingBar = findViewById(R.id.rating_bar);
@@ -439,11 +438,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                  Long totalResenas = duenoDoc.getLong("num_resenas");
                  
                  if (promedio != null) {
-                     tvCalificacionPromedioStat.setText(String.format(Locale.getDefault(), "%.1f Estrellas", promedio));
                      tvRatingValor.setText(String.format(Locale.getDefault(), "%.1f", promedio));
                      ratingBar.setRating(promedio.floatValue());
                  } else {
-                     tvCalificacionPromedioStat.setText("N/A");
                      tvRatingValor.setText("0.0");
                      ratingBar.setRating(0f);
                  }
