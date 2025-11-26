@@ -103,7 +103,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private android.widget.VideoView videoView;
     private android.widget.ProgressBar videoProgressBar;
     private TabLayout tabLayout;
-    private Button btnCerrarSesion;
+    private Button btnCerrarSesion, btnGestionarGaleria;
     private ImageButton btnMensaje;
     private FloatingActionButton fabReservar;
     private ImageView ivEditZonas, ivEditDisponibilidad;
@@ -208,6 +208,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ivBack = findViewById(R.id.iv_back);
         ivAvatar = findViewById(R.id.iv_avatar);
         btnVerGaleria = findViewById(R.id.btn_ver_galeria);
+        btnGestionarGaleria = findViewById(R.id.btn_gestionar_galeria);
         btnFavorito = findViewById(R.id.btn_favorito);
         tvNombre = findViewById(R.id.tv_nombre);
         tvRol = findViewById(R.id.tv_rol);
@@ -349,6 +350,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             } else {
                 Toast.makeText(this, "No hay imágenes en la galería.", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        btnGestionarGaleria.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilPaseadorActivity.this, GestionarGaleriaActivity.class);
+            startActivity(intent);
         });
 
         fabReservar.setOnClickListener(v -> {
@@ -559,6 +565,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             fabReservar.setVisibility(View.GONE);
             ivEditZonas.setVisibility(View.VISIBLE);
             ivEditDisponibilidad.setVisibility(View.VISIBLE);
+            btnGestionarGaleria.setVisibility(View.VISIBLE);
             ajustes_section.setVisibility(View.VISIBLE);
             soporte_section.setVisibility(View.VISIBLE);
             btnCerrarSesion.setVisibility(View.VISIBLE);
@@ -571,6 +578,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             fabReservar.setVisibility(View.VISIBLE);
             ivEditZonas.setVisibility(View.GONE);
             ivEditDisponibilidad.setVisibility(View.GONE);
+            btnGestionarGaleria.setVisibility(View.GONE);
             ajustes_section.setVisibility(View.GONE);
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);
@@ -584,6 +592,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             fabReservar.setVisibility(View.GONE);
             ivEditZonas.setVisibility(View.GONE);
             ivEditDisponibilidad.setVisibility(View.GONE);
+            btnGestionarGaleria.setVisibility(View.GONE);
             ajustes_section.setVisibility(View.GONE);
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);

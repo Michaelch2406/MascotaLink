@@ -494,6 +494,20 @@
                         android:textColor="@color/blue_primary"
                         app:strokeColor="@color/blue_primary" />
 
+                    <!-- Botón Gestionar Galería (Solo Paseador) -->
+                    <Button
+                        android:id="@+id/btn_gestionar_galeria"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="8dp"
+                        android:text="Gestionar Galería"
+                        android:textColor="@color/blue_primary"
+                        android:visibility="gone"
+                        app:icon="@drawable/ic_edit"
+                        app:iconTint="@color/blue_primary" />
+
                     <!-- Galería de Paseos Preview -->
                     <TextView
                         android:id="@+id/tv_gallery_preview_header"
