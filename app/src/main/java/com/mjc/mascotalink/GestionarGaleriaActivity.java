@@ -124,39 +124,97 @@ public class GestionarGaleriaActivity extends AppCompatActivity implements Gesti
         if (imageUri == null) return;
 
         progressBar.setVisibility(View.VISIBLE);
-        String filename = "paseo_" + UUID.randomUUID().toString() + ".jpg";
-        
-        // Obtener carpeta base del usuario para mantener orden (opcional, pero recomendado)
-        // Como no tenemos acceso fácil al nombre/cedula aquí, usaremos el ID directo
-        StorageReference ref = storage.getReference().child("galeria_paseos/" + paseadorId + "/" + filename);
 
-        ref.putFile(imageUri)
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) throw task.getException();
-                    return ref.getDownloadUrl();
-                })
-                .addOnSuccessListener(downloadUrl -> {
-                    String url = downloadUrl.toString();
-                    // Actualizar Firestore usando FieldValue.arrayUnion
-                    DocumentReference docRef = db.collection("paseadores").document(paseadorId);
-                    docRef.update("perfil_profesional.galeria_paseos_urls", FieldValue.arrayUnion(url))
-                            .addOnSuccessListener(aVoid -> {
-                                progressBar.setVisibility(View.GONE);
-                                imageUrls.add(url);
-                                adapter.notifyDataSetChanged();
-                                actualizarContador();
-                                Toast.makeText(this, "Foto subida correctamente", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e -> {
-                                progressBar.setVisibility(View.GONE);
-                                Toast.makeText(this, "Error al actualizar base de datos", Toast.LENGTH_SHORT).show();
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Error al subir imagen", Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "Error upload", e);
-                });
+        // 1. Obtener datos del usuario para construir la carpeta exacta
+        db.collection("usuarios").document(paseadorId).get().addOnSuccessListener(userDoc -> {
+            if (!userDoc.exists()) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, "Error: Usuario no encontrado", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String cedula = userDoc.getString("cedula");
+            String nombre = userDoc.getString("nombre");
+            String apellido = userDoc.getString("apellido");
+
+            if (cedula == null) cedula = "";
+            if (nombre == null) nombre = "";
+            if (apellido == null) apellido = "";
+
+            // Limpieza básica de strings para coincidir con el formato de registro
+            nombre = nombre.replaceAll("\\s", "");
+            apellido = apellido.replaceAll("\\s", "");
+
+            // Construir nombre de carpeta: UID_CEDULA_NOMBRE_APELLIDO
+            String folderName = paseadorId + "_" + cedula + "_" + nombre + "_" + apellido;
+            
+            // 2. Calcular el siguiente número de secuencia
+            int maxIndex = 0;
+            for (String url : imageUrls) {
+                // Decodificar URL para obtener el nombre del archivo real
+                String decodedUrl = Uri.decode(url);
+                // Buscamos patrones tipo "paseo_123.jpg"
+                // La URL típica termina en .../paseo_123.jpg?alt=...
+                try {
+                    int lastSlash = decodedUrl.lastIndexOf('/');
+                    int questionMark = decodedUrl.indexOf('?', lastSlash);
+                    String filename;
+                    if (questionMark > lastSlash) {
+                        filename = decodedUrl.substring(lastSlash + 1, questionMark);
+                    } else {
+                        filename = decodedUrl.substring(lastSlash + 1);
+                    }
+
+                    if (filename.startsWith("paseo_") && (filename.endsWith(".jpg") || filename.endsWith(".png") || filename.endsWith(".jpeg"))) {
+                        String numberPart = filename.replace("paseo_", "").replace(".jpg", "").replace(".png", "").replace(".jpeg", "");
+                        int number = Integer.parseInt(numberPart);
+                        if (number > maxIndex) {
+                            maxIndex = number;
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "No se pudo parsear número de secuencia de: " + url);
+                }
+            }
+
+            int nextIndex = maxIndex + 1;
+            String filename = "paseo_" + nextIndex + ".jpg";
+            
+            // 3. Subir a la ruta específica
+            StorageReference ref = storage.getReference().child("galeria_paseos/" + folderName + "/" + filename);
+
+            ref.putFile(imageUri)
+                    .continueWithTask(task -> {
+                        if (!task.isSuccessful()) throw task.getException();
+                        return ref.getDownloadUrl();
+                    })
+                    .addOnSuccessListener(downloadUrl -> {
+                        String url = downloadUrl.toString();
+                        // Actualizar Firestore
+                        DocumentReference docRef = db.collection("paseadores").document(paseadorId);
+                        docRef.update("perfil_profesional.galeria_paseos_urls", FieldValue.arrayUnion(url))
+                                .addOnSuccessListener(aVoid -> {
+                                    progressBar.setVisibility(View.GONE);
+                                    imageUrls.add(url);
+                                    adapter.notifyDataSetChanged();
+                                    actualizarContador();
+                                    Toast.makeText(this, "Foto guardada como " + filename, Toast.LENGTH_SHORT).show();
+                                })
+                                .addOnFailureListener(e -> {
+                                    progressBar.setVisibility(View.GONE);
+                                    Toast.makeText(this, "Error al actualizar base de datos", Toast.LENGTH_SHORT).show();
+                                });
+                    })
+                    .addOnFailureListener(e -> {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(this, "Error al subir imagen", Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "Error upload", e);
+                    });
+
+        }).addOnFailureListener(e -> {
+            progressBar.setVisibility(View.GONE);
+            Toast.makeText(this, "Error al obtener datos de usuario", Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void eliminarFoto(int position, String imageUrl) {
