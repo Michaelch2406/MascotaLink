@@ -126,6 +126,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private String mascotaIdActual;
     private String paseadorIdActual;
     private String duenoIdActual;
+    private boolean hasEnPaseoBeenSet = false;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -321,16 +322,31 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 Log.d(TAG, "Paseo completado, cerrando actividad");
                 Toast.makeText(this, "El paseo ha sido completado.", Toast.LENGTH_SHORT).show();
                 stopTimer();
+                // Update en_paseo to false when walk finishes, before activity closes
+                if (hasEnPaseoBeenSet) {
+                    updatePaseadorStatus(false);
+                    hasEnPaseoBeenSet = false;
+                }
                 new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1500);
             } else {
                 // Otro estado (CANCELADO, etc.)
                 Toast.makeText(this, "Este paseo ya no está en curso.", Toast.LENGTH_SHORT).show();
                 stopTimer();
+                // Update en_paseo to false if the walk is ending for any reason
+                if (hasEnPaseoBeenSet) {
+                    updatePaseadorStatus(false);
+                    hasEnPaseoBeenSet = false;
+                }
                 finish();
             }
             return;
         }
         tvEstado.setText(getString(R.string.paseo_en_curso_state_en_progreso));
+        
+        if (!hasEnPaseoBeenSet) {
+            updatePaseadorStatus(true);
+            hasEnPaseoBeenSet = true;
+        }
 
         Timestamp inicioTimestamp = snapshot.getTimestamp("fecha_inicio_paseo");
         if (inicioTimestamp == null) {
@@ -859,6 +875,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "Paseo cancelado.", Toast.LENGTH_SHORT).show();
                     mostrarLoading(false);
+                    updatePaseadorStatus(false); // Mark paseador as not in walk
                     new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1000);
                 })
                 .addOnFailureListener(e -> {
@@ -879,6 +896,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "¡Paseo finalizado con éxito!", Toast.LENGTH_SHORT).show();
                     mostrarLoading(false);
+                    updatePaseadorStatus(false); // Mark paseador as not in walk
                     
                     Intent intent = new Intent(PaseoEnCursoActivity.this, ResumenPaseoActivity.class);
                     intent.putExtra("id_reserva", idReserva);
@@ -915,6 +933,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "Paseo cancelado mutuamente.", Toast.LENGTH_SHORT).show();
                     mostrarLoading(false);
+                    updatePaseadorStatus(false); // Mark paseador as not in walk
                     finish();
                 })
                 .addOnFailureListener(e -> {
@@ -1026,6 +1045,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         if (reservaListener != null) {
             reservaListener.remove();
         }
+        if (hasEnPaseoBeenSet) { // Only update if it was set to true during the activity lifecycle
+            updatePaseadorStatus(false);
+            hasEnPaseoBeenSet = false;
+        }
     }
 
     private void setupLocationUpdates() {
@@ -1099,6 +1122,15 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                     .update(updates)
                     .addOnFailureListener(e -> Log.e(TAG, "Error publicando ubicación en tiempo real", e));
         }
+    }
+
+    private void updatePaseadorStatus(boolean inWalk) {
+        if (auth.getCurrentUser() == null) return;
+
+        db.collection("usuarios").document(auth.getCurrentUser().getUid())
+                .update("en_paseo", inWalk)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Paseador status 'en_paseo' updated to: " + inWalk))
+                .addOnFailureListener(e -> Log.e(TAG, "Error updating paseador status 'en_paseo': " + e.getMessage()));
     }
 
     @Override

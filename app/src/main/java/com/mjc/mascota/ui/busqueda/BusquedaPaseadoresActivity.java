@@ -1181,7 +1181,14 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                             DocumentSnapshot zonaDoc = task.getResult().getDocuments().get(0);
                             com.google.firebase.firestore.GeoPoint zonaGp = zonaDoc.getGeoPoint("ubicacion_centro");
                             if (zonaGp == null) {
-                                zonaGp = zonaDoc.getGeoPoint("centro"); // compatibilidad con tu campo 'centro'
+                                zonaGp = zonaDoc.getGeoPoint("centro"); // compatibilidad
+                            }
+                            if (zonaGp == null) {
+                                Double lat = zonaDoc.getDouble("latitud");
+                                Double lng = zonaDoc.getDouble("longitud");
+                                if (lat != null && lng != null) {
+                                    zonaGp = new com.google.firebase.firestore.GeoPoint(lat, lng);
+                                }
                             }
                             if (zonaGp == null) {
                                 Double lat = zonaDoc.getDouble("latitud");
@@ -1222,7 +1229,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                             boolean disponible = !task2.isSuccessful() || task2.getResult(); // Si falla o no hay datos, considerar disponible
                             
                             // Chain 2: Busy status (omit reservation query to evitar PERMISSION_DENIED; default false)
-                            boolean enPaseo = false;
+                            boolean enPaseo = userDoc.getBoolean("en_paseo") != null && userDoc.getBoolean("en_paseo");
+                            Log.d(TAG, "Paseador " + userId + " - Disponible (schedule): " + disponible + ", En Paseo: " + enPaseo); // DEBUG LOG
                             return Tasks.forResult(new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm, enPaseo));
                         });
                     }
