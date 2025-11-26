@@ -95,6 +95,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private TextView tvExperienciaAnos, tvExperienciaDesde;
     private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
     private TextView tvRatingValor, tvResenasTotal;
+    private TextView tvEmailPaseador, tvTelefonoPaseador;
+    private ImageView btnCopyEmailPaseador, btnCopyTelefonoPaseador;
     private RatingBar ratingBar;
     private LinearLayout barrasRatings, llAcercaDe, llResenas, ajustes_section, soporte_section;
     private FrameLayout videoContainer;
@@ -229,6 +231,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ratingBar = findViewById(R.id.rating_bar);
         tvResenasTotal = findViewById(R.id.tv_resenas_total);
         barrasRatings = findViewById(R.id.barras_ratings);
+        
+        tvEmailPaseador = findViewById(R.id.tv_email_paseador);
+        tvTelefonoPaseador = findViewById(R.id.tv_telefono_paseador);
+        btnCopyEmailPaseador = findViewById(R.id.btn_copy_email_paseador);
+        btnCopyTelefonoPaseador = findViewById(R.id.btn_copy_telefono_paseador);
+
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
@@ -391,6 +399,18 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             btnVerMasResenas.setVisibility(View.GONE);
             cargarMasResenas(10);
         });
+
+        btnCopyEmailPaseador.setOnClickListener(v -> copyToClipboard("Correo", tvEmailPaseador.getText().toString()));
+        btnCopyTelefonoPaseador.setOnClickListener(v -> copyToClipboard("Teléfono", tvTelefonoPaseador.getText().toString()));
+    }
+
+    private void copyToClipboard(String label, String text) {
+        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        android.content.ClipData clip = android.content.ClipData.newPlainText(label, text);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, label + " copiado al portapapeles", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setupAuthListener() {
@@ -631,6 +651,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 if (ultimaConexion != null) {
                     tvUltimaConexion.setText(String.format("Últ. conexión: %s", formatUltimaConexion(ultimaConexion)));
                 }
+                
+                tvEmailPaseador.setText(usuarioDoc.getString("correo"));
+                tvTelefonoPaseador.setText(usuarioDoc.getString("telefono"));
+
                 String galeriaFolderPath = usuarioDoc.getString("galeria_paseos");
                 if (galeriaFolderPath != null && !galeriaFolderPath.isEmpty()) {
                     btnVerGaleria.setVisibility(View.VISIBLE);

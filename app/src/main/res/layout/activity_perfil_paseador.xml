@@ -494,6 +494,94 @@
                         android:textColor="@color/blue_primary"
                         app:strokeColor="@color/blue_primary" />
 
+                    <!-- Información de contacto -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:text="Información de contacto"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical">
+
+                        <!-- Email -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="8dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_messages"
+                                app:tint="@color/gray_dark" />
+
+                            <TextView
+                                android:id="@+id/tv_email_paseador"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:text="Cargando..."
+                                android:textColor="@color/gray_dark" />
+
+                            <ImageView
+                                android:id="@+id/btn_copy_email_paseador"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="8dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:padding="4dp"
+                                android:src="@drawable/ic_content_copy"
+                                app:tint="@color/blue_primary" />
+                        </LinearLayout>
+
+                        <!-- Telefono -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="8dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_phone"
+                                app:tint="@color/gray_dark" />
+
+                            <TextView
+                                android:id="@+id/tv_telefono_paseador"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:text="Cargando..."
+                                android:textColor="@color/gray_dark" />
+
+                            <ImageView
+                                android:id="@+id/btn_copy_telefono_paseador"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="8dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:padding="4dp"
+                                android:src="@drawable/ic_content_copy"
+                                app:tint="@color/blue_primary" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+
                     <!-- Info Adicional -->
                     <TextView
                         android:layout_width="wrap_content"
