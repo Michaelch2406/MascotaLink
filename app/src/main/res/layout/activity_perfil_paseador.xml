@@ -494,6 +494,29 @@
                         android:textColor="@color/blue_primary"
                         app:strokeColor="@color/blue_primary" />
 
+                    <!-- Galería de Paseos Preview -->
+                    <TextView
+                        android:id="@+id/tv_gallery_preview_header"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:text="Galería de Paseos"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_gallery_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal"
+                        android:nestedScrollingEnabled="false"
+                        android:visibility="gone"
+                        tools:itemCount="3"
+                        tools:listitem="@layout/item_gallery_preview" />
+                    
                     <!-- Información de contacto -->
                     <TextView
                         android:layout_width="wrap_content"

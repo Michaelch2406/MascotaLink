@@ -25,9 +25,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
+        android:layout_marginBottom="24dp"
         android:background="@android:color/transparent"
-        app:tabBackground="@drawable/tab_selector"
+        app:tabBackground="@drawable/tab_indicator_gallery"
         app:tabGravity="center"
-        app:tabIndicatorHeight="0dp" />
+        app:tabIndicatorHeight="0dp"
+        app:tabMaxWidth="32dp" />
 
 </RelativeLayout>

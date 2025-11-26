@@ -124,6 +124,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private String bottomNavRole = "PASEADOR";
     private int bottomNavSelectedItem = R.id.menu_perfil;
 
+    // Gallery Preview
+    private RecyclerView rvGalleryPreview;
+    private TextView tvGalleryPreviewHeader;
+    private GalleryPreviewAdapter galleryPreviewAdapter;
+    private List<String> galleryPreviewList = new ArrayList<>();
 
     private RecyclerView recyclerViewResenas;
     private ResenaAdapter resenaAdapter;
@@ -236,6 +241,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         tvTelefonoPaseador = findViewById(R.id.tv_telefono_paseador);
         btnCopyEmailPaseador = findViewById(R.id.btn_copy_email_paseador);
         btnCopyTelefonoPaseador = findViewById(R.id.btn_copy_telefono_paseador);
+
+        // Gallery Preview initialization
+        tvGalleryPreviewHeader = findViewById(R.id.tv_gallery_preview_header);
+        rvGalleryPreview = findViewById(R.id.rv_gallery_preview);
+        rvGalleryPreview.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        galleryPreviewAdapter = new GalleryPreviewAdapter(this, galleryPreviewList);
+        rvGalleryPreview.setAdapter(galleryPreviewAdapter);
 
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
@@ -655,25 +667,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 tvEmailPaseador.setText(usuarioDoc.getString("correo"));
                 tvTelefonoPaseador.setText(usuarioDoc.getString("telefono"));
 
-                String galeriaFolderPath = usuarioDoc.getString("galeria_paseos");
-                if (galeriaFolderPath != null && !galeriaFolderPath.isEmpty()) {
-                    btnVerGaleria.setVisibility(View.VISIBLE);
-                    FirebaseStorage.getInstance().getReference().child(galeriaFolderPath).listAll()
-                        .addOnSuccessListener(listResult -> {
-                            List<Task<android.net.Uri>> urlTasks = new ArrayList<>();
-                            for (com.google.firebase.storage.StorageReference item : listResult.getItems()) {
-                                urlTasks.add(item.getDownloadUrl());
-                            }
-                            Tasks.whenAllSuccess(urlTasks).addOnSuccessListener(urls -> {
-                                galeriaImageUrls.clear();
-                                for (Object urlObject : urls) {
-                                    galeriaImageUrls.add(((android.net.Uri) urlObject).toString());
-                                }
-                            });
-                        });
-                } else {
-                    btnVerGaleria.setVisibility(View.GONE);
-                }
                 showContent();
             }
         });
@@ -723,6 +716,30 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                         tvExperienciaAnos.setVisibility(View.GONE);
                     }
                     tvExperienciaDesde.setVisibility(View.GONE);
+
+                    // Cargar Galería desde URLs guardadas
+                    List<String> urlsGaleria = (List<String>) perfil.get("galeria_paseos_urls");
+                    galeriaImageUrls.clear();
+                    galleryPreviewList.clear();
+                    
+                    if (urlsGaleria != null && !urlsGaleria.isEmpty()) {
+                        galeriaImageUrls.addAll(urlsGaleria);
+                        
+                        // Mostrar preview (max 4)
+                        int limit = Math.min(urlsGaleria.size(), 4);
+                        for (int i = 0; i < limit; i++) {
+                            galleryPreviewList.add(urlsGaleria.get(i));
+                        }
+                        galleryPreviewAdapter.setImageUrls(galleryPreviewList);
+                        
+                        rvGalleryPreview.setVisibility(View.VISIBLE);
+                        tvGalleryPreviewHeader.setVisibility(View.VISIBLE);
+                        btnVerGaleria.setVisibility(View.VISIBLE);
+                    } else {
+                        rvGalleryPreview.setVisibility(View.GONE);
+                        tvGalleryPreviewHeader.setVisibility(View.GONE);
+                        btnVerGaleria.setVisibility(View.GONE);
+                    }
                 }
 
                 Map<String, Object> manejo = (Map<String, Object>) paseadorDoc.get("manejo_perros");
