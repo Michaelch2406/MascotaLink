@@ -1,7 +1,7 @@
 const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 admin.initializeApp();
 
@@ -120,7 +120,7 @@ exports.validatePaymentOnCreate = onDocumentCreated("pagos/{pagoId}", async (eve
     paymentId: pagoId,
     usuario: paymentData.id_usuario,
     monto: paymentData.monto,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: FieldValue.serverTimestamp(),
   });
 });
 
@@ -191,7 +191,7 @@ exports.onPaymentConfirmed = onDocumentUpdated("pagos/{pagoId}", async (event) =
 
     if (messages.length > 0) {
       try {
-        const response = await admin.messaging().sendEachForMulticast(messages);
+        const response = await admin.messaging().sendEach(messages);
         console.log("Successfully sent messages:", response);
       } catch (error) {
         console.error("Error sending messages:", error);
@@ -650,8 +650,7 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
     const idDueno = getIdValue(reserva.id_dueno);
     const idPaseador = getIdValue(reserva.id_paseador);
     const idMascota = getIdValue(reserva.id_mascota);
-
-    // Correctly handle Timestamp objects from Firestore
+    
     let walkTimestamp;
     if (reserva.hora_inicio && reserva.hora_inicio.toDate) {
         walkTimestamp = reserva.hora_inicio;
@@ -769,7 +768,7 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
 
   if (messagesToSend.length > 0) {
     try {
-      const response = await admin.messaging().sendEachForMulticast(messagesToSend);
+      const response = await admin.messaging().sendEach(messagesToSend);
       console.log("Successfully sent reminder messages:", response);
     } catch (error) {
       console.error("Error sending reminder messages:", error);
@@ -830,122 +829,4 @@ exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
   } else {
     console.log("No CONFIRMADO reservations to transition to EN_CURSO.");
   }
-});
-
-
-
-/**
- * Sincroniza los datos de un paseador en una colección de búsqueda denormalizada.
- */
-async function sincronizarPaseador(docId) {
-  const userRef = db.collection("usuarios").doc(docId);
-  const paseadorRef = db.collection("paseadores").doc(docId);
-  const searchRef = db.collection("paseadores_search").doc(docId);
-
-  try {
-    const userDoc = await userRef.get();
-    const paseadorDoc = await paseadorRef.get();
-
-    if (!userDoc.exists) {
-      console.log(`Usuario ${docId} no encontrado. Eliminando de búsqueda.`);
-      await searchRef.delete();
-      return;
-    }
-
-    const userData = userDoc.data();
-
-    if (userData.rol !== "PASEADOR") {
-      console.log(`Usuario ${docId} no es un paseador. Eliminando de búsqueda.`);
-      await searchRef.delete();
-      return;
-    }
-
-    if (!paseadorDoc.exists) {
-      console.log(`Perfil de paseador para ${docId} no existe aún.`);
-      return;
-    }
-
-    const paseadorData = paseadorDoc.data();
-
-    let anosExperiencia = 0;
-    if (paseadorData.experiencia_general && typeof paseadorData.experiencia_general === 'string') {
-      const match = paseadorData.experiencia_general.match(/\d+/);
-      if (match) {
-        anosExperiencia = parseInt(match[0], 10);
-      }
-    }
-
-    const searchData = {
-      nombre_display: userData.nombre_display || null,
-      nombre_lowercase: (userData.nombre_display || "").toLowerCase(),
-      foto_perfil: userData.foto_perfil || null,
-      activo: userData.activo || false,
-      calificacion_promedio: paseadorData.calificacion_promedio || 0,
-      num_servicios_completados: paseadorData.num_servicios_completados || 0,
-      precio_hora: paseadorData.precio_hora || 0,
-      tipos_perro_aceptados: paseadorData.manejo_perros?.tamanos || [],
-      anos_experiencia: anosExperiencia,
-    };
-
-    console.log(`Actualizando documento de búsqueda para el paseador: ${docId}`);
-    await searchRef.set(searchData, { merge: true });
-  } catch (error) {
-    console.error(`Error al sincronizar paseador ${docId}:`, error);
-  }
-}
-
-exports.onUsuarioWrite = onDocumentWritten("usuarios/{userId}", async (event) => {
-  const { userId } = event.params;
-  await sincronizarPaseador(userId);
-});
-
-exports.onPaseadorWrite = onDocumentWritten("paseadores/{paseadorId}", async (event) => {
-  const { paseadorId } = event.params;
-  await sincronizarPaseador(paseadorId);
-});
-
-exports.validatePaymentOnCreate = onDocumentCreated("pagos/{pagoId}", async (event) => {
-  const { pagoId } = event.params;
-  const paymentDoc = event.data;
-  if (!paymentDoc || !paymentDoc.exists) {
-    console.warn(`validatePaymentOnCreate: documento ${pagoId} no existe o fue eliminado.`);
-    return;
-  }
-  const paymentData = paymentDoc.data();
-  const authUid = event.auth?.uid;
-  const violations = [];
-
-  if (!paymentData.id_usuario) {
-    violations.push("id_usuario ausente");
-  }
-
-  if (!paymentData.monto || typeof paymentData.monto !== "number" || paymentData.monto <= 0) {
-    violations.push("monto inválido");
-  }
-
-  if (!authUid || authUid !== paymentData.id_usuario) {
-    // violations.push("auth.uid no coincide");
-    console.warn(`validatePaymentOnCreate: Auth check skipped for dev. Auth: ${authUid}, PaymentUser: ${paymentData.id_usuario}`);
-  }
-
-  if (violations.length > 0) {
-    console.error(`validatePaymentOnCreate: bloqueo de pago ${pagoId} -> ${violations.join(", ")}`);
-    await db.collection("audit_logs").add({
-      action: "pago_rechazado",
-      paymentId: pagoId,
-      usuario: paymentData.id_usuario || null,
-      reason: violations.join("; "),
-      timestamp: new Date(),
-    });
-    await paymentDoc.ref.delete();
-    return;
-  }
-
-  await db.collection("audit_logs").add({
-    action: "pago_validado",
-    paymentId: pagoId,
-    usuario: paymentData.id_usuario,
-    monto: paymentData.monto,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-  });
 });

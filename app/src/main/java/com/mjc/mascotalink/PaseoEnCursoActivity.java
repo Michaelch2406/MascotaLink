@@ -34,6 +34,8 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.firebase.geofire.GeoFireUtils;
+import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -1076,7 +1078,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private void actualizarUbicacionFirestore(android.location.Location location) {
         if (reservaRef == null) return;
 
-        GeoPoint punto = new GeoPoint(location.getLatitude(), location.getLongitude());
+        double lat = location.getLatitude();
+        double lng = location.getLongitude();
+        GeoPoint punto = new GeoPoint(lat, lng);
+        String geohash = GeoFireUtils.getGeoHashForLocation(new GeoLocation(lat, lng));
 
         // 1. Guardar en el historial del paseo (para el dueño de este paseo)
         reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto))
@@ -1084,8 +1089,14 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         // 2. Publicar ubicación en tiempo real en el perfil del usuario (para la búsqueda global)
         if (auth.getCurrentUser() != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("ubicacion_actual", punto);
+            updates.put("ubicacion_geohash", geohash);
+            updates.put("en_linea", true);
+            updates.put("last_seen", FieldValue.serverTimestamp());
+
             db.collection("usuarios").document(auth.getCurrentUser().getUid())
-                    .update("ubicacion_actual", punto)
+                    .update(updates)
                     .addOnFailureListener(e -> Log.e(TAG, "Error publicando ubicación en tiempo real", e));
         }
     }

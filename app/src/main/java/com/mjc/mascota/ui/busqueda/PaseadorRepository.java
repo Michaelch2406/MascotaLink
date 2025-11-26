@@ -129,26 +129,18 @@ public class PaseadorRepository {
         MutableLiveData<UiState<PaseadorSearchResult>> liveData = new MutableLiveData<>();
         liveData.setValue(new UiState.Loading<>());
 
-        // Obtener el usuario actual
         com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        Task<QuerySnapshot> favoritosTask = currentUser != null
+                ? db.collection("usuarios").document(currentUser.getUid()).collection("favoritos").get()
+                : Tasks.forResult(null);
 
-        // Tarea para obtener los favoritos del usuario
-        Task<QuerySnapshot> favoritosTask;
-        if (currentUser != null) {
-            favoritosTask = db.collection("usuarios").document(currentUser.getUid()).collection("favoritos").get();
-        } else {
-            favoritosTask = Tasks.forResult(null); // Tarea vacía si no hay usuario
-        }
-
-        // Tarea para la búsqueda de paseadores (lógica existente)
         Query firestoreQuery = db.collection("paseadores_search").whereEqualTo("activo", true);
         if (query != null && !query.isEmpty()) {
             String queryNormalizado = query.toLowerCase();
             firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
-                                           .whereLessThanOrEqualTo("nombre_lowercase", queryNormalizado + "\uf8ff");
+                    .whereLessThanOrEqualTo("nombre_lowercase", queryNormalizado + "\uf8ff");
         }
 
-        // Aplicar filtros del diálogo
         if (filtros != null) {
             if (filtros.getMinCalificacion() > 0) {
                 firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("calificacion_promedio", filtros.getMinCalificacion());
@@ -163,7 +155,6 @@ public class PaseadorRepository {
                 firestoreQuery = firestoreQuery.whereArrayContainsAny("tipos_perro_aceptados", filtros.getTamanosMascota());
             }
 
-            // Aplicar ordenamiento
             String orden = filtros.getOrden();
             if (orden != null) {
                 switch (orden) {
@@ -176,24 +167,24 @@ public class PaseadorRepository {
                     case "Calificación (mejor a peor)":
                         firestoreQuery = firestoreQuery.orderBy("calificacion_promedio", Query.Direction.DESCENDING);
                         break;
-                    default: // Por defecto, si no hay texto, ordenar por nombre
+                    default:
                         if (query == null || query.isEmpty()) {
-                           firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
+                            firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
                         }
                         break;
                 }
             }
-        } else if (query == null || query.isEmpty()){
-             firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
+        } else if (query == null || query.isEmpty()) {
+            firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
         }
 
         firestoreQuery = firestoreQuery.limit(15);
         if (lastVisible != null) {
             firestoreQuery = firestoreQuery.startAfter(lastVisible);
         }
+
         Task<QuerySnapshot> busquedaTask = firestoreQuery.get();
 
-        // Combinar ambas tareas
         Tasks.whenAllSuccess(favoritosTask, busquedaTask).addOnSuccessListener(results -> {
             QuerySnapshot favoritosSnapshot = (QuerySnapshot) results.get(0);
             QuerySnapshot busquedaSnapshot = (QuerySnapshot) results.get(1);
@@ -212,6 +203,8 @@ public class PaseadorRepository {
 
             DocumentSnapshot newLastVisible = busquedaSnapshot.getDocuments().get(busquedaSnapshot.size() - 1);
             ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+            java.util.Map<String, Integer> indexMap = new java.util.HashMap<>();
+            java.util.List<Task<?>> detailTasks = new ArrayList<>();
 
             for (DocumentSnapshot doc : busquedaSnapshot) {
                 PaseadorResultado resultado = new PaseadorResultado();
@@ -220,17 +213,60 @@ public class PaseadorRepository {
                 resultado.setFotoUrl(getStringSafely(doc, "foto_perfil", null));
                 resultado.setCalificacion(getDoubleSafely(doc, "calificacion_promedio", 0.0));
                 resultado.setTotalResenas(getLongSafely(doc, "num_servicios_completados", 0L).intValue());
-                resultado.setTarifaPorHora(getDoubleSafely(doc, "tarifa_por_hora", 0.0));
+
+                Double tarifa = getDoubleSafely(doc, "tarifa_por_hora", null);
+                if (tarifa == null) {
+                    tarifa = getDoubleSafely(doc, "precio_hora", 0.0);
+                }
+                resultado.setTarifaPorHora(tarifa != null ? tarifa : 0.0);
+
                 resultado.setAnosExperiencia(getLongSafely(doc, "anos_experiencia", 0L).intValue());
                 resultado.setZonaPrincipal("Sin zona especificada");
-                
-                // Marcar como favorito si el ID está en la lista
                 resultado.setFavorito(favoritosIds.contains(doc.getId()));
 
+                int idx = resultados.size();
+                indexMap.put(doc.getId(), idx);
                 resultados.add(resultado);
+
+                Task<DocumentSnapshot> paseadorTask = db.collection("paseadores").document(doc.getId()).get()
+                        .addOnSuccessListener(pDoc -> {
+                            Integer position = indexMap.get(doc.getId());
+                            if (position == null || position >= resultados.size()) return;
+                            PaseadorResultado res = resultados.get(position);
+                            if (res.getTarifaPorHora() == 0.0) {
+                                Double precioHora = pDoc.getDouble("precio_hora");
+                                if (precioHora != null) res.setTarifaPorHora(precioHora);
+                            }
+                            Double calif = pDoc.getDouble("calificacion_promedio");
+                            if (calif != null) res.setCalificacion(calif);
+                            Long total = pDoc.getLong("num_servicios_completados");
+                            if (total != null) res.setTotalResenas(total.intValue());
+                        });
+                detailTasks.add(paseadorTask);
+
+                Task<QuerySnapshot> zonasTask = db.collection("paseadores").document(doc.getId())
+                        .collection("zonas_servicio")
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener(zonas -> {
+                            Integer position = indexMap.get(doc.getId());
+                            if (position == null || position >= resultados.size()) return;
+                            if (zonas != null && !zonas.isEmpty()) {
+                                String direccion = zonas.getDocuments().get(0).getString("direccion");
+                                if (direccion != null && !direccion.isEmpty()) {
+                                    resultados.get(position).setZonaPrincipal(direccion);
+                                }
+                            }
+                        });
+                detailTasks.add(zonasTask);
             }
 
-            liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible)));
+            if (detailTasks.isEmpty()) {
+                liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible)));
+            } else {
+                Tasks.whenAllComplete(detailTasks).addOnCompleteListener(done ->
+                        liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible))));
+            }
 
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Error en la búsqueda de paseadores para query: " + query, e);

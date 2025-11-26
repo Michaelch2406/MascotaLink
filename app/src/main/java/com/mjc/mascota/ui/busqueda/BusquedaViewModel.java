@@ -72,6 +72,13 @@ public class BusquedaViewModel extends ViewModel {
         debounceHandler.removeCallbacks(debounceRunnable);
         debounceRunnable = () -> {
             String normalizedQuery = normalizarTexto(query);
+            if (normalizedQuery.isEmpty()) {
+                currentQuery = "";
+                lastVisibleDocument = null;
+                isLastPage = true;
+                _searchResults.setValue(new UiState.Empty<>());
+                return;
+            }
             executeSearch(normalizedQuery, false, _filtros.getValue());
         };
         debounceHandler.postDelayed(debounceRunnable, 300); // 300ms de delay

@@ -49,6 +49,9 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.firebase.geofire.GeoFireUtils;
+import com.firebase.geofire.GeoLocation;
+import com.firebase.geofire.GeoQueryBounds;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -68,6 +71,8 @@ import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.slider.RangeSlider;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.Query;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.view.DefaultClusterRenderer;
 import com.google.maps.android.ui.IconGenerator;
@@ -121,6 +126,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private final Handler mapDebounceHandler = new Handler(Looper.getMainLooper());
     private Runnable mapDebounceRunnable;
     private static final long MAP_DEBOUNCE_DELAY_MS = 1000;
+    private static final long ONLINE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutos para considerar "en línea"
 
     private float currentSearchRadiusKm = 10.0f; // Radio de búsqueda inicial
 
@@ -141,6 +147,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private RecyclerView recyclerViewResultados;
     private PaseadorResultadoAdapter resultadosAdapter;
     private AutoCompleteTextView searchAutocomplete;
+    private ArrayAdapter<String> searchHistoryAdapter;
     private SwipeRefreshLayout swipeRefreshLayout;
     private NestedScrollView contentScrollView;
     private BottomNavigationView bottomNav;
@@ -520,8 +527,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void setupSearchHistory() {
         Set<String> history = getSearchHistory();
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(history));
-        searchAutocomplete.setAdapter(adapter);
+        searchHistoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(history));
+        searchAutocomplete.setAdapter(searchHistoryAdapter);
     }
 
     private Set<String> getSearchHistory() {
@@ -541,11 +548,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 .putStringSet(SEARCH_HISTORY_KEY, newHistory)
                 .apply();
 
-        ArrayAdapter<String> adapter = (ArrayAdapter<String>) searchAutocomplete.getAdapter();
-        if (adapter != null) {
-            adapter.clear();
-            adapter.addAll(newHistory);
-            adapter.notifyDataSetChanged();
+        if (searchHistoryAdapter != null) {
+            searchHistoryAdapter.clear();
+            searchHistoryAdapter.addAll(newHistory);
+            searchHistoryAdapter.notifyDataSetChanged();
         }
     }
 
@@ -666,13 +672,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 showLoading();
             } else if (uiState instanceof UiState.Success) {
                 showSuccessSearchResults(((UiState.Success<java.util.List<PaseadorResultado>>) uiState).getData());
-            } else if (uiState instanceof UiState.Error) {
-                showError(((UiState.Error<java.util.List<PaseadorResultado>>) uiState).getMessage());
-            } else if (uiState instanceof UiState.Empty) {
-                showEmpty();
-            }
-        });
-    }
+              } else if (uiState instanceof UiState.Error) {
+                  showError(((UiState.Error<java.util.List<PaseadorResultado>>) uiState).getMessage());
+              } else if (uiState instanceof UiState.Empty) {
+                  if (isQueryEmpty()) {
+                      showBaseState();
+                  } else {
+                      showEmpty();
+                  }
+              }
+          });
+      }
 
     private void showSuccessSearchResults(java.util.List<PaseadorResultado> data) {
         progressBar.setVisibility(View.GONE);
@@ -709,13 +719,25 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         ((TextView) errorStateView.findViewById(R.id.error_message)).setText(message);
     }
 
-    private void showEmpty() {
-        progressBar.setVisibility(View.GONE);
-        contentScrollView.setVisibility(View.GONE);
-        recyclerViewResultados.setVisibility(View.GONE);
-        emptyStateView.setVisibility(View.VISIBLE);
-        errorStateView.setVisibility(View.GONE);
-    }
+      private void showEmpty() {
+          progressBar.setVisibility(View.GONE);
+          contentScrollView.setVisibility(View.GONE);
+          recyclerViewResultados.setVisibility(View.GONE);
+          emptyStateView.setVisibility(View.VISIBLE);
+          errorStateView.setVisibility(View.GONE);
+      }
+
+      private void showBaseState() {
+          progressBar.setVisibility(View.GONE);
+          contentScrollView.setVisibility(View.VISIBLE);
+          recyclerViewResultados.setVisibility(View.GONE);
+          emptyStateView.setVisibility(View.GONE);
+          errorStateView.setVisibility(View.GONE);
+      }
+
+      private boolean isQueryEmpty() {
+          return searchAutocomplete == null || searchAutocomplete.getText() == null || searchAutocomplete.getText().toString().trim().isEmpty();
+      }
 
     private void stopLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback);
@@ -948,53 +970,193 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void cargarPaseadoresCercanos(LatLng ubicacionUsuario, double radioKm) {
-        // Feedback visual (ProgressBar)
-        if (progressBar != null && (cachedPaseadorMarkers.isEmpty())) {
-             progressBar.setVisibility(View.VISIBLE);
+        if (ubicacionUsuario == null) {
+            Log.w(TAG, "cargarPaseadoresCercanos: ubicacionUsuario es null, se omite búsqueda geoespacial.");
+            return;
+        }
+        if (mMap == null || mClusterManager == null) {
+            Log.w(TAG, "cargarPaseadoresCercanos: mapa no inicializado.");
+            return;
         }
 
-        cachedPaseadorMarkers.clear();
-        mClusterManager.clearItems();
-        mMap.clear();
+        if (Double.isNaN(ubicacionUsuario.latitude) || Double.isNaN(ubicacionUsuario.longitude)
+                || (Math.abs(ubicacionUsuario.latitude) < 0.0001 && Math.abs(ubicacionUsuario.longitude) < 0.0001)) {
+            Log.w(TAG, "cargarPaseadoresCercanos: ubicacionUsuario inválida, se omite consulta.");
+            return;
+        }
 
-        // CAMBIO CLAVE: Consultar directamente a los USUARIOS (Paseadores)
-        // Filtros: Rol = PASEADOR y Activo = TRUE
-        FirebaseFirestore.getInstance().collection("usuarios")
+        if (progressBar != null && cachedPaseadorMarkers.isEmpty()) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+
+        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+        GeoLocation center = new GeoLocation(ubicacionUsuario.latitude, ubicacionUsuario.longitude);
+        double radiusMeters = radioKm * 1000d;
+        List<GeoQueryBounds> bounds = GeoFireUtils.getGeoHashQueryBounds(center, radiusMeters);
+        List<Task<QuerySnapshot>> geoTasks = new ArrayList<>();
+
+        for (GeoQueryBounds b : bounds) {
+            Query q = firestore.collection("usuarios")
+                    .whereEqualTo("rol", "PASEADOR")
+                    .whereEqualTo("activo", true)
+                    .orderBy("ubicacion_geohash")
+                    .startAt(b.startHash)
+                    .endAt(b.endHash)
+                    .limit(50);
+            geoTasks.add(q.get());
+        }
+
+        Tasks.whenAllComplete(geoTasks).addOnCompleteListener(all -> {
+            Set<String> seenPaseadores = new HashSet<>();
+            List<Task<PaseadorMarker>> paseadorMarkerTasks = new ArrayList<>();
+
+            for (Task<QuerySnapshot> task : geoTasks) {
+                if (!task.isSuccessful() || task.getResult() == null) {
+                    Log.w(TAG, "Geoquery parcial fallida o vacía", task.getException());
+                    continue;
+                }
+
+                for (DocumentSnapshot doc : task.getResult()) {
+                    if (!seenPaseadores.add(doc.getId())) continue; // evitar duplicados
+                    if (!isUsuarioEnLinea(doc)) continue;
+
+                    com.google.firebase.firestore.GeoPoint gp = doc.getGeoPoint("ubicacion_actual");
+                    String geohash = doc.getString("ubicacion_geohash");
+
+                    if (gp == null || geohash == null) {
+                        Log.w(TAG, "Documento sin ubicacion_actual/geohash: " + doc.getId());
+                        continue;
+                    }
+
+                    double distanceMeters = GeoFireUtils.getDistanceBetween(
+                            new GeoLocation(gp.getLatitude(), gp.getLongitude()), center);
+
+                    if (distanceMeters <= radiusMeters) {
+                        paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(doc, ubicacionUsuario));
+                    }
+                }
+            }
+
+            if (paseadorMarkerTasks.isEmpty()) {
+                cargarPaseadoresCercanosFallback(ubicacionUsuario);
+                return;
+            }
+
+            Tasks.whenAllSuccess(paseadorMarkerTasks)
+                    .addOnSuccessListener(list -> {
+                        int added = 0;
+                        for (Object obj : list) {
+                            if (obj instanceof PaseadorMarker) {
+                                PaseadorMarker paseadorMarker = (PaseadorMarker) obj;
+                                if (paseadorMarker != null) {
+                                    cachedPaseadorMarkers.put(paseadorMarker.getPaseadorId(), paseadorMarker);
+                                    mClusterManager.addItem(new PaseadorClusterItem(paseadorMarker));
+                                    added++;
+                                }
+                            }
+                        }
+                        if (added > 0) {
+                            mClusterManager.clearItems();
+                            List<PaseadorClusterItem> items = new ArrayList<>(cachedPaseadorMarkers.size());
+                            for (PaseadorMarker pm : cachedPaseadorMarkers.values()) {
+                                items.add(new PaseadorClusterItem(pm));
+                            }
+                            mClusterManager.addItems(items);
+                            if (mMap != null) mMap.clear();
+                            mClusterManager.cluster();
+                        } else {
+                            Log.w(TAG, "Geoquery sin marcadores válidos; se conservan los existentes.");
+                        }
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al construir PaseadorMarkers", e);
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    });
+        });
+    }
+
+    private void cargarPaseadoresCercanosFallback(LatLng ubicacionUsuario) {
+        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+        firestore.collection("usuarios")
                 .whereEqualTo("rol", "PASEADOR")
                 .whereEqualTo("activo", true)
+                .limit(50)
                 .get()
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        List<Task<PaseadorMarker>> paseadorMarkerTasks = new ArrayList<>();
-                        for (QueryDocumentSnapshot userDoc : task.getResult()) {
-                            // Construir marcador directamente desde el usuario
-                            paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(userDoc, ubicacionUsuario));
-                        }
+                    if (!task.isSuccessful() || task.getResult() == null) {
+                        Log.w(TAG, "Fallback: error al obtener usuarios", task.getException());
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        return;
+                    }
 
-                        Tasks.whenAllSuccess(paseadorMarkerTasks)
-                                .addOnSuccessListener(list -> {
-                                    for (Object obj : list) {
-                                        if (obj instanceof PaseadorMarker) {
-                                            PaseadorMarker paseadorMarker = (PaseadorMarker) obj;
-                                            if (paseadorMarker != null) {
-                                                cachedPaseadorMarkers.put(paseadorMarker.getPaseadorId(), paseadorMarker);
-                                                mClusterManager.addItem(new PaseadorClusterItem(paseadorMarker));
-                                            }
+                    List<Task<PaseadorMarker>> paseadorMarkerTasks = new ArrayList<>();
+                    for (DocumentSnapshot doc : task.getResult()) {
+                        if (!isUsuarioEnLinea(doc)) continue;
+                        paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(doc, ubicacionUsuario));
+                    }
+
+                    if (paseadorMarkerTasks.isEmpty()) {
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        Log.w(TAG, "Fallback sin marcadores; se conserva estado previo.");
+                        return;
+                    }
+
+                    Tasks.whenAllSuccess(paseadorMarkerTasks)
+                            .addOnSuccessListener(list -> {
+                                int added = 0;
+                                for (Object obj : list) {
+                                    if (obj instanceof PaseadorMarker) {
+                                        PaseadorMarker paseadorMarker = (PaseadorMarker) obj;
+                                        if (paseadorMarker != null) {
+                                            cachedPaseadorMarkers.put(paseadorMarker.getPaseadorId(), paseadorMarker);
+                                            mClusterManager.addItem(new PaseadorClusterItem(paseadorMarker));
+                                            added++;
                                         }
                                     }
+                                }
+                                if (added > 0) {
+                                    mClusterManager.clearItems();
+                                    List<PaseadorClusterItem> items = new ArrayList<>(cachedPaseadorMarkers.size());
+                                    for (PaseadorMarker pm : cachedPaseadorMarkers.values()) {
+                                        items.add(new PaseadorClusterItem(pm));
+                                    }
+                                    mClusterManager.addItems(items);
+                                    if (mMap != null) mMap.clear();
                                     mClusterManager.cluster();
-                                    if (progressBar != null) progressBar.setVisibility(View.GONE);
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e(TAG, "Error al construir PaseadorMarkers: " + e.getMessage());
-                                    if (progressBar != null) progressBar.setVisibility(View.GONE);
-                                });
-
-                    } else {
-                        Log.e(TAG, "Error getting users: ", task.getException());
-                        if (progressBar != null) progressBar.setVisibility(View.GONE);
-                    }
+                                } else {
+                                    Log.w(TAG, "Fallback sin nuevos marcadores; se conserva estado previo.");
+                                }
+                                if (progressBar != null) progressBar.setVisibility(View.GONE);
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Fallback: error construyendo PaseadorMarkers", e);
+                                if (progressBar != null) progressBar.setVisibility(View.GONE);
+                            });
                 });
+    }
+
+    private boolean isUsuarioEnLinea(DocumentSnapshot doc) {
+        try {
+            Boolean enLinea = doc.getBoolean("en_linea");
+            Timestamp lastSeen = doc.getTimestamp("last_seen");
+            long now = System.currentTimeMillis();
+            boolean reciente = lastSeen != null && (now - lastSeen.toDate().getTime()) <= ONLINE_TIMEOUT_MS;
+
+            // Si ambos faltan, asumir offline para no mostrar presencia falsa
+            if (enLinea == null && lastSeen == null) {
+                return false;
+            }
+            // Si hay last_seen reciente, mostrar aunque en_linea sea null/false
+            if (reciente) {
+                return true;
+            }
+            // Si en_linea es true, mostrar
+            return Boolean.TRUE.equals(enLinea);
+        } catch (Exception e) {
+            Log.w(TAG, "Error evaluando estado en línea", e);
+            return false;
+        }
     }
 
     // Método renombrado y adaptado
@@ -1018,12 +1180,21 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         if (task.isSuccessful() && !task.getResult().isEmpty()) {
                             DocumentSnapshot zonaDoc = task.getResult().getDocuments().get(0);
                             com.google.firebase.firestore.GeoPoint zonaGp = zonaDoc.getGeoPoint("ubicacion_centro");
+                            if (zonaGp == null) {
+                                zonaGp = zonaDoc.getGeoPoint("centro"); // compatibilidad con tu campo 'centro'
+                            }
+                            if (zonaGp == null) {
+                                Double lat = zonaDoc.getDouble("latitud");
+                                Double lng = zonaDoc.getDouble("longitud");
+                                if (lat != null && lng != null) {
+                                    zonaGp = new com.google.firebase.firestore.GeoPoint(lat, lng);
+                                }
+                            }
                             if (zonaGp != null) {
                                 LatLng ubicacionZona = new LatLng(zonaGp.getLatitude(), zonaGp.getLongitude());
                                 return crearMarcador(userId, userDoc, ubicacionZona, ubicacionUsuario, false);
                             }
                         }
-                        // Si no tiene ubicación real ni zonas, no lo mostramos en el mapa
                         return Tasks.forResult(null);
                     });
         }
@@ -1048,22 +1219,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         
                         // Chain 1: Check Availability (Schedule)
                         return verificarDisponibilidadActual(userId).continueWithTask(task2 -> {
-                            boolean disponible = task2.isSuccessful() && task2.getResult();
+                            boolean disponible = !task2.isSuccessful() || task2.getResult(); // Si falla o no hay datos, considerar disponible
                             
-                            // Chain 2: Check Active Walks (Real-time "Busy" status)
-                            return FirebaseFirestore.getInstance().collection("reservas")
-                                    .whereEqualTo("id_paseador", FirebaseFirestore.getInstance().collection("usuarios").document(userId))
-                                    .whereEqualTo("estado", "EN_CURSO")
-                                    .limit(1)
-                                    .get()
-                                    .continueWith(task3 -> {
-                                        boolean enPaseo = false;
-                                        if (task3.isSuccessful() && !task3.getResult().isEmpty()) {
-                                            enPaseo = true;
-                                        }
-                                        
-                                        return new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm, enPaseo);
-                                    });
+                            // Chain 2: Busy status (omit reservation query to evitar PERMISSION_DENIED; default false)
+                            boolean enPaseo = false;
+                            return Tasks.forResult(new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm, enPaseo));
                         });
                     }
                 }
@@ -1118,22 +1278,23 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         Log.d(TAG, String.format("Verificando disponibilidad para %s a las %02d:%02d",
                 diaActual, currentHour, currentMinute));
 
+        // Nuevo esquema: documentos con campos {activo: bool, dias: [array], hora_inicio, hora_fin}
         return FirebaseFirestore.getInstance()
                 .collection("paseadores").document(paseadorId)
                 .collection("disponibilidad")
-                .whereEqualTo("dia_semana", diaActual)
                 .whereEqualTo("activo", true)
+                .whereArrayContains("dias", diaActual)
                 .get()
                 .continueWith(task -> {
                     if (!task.isSuccessful()) {
                         Log.e(TAG, "Error consultando disponibilidad", task.getException());
-                        return false;
+                        return true; // No bloquear si hay error
                     }
 
                     QuerySnapshot querySnapshot = task.getResult();
                     if (querySnapshot == null || querySnapshot.isEmpty()) {
-                        Log.d(TAG, "No hay disponibilidad configurada para " + diaActual);
-                        return false;
+                        Log.d(TAG, "No hay disponibilidad configurada para " + diaActual + ". Se considera disponible.");
+                        return true; // No ocultar por falta de configuración
                     }
 
                     for (QueryDocumentSnapshot doc : querySnapshot) {
@@ -1174,7 +1335,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     }
 
                     Log.d(TAG, "✗ Paseador no disponible en este horario");
-                    return false; // No está disponible en ninguna franja del día
+                    return false; // No está disponible en las franjas configuradas
                 });
     }
 

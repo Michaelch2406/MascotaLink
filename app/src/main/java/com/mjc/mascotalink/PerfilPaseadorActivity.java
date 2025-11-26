@@ -18,6 +18,7 @@ import android.app.AlertDialog;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.location.Location;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -55,6 +56,14 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.firebase.geofire.GeoFireUtils;
+import com.firebase.geofire.GeoLocation;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.mjc.mascotalink.security.CredentialManager;
@@ -123,6 +132,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private BottomNavigationView bottomNav;
     private String bottomNavRole = "PASEADOR";
     private int bottomNavSelectedItem = R.id.menu_perfil;
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationRequest profileLocationRequest;
+    private LocationCallback profileLocationCallback;
+    private Location lastProfileLocation;
+    private long lastProfileLocationUpdateMs = 0L;
+    private static final long PROFILE_MIN_UPDATE_MS = 30_000; // 30s
+    private static final float PROFILE_MIN_DISTANCE_M = 50f; // 50m
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 2104;
+    private boolean isOwnProfile = false;
 
     // Gallery Preview
     private RecyclerView rvGalleryPreview;
@@ -158,6 +176,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         initViews();
         
@@ -526,12 +545,23 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 Toast.makeText(this, "Las notificaciones están deshabilitadas.", Toast.LENGTH_LONG).show();
             }
         }
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startProfileLocationUpdates();
+                ensureLocationForProfile();
+            } else {
+                Log.w(TAG, "Permiso de ubicación denegado en perfil; no se actualizará ubicacion_actual.");
+            }
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         setupBottomNavigation();
+        updatePresence(true);
+        ensureLocationForProfile();
+        startProfileLocationUpdates();
     }
 
     @Override
@@ -548,10 +578,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             mAuth.removeAuthStateListener(mAuthListener);
         }
         detachDataListeners();
+        updatePresence(false);
+        stopProfileLocationUpdates();
     }
 
     private void setupRoleBasedUI() {
-        boolean isOwnProfile = paseadorId != null && paseadorId.equals(currentUserId);
+        isOwnProfile = paseadorId != null && paseadorId.equals(currentUserId);
 
         if (isOwnProfile) {
             toolbarTitle.setText("Perfil");
@@ -653,6 +685,154 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 });
             }
         });
+    }
+
+    private void updatePresence(boolean online) {
+        if (currentUserId == null) return;
+        Map<String, Object> presence = new HashMap<>();
+        presence.put("en_linea", online);
+        presence.put("last_seen", FieldValue.serverTimestamp());
+        db.collection("usuarios").document(currentUserId)
+                .update(presence)
+                .addOnFailureListener(e -> Log.w(TAG, "No se pudo actualizar presencia", e));
+    }
+
+    /**
+     * Si al entrar al perfil no existe ubicacion_actual / geohash, intenta rellenarlo con la última ubicación conocida.
+     * No solicita permisos extra: requiere que ya haya permiso de ubicación concedido.
+     */
+    private void ensureLocationForProfile() {
+        if (paseadorId == null) return;
+        db.collection("usuarios").document(paseadorId).get()
+                .addOnSuccessListener(doc -> {
+                    boolean faltaUbicacion = doc == null || doc.getGeoPoint("ubicacion_actual") == null || doc.getString("ubicacion_geohash") == null;
+                    if (!faltaUbicacion) return;
+
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        Log.w(TAG, "Sin permisos de ubicación; no se puede inicializar ubicacion_actual.");
+                        tryZoneFallback();
+                        return;
+                    }
+
+                    fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+                        if (location == null) {
+                            Log.w(TAG, "LastLocation es null; intentando fallback por zonas.");
+                            tryZoneFallback();
+                            return;
+                        }
+                        if (isInvalidLocation(location)) {
+                            Log.w(TAG, "LastLocation inválida; intentando fallback por zonas.");
+                            tryZoneFallback();
+                            return;
+                        }
+                        GeoPoint punto = new GeoPoint(location.getLatitude(), location.getLongitude());
+                        escribirUbicacionPerfil(punto);
+                    }).addOnFailureListener(e -> {
+                        Log.w(TAG, "Error obteniendo lastLocation", e);
+                        tryZoneFallback();
+                    });
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "No se pudo leer usuario para validar ubicacion", e));
+    }
+
+    private void tryZoneFallback() {
+        db.collection("paseadores").document(paseadorId)
+                .collection("zonas_servicio")
+                .limit(1)
+                .get()
+                .addOnSuccessListener(zonas -> {
+                    if (zonas == null || zonas.isEmpty()) {
+                        Log.w(TAG, "Sin zonas_servicio para fallback de ubicacion.");
+                        return;
+                    }
+                    DocumentSnapshot zona = zonas.getDocuments().get(0);
+                    GeoPoint centro = zona.getGeoPoint("ubicacion_centro");
+                    if (centro == null) {
+                        Double lat = zona.getDouble("latitud");
+                        Double lng = zona.getDouble("longitud");
+                        if (lat != null && lng != null) {
+                            centro = new GeoPoint(lat, lng);
+                        }
+                    }
+                    if (centro != null) {
+                        escribirUbicacionPerfil(centro);
+                    } else {
+                        Log.w(TAG, "Zona sin centro usable; no se actualiza ubicacion.");
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Error leyendo zonas_servicio para fallback", e));
+    }
+
+    private void escribirUbicacionPerfil(GeoPoint punto) {
+        if (punto == null) return;
+        if (isInvalidGeoPoint(punto)) {
+            Log.w(TAG, "GeoPoint inválido; no se escribe ubicacion_actual.");
+            return;
+        }
+        String geohash = GeoFireUtils.getGeoHashForLocation(new GeoLocation(punto.getLatitude(), punto.getLongitude()));
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("ubicacion_actual", punto);
+        updates.put("ubicacion_geohash", geohash);
+        updates.put("last_seen", FieldValue.serverTimestamp());
+        updates.put("en_linea", true);
+        db.collection("usuarios").document(paseadorId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "ubicacion_actual inicializada/actualizada desde perfil."))
+                .addOnFailureListener(e -> Log.w(TAG, "No se pudo guardar ubicacion_actual", e));
+    }
+
+    private void startProfileLocationUpdates() {
+        if (!isOwnProfile) return;
+        if (fusedLocationClient == null) return;
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+            return;
+        }
+
+        if (profileLocationRequest == null) {
+            profileLocationRequest = new LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, PROFILE_MIN_UPDATE_MS)
+                    .setMinUpdateDistanceMeters(PROFILE_MIN_DISTANCE_M)
+                    .build();
+        }
+
+        profileLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                for (Location loc : locationResult.getLocations()) {
+                        if (loc == null) continue;
+                    if (isInvalidLocation(loc)) continue;
+                    long now = System.currentTimeMillis();
+                    float shouldUpdateByDistance = lastProfileLocation == null ? Float.MAX_VALUE : lastProfileLocation.distanceTo(loc);
+                    if (lastProfileLocation == null || (now - lastProfileLocationUpdateMs) >= PROFILE_MIN_UPDATE_MS || shouldUpdateByDistance >= PROFILE_MIN_DISTANCE_M) {
+                        lastProfileLocationUpdateMs = now;
+                        lastProfileLocation = loc;
+                        GeoPoint punto = new GeoPoint(loc.getLatitude(), loc.getLongitude());
+                        escribirUbicacionPerfil(punto);
+                    }
+                }
+            }
+        };
+
+        fusedLocationClient.requestLocationUpdates(profileLocationRequest, profileLocationCallback, getMainLooper());
+    }
+
+    private void stopProfileLocationUpdates() {
+        if (fusedLocationClient != null && profileLocationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(profileLocationCallback);
+        }
+    }
+
+    private boolean isInvalidLocation(Location loc) {
+        return loc == null || Double.isNaN(loc.getLatitude()) || Double.isNaN(loc.getLongitude())
+                || (Math.abs(loc.getLatitude()) < 0.0001 && Math.abs(loc.getLongitude()) < 0.0001);
+    }
+
+    private boolean isInvalidGeoPoint(GeoPoint gp) {
+        return gp == null || Double.isNaN(gp.getLatitude()) || Double.isNaN(gp.getLongitude())
+                || (Math.abs(gp.getLatitude()) < 0.0001 && Math.abs(gp.getLongitude()) < 0.0001);
     }
 
     private void attachDataListeners() {
