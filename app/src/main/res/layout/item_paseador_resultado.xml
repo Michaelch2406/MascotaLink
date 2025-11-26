@@ -25,17 +25,15 @@
 
         <!-- Botón de Favorito -->
         <ImageButton
-            android:id="@+id/btn_favorito_resultado"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Marcar como favorito"
-            android:src="@drawable/ic_corazon" 
-            app:tint="@color/colorError"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <!-- Nombre del Paseador -->
+                                    android:id="@+id/btn_favorito_resultado"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:contentDescription="Marcar como favorito"
+                                    android:src="@drawable/ic_corazon"
+                                    app:tint="@color/colorError"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintTop_toTopOf="parent" />        <!-- Nombre del Paseador -->
         <TextView
             android:id="@+id/paseador_nombre"
             android:layout_width="0dp"
