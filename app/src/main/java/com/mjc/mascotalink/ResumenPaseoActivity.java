@@ -1,27 +1,23 @@
 package com.mjc.mascotalink;
 
 import android.content.Intent;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ImageView;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
@@ -29,13 +25,10 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
-import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.Transaction;
-import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -53,18 +46,14 @@ public class ResumenPaseoActivity extends AppCompatActivity {
     private String currentUserRole; // "DUEÑO" or "PASEADOR"
 
     // UI Components
-    private TextView tvFechaFinalizacion, tvDuracionReal, tvDistancia, tvCostoTotal;
-    private TextView tvLabelRol, tvNombreOtro, tvTituloCalificacion, tvYaCalificado;
-    private ShapeableImageView ivPerfilOtro;
-    private ImageView ivCheckSuccess; // Added reference
-    private RecyclerView rvFotosResumen;
-    private FotosPaseoAdapter fotosAdapter;
+    private TextView tvFechaPaseo, tvDuracionReal, tvCostoFinal, tvDistanciaRecorrida;
+    private TextView tvTituloCalificacion;
     private View cardCalificacion;
     private RatingBar ratingBar;
     private TextInputEditText etComentario;
     private TextInputLayout tilComentario;
     private Button btnEnviarCalificacion;
-    private View llDistancia;
+    private Button btnVolverInicio;
 
     // Data
     private String idPaseador;
@@ -94,73 +83,35 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         }
 
         initViews();
-        setupToolbar();
         determineRoleAndLoadData();
-        animateSuccessIcon(); // Start animation
     }
 
     private void initViews() {
-        tvFechaFinalizacion = findViewById(R.id.tv_fecha_finalizacion);
+        tvFechaPaseo = findViewById(R.id.tv_fecha_paseo);
         tvDuracionReal = findViewById(R.id.tv_duracion_real);
-        tvDistancia = findViewById(R.id.tv_distancia);
-        tvCostoTotal = findViewById(R.id.tv_costo_total);
-        tvLabelRol = findViewById(R.id.tv_label_rol);
-        tvNombreOtro = findViewById(R.id.tv_nombre_otro);
-        ivPerfilOtro = findViewById(R.id.iv_perfil_otro);
-        ivCheckSuccess = findViewById(R.id.iv_check_success); // Bind view
-        tvTituloCalificacion = findViewById(R.id.tv_titulo_calificacion);
-        tvYaCalificado = findViewById(R.id.tv_ya_calificado);
+        tvDistanciaRecorrida = findViewById(R.id.tv_distancia_recorrida);
+        tvCostoFinal = findViewById(R.id.tv_costo_final);
         
-        rvFotosResumen = findViewById(R.id.rv_fotos_resumen);
-        rvFotosResumen.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
-        fotosAdapter = new FotosPaseoAdapter(this, new FotosPaseoAdapter.OnFotoInteractionListener() {
-            @Override
-            public void onFotoClick(String url) {
-                // Optional: Show full screen
-            }
-            @Override
-            public void onFotoLongClick(String url) {}
-        });
-        rvFotosResumen.setAdapter(fotosAdapter);
-
+        // Calificación
         cardCalificacion = findViewById(R.id.card_calificacion);
+        tvTituloCalificacion = findViewById(R.id.tv_titulo_calificacion);
         ratingBar = findViewById(R.id.rating_bar);
         etComentario = findViewById(R.id.et_comentario);
         tilComentario = findViewById(R.id.til_comentario);
         btnEnviarCalificacion = findViewById(R.id.btn_enviar_calificacion);
-        llDistancia = findViewById(R.id.ll_distancia);
+        btnVolverInicio = findViewById(R.id.btn_volver_inicio);
 
         btnEnviarCalificacion.setOnClickListener(v -> submitRating());
-    }
-
-    private void animateSuccessIcon() {
-        if (ivCheckSuccess == null) return;
         
-        // Scale Animation (Pop effect)
-        ivCheckSuccess.setScaleX(0f);
-        ivCheckSuccess.setScaleY(0f);
-        
-        ivCheckSuccess.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(500)
-            .setInterpolator(new android.view.animation.OvershootInterpolator())
-            .withEndAction(() -> {
-                // Shake Animation
-                android.animation.ObjectAnimator rotate = android.animation.ObjectAnimator.ofFloat(ivCheckSuccess, "rotation", 0f, -20f, 20f, -20f, 20f, 0f);
-                rotate.setDuration(500);
-                rotate.start();
-            })
-            .start();
-    }
-
-    private void setupToolbar() {
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> checkUnsavedRatingAndExit());
+        btnVolverInicio.setOnClickListener(v -> {
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+        });
     }
 
     private void determineRoleAndLoadData() {
-        // Fetch user role first
         db.collection("usuarios").document(currentUserId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
@@ -192,11 +143,12 @@ public class ResumenPaseoActivity extends AppCompatActivity {
     }
 
     private void populateUI(DocumentSnapshot doc) {
-        // 1. Dates
+        // 1. Fecha
         Date fechaFin = doc.getDate("fecha_fin_paseo");
+        if (fechaFin == null) fechaFin = doc.getDate("fecha"); // Fallback
         if (fechaFin != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM, h:mm a", new Locale("es", "ES"));
-            tvFechaFinalizacion.setText(sdf.format(fechaFin));
+            tvFechaPaseo.setText(sdf.format(fechaFin));
         }
 
         // 2. Duration
@@ -205,57 +157,45 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         if (duracion != null) {
             tvDuracionReal.setText(duracion + " min");
         }
+        
+        // 3. Distancia (Calculada desde el array de ubicaciones)
+        List<GeoPoint> ubicaciones = (List<GeoPoint>) doc.get("ubicaciones");
+        double distanciaMeters = 0;
 
-        // 3. Distance (Placeholder or Actual)
-        // In a real app, we would sum distances from 'ubicaciones' array
-        llDistancia.setVisibility(View.GONE); // Hide for now unless we calculate it
+        if (ubicaciones != null && ubicaciones.size() > 1) {
+            for (int i = 0; i < ubicaciones.size() - 1; i++) {
+                GeoPoint p1 = ubicaciones.get(i);
+                GeoPoint p2 = ubicaciones.get(i + 1);
+                
+                float[] results = new float[1];
+                Location.distanceBetween(
+                    p1.getLatitude(), p1.getLongitude(),
+                    p2.getLatitude(), p2.getLongitude(),
+                    results
+                );
+                distanciaMeters += results[0];
+            }
+        }
+        
+        if (distanciaMeters > 0) {
+            double distanciaKm = distanciaMeters / 1000.0;
+            tvDistanciaRecorrida.setText(String.format(Locale.US, "%.2f km", distanciaKm));
+        } else {
+            tvDistanciaRecorrida.setText("0.0 km");
+        }
 
         // 4. Cost
         Double costo = doc.getDouble("costo_total");
         if (costo != null) {
-            tvCostoTotal.setText(String.format(Locale.US, "$%.2f", costo));
+            tvCostoFinal.setText(String.format(Locale.US, "$%.2f", costo));
         }
 
-        // 5. Counterpart Info
+        // 5. IDs for rating logic
         DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
         DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
 
         if (duenoRef != null) idDueno = duenoRef.getId();
         if (paseadorRef != null) idPaseador = paseadorRef.getId();
-
-        if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
-            // I am Owner, show Walker info
-            tvLabelRol.setText("Paseador");
-            loadCounterpartProfile(paseadorRef, "paseadores");
-        } else {
-            // I am Walker, show Owner info
-            tvLabelRol.setText("Dueño");
-            loadCounterpartProfile(duenoRef, "duenos");
-        }
-
-        // 6. Photos
-        List<String> fotos = (List<String>) doc.get("fotos_paseo");
-        if (fotos != null && !fotos.isEmpty()) {
-            findViewById(R.id.tv_label_fotos).setVisibility(View.VISIBLE);
-            rvFotosResumen.setVisibility(View.VISIBLE);
-            fotosAdapter.submitList(fotos);
-        }
-    }
-
-    private void loadCounterpartProfile(DocumentReference ref, String collection) {
-        if (ref == null) return;
-        ref.get().addOnSuccessListener(doc -> {
-            if (doc.exists()) {
-                String nombre = doc.getString("nombre_display");
-                if (nombre == null) nombre = doc.getString("nombre");
-                tvNombreOtro.setText(nombre != null ? nombre : "Usuario");
-
-                String fotoUrl = doc.getString("foto_perfil");
-                if (fotoUrl != null && !fotoUrl.isEmpty()) {
-                    Glide.with(this).load(fotoUrl).into(ivPerfilOtro);
-                }
-            }
-        });
     }
 
     private void checkIfAlreadyRated() {
@@ -268,14 +208,10 @@ public class ResumenPaseoActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!querySnapshot.isEmpty()) {
-                        showRatedState();
+                        // Already rated, hide card or show "Thanks"
+                        cardCalificacion.setVisibility(View.GONE);
                     }
                 });
-    }
-
-    private void showRatedState() {
-        cardCalificacion.setVisibility(View.GONE);
-        tvYaCalificado.setVisibility(View.VISIBLE);
     }
 
     private void submitRating() {
@@ -286,7 +222,6 @@ public class ResumenPaseoActivity extends AppCompatActivity {
             Toast.makeText(this, "Por favor selecciona al menos media estrella", Toast.LENGTH_SHORT).show();
             return;
         }
-        // Comentario opcional: Solo validar longitud si no está vacío
         if (!comment.isEmpty() && comment.length() < 10) {
             tilComentario.setError("Si dejas un comentario, debe tener al menos 10 caracteres");
             return;
@@ -298,11 +233,9 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         btnEnviarCalificacion.setEnabled(false);
         btnEnviarCalificacion.setText("Enviando...");
 
-        // Prepare Data
         String targetCollection = "DUEÑO".equalsIgnoreCase(currentUserRole) ? "resenas_paseadores" : "resenas_duenos";
         String targetUserId = "DUEÑO".equalsIgnoreCase(currentUserRole) ? idPaseador : idDueno;
         
-        // Note: If structure is Root Collection -> Document (Review)
         Map<String, Object> reviewData = new HashMap<>();
         reviewData.put("autorId", currentUserId);
         reviewData.put("reservaId", reservaId);
@@ -311,25 +244,21 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         reviewData.put("timestamp", FieldValue.serverTimestamp());
         
         if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
-            reviewData.put("paseadorId", idPaseador); // Target
-            reviewData.put("duenoId", currentUserId); // Author
+            reviewData.put("paseadorId", idPaseador);
+            reviewData.put("duenoId", currentUserId);
         } else {
-            reviewData.put("duenoId", idDueno); // Target
-            reviewData.put("paseadorId", currentUserId); // Author
+            reviewData.put("duenoId", idDueno);
+            reviewData.put("paseadorId", currentUserId);
         }
 
-        // Transaction to ensure atomicity (Add Review + Update Average)
         db.runTransaction((Transaction.Function<Void>) transaction -> {
-            // 1. Reference to new review doc
             DocumentReference newReviewRef = db.collection(targetCollection).document();
             
-            // 2. Reference to target user profile
             String profileCollection = "DUEÑO".equalsIgnoreCase(currentUserRole) ? "paseadores" : "duenos";
             DocumentReference profileRef = db.collection(profileCollection).document(targetUserId);
             
             DocumentSnapshot profileSnap = transaction.get(profileRef);
             
-            // 3. Calculate new average
             double currentAvg = 0.0;
             long totalReviews = 0;
             
@@ -340,12 +269,10 @@ public class ResumenPaseoActivity extends AppCompatActivity {
                 if (totalObj != null) totalReviews = totalObj;
             }
 
-            // Math: NewAvg = ((OldAvg * Total) + NewRating) / (Total + 1)
             double newTotalScore = (currentAvg * totalReviews) + stars;
             long newTotalReviews = totalReviews + 1;
             double newAvg = newTotalScore / newTotalReviews;
 
-            // 4. Writes
             transaction.set(newReviewRef, reviewData);
             transaction.update(profileRef, "calificacion_promedio", newAvg);
             transaction.update(profileRef, "total_resenas", newTotalReviews);
@@ -354,13 +281,18 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         }).addOnSuccessListener(aVoid -> {
             isRatingSubmitting = false;
             Toast.makeText(this, "¡Gracias por tu feedback!", Toast.LENGTH_LONG).show();
-            showRatedState();
+            cardCalificacion.setVisibility(View.GONE);
             
-            // Send Notification (Simulated / Placeholder)
-            sendNotificationToCounterpart();
-            
-            // Cierre automático al completar
-            new Handler().postDelayed(this::finish, 1500);
+            new AlertDialog.Builder(this)
+                .setTitle("¡Calificación Enviada!")
+                .setMessage("Tu opinión ayuda a mejorar la comunidad.")
+                .setPositiveButton("Ir al Inicio", (dialog, which) -> {
+                    startActivity(new Intent(this, MainActivity.class));
+                    finish();
+                })
+                .setCancelable(false)
+                .show();
+
         }).addOnFailureListener(e -> {
             isRatingSubmitting = false;
             btnEnviarCalificacion.setEnabled(true);
@@ -370,28 +302,22 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         });
     }
 
-    private void sendNotificationToCounterpart() {
-        // In a real app with Cloud Functions, this is handled by a trigger on the 'reseñas' collection.
-        // For this prototype, we will just log it or write to a 'notificaciones' collection if it existed.
-        // Since we don't have a Notification Service implemented in this turn, we skip the actual push.
-        Log.d(TAG, "Notification would be sent to user: " + ("DUEÑO".equalsIgnoreCase(currentUserRole) ? idPaseador : idDueno));
-    }
-
-    private void checkUnsavedRatingAndExit() {
-        if (cardCalificacion.getVisibility() == View.VISIBLE && ratingBar.getRating() > 0) {
-            new AlertDialog.Builder(this)
-                    .setTitle("¿Salir sin calificar?")
-                    .setMessage("Aún no has enviado tu calificación. ¿Estás seguro de que quieres salir?")
-                    .setPositiveButton("Salir", (dialog, which) -> finish())
-                    .setNegativeButton("Cancelar", null)
-                    .show();
-        } else {
-            finish();
-        }
-    }
-
     @Override
     public void onBackPressed() {
-        checkUnsavedRatingAndExit();
+        // Check if user rated
+        if (cardCalificacion.getVisibility() == View.VISIBLE) {
+             new AlertDialog.Builder(this)
+                .setTitle("¿Salir sin calificar?")
+                .setMessage("Tu opinión es importante. ¿Seguro que quieres salir?")
+                .setPositiveButton("Salir", (dialog, which) -> {
+                    startActivity(new Intent(this, MainActivity.class));
+                    finish();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+        } else {
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+        }
     }
 }

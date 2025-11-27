@@ -1,352 +1,277 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
-    tools:context=".ResumenPaseoActivity">
+    android:background="#F9FAFB"
+    android:fillViewport="true">
 
-    <com.google.android.material.appbar.AppBarLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
-        app:elevation="0dp">
+        android:orientation="vertical"
+        android:padding="24dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:title="Resumen del Paseo"
-            app:titleCentered="true" />
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
+        <!-- Header de Éxito -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:gravity="center"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="32dp">
 
-            <!-- Header Success -->
+            <FrameLayout
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:background="@drawable/bg_avatar_circle"
+                android:backgroundTint="#E8F5E9">
+                
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_check_circle"
+                    android:layout_gravity="center"
+                    app:tint="#4CAF50"/>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="¡Paseo Completado!"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:layout_marginTop="16dp"/>
+
+            <TextView
+                android:id="@+id/tv_fecha_paseo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="24 Oct, 2023 • 10:00 AM"
+                android:textColor="@color/secondary"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Tarjeta de Detalles -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/white"
+            android:layout_marginBottom="24dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center"
                 android:orientation="vertical"
-                android:paddingBottom="16dp">
-
-                <ImageView
-                    android:id="@+id/iv_check_success"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:src="@drawable/ic_check_circle"
-                    app:tint="@color/green_success" />
+                android:padding="24dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="¡Paseo Completado!"
-                    android:textColor="@color/green_success"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_fecha_finalizacion"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="25 de Noviembre, 10:30 AM"
-                    android:textColor="@color/gray_text" />
-
-            </LinearLayout>
-
-            <!-- Resumen Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/gray_border"
-                app:strokeWidth="1dp">
+                    android:text="Resumen del Servicio"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/gray_dark"
+                    android:layout_marginBottom="20dp"/>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Detalles del Servicio"
-                        android:textColor="@color/black"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="8dp"
-                        android:background="@color/gray_border" />
-
-                    <!-- Duración -->
+                    <!-- Tiempo -->
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:orientation="horizontal">
-
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        
                         <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:src="@drawable/ic_access_time"
-                            app:tint="@color/gray_text" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="Duración Real"
-                            android:textColor="@color/gray_text" />
-
+                            app:tint="@color/blue_primary"
+                            android:layout_marginBottom="8dp"/>
+                        
                         <TextView
                             android:id="@+id/tv_duracion_real"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="45 min"
-                            android:textColor="@color/black"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <!-- Distancia (Opcional) -->
-                    <LinearLayout
-                        android:id="@+id/ll_distancia"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_map"
-                            app:tint="@color/gray_text" />
-
+                            android:text="60 min"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/black"/>
+                            
                         <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="Distancia"
-                            android:textColor="@color/gray_text" />
-
-                        <TextView
-                            android:id="@+id/tv_distancia"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="2.3 km"
-                            android:textColor="@color/black"
-                            android:textStyle="bold" />
+                            android:text="Duración"
+                            android:textSize="12sp"
+                            android:textColor="@color/secondary"/>
                     </LinearLayout>
 
-                    <!-- Costo -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="40dp"
+                        android:background="#F0F0F0"
+                        android:layout_gravity="center"/>
 
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_attach_money"
-                            app:tint="@color/gray_text" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="Total Pagado"
-                            android:textColor="@color/gray_text" />
-
-                        <TextView
-                            android:id="@+id/tv_costo_total"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="$15.00"
-                            android:textColor="@color/green_success"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Counterpart Info Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/gray_border"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="12dp">
-
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:id="@+id/iv_perfil_otro"
-                        android:layout_width="50dp"
-                        android:layout_height="50dp"
-                        android:scaleType="centerCrop"
-                        android:src="@drawable/ic_user_placeholder"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle" />
-
+                    <!-- Distancia -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
                         android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_map"
+                            app:tint="@color/blue_primary"
+                            android:layout_marginBottom="8dp"/>
 
                         <TextView
-                            android:id="@+id/tv_label_rol"
+                            android:id="@+id/tv_distancia_recorrida"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Paseador"
-                            android:textColor="@color/gray_text"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:id="@+id/tv_nombre_otro"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Nombre Usuario"
-                            android:textColor="@color/black"
+                            android:text="0.0 km"
                             android:textSize="16sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:textColor="@color/black"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Distancia"
+                            android:textSize="12sp"
+                            android:textColor="@color/secondary"/>
                     </LinearLayout>
 
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="40dp"
+                        android:background="#F0F0F0"
+                        android:layout_gravity="center"/>
+
+                    <!-- Costo -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_attach_money"
+                            app:tint="#4CAF50"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:id="@+id/tv_costo_final"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="$15.00"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/black"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Costo Total"
+                            android:textSize="12sp"
+                            android:textColor="@color/secondary"/>
+                    </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <!-- Galería de Fotos -->
-            <TextView
-                android:id="@+id/tv_label_fotos"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Fotos del Paseo"
-                android:textColor="@color/black"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
+        <!-- Sección Calificación (Solo para Dueños, o visible si ya calificó) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_calificacion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/white">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_fotos_resumen"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal"
-                android:visibility="gone"
-                tools:listitem="@layout/item_foto_paseo" />
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:gravity="center">
 
-            <!-- Sección de Calificación -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_calificacion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                app:cardBackgroundColor="@color/light_blue_bg"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/blue_primary"
-                app:strokeWidth="1dp">
+                <TextView
+                    android:id="@+id/tv_titulo_calificacion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Califica tu experiencia"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/gray_dark"
+                    android:layout_marginBottom="16dp"/>
 
-                <LinearLayout
+                <RatingBar
+                    android:id="@+id/rating_bar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:numStars="5"
+                    android:stepSize="1.0"
+                    android:rating="0"
+                    android:theme="@style/RatingBarTheme"
+                    android:layout_marginBottom="24dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_comentario"
+                    style="@style/CustomTextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:hint="Escribe un comentario (opcional)"
+                    app:boxCornerRadiusTopStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusBottomEnd="12dp">
 
-                    <TextView
-                        android:id="@+id/tv_titulo_calificacion"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Calificar Experiencia"
-                        android:textColor="@color/blue_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <RatingBar
-                        android:id="@+id/rating_bar"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:numStars="5"
-                        android:rating="0"
-                        android:stepSize="0.5"
-                        android:progressTint="#FFB300"
-                        android:secondaryProgressTint="#FFB300"
-                        android:theme="@style/RatingBarTheme" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/til_comentario"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_comentario"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:hint="Escribe un comentario (opcional)">
+                        android:layout_height="100dp"
+                        android:gravity="top|start"
+                        android:inputType="textMultiLine"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_comentario"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="top"
-                            android:inputType="textMultiLine|textCapSentences"
-                            android:maxLength="250"
-                            android:minLines="3" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_enviar_calificacion"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="Enviar Calificación"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="24dp"
+                    app:cornerRadius="16dp"
+                    app:backgroundTint="@color/blue_primary"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_enviar_calificacion"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="Enviar Calificación"
-                        app:backgroundTint="@color/blue_primary" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_volver_inicio"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Volver al Inicio"
+            android:textColor="@color/secondary"
+            android:layout_marginTop="16dp"/>
 
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:id="@+id/tv_ya_calificado"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_status_chip"
-                android:gravity="center"
-                android:padding="12dp"
-                android:text="¡Gracias por tu calificación!"
-                android:textColor="@color/green_success"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
