@@ -65,16 +65,7 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (checkForSavedSession()) {
-            return; // Auto-login in progress
-        }
-
-        setContentView(R.layout.activity_login);
         Log.d(TAG, "onCreate: Iniciando LoginActivity");
-
-        biometricMgr = new BiometricAuthManager(this);
-        credentialMgr = new CredentialManager(this);
 
         try {
             mAuth = FirebaseAuth.getInstance();
@@ -82,11 +73,21 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
             if (mAuth != null) {
                 mAuth.setLanguageCode("es");
             }
+            biometricMgr = new BiometricAuthManager(this);
+            credentialMgr = new CredentialManager(this);
         } catch (Exception e) {
-            Log.e(TAG, "Error configurando Firebase: ", e);
+            Log.e(TAG, "Error configurando Firebase o seguridad: ", e);
             mostrarError("Error de configuración: " + e.getMessage());
+            // It's critical to exit if core components fail to initialize.
+            finish();
+            return;
         }
 
+        if (checkForSavedSession()) {
+            return; // Auto-login or re-authentication in progress
+        }
+
+        setContentView(R.layout.activity_login);
         bindViews();
         setupEmailField();
         setupPasswordField();
@@ -94,17 +95,7 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         if (!attemptAutomaticBiometricLogin()) {
             mostrarLoginNormal();
         }
-        checkAndRequestLocationPermission(); // Call the new permission check method
-    }
-
-    private void checkAndRequestLocationPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted, request it
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
-        } else {
-            // Permission has already been granted
-            Log.d(TAG, "ACCESS_FINE_LOCATION permission already granted.");
-        }
+        checkAndRequestLocationPermission();
     }
 
     private boolean checkForSavedSession() {
@@ -115,22 +106,97 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                 rememberDevice = prefs.getBoolean("recordar_sesion", false);
             }
 
-            String userId = prefs.getString("user_id", null);
-            if (userId == null) {
-                userId = prefs.getString("uid", null);
+            String tempUserId = prefs.getString("user_id", null);
+            if (tempUserId == null) {
+                tempUserId = prefs.getString("uid", null);
             }
+            final String userId = tempUserId; // Declare as final here for use in lambda
 
             String rol = prefs.getString("rol", null);
             String verificacionEstado = prefs.getString("verificacion_estado", null);
 
-            if (rememberDevice && userId != null && rol != null && FirebaseAuth.getInstance().getCurrentUser() != null) {
-                Log.d(TAG, "Sesión guardada encontrada. Redirigiendo...");
-                updateFcmTokenForCurrentUser(); // Ensure token is synced on auto-login
-                redirigirSegunRol(rol, verificacionEstado);
-                return true;
+            if (rememberDevice && userId != null && rol != null) {
+                if (mAuth.getCurrentUser() != null) {
+                    Log.d(TAG, "Sesión de Firebase activa y guardada encontrada. Redirigiendo...");
+                    updateFcmTokenForCurrentUser();
+                    redirigirSegunRol(rol, verificacionEstado);
+                    return true;
+                } else {
+                    // Firebase session is null, try re-authenticating with saved credentials
+                    Log.d(TAG, "Firebase session is null, attempting re-authentication with saved credentials...");
+                    String[] creds = credentialMgr.getCredentials();
+                    if (creds != null && creds.length == 2 && creds[0] != null && creds[1] != null) {
+                        mostrarProgressBar(true); // Show progress during re-authentication
+                        mAuth.signInWithEmailAndPassword(creds[0], creds[1])
+                                .addOnCompleteListener(this, task -> {
+                                    mostrarProgressBar(false); // Hide progress bar
+                                    if (task.isSuccessful()) {
+                                        FirebaseUser user = mAuth.getCurrentUser();
+                                        if (user != null && user.getUid().equals(userId)) { // Double-check UID consistency
+                                            Log.d(TAG, "Re-authentication successful. Redirigiendo...");
+                                            updateFcmTokenForCurrentUser();
+                                            // Re-fetch role and verification status to ensure they are up-to-date
+                                            db.collection("usuarios").document(user.getUid()).get()
+                                                .addOnSuccessListener(documentSnapshot -> {
+                                                    if (documentSnapshot.exists()) {
+                                                        String reAuthRol = documentSnapshot.getString("rol");
+                                                        if ("PASEADOR".equalsIgnoreCase(reAuthRol)) {
+                                                            db.collection("paseadores").document(user.getUid()).get()
+                                                                .addOnSuccessListener(paseadorDoc -> {
+                                                                    String reAuthVerificacionEstado = paseadorDoc.getString("verificacion_estado");
+                                                                    redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
+                                                                }).addOnFailureListener(e -> {
+                                                                    Log.e(TAG, "Error re-fetching paseador verification status", e);
+                                                                    redirigirSegunRol(reAuthRol, null);
+                                                                });
+                                                        } else if ("DUEÑO".equalsIgnoreCase(reAuthRol)) {
+                                                            db.collection("duenos").document(user.getUid()).get()
+                                                                .addOnSuccessListener(duenoDoc -> {
+                                                                    String reAuthVerificacionEstado = duenoDoc.getString("verificacion_estado");
+                                                                    redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
+                                                                }).addOnFailureListener(e -> {
+                                                                    Log.e(TAG, "Error re-fetching dueno verification status", e);
+                                                                    redirigirSegunRol(reAuthRol, null);
+                                                                });
+                                                        } else {
+                                                            redirigirSegunRol(reAuthRol, null);
+                                                        }
+                                                    } else {
+                                                        Log.w(TAG, "User profile not found after re-authentication. Falling back to normal login.");
+                                                        credentialMgr.clearCredentials(); // Invalid profile data
+                                                        mostrarError("Perfil de usuario no encontrado. Inicia sesión de nuevo.");
+                                                    }
+                                                }).addOnFailureListener(e -> {
+                                                    Log.e(TAG, "Error re-fetching user role after re-authentication", e);
+                                                    credentialMgr.clearCredentials(); // Error fetching user data
+                                                    mostrarError("Error al cargar perfil. Inicia sesión de nuevo.");
+                                                });
+                                        } else {
+                                            Log.w(TAG, "Re-authentication successful, but UID mismatch or user null. Clearing credentials.");
+                                            credentialMgr.clearCredentials(); // Credentials might be for a different user
+                                            // Fall through to normal login, no need to show specific error
+                                        }
+                                    } else {
+                                        Log.w(TAG, "Re-authentication failed: " + task.getException().getMessage());
+                                        credentialMgr.clearCredentials(); // Credentials might be outdated or invalid
+                                        mostrarError("Sesión expirada o credenciales no válidas. Por favor, inicia sesión de nuevo.");
+                                        // No return true, let it fall through to show normal login UI
+                                    }
+                                });
+                        return true; // Indicate that an async re-authentication is in progress
+                    } else {
+                        Log.d(TAG, "Remember device true, but no credentials found in CredentialManager. Falling back to normal login.");
+                        // No credentials to re-authenticate with, fall through to normal login
+                    }
+                }
             }
         } catch (Exception e) {
-            Log.e(TAG, "checkForSavedSession: error accediendo prefs cifradas", e);
+            Log.e(TAG, "checkForSavedSession: error accediendo prefs cifradas o durante re-autenticación", e);
+            // In case of any error in this flow, ensure we don't block the user
+            if (credentialMgr != null) { // Defensive check
+                credentialMgr.clearCredentials();
+            }
+            // Fall through to normal login
         }
         return false;
     }
@@ -261,6 +327,12 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         sessionManager.createSession(uid);
         if (cbRemember.isChecked()) {
             guardarPreferenciasLogin(uid, rol, verificacionEstado);
+            // Asegurarse de que las credenciales (email/password) se guarden de forma segura
+            // por CredentialManager si 'recordarme' está marcado.
+            // Esto es necesario para la re-autenticación silenciosa si la sesión de Firebase se pierde.
+            if (pendingEmail != null && pendingPassword != null) {
+                credentialMgr.saveCredentials(pendingEmail, pendingPassword);
+            }
         } else {
             try {
                 EncryptedPreferencesHelper prefs = EncryptedPreferencesHelper.getInstance(this);
@@ -615,6 +687,16 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                     });
         } else {
             Log.d(TAG, "No user logged in, cannot save FCM token.");
+        }
+    }
+
+    private void checkAndRequestLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted, request it
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            // Permission has already been granted
+            Log.d(TAG, "ACCESS_FINE_LOCATION permission already granted.");
         }
     }
 
