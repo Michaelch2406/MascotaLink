@@ -159,24 +159,8 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         }
         
         // 3. Distancia (Calculada desde el array de ubicaciones)
-        List<GeoPoint> ubicaciones = (List<GeoPoint>) doc.get("ubicaciones");
-        double distanciaMeters = 0;
-
-        if (ubicaciones != null && ubicaciones.size() > 1) {
-            for (int i = 0; i < ubicaciones.size() - 1; i++) {
-                GeoPoint p1 = ubicaciones.get(i);
-                GeoPoint p2 = ubicaciones.get(i + 1);
-                
-                float[] results = new float[1];
-                Location.distanceBetween(
-                    p1.getLatitude(), p1.getLongitude(),
-                    p2.getLatitude(), p2.getLongitude(),
-                    results
-                );
-                distanciaMeters += results[0];
-            }
-        }
-        
+        Object ubicacionesObj = doc.get("ubicaciones");
+        double distanciaMeters = calcularDistancia(ubicacionesObj);
         if (distanciaMeters > 0) {
             double distanciaKm = distanciaMeters / 1000.0;
             tvDistanciaRecorrida.setText(String.format(Locale.US, "%.2f km", distanciaKm));
@@ -196,6 +180,47 @@ public class ResumenPaseoActivity extends AppCompatActivity {
 
         if (duenoRef != null) idDueno = duenoRef.getId();
         if (paseadorRef != null) idPaseador = paseadorRef.getId();
+    }
+
+    private double calcularDistancia(Object ubicacionesObj) {
+        if (!(ubicacionesObj instanceof List)) {
+            return 0;
+        }
+        List<?> lista = (List<?>) ubicacionesObj;
+        if (lista.size() < 2) return 0;
+
+        double total = 0;
+        double[] prev = null;
+        for (Object item : lista) {
+            double[] current = extraerLatLng(item);
+            if (current == null) continue;
+            if (prev != null) {
+                float[] results = new float[1];
+                Location.distanceBetween(prev[0], prev[1], current[0], current[1], results);
+                if (results[0] >= 3f) { // evitar sumar ruido por saltos mínimos
+                    total += results[0];
+                }
+            }
+            prev = current;
+        }
+        return total;
+    }
+
+    private double[] extraerLatLng(Object item) {
+        if (item instanceof GeoPoint) {
+            GeoPoint gp = (GeoPoint) item;
+            return new double[]{gp.getLatitude(), gp.getLongitude()};
+        }
+        if (item instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) item;
+            Object latObj = map.get("lat");
+            Object lngObj = map.get("lng");
+            if (lngObj == null) lngObj = map.get("lon");
+            if (latObj instanceof Number && lngObj instanceof Number) {
+                return new double[]{((Number) latObj).doubleValue(), ((Number) lngObj).doubleValue()};
+            }
+        }
+        return null;
     }
 
     private void checkIfAlreadyRated() {

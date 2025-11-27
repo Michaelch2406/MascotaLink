@@ -387,7 +387,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         // FIX: Limpiar estado al volver. Si hay texto, se limpia para reiniciar la experiencia.
         // Esto evita que se muestre un resultado "fantasma" al regresar.
         if (searchAutocomplete != null && !searchAutocomplete.getText().toString().isEmpty()) {
-             searchAutocomplete.setText(""); // Esto disparará el TextWatcher que limpiará la UI
+             searchAutocomplete.setText(""); // Esto disparar el TextWatcher que limpiar la UI
         } else {
              // Si ya está vacío, asegurar la visibilidad correcta
              recyclerViewResultados.setVisibility(View.GONE);
@@ -572,7 +572,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             if (searchAutocomplete != null) {
                 searchAutocomplete.setText(""); // Limpiar texto visualmente
             }
-            viewModel.onSearchQueryChanged(""); // Forzar búsqueda vacía al ViewModel
+            viewModel.onSearchQueryChanged(""); // Forzar b??squeda vac??a al ViewModel
             
             // Restaurar visibilidad manualmente por seguridad
             recyclerViewResultados.setVisibility(View.GONE);
@@ -612,7 +612,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
             if (currentFiltros.getTamanosMascota() != null) {
                 for (String tamano : currentFiltros.getTamanosMascota()) {
-                    if (tamano.equals("Pequeño")) dialogView.findViewById(R.id.chip_pequeno).performClick();
+                    if (tamano.equals("Peque??o")) dialogView.findViewById(R.id.chip_pequeno).performClick();
                     if (tamano.equals("Mediano")) dialogView.findViewById(R.id.chip_mediano).performClick();
                     if (tamano.equals("Grande")) dialogView.findViewById(R.id.chip_grande).performClick();
                 }
@@ -630,7 +630,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             nuevosFiltros.setMinCalificacion(ratingBar.getRating());
 
             List<String> tamanos = new ArrayList<>();
-            if (((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_pequeno)).isChecked()) tamanos.add("Pequeño");
+            if (((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_pequeno)).isChecked()) tamanos.add("Peque??o");
             if (((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_mediano)).isChecked()) tamanos.add("Mediano");
             if (((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_grande)).isChecked()) tamanos.add("Grande");
             nuevosFiltros.setTamanosMascota(tamanos);
@@ -760,11 +760,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             
-            // Ubicación Inmediata (Última conocida)
+            // Ubicaci??n Inmediata (??ltima conocida)
             fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
-                if (location != null && lastKnownLocation == null) { // Solo si no tenemos una más reciente
+                if (location != null && lastKnownLocation == null) { // Solo si no tenemos una m??s reciente
                     lastKnownLocation = location;
-                    Log.d(TAG, "Ubicación inmediata (LastKnown): " + location.getLatitude());
+                    Log.d(TAG, "Ubicaci??n inmediata (LastKnown): " + location.getLatitude());
                     if (mMap != null) {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                                 new LatLng(location.getLatitude(), location.getLongitude()), 12));
@@ -777,7 +777,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             locationTimeoutRunnable = () -> {
                 stopLocationUpdates();
                 Log.w(TAG, "Location timeout reached. Defaulting to Quito.");
-                Toast.makeText(this, "No se pudo obtener ubicación precisa. Mostrando zona por defecto.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "No se pudo obtener ubicaci??n precisa. Mostrando zona por defecto.", Toast.LENGTH_LONG).show();
                 
                 // Default to Quito
                 LatLng quito = new LatLng(-0.180653, -78.467834);
@@ -827,7 +827,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 // Second click: Navigate to Profile
                 Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
                 intent.putExtra("paseadorId", clickedId);
-                intent.putExtra("viewerRole", "DUEÑO");
+                intent.putExtra("viewerRole", "DUE??O");
                 startActivity(intent);
                 return true;
             } else {
@@ -882,7 +882,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         PaseadorInfoWindowAdapter infoWindowAdapter = new PaseadorInfoWindowAdapter(BusquedaPaseadoresActivity.this, paseadorId -> {
             Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
             intent.putExtra("paseadorId", paseadorId);
-            intent.putExtra("viewerRole", "DUEÑO");
+            intent.putExtra("viewerRole", "DUE??O");
             startActivity(intent);
         });
         mMap.setInfoWindowAdapter(infoWindowAdapter);
@@ -960,7 +960,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     startLocationUpdates();
                 }
             } else {
-                Toast.makeText(this, "El permiso de ubicación es necesario para ver paseadores cercanos", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "El permiso de ubicaci??n es necesario para ver paseadores cercanos", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -969,7 +969,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         if (bottomNav == null) {
             return;
         }
-        String roleForNav = userRole != null ? userRole : "DUEÑO";
+        String roleForNav = userRole != null ? userRole : "DUE??O";
         BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, R.id.menu_search);
     }
 
@@ -983,7 +983,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void cargarPaseadoresCercanos(LatLng ubicacionUsuario, double radioKm) {
         if (ubicacionUsuario == null) {
-            Log.w(TAG, "cargarPaseadoresCercanos: ubicacionUsuario es null, se omite búsqueda geoespacial.");
+            Log.w(TAG, "cargarPaseadoresCercanos: ubicacionUsuario es null, se omite b??squeda geoespacial.");
             return;
         }
         if (mMap == null || mClusterManager == null) {
@@ -993,7 +993,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         if (Double.isNaN(ubicacionUsuario.latitude) || Double.isNaN(ubicacionUsuario.longitude)
                 || (Math.abs(ubicacionUsuario.latitude) < 0.0001 && Math.abs(ubicacionUsuario.longitude) < 0.0001)) {
-            Log.w(TAG, "cargarPaseadoresCercanos: ubicacionUsuario inválida, se omite consulta.");
+            Log.w(TAG, "cargarPaseadoresCercanos: ubicacionUsuario inv??lida, se omite consulta.");
             return;
         }
 
@@ -1024,7 +1024,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
             for (Task<QuerySnapshot> task : geoTasks) {
                 if (!task.isSuccessful() || task.getResult() == null) {
-                    Log.w(TAG, "Geoquery parcial fallida o vacía", task.getException());
+                    Log.w(TAG, "Geoquery parcial fallida o vac??a", task.getException());
                     continue;
                 }
 
@@ -1032,16 +1032,16 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     if (!seenPaseadores.add(doc.getId())) continue; // evitar duplicados
                     if (!isUsuarioEnLinea(doc)) continue;
 
-                    com.google.firebase.firestore.GeoPoint gp = doc.getGeoPoint("ubicacion_actual");
+                    LatLng ubicacionActual = extraerLatLng(doc.get("ubicacion_actual"));
                     String geohash = doc.getString("ubicacion_geohash");
 
-                    if (gp == null || geohash == null) {
+                    if (ubicacionActual == null || geohash == null) {
                         Log.w(TAG, "Documento sin ubicacion_actual/geohash: " + doc.getId());
                         continue;
                     }
 
                     double distanceMeters = GeoFireUtils.getDistanceBetween(
-                            new GeoLocation(gp.getLatitude(), gp.getLongitude()), center);
+                            new GeoLocation(ubicacionActual.latitude, ubicacionActual.longitude), center);
 
                     if (distanceMeters <= radiusMeters) {
                         paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(doc, ubicacionUsuario));
@@ -1076,7 +1076,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                             mClusterManager.addItems(items);
                             mClusterManager.cluster();
                         } else {
-                            Log.w(TAG, "Geoquery sin marcadores válidos; se conservan los existentes.");
+                            Log.w(TAG, "Geoquery sin marcadores v??lidos; se conservan los existentes.");
                         }
                         if (progressBar != null) progressBar.setVisibility(View.GONE);
                     })
@@ -1165,18 +1165,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             if (reciente) return true;
             return Boolean.TRUE.equals(enLinea);
         } catch (Exception e) {
-            Log.w(TAG, "Error evaluando estado en línea", e);
+            Log.w(TAG, "Error evaluando estado en l??nea", e);
             return false;
         }
     }
 
-    // Método renombrado y adaptado
+    // M??todo renombrado y adaptado
     private Task<PaseadorMarker> buildPaseadorMarkerFromUser(DocumentSnapshot userDoc, LatLng ubicacionUsuario) {
         String userId = userDoc.getId();
         
-        // 1. Intentar obtener ubicación en tiempo real del perfil
-        com.google.firebase.firestore.GeoPoint gp = userDoc.getGeoPoint("ubicacion_actual");
-        LatLng ubicacionRealtime = (gp != null) ? new LatLng(gp.getLatitude(), gp.getLongitude()) : null;
+        // 1. Intentar obtener ubicaci??n en tiempo real del perfil
+        LatLng ubicacionRealtime = extraerLatLng(userDoc.get("ubicacion_actual"));
 
         if (ubicacionRealtime != null) {
             return crearMarcador(userId, userDoc, ubicacionRealtime, ubicacionUsuario, true);
@@ -1251,8 +1250,24 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         return Tasks.forResult(null);
     }
 
+    private LatLng extraerLatLng(Object ubicacionObj) {
+        if (ubicacionObj instanceof com.google.firebase.firestore.GeoPoint) {
+            com.google.firebase.firestore.GeoPoint gp = (com.google.firebase.firestore.GeoPoint) ubicacionObj;
+            return new LatLng(gp.getLatitude(), gp.getLongitude());
+        }
+        if (ubicacionObj instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) ubicacionObj;
+            Object latObj = map.get("lat");
+            Object lngObj = map.get("lng");
+            if (lngObj == null) lngObj = map.get("lon");
+            if (latObj instanceof Number && lngObj instanceof Number) {
+                return new LatLng(((Number) latObj).doubleValue(), ((Number) lngObj).doubleValue());
+            }
+        }
+        return null;
+    }
     /**
-     * Verifica si el paseador está disponible en el día y hora actual
+     * Verifica si el paseador est?? disponible en el d??a y hora actual
      * Compatible con estructura Firebase:
      * - dia_semana: "Lunes", "Martes", etc.
      * - hora_inicio: "08:00"
@@ -1274,7 +1289,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 diaActual = "Martes";
                 break;
             case Calendar.WEDNESDAY:
-                diaActual = "Miércoles";
+                diaActual = "Mi??rcoles";
                 break;
             case Calendar.THURSDAY:
                 diaActual = "Jueves";
@@ -1283,13 +1298,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 diaActual = "Viernes";
                 break;
             case Calendar.SATURDAY:
-                diaActual = "Sábado";
+                diaActual = "S??bado";
                 break;
             case Calendar.SUNDAY:
                 diaActual = "Domingo";
                 break;
             default:
-                Log.e(TAG, "Día de la semana inválido: " + dayOfWeek);
+                Log.e(TAG, "D??a de la semana inv??lido: " + dayOfWeek);
                 return Tasks.forResult(false);
         }
 
@@ -1312,7 +1327,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     QuerySnapshot querySnapshot = task.getResult();
                     if (querySnapshot == null || querySnapshot.isEmpty()) {
                         Log.d(TAG, "No hay disponibilidad configurada para " + diaActual + ". Se considera disponible.");
-                        return true; // No ocultar por falta de configuración
+                        return true; // No ocultar por falta de configuraci??n
                     }
 
                     for (QueryDocumentSnapshot doc : querySnapshot) {
@@ -1341,9 +1356,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                             boolean disponible = minutosActuales >= minutosInicio && minutosActuales < minutosFin;
 
                             if (disponible) {
-                                Log.d(TAG, String.format("✓ Paseador disponible: %s-%s (actual: %02d:%02d)",
+                                Log.d(TAG, String.format("Paseador disponible: %s-%s (actual: %02d:%02d)",
                                         horaInicio, horaFin, currentHour, currentMinute));
-                                return true; // Está disponible en esta franja
+                                return true; // Est?? disponible en esta franja
                             }
 
                         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
@@ -1352,8 +1367,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         }
                     }
 
-                    Log.d(TAG, "✗ Paseador no disponible en este horario");
-                    return false; // No está disponible en las franjas configuradas
+                    Log.d(TAG, "Paseador no disponible en este horario");
+                    return false; // No est?? disponible en las franjas configuradas
                 });
     }
 
@@ -1433,8 +1448,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         @Nullable
         @Override
         public String getSnippet() {
-            String estado = mPaseadorMarker.isEnPaseo() ? "🚶 En un paseo" : (mPaseadorMarker.isDisponible() ? "✅ Disponible" : "⛔ No disponible");
-            return String.format(Locale.getDefault(), "%.1f km - %.1f ★\n%s", mPaseadorMarker.getDistanciaKm(), mPaseadorMarker.getCalificacion(), estado);
+            String estado = mPaseadorMarker.isEnPaseo() ? "En un paseo" : (mPaseadorMarker.isDisponible() ? "Disponible" : "No disponible");
+            return String.format(Locale.getDefault(), "%.1f km - %.1f \n%s", mPaseadorMarker.getDistanciaKm(), mPaseadorMarker.getCalificacion(), estado);
         }
 
         @Nullable
@@ -1566,7 +1581,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         @Override
         protected void onClusterItemRendered(@NonNull PaseadorClusterItem clusterItem, @NonNull Marker marker) {
             super.onClusterItemRendered(clusterItem, marker);
-            marker.setTag(clusterItem.getPaseadorMarker().getPaseadorId()); // CRÍTICO: Establecer el tag del marcador
+            marker.setTag(clusterItem.getPaseadorMarker().getPaseadorId()); // CR??TICO: Establecer el tag del marcador
         }
 
         private Bitmap createCompositeBitmap(Bitmap profileBitmap, double calificacion, boolean disponible, boolean enPaseo, boolean isSelected) {
@@ -1576,7 +1591,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 profileBitmap.eraseColor(Color.GRAY);
             }
 
-            // Diseño Moderno: Pin Flotante (Estilo Airbnb/Uber)
+            // Dise??o Moderno: Pin Flotante (Estilo Airbnb/Uber)
             // Base size: 60dp Normal, 80dp Selected
             int baseSizeDp = isSelected ? 80 : 60;
             int imageSize = (int) (baseSizeDp * mDensity); 
@@ -1644,3 +1659,5 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
     }
 }
+
+

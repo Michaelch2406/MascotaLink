@@ -126,11 +126,11 @@
                             android:layout_marginTop="8dp"
                             android:gravity="center_vertical">
                             
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="🐕"
-                                android:textSize="12sp"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-"
+                            android:textSize="12sp"/>
                                 
                             <TextView
                                 android:id="@+id/tv_info_mascota"
@@ -150,7 +150,7 @@
                             android:layout_marginTop="4dp"
                             style="@style/TextAppearance.Mascota.BodyMuted"
                             android:textSize="12sp"
-                            tools:text="Hoy, 10:00 AM | 30 min Duración" />
+                            tools:text="Hoy, 10:00 AM | 30 min Duracion" />
 
                     </LinearLayout>
 
@@ -163,9 +163,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 style="@style/TextAppearance.Mascota.BodyMuted"
-                android:text="Ubicación: obteniendo señal..." />
+                android:text="Ubicacion: obteniendo senal..." />
 
-            <!-- SECCIÓN 2: ESTADO Y TEMPORIZADOR -->
+            <!-- SECCI??N 2: ESTADO Y TEMPORIZADOR -->
             <TextView
                 android:id="@+id/tv_estado"
                 android:layout_width="wrap_content"
@@ -453,3 +453,5 @@
         android:visibility="gone" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+

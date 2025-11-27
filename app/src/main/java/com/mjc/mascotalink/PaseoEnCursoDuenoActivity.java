@@ -50,12 +50,15 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.RoundCap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import androidx.core.content.ContextCompat;
 import com.google.firebase.firestore.GeoPoint;
+import android.animation.ValueAnimator;
+import android.view.animation.LinearInterpolator;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.Polyline;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -116,6 +119,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private List<LatLng> rutaPaseo = new ArrayList<>();
     private LatLng ultimaUbicacionConocida;
     private TextView tvUbicacionEstado;
+    private Marker marcadorActual;
+    private Marker marcadorInicio;
+    private Polyline polylineRuta;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -183,7 +189,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
     private void abrirMapaFullscreen() {
         if (ultimaUbicacionConocida == null) {
-            Toast.makeText(this, "Ubicación no disponible", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Ubicacion no disponible", Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -318,7 +324,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             String estado = snapshot.getString("estado");
             if (!"EN_CURSO".equalsIgnoreCase(estado)) {
                 mostrarLoading(false);
-                Toast.makeText(this, "El paseo ya no estÃ¡ en curso", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "El paseo ya no está? en curso", Toast.LENGTH_SHORT).show();
                 finish();
                 return;
             }
@@ -426,7 +432,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         // 3. Notas
         String notas = snapshot.getString("notas_paseador");
-        tvNotasPaseador.setText(notas != null && !notas.isEmpty() ? notas : "Sin notas aÃºn");
+        tvNotasPaseador.setText(notas != null && !notas.isEmpty() ? notas : "Sin notas aún");
 
         // 4. Fotos
         Object fotosObj = snapshot.get("fotos_paseo");
@@ -513,6 +519,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         }
     }
 
+    @SuppressWarnings("unchecked")
     private List<LatLng> parsearUbicaciones(Object ubicacionesObj) {
         List<LatLng> puntos = new ArrayList<>();
         if (ubicacionesObj instanceof List) {
@@ -540,7 +547,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 }
             }
         }
-        // Limitar para evitar sobrecarga de polilínea
+        // Limitar para evitar sobrecarga de polil??nea
         if (puntos.size() > 200) {
             return puntos.subList(puntos.size() - 200, puntos.size());
         }
@@ -554,43 +561,45 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         this.rutaPaseo = puntos;
         this.ultimaUbicacionConocida = puntos.get(puntos.size() - 1);
 
-        mMap.clear();
-
-        // Dibujar ruta modernizada ("Tubular")
-        PolylineOptions polylineOptions = new PolylineOptions()
-                .addAll(puntos)
-                .width(16f) // Más grueso
-                .color(getResources().getColor(R.color.blue_primary))
-                .jointType(JointType.ROUND) // Uniones redondeadas
-                .startCap(new RoundCap())
-                .endCap(new RoundCap())
-                .geodesic(true);
-        mMap.addPolyline(polylineOptions);
-
-        // Marcador de Inicio (Punto limpio)
-        // Usamos un marcador verde estándar por ahora, pero más pequeño si fuera posible.
-        mMap.addMarker(new MarkerOptions()
-                .position(puntos.get(0))
-                .title("Inicio")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-
-        // Marcador Actual (Paseador 3D)
-        BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120); // 120px de ancho
-        if (walkerIcon != null) {
-            mMap.addMarker(new MarkerOptions()
-                    .position(ultimaUbicacionConocida)
-                    .title("Paseador")
-                    .icon(walkerIcon)
-                    .anchor(0.5f, 1.0f)); // Anclar al centro inferior (pies del muñeco)
+        // Ruta sin limpiar el mapa para evitar parpadeos
+        if (polylineRuta == null) {
+            PolylineOptions polylineOptions = new PolylineOptions()
+                    .addAll(puntos)
+                    .width(16f)
+                    .color(getResources().getColor(R.color.blue_primary))
+                    .jointType(JointType.ROUND)
+                    .startCap(new RoundCap())
+                    .endCap(new RoundCap())
+                    .geodesic(true);
+            polylineRuta = mMap.addPolyline(polylineOptions);
         } else {
-            // Fallback si falla la imagen
-            mMap.addMarker(new MarkerOptions()
-                    .position(ultimaUbicacionConocida)
-                    .title("Paseador")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+            polylineRuta.setPoints(puntos);
         }
 
-        // Mover cámara suavemente
+        // Marcador de inicio (solo una vez)
+        if (marcadorInicio == null && !puntos.isEmpty()) {
+            marcadorInicio = mMap.addMarker(new MarkerOptions()
+                    .position(puntos.get(0))
+                    .title("Inicio")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+        }
+
+        // Marcador actual con animaci?n
+        BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120);
+        if (marcadorActual == null) {
+            marcadorActual = mMap.addMarker(new MarkerOptions()
+                    .position(ultimaUbicacionConocida)
+                    .title("Paseador")
+                    .icon(walkerIcon != null ? walkerIcon : BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    .anchor(0.5f, 1.0f));
+        } else {
+            animarMarcador(marcadorActual, ultimaUbicacionConocida);
+            if (walkerIcon != null) {
+                marcadorActual.setIcon(walkerIcon);
+            }
+        }
+
+        // Mover c?mara suavemente si hay desplazamiento significativo
         try {
             float zoomLevel = 17.0f;
             boolean moverCamara = true;
@@ -598,7 +607,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 float[] results = new float[1];
                 android.location.Location.distanceBetween(previo.latitude, previo.longitude,
                         ultimaUbicacionConocida.latitude, ultimaUbicacionConocida.longitude, results);
-                moverCamara = results[0] > 15f; // solo si se movió suficiente
+                moverCamara = results[0] > 8f;
             }
             if (moverCamara) {
                 com.google.android.gms.maps.model.CameraPosition cameraPosition =
@@ -608,26 +617,25 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                                 .bearing(0)
                                 .tilt(45)
                                 .build();
-                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 800, null);
+                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 700, null);
             }
         } catch (Exception e) {
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaUbicacionConocida, 16f));
         }
 
-        // Mostrar estado de ubicación para el dueño
         actualizarEstadoUbicacionDueno(ubicacionesRaw);
     }
 
     private void actualizarEstadoUbicacionDueno(Object ubicacionesRaw) {
         if (tvUbicacionEstado == null) return;
         if (!(ubicacionesRaw instanceof List)) {
-            tvUbicacionEstado.setText("Ubicación: sin datos");
+            tvUbicacionEstado.setText("Ubicacion: sin datos");
             tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
             return;
         }
         List<?> lista = (List<?>) ubicacionesRaw;
         if (lista.isEmpty()) {
-            tvUbicacionEstado.setText("Ubicación: sin datos");
+            tvUbicacionEstado.setText("Ubicacion: sin datos");
             tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
             return;
         }
@@ -636,7 +644,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         Double speed = null;
         Timestamp ts = null;
         if (last instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) last;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = (Map<String, Object>) last;
             Object accObj = map.get("acc");
             Object speedObj = map.get("speed");
             Object tsObj = map.get("ts");
@@ -648,11 +657,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 ts = new Timestamp((Date) tsObj);
             }
         } else if (last instanceof GeoPoint) {
-            tvUbicacionEstado.setText("Ubicación: actualizada");
+            tvUbicacionEstado.setText("Ubicacion: actualizada");
             tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
             return;
         }
-        StringBuilder sb = new StringBuilder("Ubicación: ");
+        StringBuilder sb = new StringBuilder("Ubicacion: ");
         if (ts != null) {
             long diffSec = (new Date().getTime() - ts.toDate().getTime()) / 1000;
             if (diffSec < 60) {
@@ -684,6 +693,21 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             sb.append(")");
         }
         tvUbicacionEstado.setText(sb.toString());
+    }
+
+    private void animarMarcador(Marker marker, LatLng destino) {
+        if (marker == null || destino == null) return;
+        final LatLng inicio = marker.getPosition();
+        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(700);
+        animator.setInterpolator(new LinearInterpolator());
+        animator.addUpdateListener(animation -> {
+            float t = (float) animation.getAnimatedValue();
+            double lat = inicio.latitude + (destino.latitude - inicio.latitude) * t;
+            double lng = inicio.longitude + (destino.longitude - inicio.longitude) * t;
+            marker.setPosition(new LatLng(lat, lng));
+        });
+        animator.start();
     }
 
     private BitmapDescriptor getResizedBitmapDescriptor(int resourceId, int widthPx) {
@@ -795,9 +819,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         tvInfoMascota.setText(String.format("%s, %s", nombreSafe, razaSafe));
         
         // FIX: Usar 'foto_url' que es el campo estándar, con fallback a 'foto_principal_url'
-        /* Nota: Si hay un ImageView para la mascota en esta pantalla, se cargaría aquí.
+        /* Nota: Si hay un ImageView para la mascota en esta pantalla, se cargar??a aquí.
            Actualmente PaseoEnCursoDuenoActivity no tiene un ImageView específico para la mascota en el layout (ivFotoPaseador es para el paseador),
-           pero actualizamos este método para consistencia en caso de que se añada en el futuro o se use en otro lugar. */
+           pero actualizamos este método para consistencia en caso de que se a??ada en el futuro o se use en otro lugar. */
     }
 
     private void actualizarInfoFecha(Date inicio) {
@@ -805,7 +829,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             return;
         SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM, hh:mm a", new Locale("es", "ES"));
         String fechaStr = sdf.format(inicio);
-        tvFechaHora.setText(String.format(Locale.getDefault(), "%s | %d min DuraciÃ³n", fechaStr, duracionMinutos));
+        tvFechaHora.setText(String.format(Locale.getDefault(), "%s | %d min Duración", fechaStr, duracionMinutos));
     }
 
     private void iniciarProcesoCancelacion() {
@@ -815,10 +839,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         }
 
         long tiempoTranscurrido = calcularTiempoTranscurrido();
-        // Regla: Bloquear cancelación antes de 10 minutos
+        // Regla: Bloquear cancelaci??n antes de 10 minutos
         if (tiempoTranscurrido < 10 * 60 * 1000) {
             long minutosRestantes = 10 - TimeUnit.MILLISECONDS.toMinutes(tiempoTranscurrido);
-            Toast.makeText(this, "Debes esperar " + minutosRestantes + " minutos más para cancelar.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Debes esperar " + minutosRestantes + " minutos m??s para cancelar.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -835,7 +859,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         android.widget.RadioGroup rgMotivos = view.findViewById(R.id.rg_motivos);
         com.google.android.material.textfield.TextInputEditText etOtroMotivo = view.findViewById(R.id.et_otro_motivo);
         
-        // Ocultar opción de "Éxito" para el dueño
+        // Ocultar opci??n de "??xito" para el due??o
         View rbExito = view.findViewById(R.id.rb_finalizar_exito);
         if (rbExito != null) rbExito.setVisibility(View.GONE);
         
@@ -883,9 +907,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         reservaRef.update(data)
                 .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Solicitud de cancelación enviada al paseador.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Solicitud de cancelaci??n enviada al paseador.", Toast.LENGTH_LONG).show();
                     mostrarLoading(false);
-                    // No cerramos la actividad inmediatamente, esperamos respuesta o actualización de estado
+                    // No cerramos la actividad inmediatamente, esperamos respuesta o actualizaci??n de estado
                 })
                 .addOnFailureListener(e -> {
                     mostrarLoading(false);
@@ -947,7 +971,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
     private void mostrarOpcionesContacto() {
         if (telefonoPaseador == null || telefonoPaseador.isEmpty()) {
-            Toast.makeText(this, "TelÃ©fono del paseador no disponible", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Telefono del paseador no disponible", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -1020,16 +1044,3 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
