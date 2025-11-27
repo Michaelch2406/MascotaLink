@@ -4,24 +4,24 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.recyclerview.widget.DiffUtil; // Added import
+import androidx.recyclerview.widget.DiffUtil;
 
 import com.bumptech.glide.Glide;
-import com.mjc.mascotalink.utils.PaseoDiffCallback; // Added import
-
-import java.util.List;
-import java.util.ArrayList; // Added import
-
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.imageview.ShapeableImageView;
+import com.mjc.mascotalink.utils.PaseoDiffCallback;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
-import de.hdodenhof.circleimageview.CircleImageView;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewHolder> {
 
@@ -41,7 +41,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     public PaseosAdapter(Context context, List<PaseosActivity.Paseo> paseosList, OnPaseoClickListener listener, String userRole) {
         this.context = context;
-        this.paseosList = new ArrayList<>(paseosList); // Create a copy
+        this.paseosList = new ArrayList<>(paseosList);
         this.listener = listener;
         this.userRole = userRole;
     }
@@ -65,74 +65,48 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         PaseosActivity.Paseo paseo = paseosList.get(position);
         if (paseo == null) return;
 
+        // 1. Fecha
         holder.tvFecha.setText(paseo.getFechaFormateada() != null ? paseo.getFechaFormateada() : "");
 
-        // Lógica basada en el rol
+        // 2. Info Principal (Mascota) y Secundaria (Paseador/Dueño)
+        String nombreMascota = paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Mascota";
+        holder.tvNombrePrincipal.setText(nombreMascota);
+
         if (userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
-            // Vista para el Paseador
-            holder.tvPaseadorNombre.setText(paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "Dueño no asignado");
-            if (paseo.getMascotaFoto() != null && !paseo.getMascotaFoto().isEmpty()) {
-                Glide.with(context)
-                        .load(paseo.getMascotaFoto())
-                        .placeholder(R.drawable.ic_pet_placeholder)
-                        .error(R.drawable.ic_pet_placeholder)
-                        .circleCrop()
-                        .into(holder.ivPaseadorFoto);
-            } else {
-                holder.ivPaseadorFoto.setImageResource(R.drawable.ic_pet_placeholder);
-            }
+            // Si soy Paseador, veo el nombre del Dueño
+            holder.tvNombreSecundario.setText("Dueño: " + (paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "Desconocido"));
+            // Y veo la foto de la Mascota (o del dueño si prefieres, pero mascota es mejor visualmente)
+            cargarImagen(holder.ivFotoPerfil, paseo.getMascotaFoto(), R.drawable.ic_pet_placeholder);
         } else {
-            // Vista para el Dueño (comportamiento original)
-            holder.tvPaseadorNombre.setText(paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "Paseador no asignado");
-            if (paseo.getPaseadorFoto() != null && !paseo.getPaseadorFoto().isEmpty()) {
-                Glide.with(context)
-                        .load(paseo.getPaseadorFoto())
-                        .placeholder(R.drawable.ic_person)
-                        .error(R.drawable.ic_person)
-                        .circleCrop()
-                        .into(holder.ivPaseadorFoto);
-            } else {
-                holder.ivPaseadorFoto.setImageResource(R.drawable.ic_person);
-            }
+            // Si soy Dueño, veo el nombre del Paseador
+            holder.tvNombreSecundario.setText("Paseador: " + (paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "No asignado"));
+            // Y veo la foto del Paseador (importante para identificar quién viene)
+            cargarImagen(holder.ivFotoPerfil, paseo.getPaseadorFoto(), R.drawable.ic_person);
         }
 
+        // 3. Detalles
+        int duracionMinutos = (int) paseo.getDuracion_minutos();
+        holder.tvDuracion.setText(formatearDuracion(duracionMinutos));
 
-        String mascotaHora = "Mascota: " +
-                (paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Cargando...") +
-                ", " + (paseo.getHoraFormateada() != null ? paseo.getHoraFormateada() : "");
-        holder.tvMascotaHora.setText(mascotaHora);
-
-        int duracionMinutos = (int) paseo.getDuracion_minutos(); // Corrected getter
-        String duracionTexto = formatearDuracion(duracionMinutos);
-        holder.tvDuracion.setText("Duración: " + duracionTexto);
-
-        double costo = paseo.getCosto_total(); // Corrected getter
+        double costo = paseo.getCosto_total();
         holder.tvCosto.setText(String.format("$%.2f", costo));
 
-        String tipoReserva = paseo.getTipo_reserva(); // Corrected getter
-        if (tipoReserva != null) {
-            String tipoTexto = tipoReserva.equals("PUNTUAL") ? "UN DÍA" :
-                    tipoReserva.equals("SEMANAL") ? "SEMANA" :
-                            tipoReserva.equals("MENSUAL") ? "MES" : tipoReserva;
-            holder.tvTipoReserva.setText(tipoTexto);
-        } else {
-             holder.tvTipoReserva.setText("RESERVA");
-        }
-
+        // 4. Estado (Chip)
         String estado = paseo.getEstado();
         holder.chipEstado.setText(estado != null ? estado : "DESCONOCIDO");
         establecerColorEstado(holder.chipEstado, estado);
 
+        // 5. Opacidad para historial
         float opacidad = 1.0f;
-        if (estado != null) {
-            if (estado.equals("COMPLETADO")) opacidad = 0.8f;
-            else if (estado.equals("CANCELADO")) opacidad = 0.6f;
+        if (estado != null && (estado.equals("COMPLETADO") || estado.equals("CANCELADO"))) {
+            opacidad = 0.9f; // Slightly faded but readable
         }
         holder.itemView.setAlpha(opacidad);
 
+        // 6. Botones de Acción
         configurarBotonesAccion(holder, estado, paseo);
 
-
+        // Click en toda la tarjeta
         holder.itemView.setOnClickListener(v -> {
             boolean puedePagar = ReservaEstadoValidator.canPay(paseo.getEstado()) &&
                     !ReservaEstadoValidator.isPagoCompletado(paseo.getEstado_pago());
@@ -142,123 +116,109 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                 listener.onPaseoClick(paseo);
             }
         });
+    }
 
+    private void cargarImagen(ImageView imageView, String url, int placeholder) {
+        if (url != null && !url.isEmpty()) {
+            Glide.with(context)
+                    .load(url)
+                    .placeholder(placeholder)
+                    .error(placeholder)
+                    .circleCrop()
+                    .into(imageView);
+        } else {
+            imageView.setImageResource(placeholder);
+        }
     }
 
     private String formatearDuracion(int minutos) {
         int horas = minutos / 60;
         int mins = minutos % 60;
-
-        if (horas > 0 && mins > 0) {
-            return horas + "h " + mins + "m";
-        } else if (horas > 0) {
-            return horas + (horas == 1 ? " hora" : " horas");
-        } else {
-            return mins + (mins == 1 ? " minuto" : " minutos");
-        }
+        if (horas > 0 && mins > 0) return horas + "h " + mins + "m";
+        if (horas > 0) return horas + (horas == 1 ? " hora" : " horas");
+        return mins + (mins == 1 ? " min" : " min");
     }
 
-    private void establecerColorEstado(com.google.android.material.chip.Chip chip, String estado) {
+    private void establecerColorEstado(Chip chip, String estado) {
         int colorFondo;
-        int colorTexto;
-
-        if (estado != null) {
+        // Default colors
+        if (estado == null) {
+            colorFondo = 0xFF9CA3AF;
+        } else {
             switch (estado) {
                 case "EN_CURSO":
                     colorFondo = 0xFF4CAF50; // Verde
-                    colorTexto = 0xFFFFFFFF; // Blanco
                     break;
                 case "CONFIRMADO":
                     colorFondo = 0xFF12A3ED; // Azul
-                    colorTexto = 0xFFFFFFFF; // Blanco
                     break;
                 case "COMPLETADO":
                     colorFondo = 0xFF81C784; // Verde claro
-                    colorTexto = 0xFFFFFFFF; // Blanco
                     break;
                 case "CANCELADO":
                     colorFondo = 0xFFF44336; // Rojo
-                    colorTexto = 0xFFFFFFFF; // Blanco
                     break;
                 default:
                     colorFondo = 0xFF9CA3AF; // Gris
-                    colorTexto = 0xFFFFFFFF; // Blanco
                     break;
             }
-        } else {
-            colorFondo = 0xFF9CA3AF;
-            colorTexto = 0xFFFFFFFF;
         }
-
         chip.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(colorFondo));
-        chip.setTextColor(colorTexto);
+        chip.setTextColor(0xFFFFFFFF); // Blanco
     }
 
     private void configurarBotonesAccion(PaseoViewHolder holder, String estado, final PaseosActivity.Paseo paseo) {
-        holder.layoutBotonesAccion.setVisibility(View.VISIBLE);
+        holder.layoutBotones.setVisibility(View.VISIBLE);
         holder.btnAccion1.setVisibility(View.VISIBLE);
         holder.btnAccion2.setVisibility(View.VISIBLE);
 
-        // Reset colors to default (Blue)
-        holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF12A3ED));
-        holder.btnAccion2.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF12A3ED));
-
+        // Reset styles
+        holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF12A3ED)); // Blue Primary
+        holder.btnAccion1.setTextColor(0xFFFFFFFF); // White
+        holder.btnAccion2.setVisibility(View.GONE); // Hide secondary by default
 
         if (estado != null) {
             if (estado.equals("EN_CURSO")) {
                 holder.btnAccion1.setText("Ver Ubicación 📍");
-                holder.btnAccion2.setText("PASEADOR".equalsIgnoreCase(userRole) ? "Contactar Dueño 💬" : "Contactar Paseador 💬");
                 holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
+                
+                holder.btnAccion2.setVisibility(View.VISIBLE);
+                holder.btnAccion2.setText("Chat 💬");
                 holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
             }
             else if (estado.equals("ACEPTADO")) {
                 if (userRole != null && !userRole.equalsIgnoreCase("PASEADOR")) {
-                    // Logic for Owner (Dueño)
                     boolean paymentPending = !ReservaEstadoValidator.isPagoCompletado(paseo.getEstado_pago());
                     if (paymentPending) {
-                        holder.btnAccion1.setText("Confirmar Pago 💳");
-                        // Set to Green for payment action
-                        holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50));
+                        holder.btnAccion1.setText("Pagar Ahora 💳");
+                        holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
                         holder.btnAccion1.setOnClickListener(v -> listener.onProcesarPagoClick(paseo));
-
-                        holder.btnAccion2.setText("Contactar 💬");
-                        holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
                     } else {
-                        // Payment done, waiting for start
                         holder.btnAccion1.setText("Ver Detalles");
                         holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
-                        holder.btnAccion2.setText("Contactar 💬");
-                        holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
                     }
                 } else {
-                    // Logic for Walker (Paseador)
-                    holder.btnAccion1.setText("Contactar Dueño 💬");
-                    holder.btnAccion1.setOnClickListener(v -> listener.onContactarClick(paseo));
-                    holder.btnAccion2.setVisibility(View.GONE);
+                    holder.btnAccion1.setText("Ver Detalles");
+                    holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
                 }
             }
             else if (estado.equals("COMPLETADO")) {
-                holder.layoutBotonesAccion.setVisibility(View.VISIBLE);
-                holder.btnAccion1.setText("Calificar / Resumen ⭐");
+                holder.btnAccion1.setText("Calificar ⭐");
                 holder.btnAccion1.setOnClickListener(v -> listener.onCalificarClick(paseo));
-                
-                // Optional: Disable if already rated? Not checked here, activity handles it.
-                holder.btnAccion2.setText("Ver Feedback");
-                holder.btnAccion2.setOnClickListener(v -> Toast.makeText(context, "Próximamente: Ver feedback", Toast.LENGTH_SHORT).show());
             }
             else if (estado.equals("CANCELADO")) {
                 holder.btnAccion1.setText("Ver Motivo ℹ️");
-                holder.btnAccion2.setVisibility(View.GONE);
+                // Use outlined style or grey for secondary actions logic if needed, but keep simple for now
+                holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF9CA3AF)); // Gray
                 holder.btnAccion1.setOnClickListener(v -> listener.onVerMotivoClick(paseo));
             }
             else {
-                holder.layoutBotonesAccion.setVisibility(View.GONE);
+                holder.layoutBotones.setVisibility(View.GONE);
             }
         } else {
-            holder.layoutBotonesAccion.setVisibility(View.GONE);
+            holder.layoutBotones.setVisibility(View.GONE);
         }
     }
-
 
     @Override
     public int getItemCount() {
@@ -267,40 +227,28 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     static class PaseoViewHolder extends RecyclerView.ViewHolder {
         TextView tvFecha;
-        TextView tvPaseadorNombre;
-        TextView tvMascotaHora;
-        CircleImageView ivPaseadorFoto;
-        LinearLayout llBotones;
-        TextView btnVerUbicacion;
-        TextView btnContactar;
-        TextView btnCalificar;
-        TextView btnVerMotivo;
+        TextView tvNombrePrincipal;
+        TextView tvNombreSecundario;
+        ShapeableImageView ivFotoPerfil;
         TextView tvDuracion;
         TextView tvCosto;
-        TextView tvTipoReserva;
-        com.google.android.material.chip.Chip chipEstado;
-        LinearLayout layoutBotonesAccion;
-        Button btnAccion1;
-        Button btnAccion2;
+        Chip chipEstado;
+        LinearLayout layoutBotones;
+        MaterialButton btnAccion1;
+        MaterialButton btnAccion2;
 
         public PaseoViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvFecha = itemView.findViewById(R.id.tv_fecha);
-            tvPaseadorNombre = itemView.findViewById(R.id.tv_paseador_nombre);
-            tvMascotaHora = itemView.findViewById(R.id.tv_mascota_hora);
-            ivPaseadorFoto = itemView.findViewById(R.id.iv_paseador_foto);
-            llBotones = itemView.findViewById(R.id.ll_botones);
-            btnVerUbicacion = itemView.findViewById(R.id.btn_ver_ubicacion);
-            btnContactar = itemView.findViewById(R.id.btn_contactar);
-            btnCalificar = itemView.findViewById(R.id.btn_calificar);
-            btnVerMotivo = itemView.findViewById(R.id.btn_ver_motivo);
-            tvDuracion = itemView.findViewById(R.id.tvDuracion);
-            tvCosto = itemView.findViewById(R.id.tvCosto);
-            tvTipoReserva = itemView.findViewById(R.id.tvTipoReserva);
-            chipEstado = itemView.findViewById(R.id.chipEstado);
-            layoutBotonesAccion = itemView.findViewById(R.id.layoutBotonesAccion);
-            btnAccion1 = itemView.findViewById(R.id.btnAccion1);
-            btnAccion2 = itemView.findViewById(R.id.btnAccion2);
+            tvFecha = itemView.findViewById(R.id.tv_fecha_paseo);
+            tvNombrePrincipal = itemView.findViewById(R.id.tv_nombre_principal);
+            tvNombreSecundario = itemView.findViewById(R.id.tv_nombre_secundario);
+            ivFotoPerfil = itemView.findViewById(R.id.iv_foto_perfil_paseo);
+            tvDuracion = itemView.findViewById(R.id.tv_duracion);
+            tvCosto = itemView.findViewById(R.id.tv_costo);
+            chipEstado = itemView.findViewById(R.id.chip_estado_paseo);
+            layoutBotones = itemView.findViewById(R.id.layout_botones_accion);
+            btnAccion1 = itemView.findViewById(R.id.btn_accion_1);
+            btnAccion2 = itemView.findViewById(R.id.btn_accion_2);
         }
     }
 }

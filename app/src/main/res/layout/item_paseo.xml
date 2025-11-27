@@ -1,222 +1,219 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/card_paseo"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="1dp"
-    android:foreground="?attr/selectableItemBackground">
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:rippleColor="#2013A4EC">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Contenido principal -->
+        <!-- Header: Fecha y Estado -->
         <LinearLayout
-            android:id="@+id/ll_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="80dp"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
 
-            <!-- Fecha -->
-            <TextView
-                android:id="@+id/tv_fecha"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="12 de mayo"
-                android:textColor="#757575"
-                android:textSize="12sp"
-                android:layout_marginBottom="8dp" />
-
-            <!-- Nombre Paseador -->
-            <TextView
-                android:id="@+id/tv_paseador_nombre"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Elena Ramirez"
-                android:textColor="@android:color/black"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <!-- Mascota y Hora -->
-            <TextView
-                android:id="@+id/tv_mascota_hora"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Mascota: Max, 10:00 AM"
-                android:textColor="#757575"
-                android:textSize="12sp"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Row 2: Duración + Costo -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="horizontal"
-                android:paddingTop="8dp">
-
-                <!-- Duración -->
-                <TextView
-                    android:id="@+id/tvDuracion"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Duración: 2 horas"
-                    android:textSize="12sp"
-                    android:textColor="#757575" />
-
-                <!-- Costo -->
-                <TextView
-                    android:id="@+id/tvCosto"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="$21.20"
-                    android:textSize="12sp"
-                    android:textColor="#4CAF50"
-                    android:textStyle="bold"
-                    android:gravity="end" />
-            </LinearLayout>
-
-            <!-- Row 3: Tipo + Estado Badge -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="8dp"
                 android:gravity="center_vertical">
-
-                <!-- Tipo de Reserva -->
+                
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_calendar"
+                    app:tint="@color/gray_dark"/>
+                    
                 <TextView
-                    android:id="@+id/tvTipoReserva"
+                    android:id="@+id/tv_fecha_paseo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="[PUNTUAL]"
-                    android:textSize="11sp"
-                    android:textColor="#12A3ED"
-                    android:background="@drawable/badge_tipo"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="4dp" />
-
-                <!-- Estado Badge -->
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipEstado"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="CONFIRMADO"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- Row 4: Botones de Acción (se mostrarán/ocultarán según estado) -->
-            <LinearLayout
-                android:id="@+id/layoutBotonesAccion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="12dp"
-                android:gravity="center_vertical">
-
-                <!-- Botón 1: Dinámico -->
-                <Button
-                    android:id="@+id/btnAccion1"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Ver Ubicación"
-                    android:textSize="11sp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#12A3ED" />
-
-                <!-- Botón 2: Dinámico -->
-                <Button
-                    android:id="@+id/btnAccion2"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Contactar"
-                    android:textSize="11sp"
                     android:layout_marginStart="6dp"
-                    android:backgroundTint="#12A3ED" />
+                    android:textColor="@color/gray_dark"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    tools:text="24 Oct, 2023" />
             </LinearLayout>
 
-            <!-- Botones de acción -->
-            <LinearLayout
-                android:id="@+id/ll_botones"
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_estado_paseo"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <TextView
-                    android:id="@+id/btn_ver_ubicacion"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ver Ubicación 📍"
-                    android:textColor="#12A3ED"
-                    android:textSize="14sp"
-                    android:paddingEnd="16dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/btn_contactar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Contactar Paseador"
-                    android:textColor="#12A3ED"
-                    android:textSize="14sp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/btn_calificar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Calificar Paseador ⭐"
-                    android:textColor="#12A3ED"
-                    android:textSize="14sp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/btn_ver_motivo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ver motivo ℹ️"
-                    android:textColor="#9CA3AF"
-                    android:textSize="14sp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground"
-                    android:visibility="gone" />
-
-            </LinearLayout>
-
+                android:layout_height="32dp"
+                android:clickable="false"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:chipBackgroundColor="@color/green_success"
+                app:chipMinHeight="28dp"
+                app:chipStartPadding="8dp"
+                app:chipEndPadding="8dp"
+                tools:text="COMPLETADO" />
         </LinearLayout>
 
-        <!-- Imagen del paseador -->
-        <de.hdodenhof.circleimageview.CircleImageView
-            android:id="@+id/iv_paseador_foto"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentTop="true"
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F0F0F0"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Cuerpo: Detalles del Paseo -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Foto Mascota/Perfil -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/iv_foto_perfil_paseo"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
+                tools:src="@drawable/ic_pet_placeholder" />
+
+            <!-- Info Central -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_nombre_principal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    tools:text="Max" />
+
+                <TextView
+                    android:id="@+id/tv_nombre_secundario"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/secondary"
+                    android:textSize="14sp"
+                    android:layout_marginTop="2dp"
+                    tools:text="Paseador: Ana" />
+                    
+                <!-- Detalles Pills -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+                    
+                    <!-- Duración -->
+                    <LinearLayout
+                        android:id="@+id/container_duracion"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_round_12"
+                        android:backgroundTint="#E3F2FD"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:gravity="center_vertical"
+                        android:layout_marginEnd="8dp">
+                        <ImageView
+                            android:layout_width="12dp"
+                            android:layout_height="12dp"
+                            android:src="@drawable/ic_access_time"
+                            app:tint="@color/blue_primary"/>
+                        <TextView
+                            android:id="@+id/tv_duracion"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:textColor="@color/blue_primary"
+                            android:textStyle="bold"
+                            android:layout_marginStart="4dp"
+                            tools:text="60 min"/>
+                    </LinearLayout>
+
+                    <!-- Costo -->
+                    <LinearLayout
+                        android:id="@+id/container_costo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_round_12"
+                        android:backgroundTint="#E8F5E9"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="12dp"
+                            android:layout_height="12dp"
+                            android:src="@drawable/ic_attach_money"
+                            app:tint="#4CAF50"/>
+                        <TextView
+                            android:id="@+id/tv_costo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            android:textColor="#4CAF50"
+                            android:textStyle="bold"
+                            android:layout_marginStart="2dp"
+                            tools:text="$10.00"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Actions Footer (Botones Dinámicos) -->
+        <LinearLayout
+            android:id="@+id/layout_botones_accion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_marginTop="16dp"
-            android:src="@drawable/ic_person"
-            app:civ_border_width="2dp"
-            app:civ_border_color="#E5E7EB" />
+            android:visibility="gone"
+            tools:visibility="visible">
+            
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_accion_1"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Acción 1"
+                android:textSize="12sp"
+                app:cornerRadius="8dp"
+                app:backgroundTint="@color/blue_primary"/>
 
-    </RelativeLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_accion_2"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="Acción 2"
+                android:textSize="12sp"
+                app:cornerRadius="8dp"
+                app:strokeColor="@color/blue_primary"
+                android:textColor="@color/blue_primary"/>
+        </LinearLayout>
 
-</androidx.cardview.widget.CardView>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

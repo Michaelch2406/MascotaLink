@@ -40,7 +40,7 @@ public class SolicitudesActivity extends AppCompatActivity {
     private String currentUserId;
 
     // Views
-    private ImageButton ivBack;
+    private android.widget.ImageView ivBack;
     private RecyclerView rvSolicitudes;
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout llEmptyView;
@@ -94,10 +94,10 @@ public class SolicitudesActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        ivBack = findViewById(R.id.iv_back);
+        ivBack = findViewById(R.id.btn_back);
         rvSolicitudes = findViewById(R.id.rv_solicitudes);
         swipeRefresh = findViewById(R.id.swipe_refresh);
-        llEmptyView = findViewById(R.id.ll_empty_view);
+        llEmptyView = findViewById(R.id.empty_view);
         bottomNav = findViewById(R.id.bottom_nav);
         
         solicitudesList = new ArrayList<>();
