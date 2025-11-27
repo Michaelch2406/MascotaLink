@@ -4,9 +4,7 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.RatingBar;
+import android.widget.ImageView; // Changed from ImageButton to ImageView as per new layout
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -42,7 +40,7 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
             return oldItem.getNombre().equals(newItem.getNombre())
                     && Objects.equals(oldItem.getFotoUrl(), newItem.getFotoUrl())
                     && oldItem.getCalificacion() == newItem.getCalificacion()
-                    && oldItem.isFavorito() == newItem.isFavorito(); // Incluir el estado de favorito en la comparación
+                    && oldItem.isFavorito() == newItem.isFavorito();
         }
     };
 
@@ -60,7 +58,6 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
         holder.bind(currentPaseador, itemClickListener, favoritoToggleListener);
     }
 
-    // Interfaces para manejar clicks
     public interface OnItemClickListener {
         void onItemClick(PaseadorResultado paseador);
     }
@@ -77,53 +74,50 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
         this.favoritoToggleListener = listener;
     }
 
-    // --- ViewHolder Interno --- //
     static class PaseadorViewHolder extends RecyclerView.ViewHolder {
         private final ImageView avatarImageView;
         private final TextView nombreTextView;
-        private final RatingBar ratingBar;
+        private final TextView calificacionTextView; // Changed from RatingBar
         private final TextView totalResenasTextView;
         private final TextView zonaTextView;
         private final TextView tarifaTextView;
-        private final ImageButton favoritoButton;
+        private final ImageView favoritoButton; // Changed from ImageButton
 
         public PaseadorViewHolder(@NonNull View itemView) {
             super(itemView);
-            avatarImageView = itemView.findViewById(R.id.paseador_avatar);
-            nombreTextView = itemView.findViewById(R.id.paseador_nombre);
-            ratingBar = itemView.findViewById(R.id.paseador_rating_bar);
+            avatarImageView = itemView.findViewById(R.id.iv_foto_paseador);
+            nombreTextView = itemView.findViewById(R.id.tv_nombre_paseador);
+            calificacionTextView = itemView.findViewById(R.id.tv_calificacion);
             totalResenasTextView = itemView.findViewById(R.id.paseador_total_resenas);
-            zonaTextView = itemView.findViewById(R.id.paseador_zona);
-            tarifaTextView = itemView.findViewById(R.id.paseador_tarifa);
-            favoritoButton = itemView.findViewById(R.id.btn_favorito_resultado);
+            zonaTextView = itemView.findViewById(R.id.tv_zona_paseador);
+            tarifaTextView = itemView.findViewById(R.id.tv_precio);
+            favoritoButton = itemView.findViewById(R.id.btn_favorito);
         }
 
         public void bind(PaseadorResultado paseador, OnItemClickListener itemListener, OnFavoritoToggleListener favListener) {
             Context context = itemView.getContext();
             nombreTextView.setText(paseador.getNombre());
-            zonaTextView.setText(paseador.getZonaPrincipal() != null ? paseador.getZonaPrincipal() : "Sin zona especificada");
-            tarifaTextView.setText(String.format(Locale.getDefault(), "$%.2f/hora", paseador.getTarifaPorHora()));
-            ratingBar.setRating((float) paseador.getCalificacion());
+            zonaTextView.setText(paseador.getZonaPrincipal() != null ? paseador.getZonaPrincipal() : "Sin zona");
+            tarifaTextView.setText(String.format(Locale.getDefault(), "$%.2f", paseador.getTarifaPorHora()));
+            calificacionTextView.setText(String.format(Locale.getDefault(), "%.1f", paseador.getCalificacion()));
             totalResenasTextView.setText(String.format(Locale.getDefault(), "(%d)", paseador.getTotalResenas()));
 
-            // Carga de imagen
             Glide.with(context)
                     .load(paseador.getFotoUrl())
-                    .placeholder(R.drawable.bg_avatar_circle_skeleton)
-                    .error(R.drawable.ic_person)
+                    .placeholder(R.drawable.ic_user_placeholder)
+                    .error(R.drawable.ic_user_placeholder)
                     .circleCrop()
                     .into(avatarImageView);
 
-            // Actualizar estado del botón de favorito
             if (paseador.isFavorito()) {
-                favoritoButton.setImageResource(R.drawable.ic_corazon_lleno);
-                favoritoButton.setColorFilter(ContextCompat.getColor(context, R.color.colorError));
+                favoritoButton.setImageResource(R.drawable.ic_corazon_lleno); // Assumes red heart drawable
+                favoritoButton.setColorFilter(null); // Clear tint to show red
+                favoritoButton.setColorFilter(ContextCompat.getColor(context, R.color.red_error));
             } else {
                 favoritoButton.setImageResource(R.drawable.ic_corazon);
-                favoritoButton.setColorFilter(ContextCompat.getColor(context, R.color.gray_dark)); // O el color que prefieras para el estado "no favorito"
+                favoritoButton.setColorFilter(ContextCompat.getColor(context, R.color.gray_disabled));
             }
 
-            // Listeners
             itemView.setOnClickListener(v -> {
                 if (itemListener != null) {
                     itemListener.onItemClick(paseador);
@@ -132,7 +126,6 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
 
             favoritoButton.setOnClickListener(v -> {
                 if (favListener != null) {
-                    // Notificar el nuevo estado deseado
                     favListener.onFavoritoToggle(paseador.getId(), !paseador.isFavorito());
                 }
             });

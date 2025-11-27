@@ -6,109 +6,205 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp">
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:rippleColor="#2013A4EC">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Avatar -->
-        <de.hdodenhof.circleimageview.CircleImageView
-            android:id="@+id/paseador_avatar"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:src="@drawable/selfie"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <!-- Botón de Favorito -->
-        <ImageButton
-                                    android:id="@+id/btn_favorito_resultado"
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
-                                    android:contentDescription="Marcar como favorito"
-                                    android:src="@drawable/ic_corazon"
-                                    app:tint="@color/colorError"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintTop_toTopOf="parent" />        <!-- Nombre del Paseador -->
-        <TextView
-            android:id="@+id/paseador_nombre"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="8dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.Mascota.Title"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toStartOf="@+id/btn_favorito_resultado"
-            app:layout_constraintStart_toEndOf="@id/paseador_avatar"
-            app:layout_constraintTop_toTopOf="@id/paseador_avatar"
-            tools:text="Michael Christopher" />
+            android:orientation="horizontal">
 
-        <!-- Calificación (RatingBar) -->
-        <RatingBar
-            android:id="@+id/paseador_rating_bar"
-            style="?android:attr/ratingBarStyleSmall"
-            android:layout_width="wrap_content"
+            <!-- Foto Perfil -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/iv_foto_paseador"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
+                    tools:src="@drawable/ic_user_placeholder" />
+
+                <!-- Badge Verificado (Opcional, lógica en adapter) -->
+                <ImageView
+                    android:id="@+id/iv_badge_verificado"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@drawable/ic_check_circle"
+                    app:tint="@color/blue_primary"
+                    android:background="@drawable/bg_avatar_circle"
+                    android:backgroundTint="@color/white"
+                    android:padding="2dp"
+                    android:visibility="gone"/>
+            </FrameLayout>
+
+            <!-- Info Central -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_nombre_paseador"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    tools:text="Carlos Ruiz" />
+
+                <!-- Rating y Reseñas -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_star_filled"
+                        app:tint="#FFC107"/>
+
+                    <TextView
+                        android:id="@+id/tv_calificacion"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="4.8"
+                        android:textColor="@color/black"
+                        android:textStyle="bold"
+                        android:textSize="13sp"
+                        android:layout_marginStart="4dp"/>
+
+                    <TextView
+                        android:id="@+id/paseador_total_resenas"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="(120)"
+                        android:textColor="@color/secondary"
+                        android:textSize="13sp"
+                        android:layout_marginStart="4dp"/>
+                </LinearLayout>
+
+                <!-- Zona / Ubicación -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+                    
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_my_location"
+                        app:tint="@color/secondary"/>
+                        
+                    <TextView
+                        android:id="@+id/tv_zona_paseador"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Zona Norte"
+                        android:textColor="@color/secondary"
+                        android:textSize="13sp"
+                        android:layout_marginStart="4dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Precio y Favorito -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="end">
+
+                <ImageView
+                    android:id="@+id/btn_favorito"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_corazon"
+                    app:tint="@color/gray_disabled"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <TextView
+                    android:id="@+id/tv_precio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="$15.00"
+                    android:textColor="@color/blue_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="12dp"/>
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="/hora"
+                    android:textColor="@color/secondary"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F0F0F0"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Footer: Experiencia y Botón -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:isIndicator="true"
-            android:numStars="5"
-            android:stepSize="0.1"
-            app:layout_constraintStart_toStartOf="@id/paseador_nombre"
-            app:layout_constraintTop_toBottomOf="@id/paseador_nombre"
-            tools:rating="4.8" />
+            android:gravity="center_vertical">
 
-        <!-- Total de Reseñas -->
-        <TextView
-            android:id="@+id/paseador_total_resenas"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:textColor="#6B7280"
-            android:textSize="12sp"
-            app:layout_constraintBottom_toBottomOf="@+id/paseador_rating_bar"
-            app:layout_constraintStart_toEndOf="@+id/paseador_rating_bar"
-            app:layout_constraintTop_toTopOf="@+id/paseador_rating_bar"
-            tools:text="(120)" />
+            <TextView
+                android:id="@+id/tv_experiencia"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="2 años de experiencia"
+                android:textColor="@color/gray_dark"
+                android:textSize="12sp"
+                android:drawablePadding="6dp"
+                app:drawableStartCompat="@drawable/ic_walk"
+                app:drawableTint="@color/gray_dark"/>
 
-        <!-- Zona de Servicio -->
-        <TextView
-            android:id="@+id/paseador_zona"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:drawableStart="@drawable/ic_my_location"
-            android:drawablePadding="4dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="#6B7280"
-            android:textSize="12sp"
-            app:drawableTint="#888888"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="@id/paseador_rating_bar"
-            app:layout_constraintTop_toBottomOf="@id/paseador_rating_bar"
-            tools:text="Duchicela, Ecuador" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ver Perfil"
+                android:textColor="@color/blue_primary"
+                android:textStyle="bold"
+                android:textSize="14sp"/>
+                
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_arrow_forward"
+                app:tint="@color/blue_primary"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
 
-        <!-- Tarifa por Hora -->
-        <TextView
-            android:id="@+id/paseador_tarifa"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/button_outline_background"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp"
-            android:textColor="@color/green_success"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/paseador_zona"
-            tools:text="$10.60/hora" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

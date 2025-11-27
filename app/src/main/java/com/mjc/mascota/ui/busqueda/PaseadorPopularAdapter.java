@@ -51,10 +51,6 @@ public class PaseadorPopularAdapter extends ListAdapter<PaseadorResultado, Pasea
         holder.bind(currentPaseador, listener);
     }
 
-    public interface OnItemClickListener {
-        void onItemClick(PaseadorResultado paseador);
-    }
-
     public void setOnItemClickListener(PaseadorResultadoAdapter.OnItemClickListener listener) {
         this.listener = listener;
     }
@@ -63,28 +59,26 @@ public class PaseadorPopularAdapter extends ListAdapter<PaseadorResultado, Pasea
         private final ImageView avatarImageView;
         private final TextView nombreTextView;
         private final TextView calificacionTextView;
-        private final TextView resenasTextView;
         private final TextView precioTextView;
 
         public PaseadorPopularViewHolder(@NonNull View itemView) {
             super(itemView);
-            avatarImageView = itemView.findViewById(R.id.iv_avatar_popular);
-            nombreTextView = itemView.findViewById(R.id.tv_nombre_popular);
-            calificacionTextView = itemView.findViewById(R.id.tv_calificacion_popular);
-            resenasTextView = itemView.findViewById(R.id.tv_resenas_popular);
-            precioTextView = itemView.findViewById(R.id.tv_precio_popular);
+            // Asegurando que los IDs coincidan con item_paseador_popular.xml actualizado
+            avatarImageView = itemView.findViewById(R.id.iv_foto_paseador);
+            nombreTextView = itemView.findViewById(R.id.tv_nombre_paseador);
+            calificacionTextView = itemView.findViewById(R.id.tv_calificacion);
+            precioTextView = itemView.findViewById(R.id.tv_precio);
         }
 
         public void bind(PaseadorResultado paseador, final PaseadorResultadoAdapter.OnItemClickListener listener) {
             nombreTextView.setText(paseador.getNombre());
             calificacionTextView.setText(String.format(Locale.getDefault(), "%.1f", paseador.getCalificacion()));
-            resenasTextView.setText(String.format(Locale.getDefault(), "(%d)", paseador.getTotalResenas()));
-            precioTextView.setText(String.format(Locale.getDefault(), "$%.2f/hora", paseador.getTarifaPorHora()));
+            precioTextView.setText(String.format(Locale.getDefault(), "$%.2f/h", paseador.getTarifaPorHora()));
 
             Glide.with(itemView.getContext())
                     .load(paseador.getFotoUrl())
-                    .placeholder(R.drawable.bg_avatar_circle_skeleton)
-                    .error(R.drawable.ic_person)
+                    .placeholder(R.drawable.ic_user_placeholder)
+                    .error(R.drawable.ic_user_placeholder)
                     .circleCrop()
                     .into(avatarImageView);
 

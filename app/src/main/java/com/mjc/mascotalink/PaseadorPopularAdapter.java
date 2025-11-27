@@ -15,6 +15,7 @@ import com.bumptech.glide.Glide;
 import com.mjc.mascota.modelo.PaseadorResultado;
 
 import java.util.List;
+import java.util.Locale;
 
 public class PaseadorPopularAdapter extends RecyclerView.Adapter<PaseadorPopularAdapter.ViewHolder> {
 
@@ -48,8 +49,8 @@ public class PaseadorPopularAdapter extends RecyclerView.Adapter<PaseadorPopular
         holder.tvNombre.setText(paseador.getNombre());
 
         // Calificación
-        holder.tvCalificacion.setText(String.format("%.1f", paseador.getCalificacion()));
-        holder.tvResenas.setText("(" + paseador.getTotalResenas() + ")");
+        holder.tvCalificacion.setText(String.format(Locale.getDefault(), "%.1f", paseador.getCalificacion()));
+        holder.tvPrecio.setText(String.format(Locale.getDefault(), "$%.2f/h", paseador.getTarifaPorHora()));
 
         // Click listener
         holder.itemView.setOnClickListener(v -> {
@@ -66,14 +67,14 @@ public class PaseadorPopularAdapter extends RecyclerView.Adapter<PaseadorPopular
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView ivAvatar;
-        TextView tvNombre, tvCalificacion, tvResenas;
+        TextView tvNombre, tvCalificacion, tvPrecio;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            ivAvatar = itemView.findViewById(R.id.iv_avatar_popular);
-            tvNombre = itemView.findViewById(R.id.tv_nombre_popular);
-            tvCalificacion = itemView.findViewById(R.id.tv_calificacion_popular);
-            tvResenas = itemView.findViewById(R.id.tv_resenas_popular);
+            ivAvatar = itemView.findViewById(R.id.iv_foto_paseador);
+            tvNombre = itemView.findViewById(R.id.tv_nombre_paseador);
+            tvCalificacion = itemView.findViewById(R.id.tv_calificacion);
+            tvPrecio = itemView.findViewById(R.id.tv_precio);
         }
     }
 }

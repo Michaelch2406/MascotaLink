@@ -1,86 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="150dp"
+    android:layout_width="140dp"
     android:layout_height="wrap_content"
     android:layout_marginEnd="12dp"
-    app:cardCornerRadius="12dp"
+    android:layout_marginVertical="4dp"
+    android:layout_marginStart="4dp"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
-    android:clickable="true"
-    android:focusable="true">
+    app:rippleColor="#2013A4EC">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="12dp"
-        android:gravity="center_horizontal">
+        android:gravity="center">
 
-        <!-- Avatar del paseador -->
-        <de.hdodenhof.circleimageview.CircleImageView
-            android:id="@+id/iv_avatar_popular"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@drawable/paseador_mascota"/>
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/iv_foto_paseador"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:scaleType="centerCrop"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
+            tools:src="@drawable/ic_user_placeholder" />
 
-        <!-- Nombre del paseador -->
         <TextView
-            android:id="@+id/tv_nombre_popular"
-            android:layout_width="wrap_content"
+            android:id="@+id/tv_nombre_paseador"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Sofía R."
-            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="@color/black"
             android:textSize="14sp"
-            android:textColor="#111827"
+            android:textStyle="bold"
+            android:ellipsize="end"
             android:maxLines="1"
-            android:ellipsize="end"/>
+            tools:text="Ana M." />
 
-        <!-- Calificación -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center"
+            android:layout_marginTop="4dp">
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_star_filled"
+                app:tint="#FFC107"/>
 
             <TextView
+                android:id="@+id/tv_calificacion"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="★"
-                android:textSize="12sp"
-                android:textColor="#FFC107"/>
-
-            <TextView
-                android:id="@+id/tv_calificacion_popular"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
                 android:text="4.9"
                 android:textSize="12sp"
-                android:textColor="#111827"/>
-
-            <TextView
-                android:id="@+id/tv_resenas_popular"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="(123)"
-                android:textSize="12sp"
-                android:textColor="#6B7280"/>
+                android:textColor="@color/gray_dark"
+                android:layout_marginStart="2dp"/>
         </LinearLayout>
-
+        
         <TextView
-            android:id="@+id/tv_precio_popular"
+            android:id="@+id/tv_precio"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="@color/green_success"
-            android:textSize="12sp"
+            android:text="$12/h"
+            android:textColor="@color/blue_primary"
             android:textStyle="bold"
-            tools:text="$10.50/hora" />
+            android:textSize="12sp"
+            android:layout_marginTop="4dp"/>
 
     </LinearLayout>
-
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>
