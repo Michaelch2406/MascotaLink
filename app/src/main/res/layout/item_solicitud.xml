@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="12dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp"
-    android:foreground="?attr/selectableItemBackground">
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:rippleColor="#2013A4EC">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,80 +17,172 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Información superior: fecha/hora, nombre dueño, raza mascota -->
+        <!-- Fila Superior: Info Principal -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <!-- Información izquierda -->
+            <!-- Foto Mascota -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/iv_foto_mascota"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
+                tools:src="@drawable/ic_pet_placeholder" />
+
+            <!-- Datos Mascota y Dueño -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_nombre_mascota"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    tools:text="Firulais" />
+
+                <TextView
+                    android:id="@+id/tv_nombre_dueno"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/secondary"
+                    android:textSize="14sp"
+                    tools:text="De Juan Pérez" />
+            </LinearLayout>
+
+            <!-- Precio y Estado -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_precio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/green_success"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    tools:text="$15.00" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_estado"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:clickable="false"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    app:chipBackgroundColor="@color/blue_primary"
+                    app:chipMinHeight="24dp"
+                    tools:text="Pendiente" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="#F0F0F0" />
+
+        <!-- Fila Inferior: Fecha y Hora -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginEnd="12dp">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-                <!-- Fecha y hora -->
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_calendar"
+                    app:tint="@color/secondary" />
+
                 <TextView
-                    android:id="@+id/tv_fecha_hora"
+                    android:id="@+id/tv_fecha"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="12 de junio · 10:00 AM"
-                    android:textColor="#9CA3AF"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="4dp" />
-
-                <!-- Nombre del dueño -->
-                <TextView
-                    android:id="@+id/tv_dueno_nombre"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Sofía"
-                    android:textColor="#000000"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-
-                <!-- Raza de la mascota -->
-                <TextView
-                    android:id="@+id/tv_mascota_raza"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Golden Retriever"
-                    android:textColor="#757575"
-                    android:textSize="13sp" />
-
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/gray_dark"
+                    android:textSize="14sp"
+                    tools:text="24 Oct, 2023" />
             </LinearLayout>
 
-            <!-- Foto del dueño (circular) -->
-            <de.hdodenhof.circleimageview.CircleImageView
-                android:id="@+id/iv_dueno_foto"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_person"
-                app:civ_border_width="2dp"
-                app:civ_border_color="#E5E7EB" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_access_time"
+                    app:tint="@color/secondary" />
+
+                <TextView
+                    android:id="@+id/tv_hora"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/gray_dark"
+                    android:textSize="14sp"
+                    tools:text="10:00 AM (1h)" />
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Botón Aceptar -->
-        <Button
-            android:id="@+id/btn_aceptar"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginTop="12dp"
-            android:text="Aceptar ✓"
-            android:textColor="#2E7D32"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:backgroundTint="#E8F5E9"
-            android:minWidth="80dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
+        <!-- Botones de Acción (Solo visibles si es pendiente) -->
+        <LinearLayout
+            android:id="@+id/layout_botones_accion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_rechazar"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Rechazar"
+                android:textColor="@color/red_error"
+                app:strokeColor="@color/red_error" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_aceptar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="Aceptar"
+                app:backgroundTint="@color/blue_primary" />
+        </LinearLayout>
 
     </LinearLayout>
-
 </com.google.android.material.card.MaterialCardView>
-
