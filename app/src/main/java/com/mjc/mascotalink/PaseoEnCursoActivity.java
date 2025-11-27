@@ -95,6 +95,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private TextView tvMinutos;
     private TextView tvSegundos;
     private TextView tvEstado;
+    private TextView tvUbicacionEstado;
     private com.google.android.material.imageview.ShapeableImageView ivFotoMascota;
     private TextInputEditText etNotas;
     private RecyclerView rvFotos;
@@ -112,6 +113,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private final Handler saveHandler = new Handler(Looper.getMainLooper());
     private Runnable saveRunnable;
     private boolean isUpdatingNotesFromRemote = false;
+    private android.location.Location lastSentLocation = null;
+    private long lastSentAt = 0L;
 
     private Date fechaInicioPaseo;
     private long duracionMinutos = 0L;
@@ -173,6 +176,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         tvMinutos = findViewById(R.id.tv_minutos);
         tvSegundos = findViewById(R.id.tv_segundos);
         tvEstado = findViewById(R.id.tv_estado);
+        tvUbicacionEstado = findViewById(R.id.tv_ubicacion_estado);
         ivFotoMascota = findViewById(R.id.iv_foto_mascota);
         etNotas = findViewById(R.id.et_notas);
         rvFotos = findViewById(R.id.rv_fotos);
@@ -1033,8 +1037,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private void setupLocationUpdates() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 15000)
-                .setMinUpdateDistanceMeters(10)
+        // Más responsivo: 7s, 6m
+        locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 7000)
+                .setMinUpdateDistanceMeters(6)
                 .setWaitForAccurateLocation(false)
                 .build();
 
@@ -1043,13 +1048,29 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 for (android.location.Location location : locationResult.getLocations()) {
                     if (location != null) {
-                        actualizarUbicacionFirestore(location);
+                        procesarUbicacion(location);
                     }
                 }
             }
         };
 
         checkLocationPermissionAndStart();
+        solicitarPrimeraUbicacionRapida();
+    }
+
+    private void solicitarPrimeraUbicacionRapida() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener(loc -> {
+                    if (loc != null) {
+                        procesarUbicacion(loc);
+                    } else {
+                        actualizarEstadoUbicacion("Ubicación: buscando señal...");
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "No se pudo obtener ubicación inicial rápida", e));
     }
 
     private void checkLocationPermissionAndStart() {
@@ -1067,6 +1088,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 == PackageManager.PERMISSION_GRANTED) {
             if (fusedLocationClient != null && locationCallback != null) {
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+                actualizarEstadoUbicacion("Ubicación: buscando señal...");
             }
         }
     }
@@ -1077,29 +1099,71 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
     }
 
-    private void actualizarUbicacionFirestore(android.location.Location location) {
-        if (reservaRef == null) return;
+    private void procesarUbicacion(android.location.Location location) {
+        if (reservaRef == null || location == null) return;
+        if (auth == null || auth.getCurrentUser() == null) return;
+
+        if (!location.hasAccuracy() || location.getAccuracy() > 50f) {
+            actualizarEstadoUbicacion("Ubicación: precisión baja (>50 m)");
+            return;
+        }
+
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (lastSentLocation != null) {
+            float dist = location.distanceTo(lastSentLocation);
+            if (dist < 5f) {
+                return; // no se movió lo suficiente
+            }
+        }
+        if (now - lastSentAt < 5000) {
+            return; // throttling 5s
+        }
 
         double lat = location.getLatitude();
         double lng = location.getLongitude();
         GeoPoint punto = new GeoPoint(lat, lng);
         String geohash = GeoFireUtils.getGeoHashForLocation(new GeoLocation(lat, lng));
 
-        // 1. Guardar en el historial del paseo (para el dueño de este paseo)
-        reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto))
+        Map<String, Object> puntoMap = new HashMap<>();
+        puntoMap.put("lat", lat);
+        puntoMap.put("lng", lng);
+        puntoMap.put("acc", location.getAccuracy());
+        puntoMap.put("speed", location.getSpeed());
+        puntoMap.put("bearing", location.getBearing());
+        puntoMap.put("ts", Timestamp.now()); // arrayUnion no permite FieldValue.serverTimestamp
+
+        boolean enMovimiento = location.getSpeed() > 0.7f; // ~2.5 km/h
+
+        // 1. Guardar en el historial del paseo (para el dueño)
+        reservaRef.update("ubicaciones", FieldValue.arrayUnion(puntoMap))
                 .addOnFailureListener(e -> Log.e(TAG, "Error actualizando historial de ubicación", e));
 
-        // 2. Publicar ubicación en tiempo real en el perfil del usuario (para la búsqueda global)
-        if (auth.getCurrentUser() != null) {
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("ubicacion_actual", punto);
-            updates.put("ubicacion_geohash", geohash);
-            updates.put("en_linea", true);
-            updates.put("last_seen", FieldValue.serverTimestamp());
+        // 2. Publicar en tiempo real en el perfil del usuario
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("ubicacion_actual", puntoMap);
+        updates.put("ubicacion_geohash", geohash);
+        updates.put("en_linea", true);
+        updates.put("en_movimiento", enMovimiento);
+        updates.put("last_seen", FieldValue.serverTimestamp());
 
-            db.collection("usuarios").document(auth.getCurrentUser().getUid())
-                    .update(updates)
-                    .addOnFailureListener(e -> Log.e(TAG, "Error publicando ubicación en tiempo real", e));
+        db.collection("usuarios").document(auth.getCurrentUser().getUid())
+                .update(updates)
+                .addOnFailureListener(e -> Log.e(TAG, "Error publicando ubicación en tiempo real", e));
+
+        lastSentLocation = location;
+        lastSentAt = now;
+        actualizarEstadoUbicacion(formatearEstadoUbicacion(location, enMovimiento));
+    }
+
+    private String formatearEstadoUbicacion(android.location.Location loc, boolean enMovimiento) {
+        int acc = (int) loc.getAccuracy();
+        String mov = enMovimiento ? "en movimiento" : "detenido";
+        return "Ubicación: hace instantes (±" + acc + " m, " + mov + ")";
+    }
+
+    private void actualizarEstadoUbicacion(String texto) {
+        if (tvUbicacionEstado != null) {
+            tvUbicacionEstado.setText(texto);
         }
     }
 

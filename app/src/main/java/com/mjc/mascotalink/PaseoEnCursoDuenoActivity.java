@@ -115,6 +115,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     // Map Data
     private List<LatLng> rutaPaseo = new ArrayList<>();
     private LatLng ultimaUbicacionConocida;
+    private TextView tvUbicacionEstado;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -176,7 +177,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         
         // Initial empty state or loading
         if (!rutaPaseo.isEmpty()) {
-            actualizarMapa(rutaPaseo);
+            actualizarMapa(rutaPaseo, null);
         }
     }
 
@@ -245,6 +246,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         btnContactar = findViewById(R.id.btn_contactar_paseador);
         btnCancelar = findViewById(R.id.btn_cancelar_paseo);
         bottomNav = findViewById(R.id.bottom_nav);
+        tvUbicacionEstado = findViewById(R.id.tv_ubicacion_estado);
     }
     
     // ... (Rest of setup methods: setupToolbar, setupRecyclerViews, setupButtons, setupBottomNav) ...
@@ -488,7 +490,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         
         // 7. Actualizar Mapa
         List<LatLng> puntosMapa = parsearUbicaciones(snapshot.get("ubicaciones"));
-        actualizarMapa(puntosMapa);
+        actualizarMapa(puntosMapa, snapshot.get("ubicaciones"));
 
         // 6. Cargar datos relacionados (Paseador, Mascota) solo si no se han cargado
         if (idPaseador == null) {
@@ -521,16 +523,15 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 } else if (item instanceof Map) {
                     try {
                         Map<String, Object> map = (Map<String, Object>) item;
-                        // Intenta obtener lat/lng de forma segura, manejando Double o String
                         Object latObj = map.get("lat");
-                        Object lngObj = map.get("lng"); // o "lon"
+                        Object lngObj = map.get("lng");
                         if (lngObj == null) lngObj = map.get("lon");
-                        
+
                         double lat = 0, lng = 0;
                         if (latObj instanceof Number) lat = ((Number) latObj).doubleValue();
                         if (lngObj instanceof Number) lng = ((Number) lngObj).doubleValue();
-                        
-                        if (lat != 0 && lng != 0) {
+
+                        if (lat != 0 || lng != 0) {
                             puntos.add(new LatLng(lat, lng));
                         }
                     } catch (Exception e) {
@@ -539,12 +540,17 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 }
             }
         }
+        // Limitar para evitar sobrecarga de polilínea
+        if (puntos.size() > 200) {
+            return puntos.subList(puntos.size() - 200, puntos.size());
+        }
         return puntos;
     }
 
-    private void actualizarMapa(List<LatLng> puntos) {
+    private void actualizarMapa(List<LatLng> puntos, Object ubicacionesRaw) {
         if (mMap == null || puntos == null || puntos.isEmpty()) return;
 
+        LatLng previo = this.ultimaUbicacionConocida;
         this.rutaPaseo = puntos;
         this.ultimaUbicacionConocida = puntos.get(puntos.size() - 1);
 
@@ -586,20 +592,98 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         // Mover cámara suavemente
         try {
-            // Si es la primera carga o queremos seguir al paseador de cerca
             float zoomLevel = 17.0f;
-            com.google.android.gms.maps.model.CameraPosition cameraPosition = 
-                new com.google.android.gms.maps.model.CameraPosition.Builder()
-                    .target(ultimaUbicacionConocida)
-                    .zoom(zoomLevel)
-                    .bearing(0) // Podríamos orientarlo según el rumbo si tuviéramos ese dato
-                    .tilt(45) // Inclinación para efecto 3D
-                    .build();
-            
-            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 1000, null);
+            boolean moverCamara = true;
+            if (previo != null) {
+                float[] results = new float[1];
+                android.location.Location.distanceBetween(previo.latitude, previo.longitude,
+                        ultimaUbicacionConocida.latitude, ultimaUbicacionConocida.longitude, results);
+                moverCamara = results[0] > 15f; // solo si se movió suficiente
+            }
+            if (moverCamara) {
+                com.google.android.gms.maps.model.CameraPosition cameraPosition =
+                        new com.google.android.gms.maps.model.CameraPosition.Builder()
+                                .target(ultimaUbicacionConocida)
+                                .zoom(zoomLevel)
+                                .bearing(0)
+                                .tilt(45)
+                                .build();
+                mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 800, null);
+            }
         } catch (Exception e) {
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaUbicacionConocida, 16f));
         }
+
+        // Mostrar estado de ubicación para el dueño
+        actualizarEstadoUbicacionDueno(ubicacionesRaw);
+    }
+
+    private void actualizarEstadoUbicacionDueno(Object ubicacionesRaw) {
+        if (tvUbicacionEstado == null) return;
+        if (!(ubicacionesRaw instanceof List)) {
+            tvUbicacionEstado.setText("Ubicación: sin datos");
+            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
+            return;
+        }
+        List<?> lista = (List<?>) ubicacionesRaw;
+        if (lista.isEmpty()) {
+            tvUbicacionEstado.setText("Ubicación: sin datos");
+            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
+            return;
+        }
+        Object last = lista.get(lista.size() - 1);
+        Double acc = null;
+        Double speed = null;
+        Timestamp ts = null;
+        if (last instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) last;
+            Object accObj = map.get("acc");
+            Object speedObj = map.get("speed");
+            Object tsObj = map.get("ts");
+            if (accObj instanceof Number) acc = ((Number) accObj).doubleValue();
+            if (speedObj instanceof Number) speed = ((Number) speedObj).doubleValue();
+            if (tsObj instanceof Timestamp) {
+                ts = (Timestamp) tsObj;
+            } else if (tsObj instanceof Date) {
+                ts = new Timestamp((Date) tsObj);
+            }
+        } else if (last instanceof GeoPoint) {
+            tvUbicacionEstado.setText("Ubicación: actualizada");
+            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
+            return;
+        }
+        StringBuilder sb = new StringBuilder("Ubicación: ");
+        if (ts != null) {
+            long diffSec = (new Date().getTime() - ts.toDate().getTime()) / 1000;
+            if (diffSec < 60) {
+                sb.append("hace ").append(diffSec).append(" s");
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.blue_primary));
+            } else {
+                sb.append("hace ").append(diffSec / 60).append(" min");
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, diffSec > 120 ? R.color.red_error : R.color.secondary));
+            }
+        } else {
+            sb.append("actualizada");
+            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
+        }
+        if (acc != null) {
+            sb.append(" (±").append(acc.intValue()).append(" m");
+        }
+        if (speed != null) {
+            boolean enMovimiento = speed > 0.7;
+            sb.append(", ").append(enMovimiento ? "en movimiento" : "detenido");
+            if (enMovimiento) {
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.blue_primary));
+            } else if (ts != null && (new Date().getTime() - ts.toDate().getTime()) / 1000 > 120) {
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.red_error));
+            } else {
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.secondary));
+            }
+        }
+        if (acc != null) {
+            sb.append(")");
+        }
+        tvUbicacionEstado.setText(sb.toString());
     }
 
     private BitmapDescriptor getResizedBitmapDescriptor(int resourceId, int widthPx) {

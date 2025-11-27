@@ -157,6 +157,14 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <TextView
+                android:id="@+id/tv_ubicacion_estado"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                style="@style/TextAppearance.Mascota.BodyMuted"
+                android:text="Ubicación: obteniendo señal..." />
+
             <!-- SECCIÓN 2: ESTADO Y TEMPORIZADOR -->
             <TextView
                 android:id="@+id/tv_estado"
