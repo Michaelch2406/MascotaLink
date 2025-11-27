@@ -4,31 +4,30 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.DiffUtil;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.imageview.ShapeableImageView;
 import com.mjc.mascotalink.SolicitudesActivity.Solicitud;
+import com.mjc.mascotalink.utils.SolicitudDiffCallback;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import androidx.recyclerview.widget.DiffUtil;
-import com.mjc.mascotalink.utils.SolicitudDiffCallback;
-import java.util.ArrayList;
-
-import de.hdodenhof.circleimageview.CircleImageView;
-
 public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.SolicitudViewHolder> {
 
-    private Context context;
-    private List<Solicitud> solicitudesList;
-    private OnSolicitudClickListener listener;
+    private final Context context;
+    private final List<Solicitud> solicitudesList;
+    private final OnSolicitudClickListener listener;
 
     public interface OnSolicitudClickListener {
         void onSolicitudClick(Solicitud solicitud);
@@ -40,7 +39,7 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
         this.solicitudesList = new ArrayList<>(solicitudesList); // Copy for DiffUtil
         this.listener = listener;
     }
-    
+
     public void updateList(List<Solicitud> newList) {
         DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new SolicitudDiffCallback(this.solicitudesList, newList));
         this.solicitudesList.clear();
@@ -58,42 +57,44 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
     @Override
     public void onBindViewHolder(@NonNull SolicitudViewHolder holder, int position) {
         Solicitud solicitud = solicitudesList.get(position);
-        if (solicitud == null) return;
-
-        // Fecha y hora
-        if (solicitud.getFechaCreacion() != null && solicitud.getHoraInicio() != null) {
-            String fechaHora = formatearFechaHora(solicitud.getFechaCreacion(), solicitud.getHoraInicio());
-            holder.tvFechaHora.setText(fechaHora);
-        } else {
-            holder.tvFechaHora.setText("Fecha no disponible");
+        if (solicitud == null) {
+            return;
         }
 
-        // Nombre del dueño
-        holder.tvDuenoNombre.setText(solicitud.getDuenoNombre() != null ? solicitud.getDuenoNombre() : "Usuario desconocido");
+        // Nombre de mascota (usamos raza como fallback) y dueño
+        holder.tvNombreMascota.setText(solicitud.getMascotaRaza() != null ? solicitud.getMascotaRaza() : "Mascota");
+        holder.tvNombreDueno.setText(solicitud.getDuenoNombre() != null ? solicitud.getDuenoNombre() : "Usuario desconocido");
 
-        // Raza de la mascota
-        holder.tvMascotaRaza.setText(solicitud.getMascotaRaza() != null ? solicitud.getMascotaRaza() : "Mascota");
+        // Fecha y hora en campos separados
+        holder.tvFecha.setText(solicitud.getFechaCreacion() != null ? formatearFecha(solicitud.getFechaCreacion()) : "Fecha no disponible");
+        holder.tvHora.setText(solicitud.getHoraInicio() != null ? formatearHora(solicitud.getHoraInicio()) : "Hora no disponible");
 
-        // Foto del dueño
+        // Foto (ShapeableImageView del layout)
         if (solicitud.getDuenoFotoUrl() != null && !solicitud.getDuenoFotoUrl().isEmpty()) {
             Glide.with(context)
                     .load(solicitud.getDuenoFotoUrl())
-                    .placeholder(R.drawable.ic_person)
-                    .error(R.drawable.ic_person)
-                    .circleCrop()
-                    .into(holder.ivDuenoFoto);
+                    .placeholder(R.drawable.ic_pet_placeholder)
+                    .error(R.drawable.ic_pet_placeholder)
+                    .centerCrop()
+                    .into(holder.ivFotoMascota);
         } else {
-            holder.ivDuenoFoto.setImageResource(R.drawable.ic_person);
+            holder.ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
         }
 
-        // Click en botón Aceptar
+        // Estado / precio (no se tienen en el modelo actual)
+        holder.chipEstado.setText("Pendiente");
+        holder.chipEstado.setVisibility(View.VISIBLE);
+        holder.tvPrecio.setVisibility(View.GONE);
+
+        // Botones de acción: solo usamos aceptar aquí; rechazo se oculta
+        holder.btnRechazar.setVisibility(View.GONE);
+        holder.btnAceptar.setVisibility(View.VISIBLE);
         holder.btnAceptar.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onAceptarClick(solicitud);
             }
         });
 
-        // Click en toda la tarjeta
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onSolicitudClick(solicitud);
@@ -101,19 +102,21 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
         });
     }
 
-    private String formatearFechaHora(Date fechaCreacion, Date horaInicio) {
+    private String formatearFecha(Date fechaCreacion) {
         try {
-            // Formato para fecha: "12 de junio" (usando fechaCreacion para mostrar cuándo se creó la solicitud)
             SimpleDateFormat sdfFecha = new SimpleDateFormat("d 'de' MMMM", new Locale("es", "ES"));
-            String fechaStr = sdfFecha.format(fechaCreacion);
-
-            // Formato para hora: "10:00 AM" (usando horaInicio para mostrar la hora del paseo)
-            SimpleDateFormat sdfHora = new SimpleDateFormat("h:mm a", Locale.US);
-            String horaStr = sdfHora.format(horaInicio);
-
-            return fechaStr + " · " + horaStr;
+            return sdfFecha.format(fechaCreacion);
         } catch (Exception e) {
             return "Fecha no disponible";
+        }
+    }
+
+    private String formatearHora(Date horaInicio) {
+        try {
+            SimpleDateFormat sdfHora = new SimpleDateFormat("h:mm a", Locale.US);
+            return sdfHora.format(horaInicio);
+        } catch (Exception e) {
+            return "Hora no disponible";
         }
     }
 
@@ -123,20 +126,27 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
     }
 
     static class SolicitudViewHolder extends RecyclerView.ViewHolder {
-        TextView tvFechaHora;
-        TextView tvDuenoNombre;
-        TextView tvMascotaRaza;
-        CircleImageView ivDuenoFoto;
-        Button btnAceptar;
+        TextView tvFecha;
+        TextView tvHora;
+        TextView tvNombreDueno;
+        TextView tvNombreMascota;
+        TextView tvPrecio;
+        Chip chipEstado;
+        ShapeableImageView ivFotoMascota;
+        MaterialButton btnAceptar;
+        MaterialButton btnRechazar;
 
-        public SolicitudViewHolder(@NonNull View itemView) {
+        SolicitudViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvFechaHora = itemView.findViewById(R.id.tv_fecha_hora);
-            tvDuenoNombre = itemView.findViewById(R.id.tv_dueno_nombre);
-            tvMascotaRaza = itemView.findViewById(R.id.tv_mascota_raza);
-            ivDuenoFoto = itemView.findViewById(R.id.iv_dueno_foto);
+            tvFecha = itemView.findViewById(R.id.tv_fecha);
+            tvHora = itemView.findViewById(R.id.tv_hora);
+            tvNombreDueno = itemView.findViewById(R.id.tv_nombre_dueno);
+            tvNombreMascota = itemView.findViewById(R.id.tv_nombre_mascota);
+            tvPrecio = itemView.findViewById(R.id.tv_precio);
+            chipEstado = itemView.findViewById(R.id.chip_estado);
+            ivFotoMascota = itemView.findViewById(R.id.iv_foto_mascota);
             btnAceptar = itemView.findViewById(R.id.btn_aceptar);
+            btnRechazar = itemView.findViewById(R.id.btn_rechazar);
         }
     }
 }
-
