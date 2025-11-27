@@ -128,7 +128,7 @@ public class HomeFragment extends Fragment {
 
         if (reservation != null) {
             // Active Walk Found!
-            header.setBackgroundColor(getResources().getColor(R.color.green_success, null)); // Use green for active
+            header.setBackgroundResource(R.drawable.bg_gradient_green_card); 
             titulo.setText("¡Paseo en Curso!");
             desc.setText("Tu mascota está paseando ahora mismo.");
             btn.setText("Ver Mapa en Vivo");
@@ -142,7 +142,7 @@ public class HomeFragment extends Fragment {
             });
         } else {
             // No active walk
-            header.setBackgroundColor(getResources().getColor(R.color.blue_primary, null));
+            header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
             titulo.setText("Sin paseos activos");
             desc.setText("¿Tu mascota quiere salir? Encuentra un paseador cerca de ti.");
             btn.setText("Buscar Paseador");
@@ -192,7 +192,7 @@ public class HomeFragment extends Fragment {
         com.google.android.material.button.MaterialButton btn = view.findViewById(R.id.btn_accion_paseador);
 
         if (reservation != null) {
-            header.setBackgroundColor(getResources().getColor(R.color.green_success, null));
+            header.setBackgroundResource(R.drawable.bg_gradient_green_card);
             titulo.setText("Paseo Activo");
             desc.setText("Tienes un servicio en curso. ¡No olvides registrar eventos!");
             btn.setText("Ir al Paseo");
@@ -204,7 +204,7 @@ public class HomeFragment extends Fragment {
                 startActivity(intent);
             });
         } else {
-            header.setBackgroundColor(getResources().getColor(R.color.blue_primary, null));
+            header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
             titulo.setText("Disponible");
             desc.setText("No tienes paseos activos. Revisa tus solicitudes pendientes.");
             btn.setText("Ver Solicitudes");

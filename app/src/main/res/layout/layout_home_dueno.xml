@@ -3,22 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC"
+    android:background="#F9FAFB"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="24dp">
 
-        <!-- Header -->
+        <!-- Header Moderno -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="32dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -31,209 +31,242 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="¡Hola!"
-                    android:textSize="16sp"
-                    android:textColor="@color/secondary"/>
+                    android:textSize="18sp"
+                    android:fontFamily="sans-serif-light"
+                    android:textColor="@color/gray_dark"/>
 
                 <TextView
                     android:id="@+id/tv_nombre_usuario"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Dueño"
-                    android:textSize="24sp"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    android:textColor="@color/black"/>
+                    android:textColor="@color/black"
+                    android:ellipsize="end"
+                    android:maxLines="1"/>
             </LinearLayout>
 
-            <ImageView
-                android:id="@+id/iv_perfil_icon"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_user_placeholder"
-                android:padding="4dp"
-                android:background="@drawable/bg_avatar_circle"/>
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                app:cardCornerRadius="28dp"
+                app:cardElevation="4dp"
+                app:strokeColor="@color/white"
+                app:strokeWidth="2dp">
+                <ImageView
+                    android:id="@+id/iv_perfil_icon"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/ic_user_placeholder"
+                    android:scaleType="centerCrop"/>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- HERO SECTION: Estado Actual -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_estado_paseo"
+        <!-- HERO SECTION: Tarjeta con Gradiente -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Estado Actual"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/gray_dark"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Nota: El fondo se cambia dinámicamente, pero ponemos uno por defecto -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
-            app:cardBackgroundColor="@color/white">
+            android:layout_marginBottom="32dp">
 
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_estado_paseo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                app:cardCornerRadius="24dp"
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="@android:color/transparent">
 
-                <!-- Header de la tarjeta -->
+                <!-- Layout Container para aplicar el background gradient -->
                 <LinearLayout
                     android:id="@+id/header_estado"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:background="@color/blue_primary"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:id="@+id/iv_estado_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_walk"
-                        app:tint="@color/white"/>
-
-                    <TextView
-                        android:id="@+id/tv_estado_titulo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Sin paseos activos"
-                        android:textColor="@color/white"
-                        android:textStyle="bold"
-                        android:textSize="16sp"
-                        android:layout_marginStart="12dp"/>
-                </LinearLayout>
-
-                <!-- Cuerpo de la tarjeta -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:background="@drawable/bg_gradient_blue_card"
+                    android:padding="24dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#30FFFFFF">
+                            <ImageView
+                                android:id="@+id/iv_estado_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_search"
+                                android:layout_gravity="center"
+                                app:tint="@color/white"/>
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/tv_estado_titulo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sin paseos activos"
+                            android:textColor="@color/white"
+                            android:textStyle="bold"
+                            android:textSize="20sp"
+                            android:layout_marginStart="16dp"/>
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/tv_estado_descripcion"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="¿Tu mascota quiere salir? Encuentra un paseador cerca de ti."
-                        android:textColor="@color/secondary"
-                        android:textSize="14sp"
-                        android:layout_marginBottom="16dp"/>
+                        android:textColor="#F0F0F0"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="24dp"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_accion_principal"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="56dp"
                         android:text="Buscar Paseador"
-                        android:textColor="@color/white"
-                        app:backgroundTint="@color/blue_primary"
-                        app:cornerRadius="8dp"/>
+                        android:textColor="@color/blue_primary"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/white"
+                        app:cornerRadius="16dp"
+                        app:elevation="0dp"/>
                 </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            </com.google.android.material.card.MaterialCardView>
+        </FrameLayout>
 
-        <!-- Accesos Rápidos -->
+        <!-- Accesos Rápidos Grid -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Accesos Rápidos"
-            android:textSize="18sp"
+            android:text="¿Qué quieres hacer?"
+            android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="@color/black"
+            android:textColor="@color/gray_dark"
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:weightSum="3">
+            android:baselineAligned="false">
 
-            <!-- Botón 1: Mis Mascotas -->
-            <LinearLayout
-                android:id="@+id/btn_mis_mascotas"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:padding="8dp">
-
-                <FrameLayout
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_icon_container">
-                    <ImageView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:src="@drawable/ic_dog"
-                        android:layout_gravity="center"
-                        app:tint="@color/blue_primary"/>
-                </FrameLayout>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Mascotas"
-                    android:textSize="12sp"
-                    android:layout_marginTop="8dp"
-                    android:textColor="@color/black"/>
-            </LinearLayout>
-
-            <!-- Botón 2: Favoritos -->
+            <!-- Botón 1: Favoritos -->
             <LinearLayout
                 android:id="@+id/btn_mis_favoritos"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:gravity="center"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:padding="8dp">
+                android:gravity="center">
 
-                <FrameLayout
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_icon_container">
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="#FFF3E0">
                     <ImageView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         android:src="@drawable/ic_star_filled"
                         android:layout_gravity="center"
-                        app:tint="@color/blue_primary"/>
-                </FrameLayout>
+                        app:tint="#FF9800"/>
+                </com.google.android.material.card.MaterialCardView>
+                
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Favoritos"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:layout_marginTop="8dp"
-                    android:textColor="@color/black"/>
+                    android:textColor="@color/gray_dark"
+                    android:textStyle="bold"/>
             </LinearLayout>
 
-            <!-- Botón 3: Historial -->
+            <!-- Botón 2: Historial -->
             <LinearLayout
                 android:id="@+id/btn_historial"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:gravity="center"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:padding="8dp">
+                android:gravity="center">
 
-                <FrameLayout
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_icon_container">
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="#E3F2FD">
                     <ImageView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         android:src="@drawable/ic_description"
                         android:layout_gravity="center"
-                        app:tint="@color/blue_primary"/>
-                </FrameLayout>
+                        app:tint="#2196F3"/>
+                </com.google.android.material.card.MaterialCardView>
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Historial"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:layout_marginTop="8dp"
-                    android:textColor="@color/black"/>
+                    android:textColor="@color/gray_dark"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- Botón 3: Mis Mascotas -->
+            <LinearLayout
+                android:id="@+id/btn_mis_mascotas"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="#E8F5E9">
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_dog"
+                        android:layout_gravity="center"
+                        app:tint="#4CAF50"/>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mascotas"
+                    android:textSize="13sp"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/gray_dark"
+                    android:textStyle="bold"/>
             </LinearLayout>
         </LinearLayout>
 

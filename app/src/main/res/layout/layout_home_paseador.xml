@@ -3,22 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC"
+    android:background="#F9FAFB"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="24dp">
 
-        <!-- Header -->
+        <!-- Header Paseador -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="32dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -31,114 +31,35 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="¡Hola!"
-                    android:textSize="16sp"
-                    android:textColor="@color/secondary"/>
+                    android:textSize="18sp"
+                    android:fontFamily="sans-serif-light"
+                    android:textColor="@color/gray_dark"/>
 
                 <TextView
                     android:id="@+id/tv_nombre_paseador"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Paseador"
-                    android:textSize="24sp"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    android:textColor="@color/black"/>
+                    android:textColor="@color/black"
+                    android:ellipsize="end"
+                    android:maxLines="1"/>
             </LinearLayout>
 
-            <ImageView
-                android:id="@+id/iv_perfil_icon_paseador"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_user_placeholder"
-                android:padding="4dp"
-                android:background="@drawable/bg_avatar_circle"/>
-        </LinearLayout>
-
-        <!-- Resumen de Ganancias (Stats) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="24dp"
-            android:weightSum="2">
-
             <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/white">
-
-                <LinearLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                app:cardCornerRadius="28dp"
+                app:cardElevation="4dp"
+                app:strokeColor="@color/white"
+                app:strokeWidth="2dp">
+                <ImageView
+                    android:id="@+id/iv_perfil_icon_paseador"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Completados"
-                        android:textSize="12sp"
-                        android:textColor="@color/secondary"/>
-
-                    <TextView
-                        android:id="@+id/tv_total_paseos"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/blue_primary"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/white">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Calificación"
-                        android:textSize="12sp"
-                        android:textColor="@color/secondary"/>
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center">
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_star_filled"
-                            app:tint="#FFC107"/>
-                        <TextView
-                            android:id="@+id/tv_calificacion"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0.0"
-                            android:textSize="24sp"
-                            android:textStyle="bold"
-                            android:layout_marginStart="4dp"
-                            android:textColor="@color/black"/>
-                    </LinearLayout>
-                </LinearLayout>
+                    android:layout_height="match_parent"
+                    android:src="@drawable/ic_user_placeholder"
+                    android:scaleType="centerCrop"/>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
@@ -146,79 +67,197 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tu estado actual"
-            android:textSize="18sp"
+            android:text="Estado del Servicio"
+            android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="@color/black"
-            android:layout_marginBottom="16dp"/>
+            android:textColor="@color/gray_dark"
+            android:layout_marginBottom="12dp"/>
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_mision_paseador"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
-            app:cardBackgroundColor="@color/white">
+            android:layout_marginBottom="32dp">
 
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_mision_paseador"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                app:cardCornerRadius="24dp"
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="@android:color/transparent">
 
+                <!-- Layout con gradiente de fondo -->
                 <LinearLayout
                     android:id="@+id/header_mision"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:background="#4CAF50"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_gradient_blue_card"
+                    android:padding="24dp">
 
-                    <ImageView
-                        android:id="@+id/iv_mision_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_check_circle"
-                        app:tint="@color/white"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#30FFFFFF">
+                            <ImageView
+                                android:id="@+id/iv_mision_icon"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_check_circle"
+                                android:layout_gravity="center"
+                                app:tint="@color/white"/>
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/tv_mision_titulo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Disponible"
+                            android:textColor="@color/white"
+                            android:textStyle="bold"
+                            android:textSize="20sp"
+                            android:layout_marginStart="16dp"/>
+                    </LinearLayout>
 
                     <TextView
-                        android:id="@+id/tv_mision_titulo"
-                        android:layout_width="wrap_content"
+                        android:id="@+id/tv_mision_descripcion"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Disponible"
-                        android:textColor="@color/white"
+                        android:text="Estás visible para nuevos clientes. Revisa tus solicitudes pendientes."
+                        android:textColor="#F0F0F0"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="24dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_accion_paseador"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Ver Solicitudes"
+                        android:textColor="@color/blue_primary"
                         android:textStyle="bold"
-                        android:textSize="16sp"
-                        android:layout_marginStart="12dp"/>
+                        app:backgroundTint="@color/white"
+                        app:cornerRadius="16dp"
+                        app:elevation="0dp"/>
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </FrameLayout>
+
+        <!-- Métricas Dashboard -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tus Estadísticas"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/gray_dark"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- Card: Paseos Completados -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#E0E0E0"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
+
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_walk"
+                        app:tint="@color/blue_primary"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#E3F2FD"
+                        android:padding="6dp"/>
 
                     <TextView
-                        android:id="@+id/tv_mision_descripcion"
+                        android:id="@+id/tv_total_paseos"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="No tienes paseos activos en este momento."
-                        android:textColor="@color/secondary"
-                        android:textSize="14sp"
-                        android:layout_marginBottom="16dp"/>
+                        android:text="0"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black"
+                        android:layout_marginTop="12dp"/>
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_accion_paseador"
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Ver Solicitudes"
-                        android:textColor="@color/white"
-                        app:backgroundTint="@color/blue_primary"
-                        app:cornerRadius="8dp"/>
+                        android:text="Paseos totales"
+                        android:textSize="13sp"
+                        android:textColor="@color/gray_dark"/>
                 </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Card: Calificación -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#E0E0E0"
+                app:cardBackgroundColor="@color/white">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_star_filled"
+                        app:tint="#FF9800"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#FFF3E0"
+                        android:padding="6dp"/>
+
+                    <TextView
+                        android:id="@+id/tv_calificacion"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black"
+                        android:layout_marginTop="12dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Calificación"
+                        android:textSize="13sp"
+                        android:textColor="@color/gray_dark"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
