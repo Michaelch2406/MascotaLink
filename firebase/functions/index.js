@@ -830,3 +830,92 @@ exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
     console.log("No CONFIRMADO reservations to transition to EN_CURSO.");
   }
 });
+
+exports.onReservaStatusChange = onDocumentUpdated("reservas/{reservaId}", async (event) => {
+    const { reservaId } = event.params;
+    const newValue = event.data.after.data();
+    const oldValue = event.data.before.data();
+    
+    if (!newValue || !oldValue) {
+        return;
+    }
+
+    const oldStatus = oldValue.estado;
+    const newStatus = newValue.estado;
+
+    if (oldStatus === newStatus) {
+        return; // No change in status
+    }
+
+    // Get paseador ID safely (handle Reference or String)
+    const paseadorRef = newValue.id_paseador;
+    let paseadorId = null;
+    if (paseadorRef) {
+        if (typeof paseadorRef === 'object' && paseadorRef.id) {
+             paseadorId = paseadorRef.id;
+        } else if (typeof paseadorRef === 'string') {
+             paseadorId = paseadorRef;
+        }
+    }
+
+    if (!paseadorId) {
+        console.warn(`Reserva ${reservaId} no tiene un id_paseador válido.`);
+        return;
+    }
+
+    // Determine if the walker should be "in walk" based on the new status
+    let shouldBeInWalk = false;
+    if (newStatus === "EN_CURSO" || newStatus === "EN_PROGRESO") {
+        shouldBeInWalk = true;
+    } else if (newStatus === "COMPLETADO" || newStatus === "CANCELADO") {
+        shouldBeInWalk = false;
+    } else {
+        // For other statuses (PENDIENTE, etc.), we generally don't change the status 
+        // unless we want to be strict. For now, we only act on explicit start/end states.
+        return; 
+    }
+
+    const userDocRef = db.collection("usuarios").doc(paseadorId);
+    
+    try {
+        const userDoc = await userDocRef.get();
+        if (!userDoc.exists) {
+            console.warn(`Paseador ${paseadorId} no encontrado para la reserva ${reservaId}.`);
+            return;
+        }
+
+        const currentEnPaseo = userDoc.data().en_paseo || false;
+
+        // Update only if the status is different
+        if (currentEnPaseo !== shouldBeInWalk) {
+            console.log(`Actualizando paseador ${paseadorId} en_paseo de ${currentEnPaseo} a ${shouldBeInWalk} para reserva ${reservaId}.`);
+            
+            const updates = {
+                en_paseo: shouldBeInWalk,
+                last_en_paseo_update: FieldValue.serverTimestamp()
+            };
+
+            // If starting a walk, track which reservation started it
+            if (shouldBeInWalk) {
+                updates.current_walk_reserva_id = reservaId;
+            } else {
+                // If ending a walk, only clear current_walk_reserva_id if it matches this reservation
+                // This prevents a race condition where a NEW walk started before this one finished processing
+                const currentReservaId = userDoc.data().current_walk_reserva_id;
+                if (currentReservaId === reservaId) {
+                    updates.current_walk_reserva_id = FieldValue.delete();
+                }
+            }
+
+            await userDocRef.update(updates);
+        } else {
+             // Edge case: If already in walk, but for a DIFFERENT reservation, and this one starts...
+             // We might want to update current_walk_reserva_id? 
+             // For now, keep it simple.
+             console.log(`Paseador ${paseadorId} ya tiene el estado en_paseo: ${shouldBeInWalk}. No se necesita actualizar.`);
+        }
+
+    } catch (error) {
+        console.error(`Error actualizando estado de paseador ${paseadorId}:`, error);
+    }
+});
