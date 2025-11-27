@@ -10,6 +10,7 @@ import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.MainActivity;
 import com.mjc.mascotalink.PaseosActivity;
 import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
@@ -81,7 +82,7 @@ public class BottomNavManager {
             Intent intent = null;
 
             if (itemId == R.id.menu_home) {
-                intent = new Intent(activity, isPaseador ? PerfilPaseadorActivity.class : PerfilDuenoActivity.class);
+                intent = new Intent(activity, MainActivity.class);
             } else if (itemId == R.id.menu_search) { // Reused ID
                 intent = new Intent(activity, isPaseador ? SolicitudesActivity.class : BusquedaPaseadoresActivity.class);
             } else if (itemId == R.id.menu_walks) {
