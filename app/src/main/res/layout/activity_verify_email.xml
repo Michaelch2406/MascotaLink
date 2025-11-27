@@ -1,56 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center"
-    android:background="@android:color/white">
+    android:background="#F9FAFB"
+    android:padding="24dp">
 
-    <TextView
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="✓ Correo Enviado"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="@android:color/holo_green_dark"
-        android:gravity="center"
-        android:layout_marginBottom="16dp" />
+        app:cardCornerRadius="24dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/white"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <TextView
-        android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:gravity="center">
+
+            <!-- Ilustración / Icono -->
+            <FrameLayout
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="@drawable/bg_avatar_circle"
+                android:backgroundTint="#E3F2FD"
+                android:layout_marginBottom="24dp">
+                
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_messages"
+                    app:tint="@color/blue_primary"
+                    android:layout_gravity="center"/>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verifica tu correo"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:id="@+id/tv_description"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hemos enviado un enlace de verificación a tu dirección de correo electrónico. Por favor, revísalo para continuar."
+                android:textSize="16sp"
+                android:textColor="@color/secondary"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginBottom="32dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_check_verification"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Ya verifiqué mi correo"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:cornerRadius="16dp"
+                app:backgroundTint="@color/blue_primary"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_resend_email"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="¿No recibiste el correo? Reenviar"
+                android:textColor="@color/blue_primary"
+                android:layout_marginTop="16dp"/>
+                
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_back_login"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Volver al inicio de sesión"
+                android:textColor="@color/gray_dark"
+                android:layout_marginTop="8dp"/>
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Por favor revisa tu correo electrónico"
-        android:textSize="16sp"
-        android:textColor="@android:color/black"
-        android:gravity="center"
-        android:layout_marginBottom="8dp" />
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:elevation="10dp"/>
 
-    <TextView
-        android:id="@+id/text_view_email"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Email aquí"
-        android:textSize="14sp"
-        android:textColor="@android:color/darker_gray"
-        android:gravity="center"
-        android:layout_marginBottom="24dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="El enlace expira en 15 minutos.\n\nSi no recibiste el correo, revisa tu carpeta de spam."
-        android:textSize="12sp"
-        android:textColor="@android:color/darker_gray"
-        android:gravity="center"
-        android:layout_marginBottom="32dp" />
-
-    <Button
-        android:id="@+id/button_back_to_login"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="Volver a Login"
-        android:textSize="16sp"
-        />
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
