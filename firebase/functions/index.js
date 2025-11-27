@@ -1,5 +1,6 @@
 const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
@@ -915,7 +916,96 @@ exports.onReservaStatusChange = onDocumentUpdated("reservas/{reservaId}", async 
              console.log(`Paseador ${paseadorId} ya tiene el estado en_paseo: ${shouldBeInWalk}. No se necesita actualizar.`);
         }
 
+        // ---------------------------------------------------------
+        // NUEVA LÓGICA: Incrementar contador de servicios completados
+        // ---------------------------------------------------------
+        if (newStatus === "COMPLETADO" && oldStatus !== "COMPLETADO") {
+            console.log(`Reserva ${reservaId} completada. Incrementando contador para paseador ${paseadorId}.`);
+            const paseadorProfileRef = db.collection("paseadores").doc(paseadorId);
+            
+            // Usamos FieldValue.increment(1) para una operación atómica y segura
+            await paseadorProfileRef.set({
+                num_servicios_completados: FieldValue.increment(1)
+            }, { merge: true }); 
+            // Usamos set con merge: true por si el documento del paseador o el campo no existen aún
+        }
+
     } catch (error) {
         console.error(`Error actualizando estado de paseador ${paseadorId}:`, error);
+    }
+});
+
+// --- FUNCIÓN DE MANTENIMIENTO (Ejecutar una vez y borrar si se desea) ---
+// Esta función recalcula el total de paseos completados para TODOS los paseadores
+// basándose en el historial real de la colección 'reservas'.
+exports.recalcularContadores = onRequest(async (req, res) => {
+    try {
+        console.log("Iniciando recálculo masivo de paseos completados...");
+        
+        // 1. Obtener todas las reservas completadas
+        const reservasSnapshot = await db.collection("reservas")
+            .where("estado", "==", "COMPLETADO")
+            .get();
+
+        console.log(`Se encontraron ${reservasSnapshot.size} reservas completadas en total.`);
+
+        const counts = {}; // Mapa: paseadorId -> cantidad
+
+        // 2. Contar paseos por paseador
+        reservasSnapshot.forEach(doc => {
+            const data = doc.data();
+            const paseadorRef = data.id_paseador;
+            let paseadorId = null;
+
+            // Manejar si es String o DocumentReference
+            if (paseadorRef) {
+                if (typeof paseadorRef === 'string') {
+                    paseadorId = paseadorRef;
+                } else if (typeof paseadorRef === 'object' && paseadorRef.id) {
+                    paseadorId = paseadorRef.id;
+                }
+            }
+
+            if (paseadorId) {
+                if (!counts[paseadorId]) {
+                    counts[paseadorId] = 0;
+                }
+                counts[paseadorId]++;
+            }
+        });
+
+        console.log("Conteos calculados:", counts);
+
+        // 3. Actualizar cada paseador (usando batch para eficiencia, lotes de 500)
+        const updates = [];
+        let batch = db.batch();
+        let counter = 0;
+
+        for (const [paseadorId, total] of Object.entries(counts)) {
+            const paseadorRef = db.collection("paseadores").doc(paseadorId);
+            batch.set(paseadorRef, { num_servicios_completados: total }, { merge: true });
+            counter++;
+
+            if (counter >= 400) { // Límite de seguridad antes de 500
+                updates.push(batch.commit());
+                batch = db.batch();
+                counter = 0;
+            }
+        }
+        
+        if (counter > 0) {
+            updates.push(batch.commit());
+        }
+
+        await Promise.all(updates);
+
+        res.status(200).send({
+            message: "Recálculo completado exitosamente.",
+            detalles: counts
+        });
+
+    } catch (error) {
+        console.error("Error en recálculo:", error);
+        res.status(500).send({ error: error.message });
     }
 });

@@ -176,6 +176,18 @@
                             android:background="@android:color/transparent"
                             android:clickable="true"
                             android:focusable="true" />
+
+                        <!-- Botón de refresco manual -->
+                        <com.google.android.material.floatingactionbutton.FloatingActionButton
+                            android:id="@+id/fab_refresh_map"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|end"
+                            android:layout_margin="16dp"
+                            android:src="@drawable/ic_my_location"
+                            app:fabSize="mini"
+                            app:tint="@color/white"
+                            app:backgroundTint="@color/blue_primary"/>
                     </FrameLayout>
 
                     <!-- Aquí irían las otras secciones como los resultados de búsqueda -->

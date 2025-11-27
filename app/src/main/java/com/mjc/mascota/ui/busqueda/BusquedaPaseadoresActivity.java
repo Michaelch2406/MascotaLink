@@ -160,6 +160,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private View mapContainer;
     private View viewMapOverlay;
     private boolean isMapExpanded = false;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton fabRefreshMap;
 
     // Handler y Runnable para la actualización periódica del mapa
     private final Handler periodicRefreshHandler = new Handler(Looper.getMainLooper());
@@ -212,6 +213,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         // Map Views
         mapContainer = findViewById(R.id.map_container);
         viewMapOverlay = findViewById(R.id.view_map_overlay);
+        fabRefreshMap = findViewById(R.id.fab_refresh_map);
+        
+        fabRefreshMap.setOnClickListener(v -> {
+            Toast.makeText(this, "Actualizando mapa...", Toast.LENGTH_SHORT).show();
+            if (mMap != null) {
+                LatLng center = mMap.getCameraPosition().target;
+                cargarPaseadoresCercanos(center, currentSearchRadiusKm);
+            } else {
+                startLocationUpdates(); // Try to get location if map not ready or location lost
+            }
+        });
 
         setupRecyclerViews();
         setupSearch();

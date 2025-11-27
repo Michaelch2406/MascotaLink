@@ -125,6 +125,7 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
 
             if (rememberDevice && userId != null && rol != null && FirebaseAuth.getInstance().getCurrentUser() != null) {
                 Log.d(TAG, "Sesión guardada encontrada. Redirigiendo...");
+                updateFcmTokenForCurrentUser(); // Ensure token is synced on auto-login
                 redirigirSegunRol(rol, verificacionEstado);
                 return true;
             }
