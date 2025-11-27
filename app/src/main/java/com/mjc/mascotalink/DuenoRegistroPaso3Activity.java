@@ -354,6 +354,11 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         duenoData.put("verificacion_fecha", FieldValue.serverTimestamp());
         duenoData.put("ultima_actualizacion", FieldValue.serverTimestamp());
         duenoData.put("acepta_mensajes", messagesSwitch.isChecked());
+        
+        // Initialize stats for new owner
+        duenoData.put("num_paseos_solicitados", 0);
+        duenoData.put("total_resenas", 0);
+        duenoData.put("calificacion_promedio", 0.0);
 
         db.runBatch(batch -> {
             batch.set(db.collection("usuarios").document(uid), usuarioData);

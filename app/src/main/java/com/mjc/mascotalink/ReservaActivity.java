@@ -323,6 +323,7 @@ public class ReservaActivity extends AppCompatActivity {
         rvMascotas.setAdapter(mascotaAdapter);
     }
 
+    @SuppressWarnings("unchecked")
     private void cargarNotasAdicionalesMascota(String mascotaId) {
         if (currentUserId == null || mascotaId == null) {
             notasAdicionalesMascota = "";

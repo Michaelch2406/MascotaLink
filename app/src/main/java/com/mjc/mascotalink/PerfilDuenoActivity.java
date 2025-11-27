@@ -433,11 +433,21 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                      tvVerificado.setVisibility(View.GONE);
                  }
                  
-                 Long paseosSolicitados = duenoDoc.getLong("num_paseos_solicitados");
-                 tvPaseosSolicitados.setText((paseosSolicitados != null ? paseosSolicitados : 0) + " Paseos");
+                 Object paseosObj = duenoDoc.get("num_paseos_solicitados");
+                 long paseosSolicitados = 0;
+                 if (paseosObj instanceof Number) {
+                     paseosSolicitados = ((Number) paseosObj).longValue();
+                 } else if (paseosObj instanceof String) {
+                     try {
+                         paseosSolicitados = Long.parseLong((String) paseosObj);
+                     } catch (NumberFormatException ex) {
+                         paseosSolicitados = 0;
+                     }
+                 }
+                 tvPaseosSolicitados.setText(paseosSolicitados + " Paseos");
                  
                  Double promedio = duenoDoc.getDouble("calificacion_promedio");
-                 Long totalResenas = duenoDoc.getLong("num_resenas");
+                 Long totalResenas = duenoDoc.getLong("total_resenas");
                  
                  if (promedio != null) {
                      tvRatingValor.setText(String.format(Locale.getDefault(), "%.1f", promedio));
