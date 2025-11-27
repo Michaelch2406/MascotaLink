@@ -161,12 +161,12 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         // 3. Distancia (Calculada desde el array de ubicaciones)
         Object ubicacionesObj = doc.get("ubicaciones");
         double distanciaMeters = calcularDistancia(ubicacionesObj);
+        double distanciaKm = distanciaMeters / 1000.0;
         
-        if (distanciaMeters >= 1000) {
-            double distanciaKm = distanciaMeters / 1000.0;
-            tvDistanciaRecorrida.setText(String.format(Locale.US, "%.2f km", distanciaKm));
+        if (distanciaMeters > 0 && distanciaKm < 0.01) { // If non-zero but would round to 0.00 km with two decimal places
+            tvDistanciaRecorrida.setText(String.format(Locale.US, "0.01 km")); // Show minimal movement
         } else {
-            tvDistanciaRecorrida.setText(String.format(Locale.US, "%.0f m", distanciaMeters));
+            tvDistanciaRecorrida.setText(String.format(Locale.US, "%.2f km", distanciaKm));
         }
 
         // 4. Cost
