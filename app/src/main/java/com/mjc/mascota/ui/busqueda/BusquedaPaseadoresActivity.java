@@ -1062,7 +1062,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                                 items.add(new PaseadorClusterItem(pm));
                             }
                             mClusterManager.addItems(items);
-                            if (mMap != null) mMap.clear();
                             mClusterManager.cluster();
                         } else {
                             Log.w(TAG, "Geoquery sin marcadores válidos; se conservan los existentes.");
@@ -1092,7 +1091,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
                     List<Task<PaseadorMarker>> paseadorMarkerTasks = new ArrayList<>();
                     for (DocumentSnapshot doc : task.getResult()) {
-                        if (!isUsuarioEnLinea(doc)) continue;
+                        // Relaxed check: Show all active walkers in fallback too
                         paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(doc, ubicacionUsuario));
                     }
 
@@ -1122,7 +1121,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                                         items.add(new PaseadorClusterItem(pm));
                                     }
                                     mClusterManager.addItems(items);
-                                    if (mMap != null) mMap.clear();
                                     mClusterManager.cluster();
                                 } else {
                                     Log.w(TAG, "Fallback sin nuevos marcadores; se conserva estado previo.");
@@ -1137,21 +1135,22 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private boolean isUsuarioEnLinea(DocumentSnapshot doc) {
+        // RELAXED LOGIC: Return true if the user is marked as 'activo' generally.
+        // We don't want to hide walkers just because they aren't "online" right this second.
+        // The map should show all AVAILABLE walkers (who have set themselves as active/working).
+        Boolean activo = doc.getBoolean("activo");
+        if (Boolean.TRUE.equals(activo)) {
+            return true;
+        }
+
+        // Fallback to legacy logic if 'activo' is missing or false but they are online
         try {
             Boolean enLinea = doc.getBoolean("en_linea");
             Timestamp lastSeen = doc.getTimestamp("last_seen");
             long now = System.currentTimeMillis();
             boolean reciente = lastSeen != null && (now - lastSeen.toDate().getTime()) <= ONLINE_TIMEOUT_MS;
 
-            // Si ambos faltan, asumir offline para no mostrar presencia falsa
-            if (enLinea == null && lastSeen == null) {
-                return false;
-            }
-            // Si hay last_seen reciente, mostrar aunque en_linea sea null/false
-            if (reciente) {
-                return true;
-            }
-            // Si en_linea es true, mostrar
+            if (reciente) return true;
             return Boolean.TRUE.equals(enLinea);
         } catch (Exception e) {
             Log.w(TAG, "Error evaluando estado en línea", e);
@@ -1168,43 +1167,42 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         LatLng ubicacionRealtime = (gp != null) ? new LatLng(gp.getLatitude(), gp.getLongitude()) : null;
 
         if (ubicacionRealtime != null) {
-            // ¡Tenemos ubicación real! Usarla directamente.
             return crearMarcador(userId, userDoc, ubicacionRealtime, ubicacionUsuario, true);
-        } else {
-            // 2. Fallback: Buscar zona de servicio principal si no hay ubicación real
-            return FirebaseFirestore.getInstance().collection("paseadores").document(userId)
-                    .collection("zonas_servicio")
-                    .limit(1) // Solo necesitamos una referencia
-                    .get()
-                    .continueWithTask(task -> {
-                        if (task.isSuccessful() && !task.getResult().isEmpty()) {
-                            DocumentSnapshot zonaDoc = task.getResult().getDocuments().get(0);
-                            com.google.firebase.firestore.GeoPoint zonaGp = zonaDoc.getGeoPoint("ubicacion_centro");
-                            if (zonaGp == null) {
-                                zonaGp = zonaDoc.getGeoPoint("centro"); // compatibilidad
-                            }
-                            if (zonaGp == null) {
-                                Double lat = zonaDoc.getDouble("latitud");
-                                Double lng = zonaDoc.getDouble("longitud");
-                                if (lat != null && lng != null) {
-                                    zonaGp = new com.google.firebase.firestore.GeoPoint(lat, lng);
-                                }
-                            }
-                            if (zonaGp == null) {
-                                Double lat = zonaDoc.getDouble("latitud");
-                                Double lng = zonaDoc.getDouble("longitud");
-                                if (lat != null && lng != null) {
-                                    zonaGp = new com.google.firebase.firestore.GeoPoint(lat, lng);
-                                }
-                            }
-                            if (zonaGp != null) {
-                                LatLng ubicacionZona = new LatLng(zonaGp.getLatitude(), zonaGp.getLongitude());
-                                return crearMarcador(userId, userDoc, ubicacionZona, ubicacionUsuario, false);
+        } 
+        
+        // 2. Fallback: Buscar zona de servicio principal
+        return FirebaseFirestore.getInstance().collection("paseadores").document(userId)
+                .collection("zonas_servicio")
+                .limit(1) 
+                .get()
+                .continueWithTask(task -> {
+                    LatLng ubicacionFinal = null;
+                    
+                    if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                        DocumentSnapshot zonaDoc = task.getResult().getDocuments().get(0);
+                        com.google.firebase.firestore.GeoPoint zonaGp = zonaDoc.getGeoPoint("ubicacion_centro");
+                        if (zonaGp == null) zonaGp = zonaDoc.getGeoPoint("centro"); // compatibilidad
+                        
+                        if (zonaGp != null) {
+                            ubicacionFinal = new LatLng(zonaGp.getLatitude(), zonaGp.getLongitude());
+                        } else {
+                            Double lat = zonaDoc.getDouble("latitud");
+                            Double lng = zonaDoc.getDouble("longitud");
+                            if (lat != null && lng != null) {
+                                ubicacionFinal = new LatLng(lat, lng);
                             }
                         }
+                    }
+                    
+                    if (ubicacionFinal == null) {
+                        // 3. Last Resort: Check top-level fields on 'usuarios' or 'paseadores' doc if we had access
+                        // For now, just log.
+                        Log.w(TAG, "Paseador " + userId + " dropped: No realtime location AND no service zone found.");
                         return Tasks.forResult(null);
-                    });
-        }
+                    }
+                    
+                    return crearMarcador(userId, userDoc, ubicacionFinal, ubicacionUsuario, false);
+                });
     }
 
     private Task<PaseadorMarker> crearMarcador(String userId, DocumentSnapshot userDoc, LatLng ubicacionPaseador, LatLng ubicacionUsuario, boolean esRealtime) {
