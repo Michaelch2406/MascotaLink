@@ -705,8 +705,32 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         if (paseadorId == null) return;
         db.collection("usuarios").document(paseadorId).get()
                 .addOnSuccessListener(doc -> {
-                    boolean faltaUbicacion = doc == null || doc.getGeoPoint("ubicacion_actual") == null || doc.getString("ubicacion_geohash") == null;
-                    if (!faltaUbicacion) return;
+                    if (doc == null || !doc.exists()) return;
+
+                    Object ubicacionObj = doc.get("ubicacion_actual");
+                    boolean tieneUbicacionValida = false;
+
+                    if (ubicacionObj instanceof GeoPoint) {
+                        tieneUbicacionValida = true;
+                    } else if (ubicacionObj instanceof Map) {
+                        // It exists but it's a Map, we should convert it to GeoPoint if possible
+                        Map<?, ?> map = (Map<?, ?>) ubicacionObj;
+                        if (map.containsKey("latitude") && map.containsKey("longitude")) {
+                            tieneUbicacionValida = true;
+                        } else if (map.containsKey("lat") && map.containsKey("lng")) {
+                            tieneUbicacionValida = true;
+                        }
+                    }
+
+                    boolean faltaGeohash = doc.getString("ubicacion_geohash") == null;
+
+                    if (tieneUbicacionValida && !faltaGeohash) {
+                         // Data is fine
+                         return;
+                    }
+
+                    // If we are here, either location is missing/invalid OR geohash is missing.
+                    // We need to try to fix it using current location or zone fallback.
 
                     if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {

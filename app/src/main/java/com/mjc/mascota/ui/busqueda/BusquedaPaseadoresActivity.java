@@ -1191,8 +1191,29 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     
                     if (task.isSuccessful() && !task.getResult().isEmpty()) {
                         DocumentSnapshot zonaDoc = task.getResult().getDocuments().get(0);
-                        com.google.firebase.firestore.GeoPoint zonaGp = zonaDoc.getGeoPoint("ubicacion_centro");
-                        if (zonaGp == null) zonaGp = zonaDoc.getGeoPoint("centro"); // compatibilidad
+                        com.google.firebase.firestore.GeoPoint zonaGp = null;
+
+                        Object ubicacionObj = zonaDoc.get("ubicacion_centro");
+                        if (ubicacionObj instanceof com.google.firebase.firestore.GeoPoint) {
+                             zonaGp = (com.google.firebase.firestore.GeoPoint) ubicacionObj;
+                        } else if (ubicacionObj instanceof Map) {
+                             Map<?, ?> map = (Map<?, ?>) ubicacionObj;
+                             if (map.containsKey("latitude") && map.containsKey("longitude")) {
+                                 zonaGp = new com.google.firebase.firestore.GeoPoint((Double) map.get("latitude"), (Double) map.get("longitude"));
+                             }
+                        }
+
+                        if (zonaGp == null) {
+                            Object centroObj = zonaDoc.get("centro");
+                            if (centroObj instanceof com.google.firebase.firestore.GeoPoint) {
+                                zonaGp = (com.google.firebase.firestore.GeoPoint) centroObj;
+                            } else if (centroObj instanceof Map) {
+                                Map<?, ?> map = (Map<?, ?>) centroObj;
+                                if (map.containsKey("latitude") && map.containsKey("longitude")) {
+                                    zonaGp = new com.google.firebase.firestore.GeoPoint((Double) map.get("latitude"), (Double) map.get("longitude"));
+                                }
+                            }
+                        }
                         
                         if (zonaGp != null) {
                             ubicacionFinal = new LatLng(zonaGp.getLatitude(), zonaGp.getLongitude());

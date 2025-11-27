@@ -266,7 +266,19 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     zonasSeleccionadas.clear();
                     for (com.google.firebase.firestore.QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        com.google.firebase.firestore.GeoPoint centro = document.getGeoPoint("centro");
+                        com.google.firebase.firestore.GeoPoint centro = null;
+                        Object centroObj = document.get("centro");
+                        if (centroObj instanceof com.google.firebase.firestore.GeoPoint) {
+                            centro = (com.google.firebase.firestore.GeoPoint) centroObj;
+                        } else if (centroObj instanceof java.util.Map) {
+                            java.util.Map<?, ?> map = (java.util.Map<?, ?>) centroObj;
+                            if (map.containsKey("latitude") && map.containsKey("longitude")) {
+                                centro = new com.google.firebase.firestore.GeoPoint((Double) map.get("latitude"), (Double) map.get("longitude"));
+                            } else if (map.containsKey("lat") && map.containsKey("lng")) {
+                                centro = new com.google.firebase.firestore.GeoPoint((Double) map.get("lat"), (Double) map.get("lng"));
+                            }
+                        }
+
                         Double radioKm = document.getDouble("radio_km");
                         String nombre = document.getString("nombre");
 

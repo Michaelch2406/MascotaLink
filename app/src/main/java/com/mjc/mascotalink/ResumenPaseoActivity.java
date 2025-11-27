@@ -161,11 +161,12 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         // 3. Distancia (Calculada desde el array de ubicaciones)
         Object ubicacionesObj = doc.get("ubicaciones");
         double distanciaMeters = calcularDistancia(ubicacionesObj);
-        if (distanciaMeters > 0) {
+        
+        if (distanciaMeters >= 1000) {
             double distanciaKm = distanciaMeters / 1000.0;
             tvDistanciaRecorrida.setText(String.format(Locale.US, "%.2f km", distanciaKm));
         } else {
-            tvDistanciaRecorrida.setText("0.0 km");
+            tvDistanciaRecorrida.setText(String.format(Locale.US, "%.0f m", distanciaMeters));
         }
 
         // 4. Cost
@@ -197,9 +198,8 @@ public class ResumenPaseoActivity extends AppCompatActivity {
             if (prev != null) {
                 float[] results = new float[1];
                 Location.distanceBetween(prev[0], prev[1], current[0], current[1], results);
-                if (results[0] >= 3f) { // evitar sumar ruido por saltos mínimos
-                    total += results[0];
-                }
+                // Eliminado filtro de 3m para capturar movimientos pequeños
+                total += results[0];
             }
             prev = current;
         }
