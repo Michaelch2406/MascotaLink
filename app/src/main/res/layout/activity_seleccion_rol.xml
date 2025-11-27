@@ -1,171 +1,154 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
+    android:background="#F9FAFB"
+    android:padding="24dp">
 
-    <!-- Toolbar Material con flecha atrás y título -->
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <ImageView
+        android:id="@+id/btn_back"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_arrow_back"
+        app:tint="@color/black"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/tv_titulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="¿Cómo quieres usar Walki?"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/btn_back"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"/>
+
+    <TextView
+        android:id="@+id/tv_subtitulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Selecciona tu perfil para continuar"
+        android:textSize="16sp"
+        android:textColor="@color/secondary"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/tv_titulo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material"
-        app:navigationIconTint="#111827"
-        app:title="Selecciona tu rol"
-        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="32dp"
+        android:weightSum="2"
+        app:layout_constraintTop_toBottomOf="@id/tv_subtitulo"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-    <ScrollView
-        android:id="@+id/scroll"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <LinearLayout
+        <!-- Opción DUEÑO -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_dueno"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/white"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
 
-            <!-- Tarjeta: Dueño de Mascota -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardUseCompatPadding="true"
-                app:strokeColor="#E5E7EB"
-                app:strokeWidth="1dp"
-                android:backgroundTint="#FFFFFF">
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="24dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:src="@drawable/dueno_mascota"
+                    android:scaleType="fitCenter"
+                    android:layout_marginBottom="16dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="0dp">
+                    android:text="Soy Dueño"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/blue_primary"/>
 
-                    <ImageView
-                        android:id="@+id/img_dueno"
-                        android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_margin="12dp"
-                        android:adjustViewBounds="true"
-                        android:scaleType="centerCrop"
-                        android:layout_weight="1"
-                        android:src="@drawable/dueno_mascota"
-                        android:contentDescription="Dueño de Mascota"/>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
-                        android:paddingBottom="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Dueño de Mascota"
-                            style="@style/TextAppearance.Mascota.CardTitle"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="Encuentra paseadores confiables para tu mascota."
-                            style="@style/TextAppearance.Mascota.BodyMuted"/>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="end"
-                            android:layout_marginTop="8dp">
-
-                            <Button
-                                android:id="@+id/btn_select_dueno"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Seleccionar"
-                                style="@style/Widget.Mascota.PrimaryPillButton"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Tarjeta: Paseador -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardUseCompatPadding="true"
-                app:strokeColor="#E5E7EB"
-                app:strokeWidth="1dp"
-                android:backgroundTint="#FFFFFF">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="0dp">
+                    android:text="Busco paseadores confiables para mi mascota"
+                    android:textSize="14sp"
+                    android:textColor="@color/secondary"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-                    <ImageView
-                        android:id="@+id/img_paseador"
-                        android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_margin="12dp"
-                        android:adjustViewBounds="true"
-                        android:scaleType="centerCrop"
-                        android:layout_weight="1"
-                        android:src="@drawable/paseador_mascota"
-                        android:contentDescription="Paseador"/>
+        <!-- Opción PASEADOR -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_paseador"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/white"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
-                        android:paddingBottom="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Paseador"
-                            style="@style/TextAppearance.Mascota.CardTitle"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="Ofrece tus servicios de paseo y conecta con dueños de mascotas."
-                            style="@style/TextAppearance.Mascota.BodyMuted"/>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="end"
-                            android:layout_marginTop="8dp">
-
-                            <Button
-                                android:id="@+id/btn_select_paseador"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Seleccionar"
-                                style="@style/Widget.Mascota.PrimaryPillButton"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <View
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="24dp"/>
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="24dp">
 
-        </LinearLayout>
-    </ScrollView>
+                <ImageView
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:src="@drawable/paseador_mascota"
+                    android:scaleType="fitCenter"
+                    android:layout_marginBottom="16dp"/>
 
-</RelativeLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Soy Paseador"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="#4CAF50"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Quiero ofrecer mis servicios y ganar dinero"
+                    android:textSize="14sp"
+                    android:textColor="@color/secondary"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,14 +1,11 @@
 package com.mjc.mascotalink;
 
-import android.os.Bundle;
-import android.widget.Button;
-import android.widget.Toast;
 import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.material.appbar.MaterialToolbar;
 
 public class SeleccionRolActivity extends AppCompatActivity {
     @Override
@@ -16,19 +13,18 @@ public class SeleccionRolActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_seleccion_rol);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> finish());
-        }
+        View btnBack = findViewById(R.id.btn_back);
+        View cardDueno = findViewById(R.id.card_dueno);
+        View cardPaseador = findViewById(R.id.card_paseador);
 
-        Button btnDueno = findViewById(R.id.btn_select_dueno);
-        Button btnPaseador = findViewById(R.id.btn_select_paseador);
+        btnBack.setOnClickListener(v -> finish());
 
-        btnDueno.setOnClickListener(v -> {
-                startActivity(new Intent(this, DuenoRegistroPaso1Activity.class));
+        cardDueno.setOnClickListener(v -> {
+            startActivity(new Intent(this, DuenoRegistroPaso1Activity.class));
         });
-        btnPaseador.setOnClickListener(v -> {
-                startActivity(new Intent(this, PaseadorRegistroPaso1Activity.class));
+
+        cardPaseador.setOnClickListener(v -> {
+            startActivity(new Intent(this, PaseadorRegistroPaso1Activity.class));
         });
     }
 }
