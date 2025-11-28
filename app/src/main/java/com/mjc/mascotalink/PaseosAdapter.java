@@ -19,6 +19,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.mjc.mascotalink.utils.PaseoDiffCallback;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
+import com.mjc.mascotalink.Paseo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,27 +27,27 @@ import java.util.List;
 public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewHolder> {
 
     private Context context;
-    private List<PaseosActivity.Paseo> paseosList;
+    private List<Paseo> paseosList;
     private OnPaseoClickListener listener;
     private String userRole;
 
     public interface OnPaseoClickListener {
-        void onPaseoClick(PaseosActivity.Paseo paseo);
-        void onVerUbicacionClick(PaseosActivity.Paseo paseo);
-        void onContactarClick(PaseosActivity.Paseo paseo);
-        void onCalificarClick(PaseosActivity.Paseo paseo);
-        void onVerMotivoClick(PaseosActivity.Paseo paseo);
-        void onProcesarPagoClick(PaseosActivity.Paseo paseo);
+        void onPaseoClick(Paseo paseo);
+        void onVerUbicacionClick(Paseo paseo);
+        void onContactarClick(Paseo paseo);
+        void onCalificarClick(Paseo paseo);
+        void onVerMotivoClick(Paseo paseo);
+        void onProcesarPagoClick(Paseo paseo);
     }
 
-    public PaseosAdapter(Context context, List<PaseosActivity.Paseo> paseosList, OnPaseoClickListener listener, String userRole) {
+    public PaseosAdapter(Context context, List<Paseo> paseosList, OnPaseoClickListener listener, String userRole) {
         this.context = context;
         this.paseosList = new ArrayList<>(paseosList);
         this.listener = listener;
         this.userRole = userRole;
     }
     
-    public void updateList(List<PaseosActivity.Paseo> newList) {
+    public void updateList(List<Paseo> newList) {
         DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new PaseoDiffCallback(this.paseosList, newList));
         this.paseosList.clear();
         this.paseosList.addAll(newList);
@@ -62,7 +63,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     @Override
     public void onBindViewHolder(@NonNull PaseoViewHolder holder, int position) {
-        PaseosActivity.Paseo paseo = paseosList.get(position);
+        Paseo paseo = paseosList.get(position);
         if (paseo == null) return;
 
         // 1. Fecha
@@ -167,7 +168,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         chip.setTextColor(0xFFFFFFFF); // Blanco
     }
 
-    private void configurarBotonesAccion(PaseoViewHolder holder, String estado, final PaseosActivity.Paseo paseo) {
+    private void configurarBotonesAccion(PaseoViewHolder holder, String estado, final Paseo paseo) {
         holder.layoutBotones.setVisibility(View.VISIBLE);
         holder.btnAccion1.setVisibility(View.VISIBLE);
         holder.btnAccion2.setVisibility(View.VISIBLE);

@@ -1,7 +1,7 @@
 package com.mjc.mascotalink.utils;
 
 import androidx.recyclerview.widget.DiffUtil;
-import com.mjc.mascotalink.PaseosActivity.Paseo;
+import com.mjc.mascotalink.Paseo;
 import java.util.List;
 import java.util.Objects;
 

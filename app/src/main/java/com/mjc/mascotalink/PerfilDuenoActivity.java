@@ -73,7 +73,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private LinearLayout llAcercaDe, llResenas, ajustes_section, soporte_section;
     private TabLayout tabLayout;
     private Button btnCerrarSesion;
-    private TextView btnFavoritos, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
+    private TextView btnFavoritos, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos, btnMisPaseos;
     private TextView tvEmailDueno, tvTelefonoDueno;
     private ImageView btnCopyEmail, btnCopyTelefono;
     private View skeletonLayout;
@@ -207,6 +207,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnCopyTelefono = findViewById(R.id.btn_copy_telefono);
         
         ajustes_section = findViewById(R.id.ajustes_section);
+        btnMisPaseos = findViewById(R.id.btn_mis_paseos);
         btnFavoritos = findViewById(R.id.btn_favoritos);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
@@ -232,6 +233,14 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             Intent intent = new Intent(PerfilDuenoActivity.this, EditarPerfilDuenoActivity.class);
             startActivity(intent);
         });
+
+        if (btnMisPaseos != null) {
+            btnMisPaseos.setOnClickListener(v -> {
+                Intent intent = new Intent(PerfilDuenoActivity.this, HistorialPaseosActivity.class);
+                intent.putExtra("rol_usuario", "DUEÑO");
+                startActivity(intent);
+            });
+        }
 
         btnFavoritos.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, FavoritosActivity.class);

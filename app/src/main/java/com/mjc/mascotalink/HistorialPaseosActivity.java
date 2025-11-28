@@ -1,0 +1,255 @@
+package com.mjc.mascotalink;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.mjc.mascotalink.util.BottomNavManager;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+
+public class HistorialPaseosActivity extends AppCompatActivity {
+
+    private static final String TAG = "HistorialPaseos";
+
+    private RecyclerView rvHistorial;
+    private HistorialPaseosAdapter adapter;
+    private List<Paseo> listaPaseos;
+    private SwipeRefreshLayout swipeRefresh;
+    private LinearLayout emptyView;
+    private ProgressBar progressBar;
+    private ChipGroup chipGroupFiltros;
+    
+    private FirebaseFirestore db;
+    private String currentUserId;
+    private String userRole;
+    private String filtroEstado = "TODOS"; // TODOS, COMPLETADO, CANCELADO, RECHAZADO
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_historial_paseos);
+
+        // Init Firebase
+        db = FirebaseFirestore.getInstance();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            currentUserId = user.getUid();
+        } else {
+            finish();
+            return;
+        }
+
+        // Get role from Intent or Cache
+        if (getIntent().hasExtra("rol_usuario")) {
+            userRole = getIntent().getStringExtra("rol_usuario");
+        } else {
+            userRole = BottomNavManager.getUserRole(this);
+            if (userRole == null) userRole = "DUEÑO"; // Default
+        }
+
+        initViews();
+        setupListeners();
+        cargarHistorial();
+    }
+
+    private void initViews() {
+        rvHistorial = findViewById(R.id.rv_historial);
+        swipeRefresh = findViewById(R.id.swipe_refresh);
+        emptyView = findViewById(R.id.empty_view);
+        progressBar = findViewById(R.id.progress_bar);
+        chipGroupFiltros = findViewById(R.id.chip_group_filtros);
+        
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
+        listaPaseos = new ArrayList<>();
+        adapter = new HistorialPaseosAdapter(this, listaPaseos, userRole, this::abrirDetallePaseo);
+        rvHistorial.setLayoutManager(new LinearLayoutManager(this));
+        rvHistorial.setAdapter(adapter);
+    }
+
+    private void setupListeners() {
+        swipeRefresh.setOnRefreshListener(this::cargarHistorial);
+        
+        chipGroupFiltros.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty()) return;
+            int id = checkedIds.get(0);
+            
+            if (id == R.id.chip_todos) filtroEstado = "TODOS";
+            else if (id == R.id.chip_completados) filtroEstado = "COMPLETADO";
+            else if (id == R.id.chip_cancelados) filtroEstado = "CANCELADO";
+            else if (id == R.id.chip_rechazados) filtroEstado = "RECHAZADO";
+            
+            filtrarListaLocalmente();
+        });
+    }
+
+    private void abrirDetallePaseo(Paseo paseo) {
+        Intent intent = new Intent(this, DetallePaseoActivity.class);
+        intent.putExtra("id_reserva", paseo.getReservaId());
+        intent.putExtra("rol_usuario", userRole);
+        intent.putExtra("paseo_obj", paseo); // Opcional: pasar objeto para carga rápida
+        startActivity(intent);
+    }
+
+    private void cargarHistorial() {
+        swipeRefresh.setRefreshing(true);
+        listaPaseos.clear();
+
+        String campoFiltro = "PASEADOR".equalsIgnoreCase(userRole) ? "id_paseador" : "id_dueno";
+        DocumentReference userRef = db.collection("usuarios").document(currentUserId);
+
+        // Consultamos paseos donde el usuario participa
+        // Nota: Firestore requiere índices compuestos para whereIn + orderBy. 
+        // Si falla, simplificaremos la query y ordenaremos en cliente.
+        
+        Query query = db.collection("reservas")
+                .whereEqualTo(campoFiltro, userRef)
+                .whereIn("estado", Arrays.asList("COMPLETADO", "CANCELADO", "RECHAZADO", "FINALIZADO"));
+                //.orderBy("fecha", Query.Direction.DESCENDING); // Comentado por si falta índice
+
+        query.get().addOnSuccessListener(querySnapshot -> {
+            if (querySnapshot.isEmpty()) {
+                swipeRefresh.setRefreshing(false);
+                mostrarEstadoVacio();
+                return;
+            }
+
+            List<Paseo> paseosTemp = new ArrayList<>();
+            List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
+
+            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                Paseo paseo = doc.toObject(Paseo.class);
+                if (paseo == null) continue;
+                paseo.setReservaId(doc.getId());
+                
+                // Asegurar ID Mascota
+                if (paseo.getIdMascota() == null && doc.contains("id_mascota")) {
+                     paseo.setIdMascota(doc.getString("id_mascota"));
+                }
+                
+                paseosTemp.add(paseo);
+
+                // Referencias para obtener nombres/fotos
+                DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
+                DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
+                
+                tareas.add(paseadorRef != null ? paseadorRef.get() : Tasks.forResult(null));
+                tareas.add(duenoRef != null ? duenoRef.get() : Tasks.forResult(null));
+                
+                if (duenoRef != null && paseo.getIdMascota() != null) {
+                    tareas.add(db.collection("duenos").document(duenoRef.getId())
+                            .collection("mascotas").document(paseo.getIdMascota()).get());
+                } else {
+                    tareas.add(Tasks.forResult(null));
+                }
+            }
+            
+            if (tareas.isEmpty()) {
+                swipeRefresh.setRefreshing(false);
+                mostrarEstadoVacio();
+                return;
+            }
+
+            Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
+                for (int i = 0; i < paseosTemp.size(); i++) {
+                    Paseo p = paseosTemp.get(i);
+                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(i * 3);
+                    DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(i * 3 + 1);
+                    DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(i * 3 + 2);
+
+                    if (paseadorDoc != null && paseadorDoc.exists()) {
+                        p.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
+                        p.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                    }
+                    if (duenoDoc != null && duenoDoc.exists()) {
+                        p.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                    }
+                    if (mascotaDoc != null && mascotaDoc.exists()) {
+                        p.setMascotaNombre(mascotaDoc.getString("nombre"));
+                        p.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                    }
+                }
+                
+                // Ordenar en cliente por fecha descendente
+                Collections.sort(paseosTemp, (p1, p2) -> {
+                    Date d1 = p1.getFecha();
+                    Date d2 = p2.getFecha();
+                    if (d1 == null) return 1;
+                    if (d2 == null) return -1;
+                    return d2.compareTo(d1);
+                });
+                
+                listaPaseos.addAll(paseosTemp);
+                filtrarListaLocalmente(); // Aplica el filtro seleccionado
+                swipeRefresh.setRefreshing(false);
+                
+            }).addOnFailureListener(e -> {
+                manejarError(e);
+            });
+
+        }).addOnFailureListener(e -> {
+            manejarError(e);
+        });
+    }
+    
+    private void filtrarListaLocalmente() {
+        if (filtroEstado.equals("TODOS")) {
+            actualizarAdapter(listaPaseos);
+        } else {
+            List<Paseo> filtrados = new ArrayList<>();
+            for (Paseo p : listaPaseos) {
+                if (p.getEstado() != null && (p.getEstado().equalsIgnoreCase(filtroEstado) 
+                    || (filtroEstado.equals("COMPLETADO") && p.getEstado().equalsIgnoreCase("FINALIZADO")))) {
+                    filtrados.add(p);
+                }
+            }
+            actualizarAdapter(filtrados);
+        }
+    }
+
+    private void actualizarAdapter(List<Paseo> lista) {
+        if (lista.isEmpty()) {
+            rvHistorial.setVisibility(View.GONE);
+            emptyView.setVisibility(View.VISIBLE);
+        } else {
+            rvHistorial.setVisibility(View.VISIBLE);
+            emptyView.setVisibility(View.GONE);
+            adapter.updateList(lista);
+        }
+    }
+
+    private void mostrarEstadoVacio() {
+        rvHistorial.setVisibility(View.GONE);
+        emptyView.setVisibility(View.VISIBLE);
+    }
+
+    private void manejarError(Exception e) {
+        swipeRefresh.setRefreshing(false);
+        Log.e(TAG, "Error cargando historial", e);
+        Toast.makeText(this, "Error al cargar el historial", Toast.LENGTH_SHORT).show();
+    }
+}

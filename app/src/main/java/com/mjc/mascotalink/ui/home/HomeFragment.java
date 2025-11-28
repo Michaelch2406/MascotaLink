@@ -110,7 +110,11 @@ public class HomeFragment extends Fragment {
 
         // Quick Actions
         view.findViewById(R.id.btn_mis_favoritos).setOnClickListener(v -> startActivity(new Intent(getContext(), FavoritosActivity.class)));
-        view.findViewById(R.id.btn_historial).setOnClickListener(v -> startActivity(new Intent(getContext(), PaseosActivity.class)));
+        view.findViewById(R.id.btn_historial).setOnClickListener(v -> {
+            Intent intent = new Intent(getContext(), com.mjc.mascotalink.HistorialPaseosActivity.class);
+            intent.putExtra("rol_usuario", "DUEÑO");
+            startActivity(intent);
+        });
         // Placeholder for My Pets -> Ideally leads to a list of pets or profile
         view.findViewById(R.id.btn_mis_mascotas).setOnClickListener(v -> {
              // Assuming PerfilDuenoActivity handles pets list logic or a dedicated activity

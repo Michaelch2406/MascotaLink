@@ -119,7 +119,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private ImageButton ivEditPerfil;
     private GoogleMap googleMap;
     private List<Circle> mapCircles = new ArrayList<>();
-    private View btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos;
+    private View btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos, btnMisPaseos;
     private String metodoPagoId;
     private View skeletonLayout;
     private NestedScrollView scrollViewContent;
@@ -270,6 +270,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         
         llEmptyReviews = findViewById(R.id.ll_empty_reviews);
 
+        btnMisPaseos = findViewById(R.id.btn_mis_paseos);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
@@ -327,6 +328,14 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             intent.putExtra("paseadorId", paseadorId);
             startActivity(intent);
         });
+
+        if (btnMisPaseos != null) {
+            btnMisPaseos.setOnClickListener(v -> {
+                Intent intent = new Intent(PerfilPaseadorActivity.this, HistorialPaseosActivity.class);
+                intent.putExtra("rol_usuario", "PASEADOR");
+                startActivity(intent);
+            });
+        }
 
         videoContainer.setOnClickListener(v -> {
             if (videoUrl != null && !videoUrl.isEmpty()) {

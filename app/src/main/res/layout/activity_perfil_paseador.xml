@@ -761,6 +761,19 @@
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/btn_mis_paseos"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:drawablePadding="12dp"
+                            android:paddingVertical="12dp"
+                            android:text="Mis Paseos"
+                            android:textColor="@color/gray_dark"
+                            app:drawableStartCompat="@drawable/ic_walk"
+                            app:drawableTint="@color/gray_dark" />
+
+                        <TextView
                             android:id="@+id/btn_notificaciones"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
