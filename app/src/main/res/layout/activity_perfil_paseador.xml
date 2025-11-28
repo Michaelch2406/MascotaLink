@@ -768,7 +768,7 @@
                             android:background="?attr/selectableItemBackground"
                             android:drawablePadding="12dp"
                             android:paddingVertical="12dp"
-                            android:text="Mis Paseos"
+                            android:text="Historial de paseos"
                             android:textColor="@color/gray_dark"
                             app:drawableStartCompat="@drawable/ic_walk"
                             app:drawableTint="@color/gray_dark" />

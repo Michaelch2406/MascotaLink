@@ -43,29 +43,31 @@
                 android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
-
-        <!-- Tabs inside Header -->
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tab_layout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:tabIndicator="@drawable/tab_indicator_rounded"
-            app:tabIndicatorColor="@color/blue_primary"
-            app:tabMode="scrollable"
-            app:tabSelectedTextColor="@color/blue_primary"
-            app:tabTextColor="@color/text_secondary"
-            app:tabRippleColor="@color/blue_100"/>
-
     </LinearLayout>
+
+    <!-- Tabs de Estado (Igual que PaseosActivity) -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        app:tabMode="scrollable"
+        app:tabGravity="start"
+        app:tabIndicatorColor="@color/blue_primary"
+        app:tabSelectedTextColor="@color/blue_primary"
+        app:tabTextColor="@color/gray_dark"
+        app:tabTextAppearance="@style/TextAppearance.MaterialComponents.Body2"
+        android:elevation="2dp"
+        app:layout_constraintTop_toBottomOf="@id/header_container"/>
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipe_refresh"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@id/bottom_nav_divider"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/header_container">
+        app:layout_constraintTop_toBottomOf="@id/tab_layout">
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -106,28 +108,5 @@
             </LinearLayout>
         </FrameLayout>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
-
-    <!-- Bottom Nav Divider & View -->
-    <View
-        android:id="@+id/bottom_nav_divider"
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:background="#E5E7EB"
-        app:layout_constraintBottom_toTopOf="@+id/bottom_nav"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_nav"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="#FFFFFF"
-        app:itemActiveIndicatorStyle="@null"
-        app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color"
-        app:labelVisibilityMode="labeled"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

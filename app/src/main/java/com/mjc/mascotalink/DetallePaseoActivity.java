@@ -37,7 +37,7 @@ public class DetallePaseoActivity extends AppCompatActivity {
     private CircleImageView ivFotoPrincipal, ivFotoMascota;
     private TextView tvNombrePrincipal, tvRolPrincipal, tvEstadoPaseo;
     private TextView tvNombreMascota, tvFechaHora, tvDuracionReal;
-    private TextView tvCostoTotal, tvMetodoPago, tvIdTransaccion;
+    private TextView tvCostoTotal, tvMetodoPago;
     private RatingBar ratingBar;
     private TextView tvComentario;
     private MaterialButton btnDescargar, btnSoporte;
@@ -79,7 +79,6 @@ public class DetallePaseoActivity extends AppCompatActivity {
         tvDuracionReal = findViewById(R.id.tv_duracion_real);
         tvCostoTotal = findViewById(R.id.tv_costo_total);
         tvMetodoPago = findViewById(R.id.tv_metodo_pago);
-        tvIdTransaccion = findViewById(R.id.tv_id_transaccion);
         ratingBar = findViewById(R.id.rating_bar);
         tvComentario = findViewById(R.id.tv_comentario);
         btnDescargar = findViewById(R.id.btn_descargar_comprobante);
@@ -180,12 +179,6 @@ public class DetallePaseoActivity extends AppCompatActivity {
             tvMetodoPago.setText(paseo.getMetodo_pago());
         } else {
             tvMetodoPago.setText("No especificado");
-        }
-        
-        if (paseo.getTransaction_id() != null) {
-            tvIdTransaccion.setText(paseo.getTransaction_id());
-        } else {
-            tvIdTransaccion.setText("-");
         }
 
         // Estado Visual

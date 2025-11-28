@@ -306,14 +306,6 @@
                                 android:text="Método"
                                 android:textColor="@color/black"
                                 android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tv_id_transaccion"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="ID Transacción"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>

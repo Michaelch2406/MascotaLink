@@ -181,10 +181,6 @@ public class PdfGenerator {
         payTable.setWidth(UnitValue.createPercentValue(100));
 
         addRow(payTable, "Método:", paseo.getMetodo_pago() != null ? paseo.getMetodo_pago() : "Desconocido");
-        if (paseo.getTransaction_id() != null) {
-            addRow(payTable, "ID Transacción:", paseo.getTransaction_id());
-        }
-        
         // Total Cost Row (Standout)
         Cell labelCell = new Cell().add(new Paragraph("Costo Total:")).setBorder(Border.NO_BORDER).setBold();
         Cell valueCell = new Cell().add(new Paragraph("$" + String.format(Locale.US, "%.2f", paseo.getCosto_total())))
