@@ -17,17 +17,21 @@ import androidx.core.content.ContextCompat;
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
+import com.itextpdf.layout.element.LineSeparator;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.layout.properties.VerticalAlignment;
 import com.mjc.mascotalink.Paseo;
 import com.mjc.mascotalink.R;
 
@@ -66,7 +70,6 @@ public class PdfGenerator {
                 if (!appDir.exists()) appDir.mkdirs();
                 file = new File(appDir, fileName);
                 outputStream = new FileOutputStream(file);
-                // For pre-Q, we return a file URI later if needed, or use FileProvider
             }
 
             if (outputStream != null) {
@@ -74,7 +77,6 @@ public class PdfGenerator {
                 Toast.makeText(context, "Comprobante descargado en Descargas/Walki", Toast.LENGTH_LONG).show();
                 
                 if (file != null) {
-                    // Return file URI for pre-Q (FileProvider logic handled in Activity)
                     return Uri.fromFile(file);
                 }
                 return fileUri;
@@ -103,7 +105,15 @@ public class PdfGenerator {
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
 
-        // Add Logo
+        // Colors
+        DeviceRgb primaryColor = new DeviceRgb(19, 164, 236); // Walki Blue
+        DeviceRgb grayColor = new DeviceRgb(107, 114, 128);
+
+        // Header Table (Logo + Info)
+        Table headerTable = new Table(UnitValue.createPercentArray(new float[]{1, 2}));
+        headerTable.setWidth(UnitValue.createPercentValue(100));
+
+        // Logo Cell
         Drawable d = ContextCompat.getDrawable(context, R.drawable.walki_logo_principal);
         if (d != null) {
             Bitmap bitmap = ((BitmapDrawable) d).getBitmap();
@@ -112,85 +122,95 @@ public class PdfGenerator {
             byte[] bitmapData = stream.toByteArray();
             ImageData imageData = ImageDataFactory.create(bitmapData);
             Image image = new Image(imageData);
-            image.scaleToFit(100, 100);
-            image.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
-            document.add(image);
+            image.scaleToFit(80, 80);
+            
+            Cell logoCell = new Cell().add(image).setBorder(Border.NO_BORDER);
+            logoCell.setVerticalAlignment(VerticalAlignment.MIDDLE);
+            headerTable.addCell(logoCell);
+        } else {
+            headerTable.addCell(new Cell().add(new Paragraph("Walki")).setBorder(Border.NO_BORDER));
         }
 
-        // Título
-        document.add(new Paragraph("COMPROBANTE DE PAGO")
-                .setTextAlignment(TextAlignment.CENTER)
+        // Info Cell
+        Paragraph headerInfo = new Paragraph()
+                .add(new Text("COMPROBANTE DE PAGO\n").setBold().setFontSize(16).setFontColor(primaryColor))
+                .add(new Text("Walki App\n").setFontSize(12).setFontColor(grayColor))
+                .add(new Text("Fecha: " + paseo.getFechaFormateada() + "\n").setFontSize(10))
+                .add(new Text("ID: " + paseo.getReservaId()).setFontSize(10));
+        
+        Cell infoCell = new Cell().add(headerInfo).setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT);
+        headerTable.addCell(infoCell);
+
+        document.add(headerTable);
+
+        // Separator
+        SolidLine line = new SolidLine(1f);
+        line.setColor(primaryColor);
+        LineSeparator ls = new LineSeparator(line);
+        ls.setMarginTop(10);
+        ls.setMarginBottom(20);
+        document.add(ls);
+
+        // Section: Detalles del Servicio
+        document.add(new Paragraph("DETALLES DEL SERVICIO")
                 .setBold()
-                .setFontSize(20));
-        
-        document.add(new Paragraph("Walki")
-                .setTextAlignment(TextAlignment.CENTER)
+                .setFontColor(primaryColor)
                 .setFontSize(12)
-                .setFontColor(ColorConstants.GRAY));
+                .setMarginBottom(5));
 
-        document.add(new Paragraph("\n"));
-
-        // Info de Reserva
-        Table table = new Table(UnitValue.createPercentArray(new float[]{1, 2}));
-        table.setWidth(UnitValue.createPercentValue(100));
-
-        addCell(table, "ID Reserva:", true);
-        addCell(table, paseo.getReservaId(), false);
-
-        addCell(table, "Fecha:", true);
-        addCell(table, paseo.getFechaFormateada() + " " + paseo.getHoraFormateada(), false);
-        
-        addCell(table, "Estado:", true);
-        addCell(table, paseo.getEstado(), false);
-
-        document.add(table);
-        document.add(new Paragraph("\nDETALLES DEL SERVICIO").setBold());
-        
         Table serviceTable = new Table(UnitValue.createPercentArray(new float[]{1, 2}));
         serviceTable.setWidth(UnitValue.createPercentValue(100));
+        serviceTable.setMarginBottom(15);
 
-        addCell(serviceTable, "Paseador:", true);
-        addCell(serviceTable, paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "-", false);
-        
-        addCell(serviceTable, "Dueño:", true);
-        addCell(serviceTable, paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "-", false);
-
-        addCell(serviceTable, "Mascota:", true);
-        addCell(serviceTable, paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "-", false);
-
-        addCell(serviceTable, "Duración:", true);
-        addCell(serviceTable, paseo.getDuracion_minutos() + " min", false);
+        addRow(serviceTable, "Paseador:", paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "-");
+        addRow(serviceTable, "Dueño:", paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "-");
+        addRow(serviceTable, "Mascota:", paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "-");
+        addRow(serviceTable, "Duración:", paseo.getDuracion_minutos() + " min");
+        addRow(serviceTable, "Estado:", paseo.getEstado());
 
         document.add(serviceTable);
-        document.add(new Paragraph("\nDETALLES DEL PAGO").setBold());
+
+        // Section: Detalles del Pago
+        document.add(new Paragraph("DETALLES DEL PAGO")
+                .setBold()
+                .setFontColor(primaryColor)
+                .setFontSize(12)
+                .setMarginBottom(5));
 
         Table payTable = new Table(UnitValue.createPercentArray(new float[]{1, 2}));
         payTable.setWidth(UnitValue.createPercentValue(100));
 
-        addCell(payTable, "Costo Total:", true);
-        addCell(payTable, "$" + String.format(Locale.US, "%.2f", paseo.getCosto_total()), false);
-        
-        addCell(payTable, "Método:", true);
-        addCell(payTable, paseo.getMetodo_pago() != null ? paseo.getMetodo_pago() : "Desconocido", false);
-        
+        addRow(payTable, "Método:", paseo.getMetodo_pago() != null ? paseo.getMetodo_pago() : "Desconocido");
         if (paseo.getTransaction_id() != null) {
-            addCell(payTable, "ID Transacción:", true);
-            addCell(payTable, paseo.getTransaction_id(), false);
+            addRow(payTable, "ID Transacción:", paseo.getTransaction_id());
         }
+        
+        // Total Cost Row (Standout)
+        Cell labelCell = new Cell().add(new Paragraph("Costo Total:")).setBorder(Border.NO_BORDER).setBold();
+        Cell valueCell = new Cell().add(new Paragraph("$" + String.format(Locale.US, "%.2f", paseo.getCosto_total())))
+                .setBorder(Border.NO_BORDER)
+                .setBold()
+                .setFontSize(14)
+                .setFontColor(primaryColor);
+        
+        payTable.addCell(labelCell);
+        payTable.addCell(valueCell);
 
         document.add(payTable);
 
-        document.add(new Paragraph("\n\nGracias por confiar en Walki.")
+        // Footer
+        document.add(new Paragraph("\n\n"));
+        document.add(new Paragraph("Gracias por confiar en Walki.")
                 .setTextAlignment(TextAlignment.CENTER)
                 .setItalic()
+                .setFontColor(grayColor)
                 .setFontSize(10));
 
         document.close();
     }
 
-    private static void addCell(Table table, String text, boolean bold) {
-        Paragraph p = new Paragraph(text);
-        if (bold) p.setBold();
-        table.addCell(new Cell().add(p).setBorder(Border.NO_BORDER));
+    private static void addRow(Table table, String label, String value) {
+        table.addCell(new Cell().add(new Paragraph(label)).setBorder(Border.NO_BORDER).setBold().setFontSize(10));
+        table.addCell(new Cell().add(new Paragraph(value)).setBorder(Border.NO_BORDER).setFontSize(10));
     }
 }
