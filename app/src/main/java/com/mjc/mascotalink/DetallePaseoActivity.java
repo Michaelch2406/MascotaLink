@@ -2,6 +2,7 @@ package com.mjc.mascotalink;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -17,6 +18,8 @@ import androidx.core.content.ContextCompat;
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.utils.PdfGenerator;
 
@@ -38,6 +41,7 @@ public class DetallePaseoActivity extends AppCompatActivity {
     private RatingBar ratingBar;
     private TextView tvComentario;
     private MaterialButton btnDescargar, btnSoporte;
+    private View cardCalificacion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +87,7 @@ public class DetallePaseoActivity extends AppCompatActivity {
         tvComentario = findViewById(R.id.tv_comentario);
         btnDescargar = findViewById(R.id.btn_descargar_comprobante);
         btnSoporte = findViewById(R.id.btn_contactar_soporte);
+        cardCalificacion = findViewById(R.id.card_calificacion);
     }
 
     private void setupListeners() {
@@ -113,7 +118,7 @@ public class DetallePaseoActivity extends AppCompatActivity {
         });
     }
     
-    private void abrirPdf(android.net.Uri uri) {
+    private void abrirPdf(Uri uri) {
         android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
         intent.setDataAndType(uri, "application/pdf");
         intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -189,8 +194,42 @@ public class DetallePaseoActivity extends AppCompatActivity {
         
         tvEstadoPaseo.setTextColor(color);
 
-        // Ocultar calificaciones por ahora si no hay lógica de fetch
-        findViewById(R.id.card_calificacion).setVisibility(View.GONE);
+        // Buscar calificación
+        buscarCalificacion();
+    }
+
+    private void buscarCalificacion() {
+        String collection = "PASEADOR".equalsIgnoreCase(userRole) ? "resenas_duenos" : "resenas_paseadores";
+        String fieldToMatch = "reservaId"; // Asumiendo que la reseña guarda el ID de la reserva
+
+        // Si no existe el campo reservaId en las reseñas antiguas, habría que buscar por timestamp aproximado o ids de usuarios
+        // Pero lo ideal es que al crear la reseña se guarde el reservaId.
+        // Asumimos que se guarda como 'reservaId'.
+        
+        FirebaseFirestore.getInstance().collection(collection)
+                .whereEqualTo("reservaId", paseo.getReservaId())
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                        Double calificacion = doc.getDouble("calificacion");
+                        String comentario = doc.getString("comentario");
+                        
+                        if (calificacion != null) {
+                            ratingBar.setRating(calificacion.floatValue());
+                            tvComentario.setText(comentario != null ? comentario : "");
+                            cardCalificacion.setVisibility(View.VISIBLE);
+                        } else {
+                            cardCalificacion.setVisibility(View.GONE);
+                        }
+                    } else {
+                        cardCalificacion.setVisibility(View.GONE);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    cardCalificacion.setVisibility(View.GONE);
+                });
     }
 
     private void cargarImagen(String url, CircleImageView iv) {
@@ -204,7 +243,10 @@ public class DetallePaseoActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                PdfGenerator.generarComprobante(this, paseo);
+                Uri uri = PdfGenerator.generarComprobante(this, paseo);
+                if (uri != null) {
+                    abrirPdf(uri);
+                }
             } else {
                 Toast.makeText(this, "Permiso necesario para guardar el PDF", Toast.LENGTH_SHORT).show();
             }
