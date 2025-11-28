@@ -15,8 +15,6 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.android.material.chip.Chip;
-import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -41,7 +39,7 @@ public class HistorialPaseosActivity extends AppCompatActivity {
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout emptyView;
     private ProgressBar progressBar;
-    private ChipGroup chipGroupFiltros;
+    private com.google.android.material.tabs.TabLayout tabLayout;
     
     private FirebaseFirestore db;
     private String currentUserId;
@@ -77,11 +75,10 @@ public class HistorialPaseosActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        rvHistorial = findViewById(R.id.rv_historial);
+        rvHistorial = findViewById(R.id.rv_paseos);
         swipeRefresh = findViewById(R.id.swipe_refresh);
         emptyView = findViewById(R.id.empty_view);
-        progressBar = findViewById(R.id.progress_bar);
-        chipGroupFiltros = findViewById(R.id.chip_group_filtros);
+        tabLayout = findViewById(R.id.tab_layout);
         
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
@@ -89,21 +86,38 @@ public class HistorialPaseosActivity extends AppCompatActivity {
         adapter = new HistorialPaseosAdapter(this, listaPaseos, userRole, this::abrirDetallePaseo);
         rvHistorial.setLayoutManager(new LinearLayoutManager(this));
         rvHistorial.setAdapter(adapter);
+        
+        setupTabs();
+    }
+    
+    private void setupTabs() {
+        tabLayout.addTab(tabLayout.newTab().setText("Todos"));
+        tabLayout.addTab(tabLayout.newTab().setText("Completados"));
+        tabLayout.addTab(tabLayout.newTab().setText("Cancelados"));
+        tabLayout.addTab(tabLayout.newTab().setText("Rechazados"));
     }
 
     private void setupListeners() {
         swipeRefresh.setOnRefreshListener(this::cargarHistorial);
         
-        chipGroupFiltros.setOnCheckedStateChangeListener((group, checkedIds) -> {
-            if (checkedIds.isEmpty()) return;
-            int id = checkedIds.get(0);
-            
-            if (id == R.id.chip_todos) filtroEstado = "TODOS";
-            else if (id == R.id.chip_completados) filtroEstado = "COMPLETADO";
-            else if (id == R.id.chip_cancelados) filtroEstado = "CANCELADO";
-            else if (id == R.id.chip_rechazados) filtroEstado = "RECHAZADO";
-            
-            filtrarListaLocalmente();
+        tabLayout.addOnTabSelectedListener(new com.google.android.material.tabs.TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(com.google.android.material.tabs.TabLayout.Tab tab) {
+                int position = tab.getPosition();
+                switch (position) {
+                    case 0: filtroEstado = "TODOS"; break;
+                    case 1: filtroEstado = "COMPLETADO"; break;
+                    case 2: filtroEstado = "CANCELADO"; break;
+                    case 3: filtroEstado = "RECHAZADO"; break;
+                }
+                filtrarListaLocalmente();
+            }
+
+            @Override
+            public void onTabUnselected(com.google.android.material.tabs.TabLayout.Tab tab) {}
+
+            @Override
+            public void onTabReselected(com.google.android.material.tabs.TabLayout.Tab tab) {}
         });
     }
 

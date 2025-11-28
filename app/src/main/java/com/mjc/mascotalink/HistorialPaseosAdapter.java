@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.chip.Chip;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.util.List;
@@ -84,6 +85,7 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
                     .load(fotoUrl)
                     .placeholder(R.drawable.ic_pet_placeholder) // Fallback genérico
                     .error(R.drawable.ic_pet_placeholder)
+                    .centerCrop()
                     .into(holder.ivAvatar);
         } else {
             holder.ivAvatar.setImageResource(R.drawable.ic_pet_placeholder);
@@ -102,31 +104,30 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
         holder.chipEstado.setText(estado.toUpperCase());
 
         int colorRes;
-        int bgRes; // Podríamos usar un drawable selector, pero lo haremos programáticamente simple aquí o usar colores fijos
+        int bgRes; 
 
         switch (estado) {
             case "COMPLETADO":
             case "FINALIZADO":
                 colorRes = R.color.green_700;
-                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.green_500));
-                holder.chipEstado.setTextColor(ContextCompat.getColor(context, R.color.green_700));
+                bgRes = R.color.green_100;
                 break;
             case "CANCELADO":
-                colorRes = R.color.color_cancelado;
-                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.color_cancelado));
-                holder.chipEstado.setTextColor(ContextCompat.getColor(context, R.color.color_cancelado));
+                colorRes = R.color.red_error;
+                bgRes = R.color.red_100;
                 break;
             case "RECHAZADO":
                 colorRes = R.color.orange_500;
-                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.orange_500));
-                holder.chipEstado.setTextColor(ContextCompat.getColor(context, R.color.orange_500));
+                bgRes = R.color.orange_100;
                 break;
             default:
-                colorRes = R.color.grey_600;
-                holder.viewStatusStrip.setBackgroundColor(ContextCompat.getColor(context, R.color.grey_600));
-                holder.chipEstado.setTextColor(ContextCompat.getColor(context, R.color.grey_600));
+                colorRes = R.color.text_secondary;
+                bgRes = R.color.gray_100;
                 break;
         }
+        
+        holder.chipEstado.setChipBackgroundColorResource(bgRes);
+        holder.chipEstado.setTextColor(ContextCompat.getColor(context, colorRes));
     }
 
     @Override
@@ -135,9 +136,9 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvNombre, tvSubtitulo, tvFecha, chipEstado, tvDuracion, tvCosto;
+        TextView tvNombre, tvSubtitulo, tvFecha, tvDuracion, tvCosto;
+        Chip chipEstado;
         ImageView ivAvatar;
-        View viewStatusStrip;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -148,7 +149,6 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
             tvDuracion = itemView.findViewById(R.id.tv_duracion);
             tvCosto = itemView.findViewById(R.id.tv_costo);
             ivAvatar = itemView.findViewById(R.id.iv_avatar);
-            viewStatusStrip = itemView.findViewById(R.id.view_status_strip);
         }
     }
 }

@@ -42,15 +42,12 @@ public class DetallePaseoActivity extends AppCompatActivity {
     private TextView tvComentario;
     private MaterialButton btnDescargar, btnSoporte;
     private View cardCalificacion;
+    private View btnBack;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detalle_paseo);
-
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
 
         initViews();
 
@@ -88,9 +85,13 @@ public class DetallePaseoActivity extends AppCompatActivity {
         btnDescargar = findViewById(R.id.btn_descargar_comprobante);
         btnSoporte = findViewById(R.id.btn_contactar_soporte);
         cardCalificacion = findViewById(R.id.card_calificacion);
+        btnBack = findViewById(R.id.btn_back);
     }
 
     private void setupListeners() {
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finish());
+        }
         btnDescargar.setOnClickListener(v -> {
             if (paseo == null) return;
             Uri pdfUri = null;
