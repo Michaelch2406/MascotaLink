@@ -374,14 +374,26 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatId}/mensajes/{mensa
     notification: {
       title: "Nuevo mensaje",
       body: preview,
-      sound: "default",
     },
     data: {
       chat_id: chatId,
       id_otro_usuario: remit,
+      message_id: event.params.mensajeId,
     },
-    android: { priority: "high" },
-    apns: { payload: { aps: { sound: "default" } } },
+    android: { 
+      priority: "high",
+      notification: {
+        sound: "default",
+        icon: "walki_logo_secundario"
+      }
+    },
+    apns: { 
+      payload: { 
+        aps: { 
+          sound: "default" 
+        } 
+      } 
+    },
   };
 
   try {

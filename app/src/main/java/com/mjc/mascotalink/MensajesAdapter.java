@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.modelo.Chat;
+import com.mjc.mascotalink.util.TimeUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -55,8 +56,7 @@ public class MensajesAdapter extends RecyclerView.Adapter<MensajesAdapter.ViewHo
         holder.tvUltimoMensaje.setText(chat.getUltimo_mensaje());
 
         if (chat.getUltimo_timestamp() != null) {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            holder.tvHora.setText(sdf.format(chat.getUltimo_timestamp()));
+            holder.tvHora.setText(TimeUtils.getRelativeTimeString(chat.getUltimo_timestamp()));
         } else {
             holder.tvHora.setText("");
         }

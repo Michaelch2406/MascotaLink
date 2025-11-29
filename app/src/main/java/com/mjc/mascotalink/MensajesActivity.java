@@ -2,6 +2,8 @@ package com.mjc.mascotalink;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -38,6 +40,10 @@ public class MensajesActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String currentUserId;
     private String userRole;
+    
+    // Handler para actualizar timestamps periódicamente
+    private Handler updateHandler;
+    private Runnable updateRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,12 +65,26 @@ public class MensajesActivity extends AppCompatActivity {
         setupBottomNavigation();
         setupRecyclerView();
         cargarConversaciones();
+        setupPeriodicUpdate();
     }
     
     @Override
     protected void onResume() {
         super.onResume();
         setupBottomNavigation();
+        startPeriodicUpdate();
+    }
+    
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopPeriodicUpdate();
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        stopPeriodicUpdate();
     }
 
     private void initViews() {
@@ -117,6 +137,8 @@ public class MensajesActivity extends AppCompatActivity {
     private void cargarConversaciones() {
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         
+        Log.d("Mensajes", "Cargando conversaciones para userId: " + currentUserId + ", role: " + userRole);
+        
         db.collection("chats")
                 .whereArrayContains("participantes", currentUserId)
                 .orderBy("ultimo_timestamp", Query.Direction.DESCENDING)
@@ -126,8 +148,12 @@ public class MensajesActivity extends AppCompatActivity {
 
                     if (error != null) {
                         Log.e("Mensajes", "Error al cargar chats: " + error.getMessage());
+                        Log.e("Mensajes", "Error code: " + error.getCode());
+                        Toast.makeText(MensajesActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_LONG).show();
                         return;
                     }
+
+                    Log.d("Mensajes", "Query exitosa. Documentos encontrados: " + (snapshot != null ? snapshot.size() : 0));
 
                     if (snapshot != null && !snapshot.isEmpty()) {
                         List<Chat> conversaciones = new ArrayList<>();
@@ -181,5 +207,41 @@ public class MensajesActivity extends AppCompatActivity {
                         rvConversaciones.setVisibility(View.GONE);
                     }
                 });
+    }
+    
+    /**
+     * Configura la actualización periódica de timestamps.
+     */
+    private void setupPeriodicUpdate() {
+        updateHandler = new Handler(Looper.getMainLooper());
+        updateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Actualizar el adaptador para refrescar los timestamps
+                if (adaptador != null) {
+                    adaptador.notifyDataSetChanged();
+                }
+                // Programar la próxima actualización en 60 segundos
+                updateHandler.postDelayed(this, 60000);
+            }
+        };
+    }
+    
+    /**
+     * Inicia la actualización periódica.
+     */
+    private void startPeriodicUpdate() {
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.postDelayed(updateRunnable, 60000);
+        }
+    }
+    
+    /**
+     * Detiene la actualización periódica.
+     */
+    private void stopPeriodicUpdate() {
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.removeCallbacks(updateRunnable);
+        }
     }
 }

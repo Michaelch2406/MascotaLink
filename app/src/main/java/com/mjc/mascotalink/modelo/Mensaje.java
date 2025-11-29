@@ -3,7 +3,7 @@ package com.mjc.mascotalink.modelo;
 import com.google.firebase.firestore.ServerTimestamp;
 import java.util.Date;
 
-public class Mensaje {
+public class Mensaje implements ChatItem {
     private String id;
     private String id_remitente;
     private String id_destinatario;
@@ -43,4 +43,9 @@ public class Mensaje {
 
     public Date getFecha_eliminacion() { return fecha_eliminacion; }
     public void setFecha_eliminacion(Date fecha_eliminacion) { this.fecha_eliminacion = fecha_eliminacion; }
+    
+    @Override
+    public int getType() {
+        return ChatItem.TYPE_MESSAGE;
+    }
 }

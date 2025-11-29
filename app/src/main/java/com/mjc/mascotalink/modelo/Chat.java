@@ -15,6 +15,7 @@ public class Chat {
     private Date fecha_creacion;
     private Map<String, String> estado_usuarios;
     private Map<String, Date> ultima_actividad;
+    private Map<String, String> chat_abierto;
 
     // Campos auxiliares para la UI (no en Firebase)
     private String nombreOtroUsuario;
@@ -46,6 +47,9 @@ public class Chat {
 
     public Map<String, Date> getUltima_actividad() { return ultima_actividad; }
     public void setUltima_actividad(Map<String, Date> ultima_actividad) { this.ultima_actividad = ultima_actividad; }
+
+    public Map<String, String> getChat_abierto() { return chat_abierto; }
+    public void setChat_abierto(Map<String, String> chat_abierto) { this.chat_abierto = chat_abierto; }
 
     // Getters y Setters auxiliares
     public String getNombreOtroUsuario() { return nombreOtroUsuario; }

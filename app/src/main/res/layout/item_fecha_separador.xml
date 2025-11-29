@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp"
+    android:gravity="center">
+
+    <TextView
+        android:id="@+id/tv_fecha_separador"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_date_separator"
+        android:textColor="#757575"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:elevation="1dp"
+        android:text="Hoy" />
+
+</LinearLayout>

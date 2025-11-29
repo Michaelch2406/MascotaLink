@@ -142,22 +142,32 @@ service cloud.firestore {
 
     // chats collection
     match /chats/{chatId} {
-      function chatDoc() { return get(/databases/$(database)/documents/chats/$(chatId)); }
-      function isParticipant() {
+      function getChatDoc() { return get(/databases/$(database)/documents/chats/$(chatId)); }
+      
+      function isParticipantInParent() {
+        let doc = getChatDoc();
         return isAuthenticated()
-          && chatDoc() != null
-          && chatDoc().data.participantes is list
-          && chatDoc().data.participantes.hasAny([request.auth.uid]);
+          && doc != null
+          && doc.data != null
+          && doc.data.participantes is list
+          && doc.data.participantes.hasAny([request.auth.uid]);
       }
+
+      function isParticipantInResource() {
+        return isAuthenticated()
+          && resource.data.participantes is list
+          && resource.data.participantes.hasAny([request.auth.uid]);
+      }
+
       function isParticipantInCreate() {
         return isAuthenticated()
           && request.resource.data.participantes is list
           && request.resource.data.participantes.hasAny([request.auth.uid]);
       }
 
-      allow read: if isParticipant() || (resource == null && chatId.matches(".*" + request.auth.uid + ".*"));
+      allow read: if isParticipantInResource() || (resource == null && chatId.matches(".*" + request.auth.uid + ".*"));
       allow create: if isParticipantInCreate();
-      allow update: if isParticipant()
+      allow update: if isParticipantInResource()
         && request.resource.data.keys().hasOnly([
           'participantes', 'fecha_creacion', 'ultimo_mensaje', 'ultimo_timestamp',
           'mensajes_no_leidos', 'estado_usuarios', 'chat_abierto', 'ultima_actividad'
@@ -165,10 +175,10 @@ service cloud.firestore {
       allow delete: if false;
 
       match /mensajes/{mensajeId} {
-        allow read: if isParticipant();
-        allow create: if isParticipant()
+        allow read: if isParticipantInParent();
+        allow create: if isParticipantInParent()
           && request.resource.data.id_remitente == request.auth.uid;
-        allow update: if isParticipant()
+        allow update: if isParticipantInParent()
           && request.resource.data.keys().hasOnly(['leido', 'entregado'])
           && resource.data.id_destinatario == request.auth.uid;
         allow delete: if false;

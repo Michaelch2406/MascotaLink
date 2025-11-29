@@ -71,9 +71,24 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void handleDataMessage(RemoteMessage remoteMessage) {
-        String title = remoteMessage.getData().get("title");
-        String message = remoteMessage.getData().get("message");
-        sendNotification(title, message, remoteMessage.getData());
+        Map<String, String> data = remoteMessage.getData();
+        String title = data.get("title");
+        String message = data.get("message");
+        
+        // Mark message as delivered if it's a chat message
+        if (data.containsKey("chat_id") && data.containsKey("message_id")) {
+            String chatId = data.get("chat_id");
+            String messageId = data.get("message_id");
+            if (chatId != null && messageId != null) {
+                FirebaseFirestore.getInstance()
+                        .collection("chats").document(chatId)
+                        .collection("mensajes").document(messageId)
+                        .update("entregado", true)
+                        .addOnFailureListener(e -> Log.e(TAG, "Error marking message as delivered", e));
+            }
+        }
+
+        sendNotification(title, message, data);
     }
 
     /**

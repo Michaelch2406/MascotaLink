@@ -8,6 +8,14 @@
         { "fieldPath": "activo", "order": "ASCENDING" },
         { "fieldPath": "ubicacion_geohash", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "chats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participantes", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "ultimo_timestamp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
