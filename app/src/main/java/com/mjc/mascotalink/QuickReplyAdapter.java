@@ -37,22 +37,35 @@ public class QuickReplyAdapter extends RecyclerView.Adapter<QuickReplyAdapter.Vi
         }
     }
 
-    public QuickReplyAdapter(Context context, OnQuickReplyClickListener listener) {
+    public QuickReplyAdapter(Context context, OnQuickReplyClickListener listener, String userRole) {
         this.context = context;
         this.listener = listener;
         this.quickReplies = new ArrayList<>();
-        initializeQuickReplies();
+        initializeQuickReplies(userRole);
     }
 
-    private void initializeQuickReplies() {
-        quickReplies.add(new QuickReply("🚶", "Voy en camino"));
-        quickReplies.add(new QuickReply("📍", "Llegué a tu dirección"));
-        quickReplies.add(new QuickReply("🐕", "Iniciando el paseo"));
-        quickReplies.add(new QuickReply("🏠", "Estamos de regreso"));
-        quickReplies.add(new QuickReply("✅", "El paseo terminó exitosamente"));
-        quickReplies.add(new QuickReply("💧", "Le di agua a tu mascota"));
-        quickReplies.add(new QuickReply("🎾", "Jugamos en el parque"));
-        quickReplies.add(new QuickReply("😊", "Tu mascota se portó muy bien"));
+    private void initializeQuickReplies(String userRole) {
+        if ("PASEADOR".equals(userRole)) {
+            // Respuestas rápidas para paseadores
+            quickReplies.add(new QuickReply("🚶", "Voy en camino"));
+            quickReplies.add(new QuickReply("📍", "Llegué a tu dirección"));
+            quickReplies.add(new QuickReply("🐕", "Iniciando el paseo"));
+            quickReplies.add(new QuickReply("🏠", "Estamos de regreso"));
+            quickReplies.add(new QuickReply("✅", "El paseo terminó exitosamente"));
+            quickReplies.add(new QuickReply("💧", "Le di agua a tu mascota"));
+            quickReplies.add(new QuickReply("🎾", "Jugamos en el parque"));
+            quickReplies.add(new QuickReply("😊", "Tu mascota se portó muy bien"));
+        } else {
+            // Respuestas rápidas para dueños
+            quickReplies.add(new QuickReply("👋", "Hola, ¿cómo estás?"));
+            quickReplies.add(new QuickReply("⏰", "¿A qué hora puedes venir?"));
+            quickReplies.add(new QuickReply("📍", "Mi dirección es..."));
+            quickReplies.add(new QuickReply("🐕", "¿Cómo va mi mascota?"));
+            quickReplies.add(new QuickReply("📸", "¿Puedes enviar fotos?"));
+            quickReplies.add(new QuickReply("💰", "¿Cuál es el costo?"));
+            quickReplies.add(new QuickReply("🙏", "Muchas gracias"));
+            quickReplies.add(new QuickReply("👍", "Perfecto, nos vemos"));
+        }
     }
 
     @NonNull

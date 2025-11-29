@@ -226,7 +226,7 @@ public class ChatActivity extends AppCompatActivity {
         mensaje.put("texto", texto);
         mensaje.put("timestamp", FieldValue.serverTimestamp());
         mensaje.put("leido", false);
-        mensaje.put("entregado", false);
+        mensaje.put("entregado", true); // Marcar como entregado desde el inicio
         mensaje.put("tipo", "texto");
 
         Calendar cal = Calendar.getInstance();
@@ -238,10 +238,6 @@ public class ChatActivity extends AppCompatActivity {
                 .add(mensaje)
                 .addOnSuccessListener(docRef -> {
                     Log.d(TAG, "Mensaje enviado exitosamente: " + docRef.getId());
-                    
-                    // Marcar como entregado inmediatamente
-                    docRef.update("entregado", true)
-                            .addOnFailureListener(e -> Log.w(TAG, "Error marcando como entregado", e));
                     
                     Map<String, Object> chatUpdate = new HashMap<>();
                     chatUpdate.put("ultimo_mensaje", texto);
@@ -335,7 +331,8 @@ public class ChatActivity extends AppCompatActivity {
     private void setupQuickReplies() {
         String userRole = BottomNavManager.getUserRole(this);
         
-        if ("PASEADOR".equals(userRole)) {
+        // Mostrar quick replies tanto para paseadores como para dueños
+        if ("PASEADOR".equals(userRole) || "DUENO".equals(userRole) || "DUEÑO".equals(userRole)) {
             rvQuickReplies.setVisibility(View.VISIBLE);
             
             LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
@@ -345,9 +342,15 @@ public class ChatActivity extends AppCompatActivity {
                 // Al hacer click en una respuesta rápida, insertarla en el campo de texto
                 etMensaje.setText(message);
                 etMensaje.setSelection(message.length());
-                // Opcionalmente, enviar automáticamente
-                // enviarMensaje(message);
-            });
+                // Opcionalmente, enviar automáticamente después de un pequeño delay
+                // para dar tiempo al usuario de editar si lo desea
+                // Handler handler = new Handler(Looper.getMainLooper());
+                // handler.postDelayed(() -> {
+                //     if (etMensaje.getText().toString().equals(message)) {
+                //         enviarMensaje(message);
+                //     }
+                // }, 1000);
+            }, userRole);
             
             rvQuickReplies.setAdapter(quickReplyAdapter);
         } else {
@@ -379,6 +382,13 @@ public class ChatActivity extends AppCompatActivity {
                         m.setId(doc.getId());
                         messageIds.add(doc.getId());
                         page.add(m);
+                        
+                        // Marcar como leído si soy el destinatario y aún no está leído
+                        if (m.getId_destinatario() != null && 
+                            m.getId_destinatario().equals(currentUserId) && 
+                            !m.isLeido()) {
+                            marcarLeido(doc.getId());
+                        }
                     }
                     Collections.reverse(page);
                     adapter.setMensajes(page);
@@ -525,8 +535,13 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void marcarLeido(String mensajeId) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("leido", true);
+        updates.put("entregado", true); // También marcar como entregado
+        
         db.collection("chats").document(chatId).collection("mensajes").document(mensajeId)
-                .update("leido", true)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Mensaje marcado como leído: " + mensajeId))
                 .addOnFailureListener(e -> Log.e(TAG, "Error marcando mensaje como leído", e));
     }
     
