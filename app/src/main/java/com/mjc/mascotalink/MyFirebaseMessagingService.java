@@ -34,6 +34,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public static final String CHANNEL_ID_PAYMENTS = "payment_channel";
     public static final String CHANNEL_NAME_PAYMENTS = "Confirmaciones de Pago";
     public static final String CHANNEL_DESCRIPTION_PAYMENTS = "Notificaciones sobre confirmaciones de pagos de paseos.";
+    
+    public static final String CHANNEL_ID_MESSAGES = "messages_channel";
+    public static final String CHANNEL_NAME_MESSAGES = "Mensajes";
+    public static final String CHANNEL_DESCRIPTION_MESSAGES = "Notificaciones de mensajes de chat.";
+    
+    private static final String GROUP_KEY_MESSAGES = "com.mjc.mascotalink.MESSAGES";
+    private static int messageNotificationId = 1000;
 
     /**
      * Called when message is received.
@@ -167,8 +174,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
                 PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
-        String channelId = CHANNEL_ID_PAYMENTS;
+        // Determinar si es un mensaje de chat para usar notificación especial
+        boolean isChatMessage = data != null && data.containsKey("chat_id") && data.containsKey("id_otro_usuario");
+        String channelId = isChatMessage ? CHANNEL_ID_MESSAGES : CHANNEL_ID_PAYMENTS;
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        
         NotificationCompat.Builder notificationBuilder =
                 new NotificationCompat.Builder(this, channelId)
                         .setSmallIcon(R.drawable.walki_logo_secundario)
@@ -176,14 +186,72 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setContentText(messageBody)
                         .setAutoCancel(true)
                         .setSound(defaultSoundUri)
-                        .setContentIntent(pendingIntent);
+                        .setContentIntent(pendingIntent)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH);
+        
+        // Si es mensaje de chat, agregar respuesta rápida y agrupar
+        if (isChatMessage) {
+            String chatId = data.get("chat_id");
+            String otherUserId = data.get("id_otro_usuario");
+            
+            // Agrupar notificaciones de mensajes
+            notificationBuilder.setGroup(GROUP_KEY_MESSAGES);
+            
+            // Agregar acción de respuesta rápida
+            Intent replyIntent = new Intent(this, ChatActivity.class);
+            replyIntent.putExtra("chat_id", chatId);
+            replyIntent.putExtra("id_otro_usuario", otherUserId);
+            
+            // IMPORTANTE: Debe ser MUTABLE para RemoteInput
+            PendingIntent replyPendingIntent = PendingIntent.getActivity(
+                this, 
+                messageNotificationId++, 
+                replyIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
+            );
+            
+            // RemoteInput para respuesta rápida
+            androidx.core.app.RemoteInput remoteInput = new androidx.core.app.RemoteInput.Builder("key_text_reply")
+                    .setLabel("Responder")
+                    .build();
+            
+            NotificationCompat.Action replyAction = new NotificationCompat.Action.Builder(
+                    R.drawable.ic_arrow_forward,
+                    "Responder",
+                    replyPendingIntent)
+                    .addRemoteInput(remoteInput)
+                    .build();
+            
+            notificationBuilder.addAction(replyAction);
+            
+            // Estilo de mensajería
+            NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle("Tú")
+                    .setConversationTitle(title)
+                    .addMessage(messageBody, System.currentTimeMillis(), title);
+            
+            notificationBuilder.setStyle(messagingStyle);
+        }
 
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
-        createNotificationChannel(notificationManager, channelId, CHANNEL_NAME_PAYMENTS, CHANNEL_DESCRIPTION_PAYMENTS);
-
-        notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
+        if (isChatMessage) {
+            createNotificationChannel(notificationManager, CHANNEL_ID_MESSAGES, CHANNEL_NAME_MESSAGES, CHANNEL_DESCRIPTION_MESSAGES);
+            // Usar ID único para cada mensaje pero agruparlos
+            notificationManager.notify(messageNotificationId++, notificationBuilder.build());
+            
+            // Crear notificación de resumen del grupo
+            NotificationCompat.Builder summaryBuilder = new NotificationCompat.Builder(this, CHANNEL_ID_MESSAGES)
+                    .setSmallIcon(R.drawable.walki_logo_secundario)
+                    .setGroup(GROUP_KEY_MESSAGES)
+                    .setGroupSummary(true)
+                    .setAutoCancel(true);
+            
+            notificationManager.notify(0, summaryBuilder.build());
+        } else {
+            createNotificationChannel(notificationManager, channelId, CHANNEL_NAME_PAYMENTS, CHANNEL_DESCRIPTION_PAYMENTS);
+            notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
+        }
     }
 
     private void createNotificationChannel(NotificationManager notificationManager, String channelId, String channelName, String channelDescription) {

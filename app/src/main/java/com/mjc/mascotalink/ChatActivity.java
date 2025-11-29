@@ -67,6 +67,7 @@ public class ChatActivity extends AppCompatActivity {
     private QuickReplyAdapter quickReplyAdapter;
     private EditText etMensaje;
     private FloatingActionButton btnEnviar;
+    private FloatingActionButton fabScrollDown;
     private ImageView btnBack;
     private TextView tvNombreChat, tvEstadoChat;
     private CircleImageView ivAvatarChat;
@@ -123,11 +124,15 @@ public class ChatActivity extends AppCompatActivity {
         rvQuickReplies = findViewById(R.id.rv_quick_replies);
         etMensaje = findViewById(R.id.et_mensaje);
         btnEnviar = findViewById(R.id.btn_enviar);
+        fabScrollDown = findViewById(R.id.fab_scroll_down);
         btnBack = findViewById(R.id.btn_back);
         tvNombreChat = findViewById(R.id.tv_nombre_chat);
         tvEstadoChat = findViewById(R.id.tv_estado_chat);
         ivAvatarChat = findViewById(R.id.iv_avatar_chat);
         progressLoadMore = findViewById(R.id.progress_load_more);
+        
+        // Configurar botón de scroll rápido
+        setupScrollButton();
         
         // Configurar quick replies solo para paseadores
         setupQuickReplies();
@@ -143,8 +148,24 @@ public class ChatActivity extends AppCompatActivity {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
+                
+                // Cargar más mensajes al llegar arriba
                 if (!recyclerView.canScrollVertically(-1) && !isLoadingMore && hasMoreMessages) {
                     loadMoreMessages();
+                }
+                
+                // Mostrar/ocultar botón de scroll según posición
+                int lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition();
+                int totalItems = adapter.getItemCount();
+                
+                if (fabScrollDown != null) {
+                    if (lastVisiblePosition < totalItems - 3) {
+                        // No está al final, mostrar botón
+                        fabScrollDown.show();
+                    } else {
+                        // Está al final, ocultar botón
+                        fabScrollDown.hide();
+                    }
                 }
             }
         });
@@ -310,6 +331,23 @@ public class ChatActivity extends AppCompatActivity {
     /**
      * Configura las respuestas rápidas solo para paseadores.
      */
+    /**
+     * Configura el botón de scroll rápido al final.
+     */
+    private void setupScrollButton() {
+        if (fabScrollDown != null) {
+            fabScrollDown.setOnClickListener(v -> {
+                if (adapter.getItemCount() > 0) {
+                    rvMensajes.smoothScrollToPosition(adapter.getItemCount() - 1);
+                    fabScrollDown.hide();
+                }
+            });
+            
+            // Inicialmente oculto
+            fabScrollDown.hide();
+        }
+    }
+    
     /**
      * Proporciona feedback háptico sutil al enviar mensaje.
      */
@@ -549,10 +587,27 @@ public class ChatActivity extends AppCompatActivity {
      * Marca todos los mensajes del chat como leídos y resetea el contador.
      */
     private void marcarTodosLeidos() {
+        if (chatId == null || currentUserId == null) {
+            Log.w(TAG, "No se puede resetear contador: chatId o currentUserId es null");
+            return;
+        }
+        
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("mensajes_no_leidos." + currentUserId, 0);
+        
         db.collection("chats").document(chatId)
-                .update("mensajes_no_leidos." + currentUserId, 0)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Contador de no leídos reseteado"))
-                .addOnFailureListener(e -> Log.e(TAG, "Error reseteando contador de no leídos", e));
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Contador de no leídos reseteado exitosamente para " + currentUserId);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error reseteando contador de no leídos", e);
+                    // Intentar con set merge si el update falla
+                    db.collection("chats").document(chatId)
+                            .set(updates, com.google.firebase.firestore.SetOptions.merge())
+                            .addOnSuccessListener(aVoid2 -> Log.d(TAG, "Contador reseteado con merge"))
+                            .addOnFailureListener(e2 -> Log.e(TAG, "Error en merge también", e2));
+                });
     }
 
     private void cargarDatosOtroUsuario() {
@@ -626,7 +681,10 @@ public class ChatActivity extends AppCompatActivity {
         attachNewMessagesListener();
         
         // Marcar todos los mensajes como leídos y resetear contador
-        marcarTodosLeidos();
+        // Usar un pequeño delay para asegurar que todo esté inicializado
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            marcarTodosLeidos();
+        }, 300);
         
         db.collection("chats").document(chatId)
                 .update("chat_abierto." + currentUserId, chatId);

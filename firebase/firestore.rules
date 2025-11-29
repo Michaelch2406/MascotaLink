@@ -183,7 +183,12 @@ service cloud.firestore {
           && request.resource.data.id_remitente == request.auth.uid;
         allow update: if isParticipantInParent()
           && request.resource.data.keys().hasOnly(['leido', 'entregado'])
-          && resource.data.id_destinatario == request.auth.uid;
+          && (
+            // El destinatario puede marcar como leido/entregado
+            resource.data.id_destinatario == request.auth.uid
+            // O cualquier participante puede marcar como entregado (para FCM service)
+            || (request.resource.data.keys().hasOnly(['entregado']) && request.resource.data.entregado == true)
+          );
         allow delete: if false;
       }
     }
