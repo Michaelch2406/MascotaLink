@@ -107,7 +107,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Intent intent = null;
         String clickAction = data.get("click_action");
 
-        if (clickAction != null) {
+        // Manejar notificaciones de chat específicamente
+        if (data != null && data.containsKey("chat_id") && data.containsKey("id_otro_usuario")) {
+            // Notificación de mensaje de chat - ir directamente a ChatActivity
+            intent = new Intent(this, ChatActivity.class);
+            intent.putExtra("chat_id", data.get("chat_id"));
+            intent.putExtra("id_otro_usuario", data.get("id_otro_usuario"));
+        } else if (clickAction != null) {
             switch (clickAction) {
                 case "OPEN_WALKS_ACTIVITY":
                     intent = new Intent(this, PaseosActivity.class);

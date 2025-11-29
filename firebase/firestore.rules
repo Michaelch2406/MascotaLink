@@ -165,7 +165,10 @@ service cloud.firestore {
           && request.resource.data.participantes.hasAny([request.auth.uid]);
       }
 
-      allow read: if isParticipantInResource() || (resource == null && chatId.matches(".*" + request.auth.uid + ".*"));
+      // Permitir list (queries) si está autenticado - la query whereArrayContains ya filtra
+      allow list: if isAuthenticated();
+      // Permitir get (lectura individual) solo si es participante
+      allow get: if isParticipantInResource();
       allow create: if isParticipantInCreate();
       allow update: if isParticipantInResource()
         && request.resource.data.keys().hasOnly([

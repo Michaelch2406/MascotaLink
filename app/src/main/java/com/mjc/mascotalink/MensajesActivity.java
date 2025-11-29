@@ -149,7 +149,25 @@ public class MensajesActivity extends AppCompatActivity {
                     if (error != null) {
                         Log.e("Mensajes", "Error al cargar chats: " + error.getMessage());
                         Log.e("Mensajes", "Error code: " + error.getCode());
-                        Toast.makeText(MensajesActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                        
+                        // Mostrar mensaje de error amigable
+                        String errorMsg = "No se pudieron cargar las conversaciones";
+                        if (error.getMessage() != null) {
+                            if (error.getMessage().contains("PERMISSION_DENIED")) {
+                                errorMsg = "No tienes permiso para ver las conversaciones";
+                            } else if (error.getMessage().contains("UNAVAILABLE")) {
+                                errorMsg = "Sin conexión. Verifica tu internet";
+                            }
+                        }
+                        
+                        Toast.makeText(MensajesActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                        
+                        // Mostrar vista vacía con opción de reintentar
+                        emptyView.setVisibility(View.VISIBLE);
+                        rvConversaciones.setVisibility(View.GONE);
+                        
+                        // Agregar botón de reintentar (si existe en el layout)
+                        // O permitir pull-to-refresh
                         return;
                     }
 

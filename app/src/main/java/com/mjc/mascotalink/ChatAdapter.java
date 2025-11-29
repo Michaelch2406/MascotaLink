@@ -4,6 +4,8 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -29,6 +31,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private Context context;
     private List<ChatItem> items;
     private String currentUserId;
+    private int lastPosition = -1;
 
     public ChatAdapter(Context context, String currentUserId) {
         this.context = context;
@@ -206,6 +209,9 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         ChatItem item = items.get(position);
         
+        // Aplicar animación solo a items nuevos
+        setAnimation(holder.itemView, position);
+        
         if (holder instanceof DateSeparatorHolder) {
             DateSeparator separator = (DateSeparator) item;
             ((DateSeparatorHolder) holder).bind(separator);
@@ -225,6 +231,24 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     @Override
     public int getItemCount() {
         return items.size();
+    }
+    
+    /**
+     * Aplica animación suave a los items cuando se muestran.
+     */
+    private void setAnimation(View viewToAnimate, int position) {
+        // Si el item ya fue animado, no volver a animarlo
+        if (position > lastPosition) {
+            Animation animation = AnimationUtils.loadAnimation(context, R.anim.message_slide_in);
+            viewToAnimate.startAnimation(animation);
+            lastPosition = position;
+        }
+    }
+    
+    @Override
+    public void onViewDetachedFromWindow(@NonNull RecyclerView.ViewHolder holder) {
+        super.onViewDetachedFromWindow(holder);
+        holder.itemView.clearAnimation();
     }
     
     /**
@@ -258,15 +282,23 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             tvMensaje.setText(mensaje.getTexto());
             tvHora.setText(time);
 
+            // Actualizar icono de estado con animación suave
             if (mensaje.isLeido()) {
                 ivEstado.setImageResource(R.drawable.ic_check_double);
                 ivEstado.setColorFilter(android.graphics.Color.parseColor("#2196F3"));
+                ivEstado.setContentDescription("Leído");
+                // Animación sutil al cambiar a leído
+                ivEstado.animate().scaleX(1.2f).scaleY(1.2f).setDuration(150)
+                    .withEndAction(() -> ivEstado.animate().scaleX(1f).scaleY(1f).setDuration(150).start())
+                    .start();
             } else if (mensaje.isEntregado()) {
                 ivEstado.setImageResource(R.drawable.ic_check_double);
                 ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                ivEstado.setContentDescription("Entregado");
             } else {
                 ivEstado.setImageResource(R.drawable.ic_check_single);
                 ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                ivEstado.setContentDescription("Enviado");
             }
         }
     }

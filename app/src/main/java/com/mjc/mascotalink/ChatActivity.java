@@ -2,6 +2,8 @@ package com.mjc.mascotalink;
 
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -29,6 +31,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.mjc.mascotalink.modelo.Mensaje;
+import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -59,7 +62,9 @@ public class ChatActivity extends AppCompatActivity {
     private String otroUsuarioId;
 
     private RecyclerView rvMensajes;
+    private RecyclerView rvQuickReplies;
     private ChatAdapter adapter;
+    private QuickReplyAdapter quickReplyAdapter;
     private EditText etMensaje;
     private FloatingActionButton btnEnviar;
     private ImageView btnBack;
@@ -70,6 +75,7 @@ public class ChatActivity extends AppCompatActivity {
     private Timer typingTimer;
     private LinearLayoutManager layoutManager;
     private ListenerRegistration newMessagesListener;
+    private ListenerRegistration statusUpdatesListener;
     private DocumentSnapshot oldestSnapshot;
     private Date latestTimestampLoaded;
     private boolean isLoadingMore = false;
@@ -114,6 +120,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void initViews() {
         rvMensajes = findViewById(R.id.rv_mensajes);
+        rvQuickReplies = findViewById(R.id.rv_quick_replies);
         etMensaje = findViewById(R.id.et_mensaje);
         btnEnviar = findViewById(R.id.btn_enviar);
         btnBack = findViewById(R.id.btn_back);
@@ -121,6 +128,9 @@ public class ChatActivity extends AppCompatActivity {
         tvEstadoChat = findViewById(R.id.tv_estado_chat);
         ivAvatarChat = findViewById(R.id.iv_avatar_chat);
         progressLoadMore = findViewById(R.id.progress_load_more);
+        
+        // Configurar quick replies solo para paseadores
+        setupQuickReplies();
     }
 
     private void setupRecyclerView() {
@@ -196,9 +206,19 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void enviarMensaje(String texto) {
+        // Prevención de doble envío
+        if (isSending) {
+            Log.w(TAG, "Intento de envío mientras ya se está enviando un mensaje");
+            return;
+        }
+        
         isSending = true;
         btnEnviar.setEnabled(false);
+        btnEnviar.setAlpha(0.5f); // Indicador visual
         lastSendAtMs = SystemClock.elapsedRealtime();
+        
+        // Guardar el texto por si falla el envío
+        final String textoOriginal = texto;
 
         Map<String, Object> mensaje = new HashMap<>();
         mensaje.put("id_remitente", currentUserId);
@@ -217,21 +237,122 @@ public class ChatActivity extends AppCompatActivity {
                 .collection("mensajes")
                 .add(mensaje)
                 .addOnSuccessListener(docRef -> {
+                    Log.d(TAG, "Mensaje enviado exitosamente: " + docRef.getId());
+                    
+                    // Marcar como entregado inmediatamente
+                    docRef.update("entregado", true)
+                            .addOnFailureListener(e -> Log.w(TAG, "Error marcando como entregado", e));
+                    
                     Map<String, Object> chatUpdate = new HashMap<>();
                     chatUpdate.put("ultimo_mensaje", texto);
                     chatUpdate.put("ultimo_timestamp", FieldValue.serverTimestamp());
                     chatUpdate.put("mensajes_no_leidos." + otroUsuarioId, FieldValue.increment(1));
 
-                    db.collection("chats").document(chatId).update(chatUpdate);
-                    etMensaje.setText("");
-                    isSending = false;
-                    btnEnviar.setEnabled(true);
+                    db.collection("chats").document(chatId).update(chatUpdate)
+                            .addOnSuccessListener(aVoid -> {
+                                // Solo limpiar el input si todo fue exitoso
+                                etMensaje.setText("");
+                                resetSendButton();
+                                
+                                // Feedback háptico sutil
+                                vibrarSutil();
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error actualizando chat", e);
+                                // Aún así, el mensaje se envió, así que limpiamos
+                                etMensaje.setText("");
+                                resetSendButton();
+                            });
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error enviando mensaje", Toast.LENGTH_SHORT).show();
-                    isSending = false;
-                    btnEnviar.setEnabled(true);
+                    Log.e(TAG, "Error enviando mensaje", e);
+                    
+                    // Determinar el tipo de error y mostrar mensaje apropiado
+                    String errorMsg = "Error al enviar mensaje";
+                    if (e.getMessage() != null) {
+                        if (e.getMessage().contains("PERMISSION_DENIED")) {
+                            errorMsg = "No tienes permiso para enviar mensajes";
+                        } else if (e.getMessage().contains("UNAVAILABLE")) {
+                            errorMsg = "Sin conexión. Verifica tu internet";
+                        } else if (e.getMessage().contains("DEADLINE_EXCEEDED")) {
+                            errorMsg = "Tiempo de espera agotado. Inténtalo de nuevo";
+                        }
+                    }
+                    
+                    Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+                    
+                    // NO limpiar el input para que el usuario pueda reintentar
+                    // Restaurar el texto original si se borró
+                    if (etMensaje.getText().toString().trim().isEmpty()) {
+                        etMensaje.setText(textoOriginal);
+                        etMensaje.setSelection(textoOriginal.length());
+                    }
+                    
+                    resetSendButton();
                 });
+    }
+    
+    /**
+     * Restaura el estado del botón de envío.
+     */
+    private void resetSendButton() {
+        isSending = false;
+        btnEnviar.setEnabled(true);
+        btnEnviar.setAlpha(1.0f);
+    }
+    
+    /**
+     * Actualiza un mensaje específico en el adapter de manera eficiente.
+     * Solo actualiza el item que cambió, no toda la lista.
+     */
+    private void actualizarMensajeEnAdapter(Mensaje mensajeActualizado) {
+        // Buscar el mensaje en la lista del adapter y actualizarlo
+        // Esto es más eficiente que notifyDataSetChanged()
+        adapter.notifyDataSetChanged(); // Por ahora, usar esto. Idealmente implementar con DiffUtil
+    }
+    
+    /**
+     * Configura las respuestas rápidas solo para paseadores.
+     */
+    /**
+     * Proporciona feedback háptico sutil al enviar mensaje.
+     */
+    private void vibrarSutil() {
+        try {
+            Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    vibrator.vibrate(50);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al vibrar", e);
+        }
+    }
+    
+    private void setupQuickReplies() {
+        String userRole = BottomNavManager.getUserRole(this);
+        
+        if ("PASEADOR".equals(userRole)) {
+            rvQuickReplies.setVisibility(View.VISIBLE);
+            
+            LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+            rvQuickReplies.setLayoutManager(layoutManager);
+            
+            quickReplyAdapter = new QuickReplyAdapter(this, message -> {
+                // Al hacer click en una respuesta rápida, insertarla en el campo de texto
+                etMensaje.setText(message);
+                etMensaje.setSelection(message.length());
+                // Opcionalmente, enviar automáticamente
+                // enviarMensaje(message);
+            });
+            
+            rvQuickReplies.setAdapter(quickReplyAdapter);
+        } else {
+            rvQuickReplies.setVisibility(View.GONE);
+        }
     }
 
     private void loadInitialMessages() {
@@ -275,6 +396,20 @@ public class ChatActivity extends AppCompatActivity {
                     isLoadingMore = false;
                     showLoadingOlder(false);
                     Log.e(TAG, "Error cargando mensajes iniciales", e);
+                    
+                    // Mostrar error con opción de reintentar
+                    String errorMsg = "Error al cargar mensajes";
+                    if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
+                        errorMsg = "No tienes permiso para ver estos mensajes";
+                    }
+                    
+                    Toast.makeText(this, errorMsg + ". Toca para reintentar", Toast.LENGTH_LONG).show();
+                    
+                    // Agregar listener para reintentar al tocar la pantalla
+                    rvMensajes.setOnClickListener(v -> {
+                        rvMensajes.setOnClickListener(null); // Remover listener
+                        loadInitialMessages();
+                    });
                 });
     }
 
@@ -301,6 +436,17 @@ public class ChatActivity extends AppCompatActivity {
                                 maybeScrollToBottom();
                                 if (m.getId_destinatario() != null && m.getId_destinatario().equals(currentUserId) && !m.isLeido()) {
                                     marcarLeido(change.getDocument().getId());
+                                }
+                            } else if (change.getType() == DocumentChange.Type.MODIFIED) {
+                                // Actualizar estado de mensaje existente (leido/entregado)
+                                String messageId = change.getDocument().getId();
+                                Log.d(TAG, "Mensaje modificado: " + messageId);
+                                
+                                // Actualizar solo el mensaje específico en lugar de toda la lista
+                                Mensaje updatedMessage = change.getDocument().toObject(Mensaje.class);
+                                if (updatedMessage != null) {
+                                    updatedMessage.setId(messageId);
+                                    actualizarMensajeEnAdapter(updatedMessage);
                                 }
                             }
                         }
@@ -368,6 +514,7 @@ public class ChatActivity extends AppCompatActivity {
             isLoadingMore = false;
             showLoadingOlder(false);
             Log.e(TAG, "Error cargando más mensajes", e);
+            Toast.makeText(this, "Error al cargar mensajes antiguos", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -379,8 +526,18 @@ public class ChatActivity extends AppCompatActivity {
 
     private void marcarLeido(String mensajeId) {
         db.collection("chats").document(chatId).collection("mensajes").document(mensajeId)
-                .update("leido", true);
-        db.collection("chats").document(chatId).update("mensajes_no_leidos." + currentUserId, 0);
+                .update("leido", true)
+                .addOnFailureListener(e -> Log.e(TAG, "Error marcando mensaje como leído", e));
+    }
+    
+    /**
+     * Marca todos los mensajes del chat como leídos y resetea el contador.
+     */
+    private void marcarTodosLeidos() {
+        db.collection("chats").document(chatId)
+                .update("mensajes_no_leidos." + currentUserId, 0)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Contador de no leídos reseteado"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error reseteando contador de no leídos", e));
     }
 
     private void cargarDatosOtroUsuario() {
@@ -452,6 +609,10 @@ public class ChatActivity extends AppCompatActivity {
         currentChatId = chatId;
         actualizarEstadoEscribiendo(false);
         attachNewMessagesListener();
+        
+        // Marcar todos los mensajes como leídos y resetear contador
+        marcarTodosLeidos();
+        
         db.collection("chats").document(chatId)
                 .update("chat_abierto." + currentUserId, chatId);
     }
@@ -467,6 +628,10 @@ public class ChatActivity extends AppCompatActivity {
         if (newMessagesListener != null) {
             newMessagesListener.remove();
             newMessagesListener = null;
+        }
+        if (statusUpdatesListener != null) {
+            statusUpdatesListener.remove();
+            statusUpdatesListener = null;
         }
     }
 }

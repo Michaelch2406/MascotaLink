@@ -95,10 +95,29 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp"
         android:paddingTop="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/input_container"
+        app:layout_constraintBottom_toTopOf="@+id/rv_quick_replies"
         app:layout_constraintTop_toBottomOf="@id/progress_load_more"
         app:stackFromEnd="true"
         tools:listitem="@layout/item_mensaje_recibido" />
+    
+    <!-- Quick Replies (solo para paseadores) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_quick_replies"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:clipToPadding="false"
+        android:elevation="4dp"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintBottom_toTopOf="@+id/input_container"
+        tools:listitem="@layout/item_quick_reply"
+        tools:visibility="visible" />
 
     <!-- Input Area -->
     <LinearLayout

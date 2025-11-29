@@ -155,4 +155,11 @@
     <string name="selfie_button_capture">Tomar selfie</string>
     <string name="selfie_close">Cerrar</string>
     <string name="selfie_capturing">Capturando...</string>
+    
+    <!-- Mensajería -->
+    <string name="message_status">Estado del mensaje</string>
+    <string name="message_sending">Enviando...</string>
+    <string name="message_sent">Enviado</string>
+    <string name="message_delivered">Entregado</string>
+    <string name="message_read">Leído</string>
 </resources>
