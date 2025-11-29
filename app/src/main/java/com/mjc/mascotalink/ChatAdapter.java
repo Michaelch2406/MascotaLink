@@ -42,6 +42,12 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
+    public void agregarMensajesAlInicio(List<Mensaje> nuevos) {
+        if (nuevos == null || nuevos.isEmpty()) return;
+        this.mensajes.addAll(0, nuevos);
+        notifyItemRangeInserted(0, nuevos.size());
+    }
+
     @Override
     public int getItemViewType(int position) {
         Mensaje mensaje = mensajes.get(position);

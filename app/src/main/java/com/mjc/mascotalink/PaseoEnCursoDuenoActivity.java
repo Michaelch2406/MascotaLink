@@ -975,21 +975,33 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             return;
         }
 
-        String[] opciones = { "Llamar", "WhatsApp", "SMS", "Cancelar" };
+        String[] opciones = { "Chat", "Llamar", "WhatsApp", "SMS", "Cancelar" };
         new AlertDialog.Builder(this)
                 .setTitle("Contactar a " + (nombrePaseador != null ? nombrePaseador : "Paseador"))
                 .setItems(opciones, (dialog, which) -> {
                     switch (which) {
                         case 0:
-                            intentarLlamar();
+                            FirebaseUser user = auth.getCurrentUser();
+                            if (user == null) {
+                                Toast.makeText(this, "Inicia sesion para chatear", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            if (idPaseador == null) {
+                                Toast.makeText(this, "No se pudo abrir el chat", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(this, db, user.getUid(), idPaseador);
                             break;
                         case 1:
-                            enviarWhatsApp(telefonoPaseador);
+                            intentarLlamar();
                             break;
                         case 2:
-                            enviarSMS();
+                            enviarWhatsApp(telefonoPaseador);
                             break;
                         case 3:
+                            enviarSMS();
+                            break;
+                        case 4:
                             dialog.dismiss();
                             break;
                     }

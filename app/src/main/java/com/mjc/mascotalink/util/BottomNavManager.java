@@ -17,6 +17,8 @@ import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.SolicitudesActivity;
+import com.mjc.mascotalink.util.UnreadBadgeManager;
+import com.google.firebase.auth.FirebaseAuth;
 
 public class BottomNavManager {
 
@@ -103,5 +105,20 @@ public class BottomNavManager {
 
             return false;
         });
+
+        // Iniciar/registrar badge de no leídos globalmente desde cualquier pantalla con bottom nav
+        try {
+            String uid = FirebaseAuth.getInstance().getCurrentUser() != null
+                    ? FirebaseAuth.getInstance().getCurrentUser().getUid()
+                    : null;
+            if (uid != null) {
+                UnreadBadgeManager.start(uid);
+                UnreadBadgeManager.registerNav(navView, activity);
+            }
+        } catch (Exception ignored) {
+            // Silenciar para no romper flujo si auth/firestore no están listos
+        }
+
+        UnreadBadgeManager.registerNav(navView, activity);
     }
 }

@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
@@ -65,6 +66,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private TextView toolbarTitle;
     private ImageView ivBack, ivEditPerfil;
     private de.hdodenhof.circleimageview.CircleImageView ivAvatar;
+    private ImageButton btnMensaje;
     private ImageView ivVerificadoBadge;
     private TextView tvNombre, tvRol, tvVerificado;
     private TextView tvMascotasRegistradas, tvPaseosSolicitados, tvMiembroDesdeStat;
@@ -101,7 +103,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private String currentUserId;
     private String currentUserRole;
     private String metodoPagoId;
-    private String bottomNavRole = "DUEÑO";
+    private String bottomNavRole = "Dueno";
     private int bottomNavSelectedItem = R.id.menu_perfil;
 
     // Listeners
@@ -135,36 +137,20 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         setupAuthListener();
 
         // Determine duenoId
-        String idFromIntent = getIntent().getStringExtra("id_dueno");
+        String idFromIntent = getIntent().getStringExtra("id_Dueno");
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             currentUserId = currentUser.getUid();
-            if (idFromIntent != null) {
-                duenoId = idFromIntent;
-            } else {
-                duenoId = currentUserId;
-            }
-            
-            // Cache role checks to prevent nav flicker
+            duenoId = idFromIntent != null ? idFromIntent : currentUserId;
             String cachedRole = BottomNavManager.getUserRole(this);
             if (cachedRole != null) {
                 currentUserRole = cachedRole;
-                boolean isOwnProfile = duenoId.equals(currentUserId);
-                if (isOwnProfile) {
-                    bottomNavRole = "DUEÑO";
-                    bottomNavSelectedItem = R.id.menu_perfil;
-                } else if ("PASEADOR".equalsIgnoreCase(currentUserRole)) {
-                    bottomNavRole = "PASEADOR";
-                    bottomNavSelectedItem = R.id.menu_search;
-                } else {
-                    bottomNavRole = "PASEADOR"; // Default view logic
-                    bottomNavSelectedItem = R.id.menu_search;
-                }
             }
         } else {
-            // Should be handled by AuthListener redirect
             duenoId = idFromIntent;
         }
+
+        com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
 
         if (bottomNav != null) {
             setupBottomNavigation();
@@ -177,6 +163,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         ivBack = findViewById(R.id.iv_back);
         ivEditPerfil = findViewById(R.id.iv_edit_perfil);
         ivAvatar = findViewById(R.id.iv_avatar);
+        btnMensaje = findViewById(R.id.btn_mensaje);
         tvNombre = findViewById(R.id.tv_nombre);
         tvRol = findViewById(R.id.tv_rol);
         ivVerificadoBadge = findViewById(R.id.iv_verificado_badge);
@@ -237,7 +224,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         if (btnMisPaseos != null) {
             btnMisPaseos.setOnClickListener(v -> {
                 Intent intent = new Intent(PerfilDuenoActivity.this, HistorialPaseosActivity.class);
-                intent.putExtra("rol_usuario", "DUEÑO");
+                intent.putExtra("rol_usuario", "Dueno");
                 startActivity(intent);
             });
         }
@@ -351,6 +338,14 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 finish();
             }
         };
+        btnMensaje.setOnClickListener(v -> {
+            if (duenoId == null || currentUserId == null || duenoId.equals(currentUserId)) {
+                Toast.makeText(this, "No se pudo abrir el chat", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(this, db, currentUserId, duenoId);
+        });
+
     }
 
     private void fetchCurrentUserRoleAndSetupUI() {
@@ -374,17 +369,19 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void setupRoleBasedUI() {
         boolean isOwnProfile = duenoId != null && duenoId.equals(currentUserId);
 
-        if (isOwnProfile) {
+                if (isOwnProfile) {
             toolbarTitle.setText("Perfil");
             ivEditPerfil.setVisibility(View.VISIBLE);
+            btnMensaje.setVisibility(View.GONE);
             ajustes_section.setVisibility(View.VISIBLE);
             soporte_section.setVisibility(View.VISIBLE);
             btnCerrarSesion.setVisibility(View.VISIBLE);
-            bottomNavRole = "DUEÑO";
+            bottomNavRole = "Dueno";
             bottomNavSelectedItem = R.id.menu_perfil;
         } else {
-            toolbarTitle.setText("Dueño");
+            toolbarTitle.setText("Dueno");
             ivEditPerfil.setVisibility(View.GONE);
+            btnMensaje.setVisibility(View.VISIBLE);
             ajustes_section.setVisibility(View.GONE);
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);
@@ -393,13 +390,15 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             bottomNavRole = currentUserRole != null ? currentUserRole : "PASEADOR";
             bottomNavSelectedItem = R.id.menu_search;
         }
+        com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
         setupBottomNavigation();
     }
 
     private void setupBottomNavigation() {
         if (bottomNav == null) return;
-        String roleForNav = bottomNavRole != null ? bottomNavRole : "DUEÑO";
+        String roleForNav = bottomNavRole != null ? bottomNavRole : "Dueno";
         BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, bottomNavSelectedItem);
+        com.mjc.mascotalink.util.UnreadBadgeManager.registerNav(bottomNav, this);
     }
 
     private void attachDataListeners() {
@@ -429,7 +428,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             }
         });
 
-        // 2. Load Dueño specific Stats
+        // 2. Load Dueno specific Stats
         db.collection("duenos").document(duenoId).addSnapshotListener((duenoDoc, e) -> {
              if (e != null) return;
              if (duenoDoc != null && duenoDoc.exists()) {
@@ -684,6 +683,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         setupBottomNavigation();
+        com.mjc.mascotalink.util.UnreadBadgeManager.registerNav(bottomNav, this);
     }
 
     @Override
@@ -698,3 +698,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         detachDataListeners();
     }
 }
+
+
+

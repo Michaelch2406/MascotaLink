@@ -76,6 +76,17 @@
 
     </LinearLayout>
 
+    <ProgressBar
+        android:id="@+id/progress_load_more"
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="4dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/header_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- Lista de Mensajes -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_mensajes"
@@ -85,7 +96,7 @@
         android:paddingBottom="8dp"
         android:paddingTop="8dp"
         app:layout_constraintBottom_toTopOf="@+id/input_container"
-        app:layout_constraintTop_toBottomOf="@id/header_container"
+        app:layout_constraintTop_toBottomOf="@id/progress_load_more"
         app:stackFromEnd="true"
         tools:listitem="@layout/item_mensaje_recibido" />
 

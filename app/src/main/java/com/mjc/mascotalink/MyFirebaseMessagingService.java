@@ -80,6 +80,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      * Create and show a simple notification containing the received FCM message.
      */
     private void sendNotification(String title, String messageBody, java.util.Map<String, String> data) {
+        // Check if the chat is currently open to suppress notification
+        if (data != null && data.containsKey("chat_id")) {
+            String chatId = data.get("chat_id");
+            if (chatId != null && chatId.equals(ChatActivity.currentChatId)) {
+                Log.d(TAG, "Suppressing notification for open chat: " + chatId);
+                return;
+            }
+        }
+
         Intent intent = null;
         String clickAction = data.get("click_action");
 
@@ -93,27 +102,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     break;
                 case "OPEN_REQUEST_DETAILS":
                     intent = new Intent(this, SolicitudDetalleActivity.class);
-                    if (data.containsKey("reservaId")) {
-                        intent.putExtra("id_reserva", data.get("reservaId"));
-                    }
                     break;
                 case "OPEN_PAYMENT_CONFIRMATION":
                     intent = new Intent(this, ConfirmarPagoActivity.class);
-                    if (data.containsKey("reservaId")) {
-                        intent.putExtra("reserva_id", data.get("reservaId"));
-                    }
                     break;
                 case "OPEN_CURRENT_WALK_ACTIVITY":
                     intent = new Intent(this, PaseoEnCursoActivity.class);
-                    if (data.containsKey("reservaId")) {
-                        intent.putExtra("id_reserva", data.get("reservaId"));
-                    }
                     break;
-                case "OPEN_CURRENT_WALK_OWNER": // New case for owners
+                case "OPEN_CURRENT_WALK_OWNER":
                     intent = new Intent(this, PaseoEnCursoDuenoActivity.class);
-                    if (data.containsKey("reservaId")) {
-                        intent.putExtra("id_reserva", data.get("reservaId"));
-                    }
                     break;
                 default:
                     intent = new Intent(this, MainActivity.class);
@@ -121,6 +118,28 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             }
         } else {
             intent = new Intent(this, MainActivity.class);
+        }
+
+        // Pass all data keys to the intent
+        if (data != null) {
+            for (Map.Entry<String, String> entry : data.entrySet()) {
+                intent.putExtra(entry.getKey(), entry.getValue());
+            }
+
+            // Manually map keys that differ between Cloud Function and Activity expectations
+            if (data.containsKey("reservaId")) {
+                String reservaId = data.get("reservaId");
+                // These activities expect "id_reserva"
+                if (intent.getComponent().getClassName().equals(SolicitudDetalleActivity.class.getName()) ||
+                    intent.getComponent().getClassName().equals(PaseoEnCursoActivity.class.getName()) ||
+                    intent.getComponent().getClassName().equals(PaseoEnCursoDuenoActivity.class.getName())) {
+                    intent.putExtra("id_reserva", reservaId);
+                }
+                // This activity expects "reserva_id"
+                if (intent.getComponent().getClassName().equals(ConfirmarPagoActivity.class.getName())) {
+                    intent.putExtra("reserva_id", reservaId);
+                }
+            }
         }
 
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);

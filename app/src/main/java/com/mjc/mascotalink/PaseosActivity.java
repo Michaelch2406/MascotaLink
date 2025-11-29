@@ -83,7 +83,8 @@ public class PaseosActivity extends AppCompatActivity {
 
         initViews();
         setupSwipeRefresh();
-        
+        com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
+
         String cachedRole = BottomNavManager.getUserRole(this);
         if (cachedRole != null) {
             userRole = cachedRole;
@@ -98,6 +99,7 @@ public class PaseosActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         setupBottomNavigation();
+        com.mjc.mascotalink.util.UnreadBadgeManager.registerNav(bottomNav, this);
     }
 
     private void initViews() {
@@ -150,6 +152,7 @@ public class PaseosActivity extends AppCompatActivity {
         if (bottomNav == null) return;
         String roleForNav = userRole != null ? userRole : "DUEÑO";
         BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, R.id.menu_walks);
+        com.mjc.mascotalink.util.UnreadBadgeManager.registerNav(bottomNav, this);
     }
 
     private void setupTabLayout(String role) {
@@ -231,7 +234,18 @@ public class PaseosActivity extends AppCompatActivity {
 
             @Override
             public void onContactarClick(Paseo paseo) {
-                // Implementar chat o llamada
+                if (paseo == null) return;
+                String targetUserId = null;
+                if ("PASEADOR".equalsIgnoreCase(userRole) && paseo.getId_dueno() != null) {
+                    targetUserId = paseo.getId_dueno().getId();
+                } else if (paseo.getId_paseador() != null) {
+                    targetUserId = paseo.getId_paseador().getId();
+                }
+                if (targetUserId == null) {
+                    Toast.makeText(PaseosActivity.this, "No se pudo abrir el chat", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(PaseosActivity.this, db, currentUserId, targetUserId);
             }
 
             @Override
@@ -414,3 +428,4 @@ public class PaseosActivity extends AppCompatActivity {
                 .show();
     }
 }
+

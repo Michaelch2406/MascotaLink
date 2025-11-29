@@ -214,8 +214,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     bottomNavSelectedItem = R.id.menu_search;
                 }
             }
+            com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
         }
         
+        com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
+
         // Setup Bottom Navigation immediately to prevent flicker
         if (bottomNav != null) {
             setupBottomNavigation();
@@ -367,8 +370,16 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
         });
 
-        btnMensaje.setOnClickListener(v -> {
-            Toast.makeText(this, "Próximamente: Iniciar chat", Toast.LENGTH_SHORT).show();
+                btnMensaje.setOnClickListener(v -> {
+            if (paseadorId == null || currentUserId == null) {
+                Toast.makeText(this, "No se pudo abrir el chat", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (paseadorId.equals(currentUserId)) {
+                Toast.makeText(this, "Este es tu perfil", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(this, db, currentUserId, paseadorId);
         });
 
         btnVerGaleria.setOnClickListener(v -> {
@@ -648,6 +659,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         if (bottomNav == null) return;
         String roleForNav = bottomNavRole != null ? bottomNavRole : (currentUserRole != null ? currentUserRole : "PASEADOR");
         BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, bottomNavSelectedItem);
+        com.mjc.mascotalink.util.UnreadBadgeManager.registerNav(bottomNav, this);
     }
 
     private void configurarBotonFavorito(String duenoId, String paseadorId) {
@@ -1185,3 +1197,4 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
     }
 }
+

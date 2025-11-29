@@ -722,18 +722,30 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             Toast.makeText(this, "Contacto no disponible", Toast.LENGTH_SHORT).show();
             return;
         }
-        String[] opciones = {"Llamar", "WhatsApp", "SMS"};
+        String[] opciones = {"Chat", "Llamar", "WhatsApp", "SMS"};
         new AlertDialog.Builder(this)
-                .setTitle("Contactar dueño")
+                .setTitle("Contactar dueno")
                 .setItems(opciones, (dialog, which) -> {
                     switch (which) {
                         case 0:
-                            intentarLlamar(contactoDueno);
+                            FirebaseUser user = auth.getCurrentUser();
+                            if (user == null) {
+                                Toast.makeText(this, "Inicia sesion para chatear", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            if (duenoIdActual == null) {
+                                Toast.makeText(this, "No se pudo abrir el chat", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(this, db, user.getUid(), duenoIdActual);
                             break;
                         case 1:
-                            enviarWhatsApp(contactoDueno);
+                            intentarLlamar(contactoDueno);
                             break;
                         case 2:
+                            enviarWhatsApp(contactoDueno);
+                            break;
+                        case 3:
                             enviarSms(contactoDueno);
                             break;
                         default:
@@ -756,7 +768,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private void realizarLlamada(String telefono) {
         if (telefono == null || telefono.isEmpty()) {
-            Toast.makeText(this, "Número no disponible", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Numero no disponible", Toast.LENGTH_SHORT).show();
             return;
         }
         Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + telefono));
@@ -1200,4 +1212,5 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
     }
 }
+
 
