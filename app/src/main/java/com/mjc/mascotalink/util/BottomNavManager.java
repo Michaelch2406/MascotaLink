@@ -11,6 +11,7 @@ import android.widget.Toast;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
 import com.mjc.mascotalink.MainActivity;
+import com.mjc.mascotalink.MensajesActivity;
 import com.mjc.mascotalink.PaseosActivity;
 import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
@@ -88,8 +89,7 @@ public class BottomNavManager {
             } else if (itemId == R.id.menu_walks) {
                 intent = new Intent(activity, PaseosActivity.class);
             } else if (itemId == R.id.menu_messages) {
-                Toast.makeText(activity, "Proximamente: Mensajes", Toast.LENGTH_SHORT).show();
-                return false; // Do not navigate
+                intent = new Intent(activity, MensajesActivity.class);
             } else if (itemId == R.id.menu_perfil) {
                 intent = new Intent(activity, isPaseador ? PerfilPaseadorActivity.class : PerfilDuenoActivity.class);
             }

@@ -293,6 +293,16 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".MensajesActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".FavoritosActivity"
