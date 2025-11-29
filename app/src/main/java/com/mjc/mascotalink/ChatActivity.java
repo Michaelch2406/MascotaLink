@@ -1,9 +1,15 @@
 package com.mjc.mascotalink;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -15,7 +21,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -32,6 +43,12 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.mjc.mascotalink.modelo.Mensaje;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.ImageCompressor;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -53,6 +70,7 @@ public class ChatActivity extends AppCompatActivity {
     private static final int MESSAGE_MAX_LENGTH = 500;
     private static final long SEND_COOLDOWN_MS = 2000;
     private static final long TYPING_DEBOUNCE_MS = 500;
+    private static final int REQUEST_LOCATION_PERMISSION = 100;
 
     public static String currentChatId = null;
 
@@ -69,6 +87,7 @@ public class ChatActivity extends AppCompatActivity {
     private FloatingActionButton btnEnviar;
     private FloatingActionButton fabScrollDown;
     private ImageView btnBack;
+    private ImageView btnAdjuntos;
     private TextView tvNombreChat, tvEstadoChat;
     private CircleImageView ivAvatarChat;
     private ProgressBar progressLoadMore;
@@ -85,13 +104,30 @@ public class ChatActivity extends AppCompatActivity {
     private long lastSendAtMs = 0L;
     private long lastTypingUpdateMs = 0L;
     private final HashSet<String> messageIds = new HashSet<>();
+    
+    // Para manejo de imágenes
+    private Uri currentPhotoUri;
+    private FirebaseStorage storage;
+    private StorageReference storageRef;
+    private FusedLocationProviderClient fusedLocationClient;
+    
+    // Activity Result Launchers
+    private ActivityResultLauncher<Intent> cameraLauncher;
+    private ActivityResultLauncher<Intent> galleryLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
+        // Inicializar launchers ANTES de setContentView
+        initializeLaunchers();
+        
         db = FirebaseFirestore.getInstance();
+        storage = FirebaseStorage.getInstance();
+        storageRef = storage.getReference();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             currentUserId = user.getUid();
@@ -126,6 +162,7 @@ public class ChatActivity extends AppCompatActivity {
         btnEnviar = findViewById(R.id.btn_enviar);
         fabScrollDown = findViewById(R.id.fab_scroll_down);
         btnBack = findViewById(R.id.btn_back);
+        btnAdjuntos = findViewById(R.id.btn_adjuntos);
         tvNombreChat = findViewById(R.id.tv_nombre_chat);
         tvEstadoChat = findViewById(R.id.tv_estado_chat);
         ivAvatarChat = findViewById(R.id.iv_avatar_chat);
@@ -173,6 +210,8 @@ public class ChatActivity extends AppCompatActivity {
 
     private void setupListeners() {
         btnBack.setOnClickListener(v -> finish());
+        
+        btnAdjuntos.setOnClickListener(v -> mostrarOpcionesAdjuntos());
 
         btnEnviar.setOnClickListener(v -> {
             String texto = etMensaje.getText().toString().trim();
@@ -331,6 +370,260 @@ public class ChatActivity extends AppCompatActivity {
     /**
      * Configura las respuestas rápidas solo para paseadores.
      */
+    /**
+     * Inicializa los launchers para cámara y galería.
+     * DEBE llamarse ANTES de setContentView.
+     */
+    private void initializeLaunchers() {
+        // Launcher para cámara
+        cameraLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    if (currentPhotoUri != null) {
+                        procesarYEnviarImagen(currentPhotoUri);
+                    }
+                }
+            }
+        );
+        
+        // Launcher para galería
+        galleryLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri imageUri = result.getData().getData();
+                    if (imageUri != null) {
+                        procesarYEnviarImagen(imageUri);
+                    }
+                }
+            }
+        );
+    }
+    
+    /**
+     * Muestra el bottom sheet con opciones de adjuntos.
+     */
+    private void mostrarOpcionesAdjuntos() {
+        BottomSheetDialog bottomSheet = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_adjuntos, null);
+        
+        view.findViewById(R.id.option_camera).setOnClickListener(v -> {
+            bottomSheet.dismiss();
+            abrirCamara();
+        });
+        
+        view.findViewById(R.id.option_gallery).setOnClickListener(v -> {
+            bottomSheet.dismiss();
+            abrirGaleria();
+        });
+        
+        view.findViewById(R.id.option_location).setOnClickListener(v -> {
+            bottomSheet.dismiss();
+            compartirUbicacion();
+        });
+        
+        bottomSheet.setContentView(view);
+        bottomSheet.show();
+    }
+    
+    /**
+     * Abre la cámara para tomar una foto.
+     */
+    private void abrirCamara() {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            try {
+                // Crear archivo temporal para la foto
+                java.io.File photoFile = new java.io.File(
+                    getCacheDir(),
+                    "photo_" + System.currentTimeMillis() + ".jpg"
+                );
+                
+                currentPhotoUri = FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".provider",
+                    photoFile
+                );
+                
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, currentPhotoUri);
+                cameraLauncher.launch(intent);
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Error abriendo cámara", e);
+                Toast.makeText(this, "Error al abrir la cámara", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "No hay cámara disponible", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Abre la galería para seleccionar una imagen.
+     */
+    private void abrirGaleria() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        intent.setType("image/*");
+        galleryLauncher.launch(intent);
+    }
+    
+    /**
+     * Procesa y envía una imagen.
+     */
+    private void procesarYEnviarImagen(Uri imageUri) {
+        // Mostrar indicador de carga
+        Toast.makeText(this, "Procesando imagen...", Toast.LENGTH_SHORT).show();
+        
+        new Thread(() -> {
+            // Comprimir imagen en background
+            java.io.File compressedFile = ImageCompressor.compressImage(this, imageUri);
+            
+            if (compressedFile != null) {
+                runOnUiThread(() -> subirImagenAStorage(compressedFile));
+            } else {
+                runOnUiThread(() -> 
+                    Toast.makeText(this, "Error al procesar la imagen", Toast.LENGTH_SHORT).show()
+                );
+            }
+        }).start();
+    }
+    
+    /**
+     * Sube la imagen a Firebase Storage y envía el mensaje.
+     */
+    private void subirImagenAStorage(java.io.File imageFile) {
+        String fileName = "chat_" + System.currentTimeMillis() + ".jpg";
+        StorageReference imageRef = storageRef.child("chats/" + chatId + "/images/" + fileName);
+        
+        Uri fileUri = Uri.fromFile(imageFile);
+        
+        imageRef.putFile(fileUri)
+            .addOnProgressListener(taskSnapshot -> {
+                double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                Log.d(TAG, "Subiendo imagen: " + (int) progress + "%");
+            })
+            .addOnSuccessListener(taskSnapshot -> {
+                // Obtener URL de descarga
+                imageRef.getDownloadUrl().addOnSuccessListener(downloadUri -> {
+                    enviarMensajeImagen(downloadUri.toString());
+                    imageFile.delete(); // Limpiar archivo temporal
+                });
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error subiendo imagen", e);
+                Toast.makeText(this, "Error al subir la imagen", Toast.LENGTH_SHORT).show();
+                imageFile.delete();
+            });
+    }
+    
+    /**
+     * Envía un mensaje de tipo imagen.
+     */
+    private void enviarMensajeImagen(String imageUrl) {
+        Map<String, Object> mensaje = new HashMap<>();
+        mensaje.put("id_remitente", currentUserId);
+        mensaje.put("id_destinatario", otroUsuarioId);
+        mensaje.put("texto", "Imagen");
+        mensaje.put("tipo", "imagen");
+        mensaje.put("imagen_url", imageUrl);
+        mensaje.put("timestamp", FieldValue.serverTimestamp());
+        mensaje.put("leido", false);
+        mensaje.put("entregado", true);
+        
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, 7);
+        mensaje.put("fecha_eliminacion", new Timestamp(cal.getTime()));
+        
+        db.collection("chats").document(chatId)
+            .collection("mensajes")
+            .add(mensaje)
+            .addOnSuccessListener(docRef -> {
+                Log.d(TAG, "Mensaje de imagen enviado");
+                
+                Map<String, Object> chatUpdate = new HashMap<>();
+                chatUpdate.put("ultimo_mensaje", "📷 Imagen");
+                chatUpdate.put("ultimo_timestamp", FieldValue.serverTimestamp());
+                chatUpdate.put("mensajes_no_leidos." + otroUsuarioId, FieldValue.increment(1));
+                
+                db.collection("chats").document(chatId).update(chatUpdate);
+                
+                vibrarSutil();
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error enviando mensaje de imagen", e);
+                Toast.makeText(this, "Error al enviar la imagen", Toast.LENGTH_SHORT).show();
+            });
+    }
+    
+    /**
+     * Comparte la ubicación actual del usuario.
+     */
+    private void compartirUbicacion() {
+        // Verificar permisos
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                REQUEST_LOCATION_PERMISSION);
+            return;
+        }
+        
+        Toast.makeText(this, "Obteniendo ubicación...", Toast.LENGTH_SHORT).show();
+        
+        fusedLocationClient.getLastLocation()
+            .addOnSuccessListener(location -> {
+                if (location != null) {
+                    enviarMensajeUbicacion(location.getLatitude(), location.getLongitude());
+                } else {
+                    Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error obteniendo ubicación", e);
+                Toast.makeText(this, "Error al obtener ubicación", Toast.LENGTH_SHORT).show();
+            });
+    }
+    
+    /**
+     * Envía un mensaje de tipo ubicación.
+     */
+    private void enviarMensajeUbicacion(double latitud, double longitud) {
+        Map<String, Object> mensaje = new HashMap<>();
+        mensaje.put("id_remitente", currentUserId);
+        mensaje.put("id_destinatario", otroUsuarioId);
+        mensaje.put("texto", "Ubicación compartida");
+        mensaje.put("tipo", "ubicacion");
+        mensaje.put("latitud", latitud);
+        mensaje.put("longitud", longitud);
+        mensaje.put("timestamp", FieldValue.serverTimestamp());
+        mensaje.put("leido", false);
+        mensaje.put("entregado", true);
+        
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, 7);
+        mensaje.put("fecha_eliminacion", new Timestamp(cal.getTime()));
+        
+        db.collection("chats").document(chatId)
+            .collection("mensajes")
+            .add(mensaje)
+            .addOnSuccessListener(docRef -> {
+                Log.d(TAG, "Mensaje de ubicación enviado");
+                
+                Map<String, Object> chatUpdate = new HashMap<>();
+                chatUpdate.put("ultimo_mensaje", "📍 Ubicación");
+                chatUpdate.put("ultimo_timestamp", FieldValue.serverTimestamp());
+                chatUpdate.put("mensajes_no_leidos." + otroUsuarioId, FieldValue.increment(1));
+                
+                db.collection("chats").document(chatId).update(chatUpdate);
+                
+                vibrarSutil();
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error enviando mensaje de ubicación", e);
+                Toast.makeText(this, "Error al enviar ubicación", Toast.LENGTH_SHORT).show();
+            });
+    }
+    
     /**
      * Configura el botón de scroll rápido al final.
      */

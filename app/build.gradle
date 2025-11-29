@@ -7,6 +7,10 @@ android {
     namespace 'com.mjc.mascotalink'
     compileSdk 36
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId "com.mjc.mascotalink"
         minSdk 32
@@ -21,6 +25,7 @@ android {
             localProperties.load(new FileInputStream(localPropertiesFile))
         }
         manifestPlaceholders = [MAPS_API_KEY: localProperties.getProperty('mapsApiKey', "")]
+        buildConfigField "String", "MAPS_API_KEY", "\"${localProperties.getProperty('mapsApiKey', "")}\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

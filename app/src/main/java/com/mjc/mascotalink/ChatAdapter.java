@@ -16,6 +16,10 @@ import com.mjc.mascotalink.modelo.ChatItem;
 import com.mjc.mascotalink.modelo.DateSeparator;
 import com.mjc.mascotalink.modelo.Mensaje;
 import com.mjc.mascotalink.util.TimeUtils;
+import com.bumptech.glide.Glide;
+import android.content.Intent;
+import android.net.Uri;
+import android.widget.ProgressBar;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -27,6 +31,10 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int VIEW_TYPE_SENT = 0;
     private static final int VIEW_TYPE_RECEIVED = 1;
     private static final int VIEW_TYPE_DATE_SEPARATOR = 2;
+    private static final int VIEW_TYPE_IMAGE_SENT = 3;
+    private static final int VIEW_TYPE_IMAGE_RECEIVED = 4;
+    private static final int VIEW_TYPE_LOCATION_SENT = 5;
+    private static final int VIEW_TYPE_LOCATION_RECEIVED = 6;
 
     private Context context;
     private List<ChatItem> items;
@@ -183,25 +191,55 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         
         Mensaje mensaje = (Mensaje) item;
-        if (mensaje.getId_remitente() != null && mensaje.getId_remitente().equals(currentUserId)) {
-            return VIEW_TYPE_SENT;
+        boolean isSent = mensaje.getId_remitente() != null && mensaje.getId_remitente().equals(currentUserId);
+        String tipo = mensaje.getTipo() != null ? mensaje.getTipo() : "texto";
+        
+        // Determinar tipo según contenido y remitente
+        if ("imagen".equals(tipo)) {
+            return isSent ? VIEW_TYPE_IMAGE_SENT : VIEW_TYPE_IMAGE_RECEIVED;
+        } else if ("ubicacion".equals(tipo)) {
+            return isSent ? VIEW_TYPE_LOCATION_SENT : VIEW_TYPE_LOCATION_RECEIVED;
         } else {
-            return VIEW_TYPE_RECEIVED;
+            return isSent ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
         }
     }
 
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        if (viewType == VIEW_TYPE_DATE_SEPARATOR) {
-            View view = LayoutInflater.from(context).inflate(R.layout.item_fecha_separador, parent, false);
-            return new DateSeparatorHolder(view);
-        } else if (viewType == VIEW_TYPE_SENT) {
-            View view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_enviado, parent, false);
-            return new SentMessageHolder(view);
-        } else {
-            View view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_recibido, parent, false);
-            return new ReceivedMessageHolder(view);
+        View view;
+        switch (viewType) {
+            case VIEW_TYPE_DATE_SEPARATOR:
+                view = LayoutInflater.from(context).inflate(R.layout.item_fecha_separador, parent, false);
+                return new DateSeparatorHolder(view);
+                
+            case VIEW_TYPE_SENT:
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_enviado, parent, false);
+                return new SentMessageHolder(view);
+                
+            case VIEW_TYPE_RECEIVED:
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_recibido, parent, false);
+                return new ReceivedMessageHolder(view);
+                
+            case VIEW_TYPE_IMAGE_SENT:
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_imagen_enviado, parent, false);
+                return new ImageMessageHolder(view, true);
+                
+            case VIEW_TYPE_IMAGE_RECEIVED:
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_imagen_enviado, parent, false);
+                return new ImageMessageHolder(view, false);
+                
+            case VIEW_TYPE_LOCATION_SENT:
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_ubicacion, parent, false);
+                return new LocationMessageHolder(view, true);
+                
+            case VIEW_TYPE_LOCATION_RECEIVED:
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_ubicacion, parent, false);
+                return new LocationMessageHolder(view, false);
+                
+            default:
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_recibido, parent, false);
+                return new ReceivedMessageHolder(view);
         }
     }
 
@@ -215,6 +253,16 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (holder instanceof DateSeparatorHolder) {
             DateSeparator separator = (DateSeparator) item;
             ((DateSeparatorHolder) holder).bind(separator);
+        } else if (holder instanceof ImageMessageHolder) {
+            Mensaje mensaje = (Mensaje) item;
+            SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+            String time = mensaje.getTimestamp() != null ? sdf.format(mensaje.getTimestamp()) : "";
+            ((ImageMessageHolder) holder).bind(mensaje, time);
+        } else if (holder instanceof LocationMessageHolder) {
+            Mensaje mensaje = (Mensaje) item;
+            SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+            String time = mensaje.getTimestamp() != null ? sdf.format(mensaje.getTimestamp()) : "";
+            ((LocationMessageHolder) holder).bind(mensaje, time);
         } else {
             Mensaje mensaje = (Mensaje) item;
             SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
@@ -315,6 +363,152 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         void bind(Mensaje mensaje, String time) {
             tvMensaje.setText(mensaje.getTexto());
             tvHora.setText(time);
+        }
+    }
+    
+    /**
+     * ViewHolder para mensajes con imagen.
+     */
+    static class ImageMessageHolder extends RecyclerView.ViewHolder {
+        ImageView ivImagen;
+        TextView tvHora;
+        ImageView ivEstado;
+        ProgressBar progressUpload;
+        boolean isSent;
+        
+        ImageMessageHolder(View itemView, boolean isSent) {
+            super(itemView);
+            this.isSent = isSent;
+            ivImagen = itemView.findViewById(R.id.iv_imagen);
+            tvHora = itemView.findViewById(R.id.tv_hora);
+            progressUpload = itemView.findViewById(R.id.progress_upload);
+            
+            if (isSent) {
+                ivEstado = itemView.findViewById(R.id.iv_estado);
+            }
+        }
+        
+        void bind(Mensaje mensaje, String time) {
+            tvHora.setText(time);
+            
+            // Cargar imagen con Glide
+            if (mensaje.getImagen_url() != null && !mensaje.getImagen_url().isEmpty()) {
+                progressUpload.setVisibility(View.GONE);
+                
+                Glide.with(itemView.getContext())
+                    .load(mensaje.getImagen_url())
+                    .placeholder(R.drawable.ic_gallery)
+                    .error(R.drawable.ic_gallery)
+                    .centerCrop()
+                    .into(ivImagen);
+                
+                // Click para ver en fullscreen
+                ivImagen.setOnClickListener(v -> {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setDataAndType(Uri.parse(mensaje.getImagen_url()), "image/*");
+                    itemView.getContext().startActivity(intent);
+                });
+            } else {
+                progressUpload.setVisibility(View.VISIBLE);
+            }
+            
+            // Actualizar estado si es mensaje enviado
+            if (isSent && ivEstado != null) {
+                if (mensaje.isLeido()) {
+                    ivEstado.setImageResource(R.drawable.ic_check_double);
+                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#2196F3"));
+                    ivEstado.setContentDescription("Leído");
+                } else if (mensaje.isEntregado()) {
+                    ivEstado.setImageResource(R.drawable.ic_check_double);
+                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                    ivEstado.setContentDescription("Entregado");
+                } else {
+                    ivEstado.setImageResource(R.drawable.ic_check_single);
+                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                    ivEstado.setContentDescription("Enviado");
+                }
+            }
+        }
+    }
+    
+    /**
+     * ViewHolder para mensajes de ubicación.
+     */
+    static class LocationMessageHolder extends RecyclerView.ViewHolder {
+        TextView tvUbicacion, tvHora;
+        ImageView ivEstado;
+        ImageView ivMapa;
+        boolean isSent;
+        
+        LocationMessageHolder(View itemView, boolean isSent) {
+            super(itemView);
+            this.isSent = isSent;
+            tvUbicacion = itemView.findViewById(R.id.tv_ubicacion);
+            tvHora = itemView.findViewById(R.id.tv_hora);
+            ivMapa = itemView.findViewById(R.id.iv_mapa);
+            
+            if (isSent) {
+                ivEstado = itemView.findViewById(R.id.iv_estado);
+            }
+        }
+        
+        void bind(Mensaje mensaje, String time) {
+            tvHora.setText(time);
+            tvUbicacion.setText("📍 Ubicación compartida");
+            
+            if (mensaje.getLatitud() != null && mensaje.getLongitud() != null) {
+                double lat = mensaje.getLatitud();
+                double lng = mensaje.getLongitud();
+                
+                // Cargar mapa estático de Google Maps
+                String staticMapUrl = "https://maps.googleapis.com/maps/api/staticmap?" +
+                    "center=" + lat + "," + lng +
+                    "&zoom=15" +
+                    "&size=400x200" +
+                    "&markers=color:red%7C" + lat + "," + lng +
+                    "&key=" + BuildConfig.MAPS_API_KEY;
+                
+                if (ivMapa != null) {
+                    Glide.with(itemView.getContext())
+                        .load(staticMapUrl)
+                        .placeholder(R.drawable.ic_location)
+                        .error(R.drawable.ic_location)
+                        .into(ivMapa);
+                }
+                
+                // Click para abrir en Google Maps
+                itemView.setOnClickListener(v -> {
+                    String uri = "geo:" + lat + "," + lng + "?q=" + lat + "," + lng;
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                    intent.setPackage("com.google.android.apps.maps");
+                    
+                    if (intent.resolveActivity(itemView.getContext().getPackageManager()) != null) {
+                        itemView.getContext().startActivity(intent);
+                    } else {
+                        // Si Google Maps no está instalado, abrir en navegador
+                        String browserUri = "https://www.google.com/maps/search/?api=1&query=" + lat + "," + lng;
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(browserUri));
+                        itemView.getContext().startActivity(browserIntent);
+                    }
+                });
+            }
+            
+            // Actualizar estado si es mensaje enviado
+            if (isSent && ivEstado != null) {
+                if (mensaje.isLeido()) {
+                    ivEstado.setImageResource(R.drawable.ic_check_double);
+                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#2196F3"));
+                    ivEstado.setContentDescription("Leído");
+                } else if (mensaje.isEntregado()) {
+                    ivEstado.setImageResource(R.drawable.ic_check_double);
+                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                    ivEstado.setContentDescription("Entregado");
+                } else {
+                    ivEstado.setImageResource(R.drawable.ic_check_single);
+                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                    ivEstado.setContentDescription("Enviado");
+                }
+            }
         }
     }
 }

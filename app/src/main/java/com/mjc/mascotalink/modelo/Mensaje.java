@@ -12,8 +12,15 @@ public class Mensaje implements ChatItem {
     private Date timestamp;
     private boolean leido;
     private boolean entregado;
-    private String tipo;
+    private String tipo; // "texto", "imagen", "ubicacion"
     private Date fecha_eliminacion;
+    
+    // Campos para mensajes de imagen
+    private String imagen_url;
+    
+    // Campos para mensajes de ubicación
+    private Double latitud;
+    private Double longitud;
 
     public Mensaje() {}
 
@@ -43,6 +50,15 @@ public class Mensaje implements ChatItem {
 
     public Date getFecha_eliminacion() { return fecha_eliminacion; }
     public void setFecha_eliminacion(Date fecha_eliminacion) { this.fecha_eliminacion = fecha_eliminacion; }
+    
+    public String getImagen_url() { return imagen_url; }
+    public void setImagen_url(String imagen_url) { this.imagen_url = imagen_url; }
+    
+    public Double getLatitud() { return latitud; }
+    public void setLatitud(Double latitud) { this.latitud = latitud; }
+    
+    public Double getLongitud() { return longitud; }
+    public void setLongitud(Double longitud) { this.longitud = longitud; }
     
     @Override
     public int getType() {
