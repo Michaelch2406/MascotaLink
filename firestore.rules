@@ -10,15 +10,26 @@ service cloud.firestore {
     }
 
     function isPaseador() {
-      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'PASEADOR';
+      let userDoc = get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+      return userDoc != null && userDoc.data.get('rol', '') == 'PASEADOR';
     }
 
     function isDueno() {
-      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'DUENO';
+      let userDoc = get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+      let rol = userDoc != null ? userDoc.data.get('rol', '') : '';
+      return rol == 'DUENO' || rol == 'DUEÑO';
+    }
+
+    // Acepta referencia a /usuarios/{uid} o string con el uid
+    function isCurrentUser(value) {
+      let userRef = /databases/$(database)/documents/usuarios/$(request.auth.uid);
+      return (value is path && value == userRef) ||
+        (value is string && value == request.auth.uid);
     }
 
     function isPaseadorVerificado() {
-      return get(/databases/$(database)/documents/paseadores/$(request.auth.uid)).data.verificacion_estado == 'aprobado';
+      let paseadorDoc = get(/databases/$(database)/documents/paseadores/$(request.auth.uid));
+      return paseadorDoc != null && paseadorDoc.data.get('verificacion_estado', '') == 'aprobado';
     }
 
     // Collection group for zonas_servicio
@@ -32,13 +43,13 @@ service cloud.firestore {
 
       allow create: if isOwner(userId) &&
         request.resource.data.correo is string &&
-        request.resource.data.rol in ['DUENO', 'PASEADOR'];
+        request.resource.data.rol in ['DUENO', 'DUEÑO', 'PASEADOR'];
 
       allow update: if isOwner(userId) &&
         request.resource.data.rol == resource.data.rol &&
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['perfil_ref', 'verificacion_estado', 'verificacion_fecha'])) &&
         (resource.data.rol == 'PASEADOR'
-          ? request.resource.data.verificacion_estado == resource.data.verificacion_estado
+          ? request.resource.data.get('verificacion_estado', '') == resource.data.get('verificacion_estado', '')
           : true);
 
       allow delete: if isOwner(userId);
@@ -55,7 +66,7 @@ service cloud.firestore {
     // duenos collection
     match /duenos/{duenoId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(duenoId) && getAfter(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'DUENO';
+      allow create: if isOwner(duenoId) && getAfter(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol in ['DUENO', 'DUEÑO'];
       allow update: if isOwner(duenoId) || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['calificacion_promedio', 'total_resenas']));
 
       match /mascotas/{mascotaId} {
@@ -112,22 +123,23 @@ service cloud.firestore {
     // reservas collection
     match /reservas/{reservaId} {
       allow read: if isAuthenticated() && (
-        resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
-        resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
+        (resource != null &&
+          (isCurrentUser(resource.data.get('id_dueno', null)) ||
+           isCurrentUser(resource.data.get('id_paseador', null)))) ||
         resource == null
       );
 
       allow create: if isAuthenticated() && isDueno() &&
-        request.resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid);
+        isCurrentUser(request.resource.data.get('id_dueno', null));
 
-      allow update: if isAuthenticated() && (
-        (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) &&
-          request.resource.data.estado in ['SOLICITADO', 'CANCELADO', 'COMPLETADO', 'CONFIRMADO']) ||
-        (resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid) &&
-          request.resource.data.estado in ['ACEPTADO', 'CONFIRMADO', 'EN_PROGRESO', 'EN_CURSO', 'COMPLETADO']) ||
+      allow update: if isAuthenticated() && resource != null && (
+        (isCurrentUser(resource.data.get('id_dueno', null)) &&
+          request.resource.data.get('estado', '') in ['SOLICITADO', 'CANCELADO', 'COMPLETADO', 'CONFIRMADO']) ||
+        (isCurrentUser(resource.data.get('id_paseador', null)) &&
+          request.resource.data.get('estado', '') in ['ACEPTADO', 'CONFIRMADO', 'EN_PROGRESO', 'EN_CURSO', 'COMPLETADO']) ||
         (
-          (resource.data.id_dueno == /databases/$(database)/documents/usuarios/$(request.auth.uid) ||
-            resource.data.id_paseador == /databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+          (isCurrentUser(resource.data.get('id_dueno', null)) ||
+            isCurrentUser(resource.data.get('id_paseador', null))) &&
           true
         )
       );
@@ -168,6 +180,7 @@ service cloud.firestore {
       allow read: if isParticipantInResource() || (resource == null && chatId.matches(".*" + request.auth.uid + ".*"));
       allow create: if isParticipantInCreate();
       allow update: if isParticipantInResource()
+        && request.resource.data != null
         && request.resource.data.keys().hasOnly([
           'participantes', 'fecha_creacion', 'ultimo_mensaje', 'ultimo_timestamp',
           'mensajes_no_leidos', 'estado_usuarios', 'chat_abierto', 'ultima_actividad'
@@ -179,6 +192,7 @@ service cloud.firestore {
         allow create: if isParticipantInParent()
           && request.resource.data.id_remitente == request.auth.uid;
         allow update: if isParticipantInParent()
+          && request.resource.data != null
           && request.resource.data.keys().hasOnly(['leido', 'entregado'])
           && resource.data.id_destinatario == request.auth.uid;
         allow delete: if false;

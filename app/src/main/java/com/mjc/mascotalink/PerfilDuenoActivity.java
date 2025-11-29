@@ -103,7 +103,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private String currentUserId;
     private String currentUserRole;
     private String metodoPagoId;
-    private String bottomNavRole = "Dueno";
+    private String bottomNavRole = "Dueño";
     private int bottomNavSelectedItem = R.id.menu_perfil;
 
     // Listeners
@@ -224,7 +224,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         if (btnMisPaseos != null) {
             btnMisPaseos.setOnClickListener(v -> {
                 Intent intent = new Intent(PerfilDuenoActivity.this, HistorialPaseosActivity.class);
-                intent.putExtra("rol_usuario", "Dueno");
+                intent.putExtra("rol_usuario", "Dueño");
                 startActivity(intent);
             });
         }
@@ -376,10 +376,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             ajustes_section.setVisibility(View.VISIBLE);
             soporte_section.setVisibility(View.VISIBLE);
             btnCerrarSesion.setVisibility(View.VISIBLE);
-            bottomNavRole = "Dueno";
+            bottomNavRole = "Dueño";
             bottomNavSelectedItem = R.id.menu_perfil;
         } else {
-            toolbarTitle.setText("Dueno");
+            toolbarTitle.setText("Dueño");
             ivEditPerfil.setVisibility(View.GONE);
             btnMensaje.setVisibility(View.VISIBLE);
             ajustes_section.setVisibility(View.GONE);
@@ -396,7 +396,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private void setupBottomNavigation() {
         if (bottomNav == null) return;
-        String roleForNav = bottomNavRole != null ? bottomNavRole : "Dueno";
+        String roleForNav = bottomNavRole != null ? bottomNavRole : "Dueño";
         BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, bottomNavSelectedItem);
         com.mjc.mascotalink.util.UnreadBadgeManager.registerNav(bottomNav, this);
     }

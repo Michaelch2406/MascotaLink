@@ -122,7 +122,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private String contactoDueno;
     private String telefonoPendiente;
     private String nombreMascota = "";
-    private String nombreDueno = "Dueno";
+    private String nombreDueno = "Dueño";
     private String roleActual = "PASEADOR";
     private String currentPaseadorNombre = ""; // New member variable
 
@@ -724,7 +724,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
         String[] opciones = {"Chat", "Llamar", "WhatsApp", "SMS"};
         new AlertDialog.Builder(this)
-                .setTitle("Contactar dueno")
+                .setTitle("Contactar dueño")
                 .setItems(opciones, (dialog, which) -> {
                     switch (which) {
                         case 0:

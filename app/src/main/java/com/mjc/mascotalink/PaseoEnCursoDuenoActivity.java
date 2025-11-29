@@ -291,7 +291,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
     private void setupBottomNav() {
         // Assuming owner role for this activity
-        BottomNavManager.setupBottomNav(this, bottomNav, "DUENO", R.id.menu_walks);
+        BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_walks);
     }
 
     private void verificarPermisosYEscuchar() {
@@ -902,7 +902,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("estado", "SOLICITUD_CANCELACION"); // Estado intermedio
         data.put("motivo_cancelacion", motivo);
-        data.put("cancelado_por", "DUENO");
+        data.put("cancelado_por", "DUEÑO");
         data.put("fecha_solicitud_cancelacion", new Date());
 
         reservaRef.update(data)
