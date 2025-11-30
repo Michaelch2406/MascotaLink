@@ -431,7 +431,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             mAuth.signOut();
         });
 
-        btnNotificaciones.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Notificaciones", Toast.LENGTH_SHORT).show());
+        btnNotificaciones.setOnClickListener(v -> startActivity(new Intent(PerfilPaseadorActivity.this, NotificacionesActivity.class)));
         btnMetodosPago.setOnClickListener(v -> {
              Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
              if (metodoPagoId != null && !metodoPagoId.isEmpty()) {

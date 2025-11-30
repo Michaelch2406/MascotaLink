@@ -388,6 +388,12 @@
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
+            android:name=".NotificacionesActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+
+        <activity
             android:name=".ResetPasswordActivity"
             android:exported="true"
             android:screenOrientation="portrait"

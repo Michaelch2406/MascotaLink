@@ -245,7 +245,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             startActivity(intent);
         });
         
-        btnNotificaciones.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Notificaciones", Toast.LENGTH_SHORT).show());
+        btnNotificaciones.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, NotificacionesActivity.class)));
         btnPrivacidad.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, PoliticaPrivacidadActivity.class)));
         btnCentroAyuda.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, CentroAyudaActivity.class)));
         btnTerminos.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, TerminosCondicionesActivity.class)));
