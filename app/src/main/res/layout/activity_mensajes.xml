@@ -4,43 +4,67 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_modern">
+    android:background="#F9FAFB"
+    tools:context=".MensajesActivity">
 
-    <!-- Header -->
+    <!-- Custom Header -->
     <LinearLayout
-        android:id="@+id/header_container"
+        android:id="@+id/custom_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/white"
-        android:elevation="2dp"
-        android:orientation="vertical"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="20dp"
+        android:background="@android:color/transparent"
         app:layout_constraintTop_toTopOf="parent">
 
+        <ImageView
+            android:id="@+id/iv_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_icon_container"
+            android:contentDescription="Atrás"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/black" />
+
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_weight="1"
+            android:gravity="center"
             android:text="Mensajes"
             android:textColor="@color/black"
-            android:textSize="24sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
+
+        <!-- Spacer for centering -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+
     </LinearLayout>
 
-    <!-- Lista de Conversaciones -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_conversaciones"
+    <!-- SwipeRefreshLayout to allow pull-to-refresh -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:paddingTop="16dp"
-        android:paddingBottom="80dp"
-        app:layout_constraintBottom_toTopOf="@+id/bottom_nav_divider"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/header_container"
-        tools:listitem="@layout/item_conversacion" />
+        app:layout_constraintTop_toBottomOf="@id/custom_header"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_nav_divider">
+
+        <!-- Lista de Conversaciones -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_conversaciones"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp"
+            tools:listitem="@layout/item_conversacion" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
 
     <!-- Empty State -->
     <LinearLayout
@@ -50,24 +74,25 @@
         android:gravity="center"
         android:orientation="vertical"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_nav_divider"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/header_container">
+        app:layout_constraintTop_toBottomOf="@id/custom_header">
 
         <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:src="@drawable/ic_messages"
-            app:tint="@color/gray_disabled" />
+            app:tint="@color/gray_disabled"
+            android:alpha="0.6"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="No tienes mensajes"
-            android:textColor="@color/gray_dark"
-            android:textSize="18sp"
+            android:layout_marginTop="24dp"
+            android:text="¡Aún no hay mensajes!"
+            android:textColor="@color/black"
+            android:textSize="20sp"
             android:textStyle="bold" />
 
         <TextView
@@ -76,8 +101,9 @@
             android:layout_marginTop="8dp"
             android:gravity="center"
             android:paddingHorizontal="32dp"
-            android:text="Inicia una conversación desde el perfil de un usuario o una reserva."
-            android:textColor="@color/text_secondary" />
+            android:text="Comienza una conversación desde el perfil de un paseador o dueño."
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
     </LinearLayout>
 
     <ProgressBar

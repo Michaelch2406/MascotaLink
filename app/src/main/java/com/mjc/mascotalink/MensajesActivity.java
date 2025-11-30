@@ -88,6 +88,9 @@ public class MensajesActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        // Custom Header back button
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
+
         rvConversaciones = findViewById(R.id.rv_conversaciones);
         emptyView = findViewById(R.id.empty_view);
         progressBar = findViewById(R.id.progress_bar);
