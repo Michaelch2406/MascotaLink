@@ -36,6 +36,7 @@ import com.mjc.mascotalink.adapters.ActividadPaseoAdapter;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.modelo.PaseoActividad;
 import com.mjc.mascotalink.util.BottomNavManager;
+
 import com.mjc.mascotalink.util.WhatsAppUtil;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -123,6 +124,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private Marker marcadorInicio;
     private Polyline polylineRuta;
 
+    // Cache
+
+
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -130,6 +135,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
+
 
         initViews();
         setupToolbar();
@@ -159,6 +165,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         currentUserId = user.getUid();
 
         reservaRef = db.collection("reservas").document(idReserva);
+
+
+
+        // Luego verificar permisos y sincronizar con Firestore
         verificarPermisosYEscuchar();
     }
 
@@ -294,8 +304,13 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_walks);
     }
 
+
+
+
+
     private void verificarPermisosYEscuchar() {
         mostrarLoading(true);
+
         reservaRef.get().addOnSuccessListener(snapshot -> {
             if (!snapshot.exists()) {
                 mostrarLoading(false);
@@ -349,12 +364,27 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 return;
             }
             if (snapshot != null && snapshot.exists()) {
+                // Guardar en caché para futuras aperturas rápidas
+                /*
+                FirebaseUser user = auth.getCurrentUser();
+                if (user != null) {
+                    cacheManager.saveReservaToCache(user.getUid(), snapshot);
+                }
+                */
+
                 manejarSnapshotReserva(snapshot);
                 mostrarLoading(false);
                 if (contentContainer != null) {
                     contentContainer.setVisibility(View.VISIBLE);
                 }
             } else {
+                // Limpiar caché cuando la reserva ya no existe
+                /*
+                FirebaseUser user = auth.getCurrentUser();
+                if (user != null) {
+                    cacheManager.clearCache(user.getUid());
+                }
+                */
                 Toast.makeText(this, "El paseo ha finalizado o no existe", Toast.LENGTH_SHORT).show();
                 finish();
             }

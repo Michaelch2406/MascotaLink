@@ -55,6 +55,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.util.BottomNavManager;
+
 import com.mjc.mascotalink.util.WhatsAppUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -130,6 +131,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private String paseadorIdActual;
     private String duenoIdActual;
 
+
+
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -138,6 +142,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
+
 
         initViews();
         setupToolbar();
@@ -154,6 +159,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
 
         reservaRef = db.collection("reservas").document(idReserva);
+
+
+
+        // Luego sincronizar con Firestore en segundo plano
         escucharReserva();
         setupLocationUpdates();
     }
@@ -286,8 +295,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> BottomNavManager.setupBottomNav(this, bottomNav, "PASEADOR", R.id.menu_walks));
     }
 
+
+
+
+
     private void escucharReserva() {
         mostrarLoading(true);
+
         reservaListener = reservaRef.addSnapshotListener((snapshot, error) -> {
             if (error != null) {
                 Log.e(TAG, "Error escuchando reserva", error);
@@ -298,9 +312,25 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             if (snapshot == null || !snapshot.exists()) {
                 mostrarLoading(false);
                 Toast.makeText(this, "La reserva ya no está disponible", Toast.LENGTH_SHORT).show();
+                // Limpiar caché cuando la reserva ya no existe
+                /*
+                FirebaseUser user = auth.getCurrentUser();
+                if (user != null) {
+                    cacheManager.clearCache(user.getUid());
+                }
+                */
                 finish();
                 return;
             }
+
+            // Guardar en caché para futuras aperturas rápidas
+            /*
+            FirebaseUser user = auth.getCurrentUser();
+            if (user != null) {
+                cacheManager.saveReservaToCache(user.getUid(), snapshot);
+            }
+            */
+
             manejarSnapshotReserva(snapshot);
             mostrarLoading(false);
         });

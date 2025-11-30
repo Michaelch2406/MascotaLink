@@ -894,49 +894,70 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
 
 exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
   console.log("Running scheduled job to transition CONFIRMADO reservations to EN_CURSO.");
-  const now = new Date();
+  const now = admin.firestore.Timestamp.now();
+  
   // Look back up to 24 hours to catch any missed transitions, not just the last 5 minutes.
-  const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000)); 
+  // Using Firestore Timestamp for consistent query comparisons
+  const twentyFourHoursAgoMillis = now.toMillis() - (24 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = admin.firestore.Timestamp.fromMillis(twentyFourHoursAgoMillis);
 
-  const reservationsSnapshot = await db.collection("reservas")
-    .where("estado", "==", "CONFIRMADO")
-    .where("hasTransitionedToInCourse", "==", false) // Ensure it hasn't been processed
-    .get();
+  try {
+    // Query for reservations that match the criteria
+    const reservationsSnapshot = await db.collection("reservas")
+      .where("estado", "==", "CONFIRMADO")
+      .where("hora_inicio", "<=", now)
+      .where("hora_inicio", ">=", twentyFourHoursAgo) // Optimization: Don't fetch ancient history
+      .get();
 
-  const updates = [];
-
-  for (const doc of reservationsSnapshot.docs) {
-    const reserva = doc.data();
-    const reservaId = doc.id;
-
-    let scheduledStartTime;
-    if (reserva.hora_inicio && reserva.hora_inicio.toDate) {
-        scheduledStartTime = reserva.hora_inicio.toDate();
-    } else {
-        console.warn(`Reserva ${reservaId} has invalid hora_inicio format (not a Timestamp). Skipping.`);
-        continue;
+    if (reservationsSnapshot.empty) {
+      console.log("No CONFIRMADO reservations found pending transition.");
+      return;
     }
 
-    // If the scheduled start time is in the past AND it's within the last 24 hours
-    if (scheduledStartTime.getTime() <= now.getTime() && scheduledStartTime.getTime() >= twentyFourHoursAgo.getTime()) {
-      console.log(`Transitioning reservation ${reservaId} to EN_CURSO.`);
-      updates.push(doc.ref.update({
+    console.log(`Found ${reservationsSnapshot.size} reservations to transition.`);
+
+    const batches = [];
+    let currentBatch = db.batch();
+    let operationCounter = 0;
+    let processedCount = 0;
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+      
+      // Double check logic (redundant with query but safe)
+      // Also check if it was already processed to avoid overwriting if query was slightly delayed
+      if (reserva.estado !== "CONFIRMADO") continue;
+
+      // Add to batch
+      currentBatch.update(doc.ref, {
         estado: "EN_CURSO",
-        fecha_inicio_paseo: admin.firestore.Timestamp.fromDate(scheduledStartTime), // Use scheduled time as start
+        fecha_inicio_paseo: now, // Set start time to execution time
         hasTransitionedToInCourse: true,
-      }));
-    }
-  }
+        actualizado_por_sistema: true,
+        last_updated: now
+      });
 
-  if (updates.length > 0) {
-    try {
-      await Promise.all(updates);
-      console.log(`Successfully transitioned ${updates.length} reservations to EN_CURSO.`);
-    } catch (error) {
-      console.error("Error transitioning reservations to EN_CURSO:", error);
+      operationCounter++;
+      processedCount++;
+
+      // Firestore batch limit is 500
+      if (operationCounter >= 499) {
+        batches.push(currentBatch.commit());
+        currentBatch = db.batch();
+        operationCounter = 0;
+      }
     }
-  } else {
-    console.log("No CONFIRMADO reservations to transition to EN_CURSO.");
+
+    // Push remaining operations
+    if (operationCounter > 0) {
+      batches.push(currentBatch.commit());
+    }
+
+    await Promise.all(batches);
+    console.log(`Successfully transitioned ${processedCount} reservations to EN_CURSO.`);
+
+  } catch (error) {
+    console.error("Error transitioning reservations to EN_CURSO:", error);
   }
 });
 
