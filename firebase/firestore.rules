@@ -179,7 +179,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /mensajes/{mensajeId} {
-        // Permitir lectura si el chatId contiene el uid del usuario (validación simplificada)
+        // Permitir lectura si el chatId contiene el uid del usuario
         allow read: if isAuthenticated() && chatId.matches('.*' + request.auth.uid + '.*');
 
         // Permitir creación si el chatId contiene el uid del usuario y es el remitente
@@ -187,14 +187,11 @@ service cloud.firestore {
           && chatId.matches('.*' + request.auth.uid + '.*')
           && request.resource.data.id_remitente == request.auth.uid;
 
-        // Permitir actualización solo de campos leido/entregado por destinatario o remitente
+        // Permitir actualización de leido/entregado si es participante del chat
         allow update: if isAuthenticated()
           && chatId.matches('.*' + request.auth.uid + '.*')
-          && request.resource.data.keys().hasOnly(['leido', 'entregado'])
-          && (
-            resource.data.get('id_destinatario', '') == request.auth.uid
-            || resource.data.get('id_remitente', '') == request.auth.uid
-          );
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['leido', 'entregado']);
+
         allow delete: if false;
       }
     }
