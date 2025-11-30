@@ -1058,7 +1058,14 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     tvZonasServicioNombres.setText(!nombresZonas.isEmpty() ? android.text.TextUtils.join(", ", nombresZonas) : "Nombres no disponibles");
                     if(querySnapshot.size() > 0) {
                        try {
-                           googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+                           LatLngBounds bounds = boundsBuilder.build();
+                           // Check if bounds are too small (effectively a single point)
+                           if (bounds.northeast.latitude == bounds.southwest.latitude && 
+                               bounds.northeast.longitude == bounds.southwest.longitude) {
+                               googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(bounds.getCenter(), 14));
+                           } else {
+                               googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+                           }
                        } catch (IllegalStateException ex) {
                            Log.e(TAG, "No hay zonas para mostrar en el mapa.", ex);
                        }
@@ -1192,7 +1199,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     public void onMapReady(GoogleMap googleMap) {
         this.googleMap = googleMap;
         this.googleMap.getUiSettings().setAllGesturesEnabled(true);
-        this.googleMap.getUiSettings().setZoomControlsEnabled(true);
+        this.googleMap.getUiSettings().setZoomControlsEnabled(true); // This line enables the +/- buttons
         if (paseadorId == null) {
              this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(-0.180653, -78.467834), 12));
         }

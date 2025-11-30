@@ -75,6 +75,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     private Marker currentMarker;
     private Circle currentCircle;
     private List<ZonaServicio> zonasSeleccionadas = new ArrayList<>();
+    private List<Marker> savedMarkers = new ArrayList<>();
+    private List<Circle> savedCircles = new ArrayList<>();
     private String selectedAddressName;
 
     private FusedLocationProviderClient fusedLocationClient;
@@ -476,13 +478,36 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
 
     private void displaySavedZones() {
         if (mMap == null) return;
-        mMap.clear();
-        clearTemporaryMarker();
+
+        // Eliminar solo los marcadores y círculos guardados anteriormente, NO el marcador temporal
+        for (Marker marker : savedMarkers) {
+            if (marker != null) marker.remove();
+        }
+        for (Circle circle : savedCircles) {
+            if (circle != null) circle.remove();
+        }
+        savedMarkers.clear();
+        savedCircles.clear();
+
+        // Redibujar todas las zonas guardadas en verde
         for (ZonaServicio zona : zonasSeleccionadas) {
             LatLng posicion = new LatLng(zona.latitud, zona.longitud);
-            Marker marker = mMap.addMarker(new MarkerOptions().position(posicion).title(zona.direccion).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-            marker.setTag(zona);
-            mMap.addCircle(new CircleOptions().center(posicion).radius(zona.radio * 1000).strokeColor(Color.GREEN).fillColor(0x2200FF00));
+            Marker marker = mMap.addMarker(new MarkerOptions()
+                    .position(posicion)
+                    .title(zona.direccion)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+            if (marker != null) {
+                marker.setTag(zona);
+                savedMarkers.add(marker);
+            }
+            Circle circle = mMap.addCircle(new CircleOptions()
+                    .center(posicion)
+                    .radius(zona.radio * 1000)
+                    .strokeColor(Color.GREEN)
+                    .fillColor(0x2200FF00));
+            if (circle != null) {
+                savedCircles.add(circle);
+            }
         }
         btnGuardarZonas.setEnabled(!zonasSeleccionadas.isEmpty());
     }

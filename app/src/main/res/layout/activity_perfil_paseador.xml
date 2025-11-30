@@ -694,7 +694,7 @@
                         <!-- Mapa -->
                         <androidx.cardview.widget.CardView
                             android:layout_width="match_parent"
-                            android:layout_height="150dp"
+                            android:layout_height="250dp"
                             android:layout_marginTop="8dp"
                             app:cardCornerRadius="8dp"
                             app:cardElevation="0dp">
