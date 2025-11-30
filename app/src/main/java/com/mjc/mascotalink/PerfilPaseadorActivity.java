@@ -1020,6 +1020,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 });
     }
 
+    @SuppressWarnings("deprecation")
     private void cargarZonasServicio(String paseadorId) {
         if (zonasListener != null) zonasListener.remove();
         zonasListener = db.collection("paseadores").document(paseadorId).collection("zonas_servicio")

@@ -57,8 +57,9 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        // Toolbar logic removed as custom header is used
+        View ivBack = findViewById(R.id.iv_back);
+        ivBack.setOnClickListener(v -> finish());
     }
 
     private void setupViews() {
@@ -66,8 +67,8 @@ public class DisponibilidadActivity extends AppCompatActivity {
         etHoraFin = findViewById(R.id.et_hora_fin);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
 
-        Button btnSeleccionarTodos = findViewById(R.id.btn_seleccionar_todos);
-        Button btnDeseleccionarTodos = findViewById(R.id.btn_deseleccionar_todos);
+        TextView btnSeleccionarTodos = findViewById(R.id.btn_seleccionar_todos);
+        TextView btnDeseleccionarTodos = findViewById(R.id.btn_deseleccionar_todos);
         Button btnGuardar = findViewById(R.id.btn_guardar_disponibilidad);
 
         GridLayout gridLayout = findViewById(R.id.grid_dias);
