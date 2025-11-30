@@ -15,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.security.SessionManager;
@@ -330,77 +332,87 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     private void ejecutarLogicaDePago() {
         if (mAuth.getCurrentUser() == null) return;
         String currentUid = mAuth.getCurrentUser().getUid();
+        
+        final DocumentReference reservaRef = db.collection("reservas").document(reservaId);
+        final DocumentReference nuevoPagoRef = db.collection("pagos").document();
+        final String nuevoPagoId = nuevoPagoRef.getId();
 
-        // 1. Create Payment Document in "pagos" collection
-        Map<String, Object> pagoData = new HashMap<>();
-        pagoData.put("id_usuario", currentUid); // Required by validatePaymentOnCreate
-        pagoData.put("id_dueno", idDueno != null ? idDueno : currentUid); // For notification
-        pagoData.put("id_paseador", idPaseador); // For notification
-        pagoData.put("monto", costoTotal); // Required by validatePaymentOnCreate
-        pagoData.put("estado", "procesando"); // Initial status
-        pagoData.put("reserva_id", reservaId);
-        pagoData.put("fecha_creacion", Timestamp.now());
+        db.runTransaction(transaction -> {
+            DocumentSnapshot snapshot = transaction.get(reservaRef);
+            
+            if (!snapshot.exists()) {
+                throw new com.google.firebase.firestore.FirebaseFirestoreException(
+                    "Reserva no encontrada",
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND);
+            }
 
-        db.collection("pagos").add(pagoData)
-                .addOnSuccessListener(documentReference -> {
-                    String pagoId = documentReference.getId();
+            String estadoActual = snapshot.getString("estado");
+            String estadoPagoActual = snapshot.getString("estado_pago");
 
-                    // 2. Update Payment Document to "confirmado" (Triggers Notification)
-                    documentReference.update("estado", "confirmado")
-                            .addOnSuccessListener(aVoid -> {
-                                // 3. Update Reservation Document
-                                completarReserva(pagoId);
-                            })
-                            .addOnFailureListener(e -> {
-                                manejarFalloPago("Error al confirmar estado del pago: " + e.getMessage());
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    manejarFalloPago("Error al crear registro de pago: " + e.getMessage());
-                });
+            if (!ReservaEstadoValidator.ESTADO_ACEPTADO.equals(estadoActual)) {
+                throw new com.google.firebase.firestore.FirebaseFirestoreException(
+                    "Estado inválido para pagar: " + estadoActual,
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION);
+            }
+            
+            if (ReservaEstadoValidator.isPagoCompletado(estadoPagoActual)) {
+                 throw new com.google.firebase.firestore.FirebaseFirestoreException(
+                    "Pago ya realizado",
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.ALREADY_EXISTS);
+            }
+
+            // 1. Crear documento de pago
+            Map<String, Object> pagoData = new HashMap<>();
+            pagoData.put("id_usuario", currentUid);
+            pagoData.put("id_dueno", idDueno != null ? idDueno : currentUid);
+            pagoData.put("id_paseador", idPaseador);
+            pagoData.put("monto", costoTotal);
+            pagoData.put("estado", "confirmado");
+            pagoData.put("reserva_id", reservaId);
+            pagoData.put("fecha_creacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
+            
+            transaction.set(nuevoPagoRef, pagoData);
+
+            // 2. Actualizar reserva
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("estado", ReservaEstadoValidator.ESTADO_CONFIRMADO);
+            updates.put("id_pago", nuevoPagoId);
+            updates.put("transaction_id", nuevoPagoId);
+            updates.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO);
+            updates.put("fecha_pago", com.google.firebase.firestore.FieldValue.serverTimestamp());
+            updates.put("hasTransitionedToInCourse", false);
+            
+            String metodoPago = encryptedPrefs != null ? 
+                encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
+            updates.put("metodo_pago", metodoPago);
+
+            transaction.update(reservaRef, updates);
+
+            return nuevoPagoId;
+        }).addOnSuccessListener(pagoId -> {
+            progressBar.setVisibility(View.GONE);
+            btnProcesarPago.setText("Procesar Pago");
+            
+            if (encryptedPrefs != null) {
+                encryptedPrefs.putString("payment_status", "COMPLETED");
+                encryptedPrefs.putString("payment_id", pagoId);
+            }
+            
+            Toast.makeText(this, "Pago procesado exitosamente!", Toast.LENGTH_LONG).show();
+            
+            new Handler().postDelayed(() -> {
+                Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            }, 1000);
+            
+        }).addOnFailureListener(e -> {
+            manejarFalloPago("Error en transacción de pago: " + e.getMessage());
+        });
     }
 
-    private void completarReserva(String pagoId) {
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("estado", ReservaEstadoValidator.ESTADO_CONFIRMADO);
-        updates.put("id_pago", pagoId);
-        updates.put("transaction_id", pagoId);
-        updates.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO);
-        updates.put("fecha_pago", Timestamp.now());
-        String metodoPagoGuardado = encryptedPrefs != null ? encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
-        updates.put("metodo_pago", metodoPagoGuardado);
-        updates.put("hasTransitionedToInCourse", false);
 
-        db.collection("reservas").document(reservaId)
-                .update(updates)
-                .addOnSuccessListener(aVoid -> {
-                    progressBar.setVisibility(View.GONE);
-                    btnProcesarPago.setText("Procesar Pago");
-                    if (encryptedPrefs != null) {
-                        encryptedPrefs.putString("payment_status", "COMPLETED");
-                        encryptedPrefs.putString("payment_id", pagoId);
-                        encryptedPrefs.putString("payment_token", pagoId);
-                    }
-                    if (mAuth.getCurrentUser() != null) {
-                        sessionManager.createSession(mAuth.getCurrentUser().getUid());
-                    }
-                    Toast.makeText(this, "Pago procesado exitosamente!",
-                            Toast.LENGTH_LONG).show();
-                    estadoReserva = ReservaEstadoValidator.ESTADO_CONFIRMADO;
-                    estadoPago = ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO;
-                    actualizarEstadoUI();
-
-                    new Handler().postDelayed(() -> {
-                        Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(intent);
-                        finish();
-                    }, 1000);
-                })
-                .addOnFailureListener(e -> {
-                    manejarFalloPago("Error al actualizar reserva: " + e.getMessage());
-                });
-    }
 
     private void manejarFalloPago(String errorMsg) {
         if (encryptedPrefs != null) {

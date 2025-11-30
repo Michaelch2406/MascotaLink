@@ -396,7 +396,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                 .update(
                         "estado", ReservaEstadoValidator.ESTADO_RECHAZADO,
                         "motivo_rechazo", motivo,
-                        "fecha_respuesta", Timestamp.now()
+                        "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
                 )
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Solicitud rechazada", Toast.LENGTH_SHORT).show();
@@ -427,7 +427,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         db.collection("reservas").document(idReserva)
                 .update(
                         "estado", ReservaEstadoValidator.ESTADO_ACEPTADO,
-                        "fecha_respuesta", Timestamp.now()
+                        "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
                 )
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "¡Solicitud aceptada!", Toast.LENGTH_SHORT).show();

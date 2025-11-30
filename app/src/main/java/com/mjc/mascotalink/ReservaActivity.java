@@ -703,48 +703,152 @@ public class ReservaActivity extends AppCompatActivity {
     private void confirmarReserva() {
         if (!validarDatosReserva()) return;
 
+        // Deshabilitar botón para evitar doble click
+        btnConfirmarReserva.setEnabled(false);
+
+        // 1. Recalcular costo con tarifa real del servidor
+        db.collection("usuarios").document(paseadorId).get()
+            .addOnSuccessListener(paseadorDoc -> {
+                if (!paseadorDoc.exists()) {
+                    Toast.makeText(this, "El paseador ya no está disponible", Toast.LENGTH_SHORT).show();
+                    btnConfirmarReserva.setEnabled(true);
+                    return;
+                }
+
+                // Obtener precio real
+                Double precioHoraReal = paseadorDoc.getDouble("precio_hora");
+                if (precioHoraReal == null) {
+                    // Fallback si no tiene precio configurado (usar el del intent)
+                    precioHoraReal = tarifaPorHora; 
+                }
+                
+                // Recalcular
+                double horas = duracionMinutos / 60.0;
+                int diasCalculo = 1;
+                if (tipoReserva.equals("SEMANAL")) diasCalculo = 7;
+                else if (tipoReserva.equals("MENSUAL")) {
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(fechaSeleccionada);
+                    diasCalculo = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+                }
+                
+                final double costoTotalReal = precioHoraReal * horas * diasCalculo;
+
+                // 2. Validar disponibilidad (Crucial para evitar overbooking)
+                validarDisponibilidadYCrear(costoTotalReal, precioHoraReal);
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Error verificando tarifa: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                btnConfirmarReserva.setEnabled(true);
+            });
+    }
+
+    private void validarDisponibilidadYCrear(double costoTotalReal, double tarifaConfirmada) {
+        Calendar inicioSolicitud = Calendar.getInstance();
+        inicioSolicitud.setTime(fechaSeleccionada);
+        inicioSolicitud.set(Calendar.HOUR_OF_DAY, horarioSeleccionado.getHora());
+        inicioSolicitud.set(Calendar.MINUTE, horarioSeleccionado.getMinutos());
+        inicioSolicitud.set(Calendar.SECOND, 0);
+        
+        Calendar finSolicitud = (Calendar) inicioSolicitud.clone();
+        finSolicitud.add(Calendar.MINUTE, duracionMinutos);
+
+        // Consultar reservas del día para este paseador
+        // Nota: Esta consulta es básica, para producción idealmente usar Cloud Functions
+        // o una estructura de "slots" ocupados.
+        
+        Calendar inicioDia = (Calendar) inicioSolicitud.clone();
+        inicioDia.set(Calendar.HOUR_OF_DAY, 0);
+        inicioDia.set(Calendar.MINUTE, 0);
+        
+        Calendar finDia = (Calendar) inicioSolicitud.clone();
+        finDia.set(Calendar.HOUR_OF_DAY, 23);
+        finDia.set(Calendar.MINUTE, 59);
+
+        db.collection("reservas")
+            .whereEqualTo("id_paseador", db.collection("usuarios").document(paseadorId))
+            .whereGreaterThan("hora_inicio", new Timestamp(inicioDia.getTime()))
+            .whereLessThan("hora_inicio", new Timestamp(finDia.getTime()))
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                boolean haySolapamiento = false;
+                for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                    // Ignorar canceladas o rechazadas
+                    String estado = doc.getString("estado");
+                    if (ReservaEstadoValidator.ESTADO_CANCELADO.equals(estado) || 
+                        ReservaEstadoValidator.ESTADO_RECHAZADO.equals(estado)) {
+                        continue;
+                    }
+
+                    Timestamp inicioExistenteTs = doc.getTimestamp("hora_inicio");
+                    if (inicioExistenteTs == null) continue;
+                    
+                    long duracionExistente = 60; // Default 1 hora si falta
+                    Long d = doc.getLong("duracion_minutos");
+                    if (d != null) duracionExistente = d;
+
+                    Calendar inicioExistente = Calendar.getInstance();
+                    inicioExistente.setTime(inicioExistenteTs.toDate());
+                    
+                    Calendar finExistente = (Calendar) inicioExistente.clone();
+                    finExistente.add(Calendar.MINUTE, (int) duracionExistente);
+
+                    // Chequeo de solapamiento: (StartA < EndB) and (EndA > StartB)
+                    if (inicioSolicitud.getTimeInMillis() < finExistente.getTimeInMillis() && 
+                        finSolicitud.getTimeInMillis() > inicioExistente.getTimeInMillis()) {
+                        haySolapamiento = true;
+                        break;
+                    }
+                }
+
+                if (haySolapamiento) {
+                    Toast.makeText(this, "El paseador ya tiene una reserva en ese horario.", Toast.LENGTH_LONG).show();
+                    btnConfirmarReserva.setEnabled(true);
+                } else {
+                    crearReservaFinal(costoTotalReal, tarifaConfirmada, inicioSolicitud.getTime());
+                }
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Error validando disponibilidad: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                btnConfirmarReserva.setEnabled(true);
+            });
+    }
+
+    private void crearReservaFinal(double costoTotalReal, double tarifaConfirmada, Date horaInicio) {
         Map<String, Object> reserva = new HashMap<>();
         reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
         reserva.put("id_mascota", mascotaSeleccionada.getId());
         reserva.put("id_paseador", db.collection("usuarios").document(paseadorId));
-
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(fechaSeleccionada);
-        cal.set(Calendar.HOUR_OF_DAY, horarioSeleccionado.getHora());
-        cal.set(Calendar.MINUTE, horarioSeleccionado.getMinutos());
-        cal.set(Calendar.SECOND, 0);
-
         reserva.put("fecha", new Timestamp(fechaSeleccionada));
-        reserva.put("hora_inicio", new Timestamp(cal.getTime()));
+        reserva.put("hora_inicio", new Timestamp(horaInicio));
         reserva.put("duracion_minutos", duracionMinutos);
-        reserva.put("costo_total", costoTotal);
+        reserva.put("costo_total", costoTotalReal); // Precio seguro calculado
         reserva.put("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
         reserva.put("tipo_reserva", tipoReserva);
-        reserva.put("fecha_creacion", Timestamp.now());
-        reserva.put("tarifa_confirmada", tarifaPorHora);
-        reserva.put("id_pago", null);           // NULL inicialmente
-        reserva.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_PENDIENTE); // Estado inicial de pago
+        reserva.put("fecha_creacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        reserva.put("tarifa_confirmada", tarifaConfirmada);
+        reserva.put("id_pago", null);
+        reserva.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_PENDIENTE);
         reserva.put("notas", notasAdicionalesMascota);
         reserva.put("reminderSent", false);
 
-
         db.collection("reservas")
-                .add(reserva)
-                .addOnSuccessListener(documentReference -> {
-                    String reservaId = documentReference.getId();
-                    Toast.makeText(this, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show();
+            .add(reserva)
+            .addOnSuccessListener(documentReference -> {
+                String reservaId = documentReference.getId();
+                Toast.makeText(this, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show();
 
-                    // Tras crear la reserva y guardarla en Firestore, regresa al perfil del dueño
-                    Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
-                    intent.putExtra("reserva_id", reservaId);
-                    intent.putExtra("reserva_estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error al crear reserva: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
+                intent.putExtra("reserva_id", reservaId);
+                intent.putExtra("reserva_estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Error al crear reserva: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                btnConfirmarReserva.setEnabled(true);
+            });
     }
 
     private boolean validarDatosReserva() {

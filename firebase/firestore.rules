@@ -154,17 +154,6 @@ service cloud.firestore {
 
     // chats collection
     match /chats/{chatId} {
-      function getChatDoc() { return get(/databases/$(database)/documents/chats/$(chatId)); }
-      
-      function isParticipantInParent() {
-        let doc = getChatDoc();
-        return isAuthenticated()
-          && doc != null
-          && doc.data != null
-          && doc.data.participantes is list
-          && doc.data.participantes.hasAny([request.auth.uid]);
-      }
-
       function isParticipantInResource() {
         return isAuthenticated()
           && resource.data.participantes is list
@@ -190,16 +179,21 @@ service cloud.firestore {
       allow delete: if false;
 
       match /mensajes/{mensajeId} {
-        allow read: if isParticipantInParent();
-        allow create: if isParticipantInParent()
+        // Permitir lectura si el chatId contiene el uid del usuario (validación simplificada)
+        allow read: if isAuthenticated() && chatId.matches('.*' + request.auth.uid + '.*');
+
+        // Permitir creación si el chatId contiene el uid del usuario y es el remitente
+        allow create: if isAuthenticated()
+          && chatId.matches('.*' + request.auth.uid + '.*')
           && request.resource.data.id_remitente == request.auth.uid;
-        allow update: if isParticipantInParent()
+
+        // Permitir actualización solo de campos leido/entregado por destinatario o remitente
+        allow update: if isAuthenticated()
+          && chatId.matches('.*' + request.auth.uid + '.*')
           && request.resource.data.keys().hasOnly(['leido', 'entregado'])
           && (
-            // El destinatario puede marcar como leido/entregado
-            resource.data.id_destinatario == request.auth.uid
-            // O cualquier participante puede marcar como entregado (para FCM service)
-            || (request.resource.data.keys().hasOnly(['entregado']) && request.resource.data.entregado == true)
+            resource.data.get('id_destinatario', '') == request.auth.uid
+            || resource.data.get('id_remitente', '') == request.auth.uid
           );
         allow delete: if false;
       }
