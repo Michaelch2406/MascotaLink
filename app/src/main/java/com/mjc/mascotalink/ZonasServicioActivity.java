@@ -104,8 +104,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     }
 
     private void initViews() {
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        ImageView ivBack = findViewById(R.id.iv_back);
+        ivBack.setOnClickListener(v -> finish());
 
         etDireccionZona = findViewById(R.id.et_direccion_zona);
         ivGeolocateZona = findViewById(R.id.iv_geolocate_zona);

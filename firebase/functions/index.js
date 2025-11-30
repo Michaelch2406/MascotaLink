@@ -531,7 +531,7 @@ exports.onWalkStarted = onDocumentUpdated("reservas/{reservaId}", async (event) 
             }
         },
         data: {
-          click_action: "OPEN_CURRENT_WALK_ACTIVITY", // Opens PaseoEnCursoActivity for owner
+          click_action: "OPEN_CURRENT_WALK_OWNER", // Opens PaseoEnCursoDuenoActivity for owner
           reservaId: reservaId, // Pass reservaId to activity
         },
       };

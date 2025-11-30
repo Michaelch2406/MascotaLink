@@ -202,7 +202,7 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     }
 
     private void mostrarDatos() {
-        tvMontoTotal.setText(String.format(Locale.US, "IMPORTE A PAGAR: $%.1f", costoTotal));
+        tvMontoTotal.setText(String.format(Locale.US, "$%.1f", costoTotal));
         tvPaseadorNombre.setText(paseadorNombre != null ? paseadorNombre : "Sophia Carter");
         tvMascotaNombre.setText(mascotaNombre != null ? mascotaNombre : "Buddy");
         
