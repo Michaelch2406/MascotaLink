@@ -24,12 +24,15 @@ import java.util.Map;
 
 import android.util.Log;
 
+import android.widget.ProgressBar;
+
 public class QuizActivity extends AppCompatActivity {
 
     private TextView tvQuestion, tvProgress;
     private RadioGroup rgOptions;
     private RadioButton rb1, rb2, rb3, rb4;
     private Button btnNext;
+    private ProgressBar progressBar;
 
     private int index = 0;
     private int totalScore = 0;
@@ -47,14 +50,14 @@ public class QuizActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
 
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
         tvQuestion = findViewById(R.id.tv_question);
         tvProgress = findViewById(R.id.tv_progress);
+        progressBar = findViewById(R.id.progress_quiz);
         rgOptions = findViewById(R.id.rg_options);
         rb1 = findViewById(R.id.rb1); rb2 = findViewById(R.id.rb2); rb3 = findViewById(R.id.rb3); rb4 = findViewById(R.id.rb4);
         btnNext = findViewById(R.id.btn_next);
@@ -75,7 +78,16 @@ public class QuizActivity extends AppCompatActivity {
     private void showQuestion() {
         QuestionBank.Question q = QuestionBank.QUESTIONS[index];
         tvQuestion.setText(q.getText());
-        tvProgress.setText((index + 1) + "/" + QuestionBank.QUESTIONS.length);
+        
+        int currentQuestion = index + 1;
+        int totalQuestions = QuestionBank.QUESTIONS.length;
+        tvProgress.setText("Pregunta " + currentQuestion + " de " + totalQuestions);
+        
+        if (progressBar != null) {
+            int progress = (int) ((currentQuestion / (float) totalQuestions) * 100);
+            progressBar.setProgress(progress);
+        }
+
         rb1.setText(q.getOptions()[0]);
         rb2.setText(q.getOptions()[1]);
         rb3.setText(q.getOptions()[2]);
