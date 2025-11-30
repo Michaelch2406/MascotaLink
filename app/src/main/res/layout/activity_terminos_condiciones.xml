@@ -283,26 +283,54 @@
                         android:text="Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios entrarán en vigor al publicarse en la aplicación. El uso continuado de la plataforma constituye aceptación de los términos modificados."
                         android:textColor="@color/text_secondary"
                         android:textSize="14sp"
-                        android:lineSpacingMultiplier="1.4"
-                        android:layout_marginBottom="20dp" />
+                        android:lineSpacingMultiplier="1.4" />
 
-                    <!-- Contacto -->
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Contact Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:gravity="center">
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="11. Contacto"
+                        android:text="¿Tienes preguntas sobre estos términos?"
                         android:textColor="@color/black"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        android:layout_marginBottom="8dp" />
+                        android:gravity="center"
+                        android:layout_marginBottom="12dp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Para preguntas sobre estos términos, contáctenos en:\nlegal@walki.com"
+                        android:text="Envíanos un correo a:"
                         android:textColor="@color/text_secondary"
                         android:textSize="14sp"
-                        android:lineSpacingMultiplier="1.4" />
+                        android:gravity="center"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="legal@walki.com"
+                        android:textColor="@color/blue_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:gravity="center" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
