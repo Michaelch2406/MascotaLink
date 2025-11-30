@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="4dp">
+    android:padding="6dp">
 
     <!-- Contenedor con relación de aspecto 1:1 -->
     <FrameLayout
@@ -16,40 +16,50 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Estado: Agregar Foto (Dashed Border) -->
-        <LinearLayout
-            android:id="@+id/ll_add_photo"
+        <!-- Estado: Agregar Foto -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cv_add_photo"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@drawable/bg_dashed_border"
-            android:gravity="center"
-            android:orientation="vertical"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/blue_primary"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="#F0F9FF"
             android:visibility="visible">
 
-            <ImageView
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:src="@drawable/ic_play_circle_outline"
-                android:rotation="45"
-                app:tint="@color/blue_primary" />
+            <LinearLayout
+                android:id="@+id/ll_add_photo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Agregar"
-                android:textColor="@color/blue_primary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_add"
+                    app:tint="@color/blue_primary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Añadir"
+                    android:textColor="@color/blue_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Estado: Imagen Normal -->
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/cv_image"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="0dp"
             android:visibility="gone">
 
             <ImageView
@@ -59,19 +69,24 @@
                 android:scaleType="centerCrop" />
 
             <!-- Botón Eliminar -->
-            <ImageButton
+            <FrameLayout
                 android:id="@+id/btn_delete"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:layout_gravity="top|end"
-                android:layout_margin="4dp"
-                android:background="@drawable/bg_avatar_circle"
-                android:backgroundTint="#CCFFFFFF"
-                android:padding="4dp"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                app:tint="@color/red_error" />
+                android:layout_margin="6dp"
+                android:background="@drawable/bg_circle_soft"
+                android:backgroundTint="#CCFFFFFF">
+                
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_close"
+                    app:tint="@color/red_error" />
+            </FrameLayout>
 
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
     </FrameLayout>
 

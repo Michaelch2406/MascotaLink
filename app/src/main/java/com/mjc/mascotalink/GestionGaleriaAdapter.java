@@ -61,11 +61,11 @@ public class GestionGaleriaAdapter extends RecyclerView.Adapter<RecyclerView.Vie
         int viewType = getItemViewType(position);
 
         if (viewType == TYPE_ADD) {
-            vh.llAddPhoto.setVisibility(View.VISIBLE);
+            vh.cvAddPhoto.setVisibility(View.VISIBLE);
             vh.cvImage.setVisibility(View.GONE);
-            vh.llAddPhoto.setOnClickListener(v -> listener.onAddClick());
+            vh.cvAddPhoto.setOnClickListener(v -> listener.onAddClick());
         } else {
-            vh.llAddPhoto.setVisibility(View.GONE);
+            vh.cvAddPhoto.setVisibility(View.GONE);
             vh.cvImage.setVisibility(View.VISIBLE);
             
             String url = imageUrls.get(position);
@@ -84,14 +84,14 @@ public class GestionGaleriaAdapter extends RecyclerView.Adapter<RecyclerView.Vie
     }
 
     static class GaleriaViewHolder extends RecyclerView.ViewHolder {
-        LinearLayout llAddPhoto;
+        CardView cvAddPhoto;
         CardView cvImage;
         ImageView ivImage;
-        ImageButton btnDelete;
+        View btnDelete;
 
         public GaleriaViewHolder(@NonNull View itemView) {
             super(itemView);
-            llAddPhoto = itemView.findViewById(R.id.ll_add_photo);
+            cvAddPhoto = itemView.findViewById(R.id.cv_add_photo);
             cvImage = itemView.findViewById(R.id.cv_image);
             ivImage = itemView.findViewById(R.id.iv_image);
             btnDelete = itemView.findViewById(R.id.btn_delete);

@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -64,8 +65,8 @@ public class GestionarGaleriaActivity extends AppCompatActivity implements Gesti
     }
 
     private void initViews() {
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        ImageView ivBack = findViewById(R.id.iv_back);
+        ivBack.setOnClickListener(v -> finish());
 
         progressBar = findViewById(R.id.progress_bar);
         tvContador = findViewById(R.id.tv_contador_fotos);
