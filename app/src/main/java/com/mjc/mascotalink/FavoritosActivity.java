@@ -61,7 +61,7 @@ public class FavoritosActivity extends AppCompatActivity implements FavoritosAda
     }
 
     private void setupToolbar() {
-        ImageView ivBack = findViewById(R.id.iv_back_favoritos);
+        ImageView ivBack = findViewById(R.id.iv_back);
         ivBack.setOnClickListener(v -> finish());
     }
 

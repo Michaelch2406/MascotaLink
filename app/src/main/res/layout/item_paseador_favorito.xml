@@ -4,37 +4,46 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="8dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginEnd="8dp"
-    android:layout_marginBottom="4dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0dp"
+    app:cardBackgroundColor="@color/white"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
+        android:padding="16dp">
 
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/iv_avatar_favorito"
             android:layout_width="60dp"
             android:layout_height="60dp"
-            android:src="@drawable/paseador_mascota"
+            android:src="@drawable/ic_user_placeholder"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:civ_border_color="@color/gray_light"
+            app:civ_border_width="1dp"/>
 
         <TextView
             android:id="@+id/tv_nombre_favorito"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:textAppearance="@style/TextAppearance.Mascota.Title"
-            android:textSize="16sp" 
+            android:layout_marginEnd="8dp"
+            tools:text="Sofía Ramírez"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintEnd_toStartOf="@+id/btn_quitar_favorito"
             app:layout_constraintStart_toEndOf="@+id/iv_avatar_favorito"
-            app:layout_constraintTop_toTopOf="@+id/iv_avatar_favorito"
-            tools:text="Sofía Ramírez" />
+            app:layout_constraintTop_toTopOf="@+id/iv_avatar_favorito" />
 
         <RatingBar
             android:id="@+id/rating_bar_favorito"
@@ -45,32 +54,42 @@
             android:isIndicator="true"
             android:numStars="5"
             android:stepSize="0.1"
+            tools:rating="4.8"
+            android:progressTint="#F59E0B"
             app:layout_constraintStart_toStartOf="@+id/tv_nombre_favorito"
-            app:layout_constraintTop_toBottomOf="@+id/tv_nombre_favorito"
-            tools:rating="4.8" />
+            app:layout_constraintTop_toBottomOf="@+id/tv_nombre_favorito" />
 
         <TextView
             android:id="@+id/tv_precio_favorito"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:textColor="@color/green_success"
+            tools:text="$8.00/hora"
+            android:textColor="@color/blue_primary"
+            android:textSize="13sp"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@+id/rating_bar_favorito"
             app:layout_constraintStart_toEndOf="@+id/rating_bar_favorito"
-            app:layout_constraintTop_toTopOf="@+id/rating_bar_favorito"
-            tools:text="$8/hora" />
+            app:layout_constraintTop_toTopOf="@+id/rating_bar_favorito" />
 
-        <ImageButton
+        <FrameLayout
             android:id="@+id/btn_quitar_favorito"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Quitar de favoritos"
-            android:src="@drawable/ic_corazon_lleno"
+            android:background="@drawable/bg_circle_soft"
+            android:backgroundTint="#CCFFFFFF"
+            android:layout_marginEnd="4dp"
+            android:elevation="4dp"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/colorError" />
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_close"
+                app:tint="@color/red_error" />
+        </FrameLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
