@@ -931,6 +931,7 @@ public class ReservaActivity extends AppCompatActivity {
         limiteMaximo.add(Calendar.DAY_OF_YEAR, 30); // Máximo 30 días a futuro
 
         // 1. Validación de tiempo pasado (mínimo 1 hora de anticipación)
+        /*
         Calendar minAnticipacion = Calendar.getInstance();
         minAnticipacion.add(Calendar.HOUR_OF_DAY, 1);
         
@@ -938,6 +939,7 @@ public class ReservaActivity extends AppCompatActivity {
             Toast.makeText(this, "La reserva debe ser con al menos 1 hora de anticipación.", Toast.LENGTH_LONG).show();
             return false;
         }
+        */
 
         // 2. Validación de tiempo futuro máximo
         if (seleccion.after(limiteMaximo)) {

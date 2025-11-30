@@ -137,7 +137,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         setupAuthListener();
 
         // Determine duenoId
-        String idFromIntent = getIntent().getStringExtra("id_Dueno");
+        String idFromIntent = getIntent().getStringExtra("id_dueno");
+        if (idFromIntent == null) {
+             idFromIntent = getIntent().getStringExtra("id_Dueno"); // Fallback
+        }
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             currentUserId = currentUser.getUid();

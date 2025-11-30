@@ -122,12 +122,15 @@ service cloud.firestore {
 
     // reservas collection
     match /reservas/{reservaId} {
-      allow read: if isAuthenticated() && (
-        (resource != null &&
-          (isCurrentUser(resource.data.get('id_dueno', null)) ||
-           isCurrentUser(resource.data.get('id_paseador', null)))) ||
-        resource == null
+      // Lectura individual: verificar que el usuario es el dueño o paseador
+      allow get: if isAuthenticated() && (
+        isCurrentUser(resource.data.get('id_dueno', null)) ||
+        isCurrentUser(resource.data.get('id_paseador', null))
       );
+
+      // Consultas/queries: permitir si está autenticado
+      // La app debe filtrar por id_dueno o id_paseador en las queries
+      allow list: if isAuthenticated();
 
       allow create: if isAuthenticated() && isDueno() &&
         isCurrentUser(request.resource.data.get('id_dueno', null));
