@@ -12,15 +12,15 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.Manifest; // Added for Manifest.permission
-import android.content.pm.PackageManager; // Added for PackageManager
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat; // Added for ActivityCompat
-import androidx.core.content.ContextCompat; // Added for ContextCompat
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -29,9 +29,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseAuthInvalidUserException;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.mjc.mascotalink.security.BiometricAuthManager;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.security.SessionManager;
@@ -44,10 +42,10 @@ import java.util.Map;
 import com.mjc.mascotalink.ConfirmarPagoActivity;
 import com.google.firebase.messaging.FirebaseMessaging;
 
-public class LoginActivity extends AppCompatActivity implements BiometricAuthManager.BiometricPromptCallback {
+public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001; // Added for permission request
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -56,8 +54,6 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
     private TextInputEditText etEmail, etPassword;
     private CheckBox cbRemember;
     private ProgressBar progressBar;
-    private Button btnBiometric;
-    private BiometricAuthManager biometricMgr;
     private CredentialManager credentialMgr;
     private String pendingEmail;
     private String pendingPassword;
@@ -73,18 +69,16 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
             if (mAuth != null) {
                 mAuth.setLanguageCode("es");
             }
-            biometricMgr = new BiometricAuthManager(this);
             credentialMgr = new CredentialManager(this);
         } catch (Exception e) {
             Log.e(TAG, "Error configurando Firebase o seguridad: ", e);
             mostrarError("Error de configuración: " + e.getMessage());
-            // It's critical to exit if core components fail to initialize.
             finish();
             return;
         }
 
         if (checkForSavedSession()) {
-            return; // Auto-login or re-authentication in progress
+            return;
         }
 
         setContentView(R.layout.activity_login);
@@ -92,9 +86,6 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         setupEmailField();
         setupPasswordField();
         setupClickListeners();
-        if (!attemptAutomaticBiometricLogin()) {
-            mostrarLoginNormal();
-        }
         checkAndRequestLocationPermission();
     }
 
@@ -110,7 +101,7 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
             if (tempUserId == null) {
                 tempUserId = prefs.getString("uid", null);
             }
-            final String userId = tempUserId; // Declare as final here for use in lambda
+            final String userId = tempUserId;
 
             String rol = prefs.getString("rol", null);
             String verificacionEstado = prefs.getString("verificacion_estado", null);
@@ -122,20 +113,18 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                     redirigirSegunRol(rol, verificacionEstado);
                     return true;
                 } else {
-                    // Firebase session is null, try re-authenticating with saved credentials
                     Log.d(TAG, "Firebase session is null, attempting re-authentication with saved credentials...");
                     String[] creds = credentialMgr.getCredentials();
                     if (creds != null && creds.length == 2 && creds[0] != null && creds[1] != null) {
-                        mostrarProgressBar(true); // Show progress during re-authentication
+                        mostrarProgressBar(true);
                         mAuth.signInWithEmailAndPassword(creds[0], creds[1])
                                 .addOnCompleteListener(this, task -> {
-                                    mostrarProgressBar(false); // Hide progress bar
+                                    mostrarProgressBar(false);
                                     if (task.isSuccessful()) {
                                         FirebaseUser user = mAuth.getCurrentUser();
-                                        if (user != null && user.getUid().equals(userId)) { // Double-check UID consistency
+                                        if (user != null && user.getUid().equals(userId)) {
                                             Log.d(TAG, "Re-authentication successful. Redirigiendo...");
                                             updateFcmTokenForCurrentUser();
-                                            // Re-fetch role and verification status to ensure they are up-to-date
                                             db.collection("usuarios").document(user.getUid()).get()
                                                 .addOnSuccessListener(documentSnapshot -> {
                                                     if (documentSnapshot.exists()) {
@@ -163,40 +152,35 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                                                         }
                                                     } else {
                                                         Log.w(TAG, "User profile not found after re-authentication. Falling back to normal login.");
-                                                        credentialMgr.clearCredentials(); // Invalid profile data
+                                                        credentialMgr.clearCredentials();
                                                         mostrarError("Perfil de usuario no encontrado. Inicia sesión de nuevo.");
                                                     }
                                                 }).addOnFailureListener(e -> {
                                                     Log.e(TAG, "Error re-fetching user role after re-authentication", e);
-                                                    credentialMgr.clearCredentials(); // Error fetching user data
+                                                    credentialMgr.clearCredentials();
                                                     mostrarError("Error al cargar perfil. Inicia sesión de nuevo.");
                                                 });
                                         } else {
                                             Log.w(TAG, "Re-authentication successful, but UID mismatch or user null. Clearing credentials.");
-                                            credentialMgr.clearCredentials(); // Credentials might be for a different user
-                                            // Fall through to normal login, no need to show specific error
+                                            credentialMgr.clearCredentials();
                                         }
                                     } else {
                                         Log.w(TAG, "Re-authentication failed: " + task.getException().getMessage());
-                                        credentialMgr.clearCredentials(); // Credentials might be outdated or invalid
+                                        credentialMgr.clearCredentials();
                                         mostrarError("Sesión expirada o credenciales no válidas. Por favor, inicia sesión de nuevo.");
-                                        // No return true, let it fall through to show normal login UI
                                     }
                                 });
-                        return true; // Indicate that an async re-authentication is in progress
+                        return true;
                     } else {
                         Log.d(TAG, "Remember device true, but no credentials found in CredentialManager. Falling back to normal login.");
-                        // No credentials to re-authenticate with, fall through to normal login
                     }
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, "checkForSavedSession: error accediendo prefs cifradas o durante re-autenticación", e);
-            // In case of any error in this flow, ensure we don't block the user
-            if (credentialMgr != null) { // Defensive check
+            if (credentialMgr != null) {
                 credentialMgr.clearCredentials();
             }
-            // Fall through to normal login
         }
         return false;
     }
@@ -208,7 +192,6 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         etPassword = findViewById(R.id.et_password);
         cbRemember = findViewById(R.id.cb_remember);
         progressBar = findViewById(R.id.pb_loading);
-        btnBiometric = findViewById(R.id.btn_biometric);
     }
 
     private void setupClickListeners() {
@@ -217,9 +200,6 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         TextView tvRegisterLink = findViewById(R.id.tv_register_link);
 
         btnLogin.setOnClickListener(v -> realizarLogin());
-        if (btnBiometric != null) {
-            btnBiometric.setOnClickListener(v -> loginWithBiometric());
-        }
         tvForgotPassword.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class)));
         tvRegisterLink.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, SeleccionRolActivity.class)));
     }
@@ -287,8 +267,7 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                             mostrarError("Rol no definido para este usuario.");
                             return;
                         }
-                        updateFcmTokenForCurrentUser(); // Actualiza el token FCM al iniciar sesión
-
+                        updateFcmTokenForCurrentUser();
 
                         if ("PASEADOR".equalsIgnoreCase(rol)) {
                             db.collection("paseadores").document(uid).get()
@@ -312,7 +291,7 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                                         }
                                     })
                                     .addOnFailureListener(e -> mostrarError("Error al verificar estado del dueño: " + e.getMessage()));
-                        } else { // Otros roles como ADMIN
+                        } else {
                             handleSessionAndRedirect(uid, rol, null);
                         }
                     } else {
@@ -327,9 +306,6 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         sessionManager.createSession(uid);
         if (cbRemember.isChecked()) {
             guardarPreferenciasLogin(uid, rol, verificacionEstado);
-            // Asegurarse de que las credenciales (email/password) se guarden de forma segura
-            // por CredentialManager si 'recordarme' está marcado.
-            // Esto es necesario para la re-autenticación silenciosa si la sesión de Firebase se pierde.
             if (pendingEmail != null && pendingPassword != null) {
                 credentialMgr.saveCredentials(pendingEmail, pendingPassword);
             }
@@ -350,10 +326,7 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
                 Log.e(TAG, "handleSessionAndRedirect: error limpiando prefs cifradas", e);
             }
         }
-        boolean deferred = offerBiometricEnrollmentIfNeeded(() -> redirigirSegunRol(rol, verificacionEstado));
-        if (!deferred) {
-            redirigirSegunRol(rol, verificacionEstado);
-        }
+        redirigirSegunRol(rol, verificacionEstado);
     }
 
     private void redirigirSegunRol(String rol, String estadoVerificacion) {
@@ -363,12 +336,10 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         }
 
         Intent intent = null;
-        String normalizedRol = rol.toUpperCase(); // Normalizar a mayúsculas
+        String normalizedRol = rol.toUpperCase();
 
-        // 1. Verificar si hay una acción de notificación pendiente (Deep Link)
         String clickAction = getIntent().getStringExtra("click_action");
         
-        // Solo permitimos redirigir si el usuario está aprobado
         if (clickAction != null && "APROBADO".equals(estadoVerificacion)) {
             switch (clickAction) {
                 case "OPEN_WALKS_ACTIVITY":
@@ -392,14 +363,12 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
             }
 
             if (intent != null) {
-                // Importante: Pasar todos los extras (como id_reserva) a la siguiente actividad
                 if (getIntent().getExtras() != null) {
                     intent.putExtras(getIntent().getExtras());
                 }
             }
         }
 
-        // 2. Si no hubo acción de notificación o el intent sigue siendo nulo, flujo normal
         if (intent == null) {
             switch (normalizedRol) {
                 case "PASEADOR":
@@ -534,137 +503,6 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
         }
     }
 
-    private void loginWithBiometric() {
-        if (biometricMgr == null || credentialMgr == null) {
-            return;
-        }
-        if (!credentialMgr.isBiometricEnabled()) {
-            Toast.makeText(this, "Registra tu huella primero", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        biometricMgr.showBiometricPrompt(
-                this,
-                "Inicia sesión",
-                "Presiona tu huella para continuar",
-                this
-        );
-    }
-
-    private boolean attemptAutomaticBiometricLogin() {
-        if (biometricMgr == null || credentialMgr == null) {
-            return false;
-        }
-        if (credentialMgr.canAutoLogin() && biometricMgr.isBiometricAvailable()) {
-            hideLoginUI();
-            biometricMgr.showBiometricPromptAutomatic(this, this);
-            return true;
-        }
-        return false;
-    }
-
-    private void mostrarLoginNormal() {
-        if (etEmail != null) etEmail.setVisibility(View.VISIBLE);
-        if (etPassword != null) etPassword.setVisibility(View.VISIBLE);
-        if (btnBiometric != null) btnBiometric.setVisibility(View.GONE);
-        Button btnLogin = findViewById(R.id.btn_login);
-        if (btnLogin != null) btnLogin.setVisibility(View.VISIBLE);
-    }
-
-    private void hideLoginUI() {
-        if (etEmail != null) etEmail.setVisibility(View.GONE);
-        if (etPassword != null) etPassword.setVisibility(View.GONE);
-        Button btnLogin = findViewById(R.id.btn_login);
-        if (btnLogin != null) btnLogin.setVisibility(View.GONE);
-        if (btnBiometric != null) btnBiometric.setVisibility(View.GONE);
-    }
-
-    private boolean offerBiometricEnrollmentIfNeeded(Runnable onComplete) {
-        if (biometricMgr == null || credentialMgr == null || !cbRemember.isChecked()) {
-            clearPendingCredentials();
-            return false;
-        }
-        if (!biometricMgr.isBiometricAvailable() || credentialMgr.isBiometricEnabled()) {
-            clearPendingCredentials();
-            return false;
-        }
-        if (pendingEmail == null || pendingPassword == null) {
-            return false;
-        }
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Usar huella dactilar")
-                .setMessage("¿Deseas usar tu huella para iniciar sesión más rápido en este dispositivo?")
-                .setPositiveButton("Sí", (dlg, which) -> {
-                    credentialMgr.saveCredentials(pendingEmail, pendingPassword);
-                    refreshBiometricButtonState();
-                })
-                .setNegativeButton("No", null)
-                .show();
-        dialog.setOnDismissListener(d -> onComplete.run());
-        clearPendingCredentials();
-        return true;
-    }
-
-    private void clearPendingCredentials() {
-        pendingEmail = null;
-        pendingPassword = null;
-    }
-
-    @Override
-    public void onBiometricSuccess() {
-        if (credentialMgr == null) {
-            return;
-        }
-        String[] creds = credentialMgr.getCredentials();
-        if (creds == null) {
-            Toast.makeText(this, "No hay credenciales guardadas", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        mostrarProgressBar(true);
-        mAuth.signInWithEmailAndPassword(creds[0], creds[1])
-                .addOnSuccessListener(task -> {
-                    mostrarProgressBar(false);
-                    FirebaseUser user = mAuth.getCurrentUser();
-                    if (user != null) {
-                        verificarRolYRedirigir(user.getUid());
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    mostrarProgressBar(false);
-                    Toast.makeText(this, "Error autenticando con huella", Toast.LENGTH_SHORT).show();
-                    credentialMgr.clearCredentials();
-                });
-    }
-
-    @Override
-    public void onBiometricError(String error) {
-        Log.w(TAG, "Biometría no disponible: " + error);
-        mostrarLoginNormal();
-        Toast.makeText(this, "Usa tu email y contraseña para continuar", Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onBiometricFailed() {
-        Toast.makeText(this, "Huella no reconocida. Intenta de nuevo.", Toast.LENGTH_SHORT).show();
-    }
-
-    private void refreshBiometricButtonState() {
-        if (btnBiometric == null || biometricMgr == null || credentialMgr == null) {
-            return;
-        }
-        if (credentialMgr.isBiometricEnabled() && biometricMgr.isBiometricAvailable()) {
-            btnBiometric.setVisibility(View.VISIBLE);
-        } else {
-            btnBiometric.setVisibility(View.GONE);
-        }
-    }
-
-    // For legacy callers that still reference the previous helper name.
-    private void updateBiometricButtonVisibility() {
-        refreshBiometricButtonState();
-    }
-
     private void updateFcmTokenForCurrentUser() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
@@ -692,10 +530,8 @@ public class LoginActivity extends AppCompatActivity implements BiometricAuthMan
 
     private void checkAndRequestLocationPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted, request it
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
         } else {
-            // Permission has already been granted
             Log.d(TAG, "ACCESS_FINE_LOCATION permission already granted.");
         }
     }

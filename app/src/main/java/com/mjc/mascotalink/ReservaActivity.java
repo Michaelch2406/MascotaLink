@@ -700,8 +700,45 @@ public class ReservaActivity extends AppCompatActivity {
         btnConfirmarReserva.setEnabled(todosCompletos);
     }
 
-    private void confirmarReserva() {
-        if (!validarDatosReserva()) return;
+    private void mostrarDialogoConfirmacion() {
+        // Calcular costo estimado para el diálogo
+        double horas = duracionMinutos / 60.0;
+        int diasCalculo = 1;
+        if (tipoReserva.equals("SEMANAL")) diasCalculo = 7;
+        else if (tipoReserva.equals("MENSUAL") && fechaSeleccionada != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(fechaSeleccionada);
+            diasCalculo = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+        }
+        double costoEstimado = tarifaPorHora * horas * diasCalculo;
+
+        // Construir mensaje
+        StringBuilder mensaje = new StringBuilder();
+        mensaje.append("Mascota: ").append(mascotaSeleccionada.getNombre()).append("\n");
+        mensaje.append("Fecha: ").append(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaSeleccionada)).append("\n");
+        mensaje.append("Hora: ").append(horarioSeleccionado.getHoraFormateada()).append("\n");
+        mensaje.append("Duración: ").append(String.format(Locale.getDefault(), "%.1f horas", horas)).append("\n");
+        if (diasCalculo > 1) {
+            mensaje.append("Días: ").append(diasCalculo).append("\n");
+        }
+        mensaje.append("Costo Total: $").append(String.format(Locale.US, "%.2f", costoEstimado)).append("\n\n");
+        mensaje.append("Al confirmar, se enviará una solicitud al paseador. El costo final se verificará antes de enviar.");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Confirmar Solicitud")
+                .setMessage(mensaje.toString())
+                .setPositiveButton("Enviar Solicitud", (dialog, which) -> iniciarProcesoConfirmacion())
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void iniciarProcesoConfirmacion() {
+        // Re-validar sesión por seguridad
+        if (mAuth.getCurrentUser() == null) {
+            Toast.makeText(this, "Sesión expirada", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         // Deshabilitar botón para evitar doble click
         btnConfirmarReserva.setEnabled(false);
@@ -741,6 +778,11 @@ public class ReservaActivity extends AppCompatActivity {
                 Toast.makeText(this, "Error verificando tarifa: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 btnConfirmarReserva.setEnabled(true);
             });
+    }
+
+    private void confirmarReserva() {
+        if (!validarDatosReserva()) return;
+        mostrarDialogoConfirmacion();
     }
 
     private void validarDisponibilidadYCrear(double costoTotalReal, double tarifaConfirmada) {
@@ -877,7 +919,33 @@ public class ReservaActivity extends AppCompatActivity {
             Toast.makeText(this, "Error: La tarifa por hora es inválida.", Toast.LENGTH_SHORT).show();
             return false;
         }
-        // --- FIX FIN ---
+
+        // --- Validaciones de Negocio ---
+        Calendar seleccion = Calendar.getInstance();
+        seleccion.setTime(fechaSeleccionada);
+        seleccion.set(Calendar.HOUR_OF_DAY, horarioSeleccionado.getHora());
+        seleccion.set(Calendar.MINUTE, horarioSeleccionado.getMinutos());
+
+        Calendar ahora = Calendar.getInstance();
+        Calendar limiteMaximo = Calendar.getInstance();
+        limiteMaximo.add(Calendar.DAY_OF_YEAR, 30); // Máximo 30 días a futuro
+
+        // 1. Validación de tiempo pasado (mínimo 1 hora de anticipación)
+        Calendar minAnticipacion = Calendar.getInstance();
+        minAnticipacion.add(Calendar.HOUR_OF_DAY, 1);
+        
+        if (seleccion.before(minAnticipacion)) {
+            Toast.makeText(this, "La reserva debe ser con al menos 1 hora de anticipación.", Toast.LENGTH_LONG).show();
+            return false;
+        }
+
+        // 2. Validación de tiempo futuro máximo
+        if (seleccion.after(limiteMaximo)) {
+            Toast.makeText(this, "No se pueden hacer reservas con más de 30 días de anticipación.", Toast.LENGTH_LONG).show();
+            return false;
+        }
+        // ---------------------------------
+
         return true;
     }
 

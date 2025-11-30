@@ -15,7 +15,6 @@ public class CredentialManager {
     private static final String CRED_PREFS = "credential_prefs_encrypted";
     private static final String KEY_EMAIL = "cred_email";
     private static final String KEY_PASSWORD = "cred_password";
-    private static final String KEY_BIOMETRIC_ENABLED = "biometric_enabled";
 
     private final EncryptedSharedPreferences credPrefs;
 
@@ -45,7 +44,6 @@ public class CredentialManager {
             credPrefs.edit()
                     .putString(KEY_EMAIL, email)
                     .putString(KEY_PASSWORD, password)
-                    .putBoolean(KEY_BIOMETRIC_ENABLED, true)
                     .apply();
             Log.d(TAG, "Credenciales guardadas cifradas");
         } catch (Exception e) {
@@ -68,23 +66,12 @@ public class CredentialManager {
         return null;
     }
 
-    public boolean isBiometricEnabled() {
-        if (credPrefs == null) return false;
-        try {
-            return credPrefs.getBoolean(KEY_BIOMETRIC_ENABLED, false);
-        } catch (Exception e) {
-            Log.e(TAG, "Error checking biometric flag", e);
-            return false;
-        }
-    }
-
     public boolean canAutoLogin() {
         if (credPrefs == null) return false;
         try {
-            boolean biometricEnabled = credPrefs.getBoolean(KEY_BIOMETRIC_ENABLED, false);
             String email = credPrefs.getString(KEY_EMAIL, null);
             String password = credPrefs.getString(KEY_PASSWORD, null);
-            return biometricEnabled && email != null && password != null;
+            return email != null && password != null;
         } catch (Exception e) {
             Log.e(TAG, "Error checking auto-login", e);
             return false;
@@ -109,7 +96,6 @@ public class CredentialManager {
             credPrefs.edit()
                     .remove(KEY_EMAIL)
                     .remove(KEY_PASSWORD)
-                    .remove(KEY_BIOMETRIC_ENABLED)
                     .apply();
             Log.d(TAG, "Credenciales eliminadas");
         } catch (Exception e) {

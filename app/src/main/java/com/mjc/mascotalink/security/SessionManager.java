@@ -17,9 +17,7 @@ public class SessionManager {
     private static final String TAG = "SessionManager";
     private static final String SESSION_PREF = "session_prefs";
     private static final String SESSION_TOKEN_KEY = "session_token";
-    private static final String SESSION_EXPIRY_KEY = "session_expiry";
     private static final String SESSION_USER_KEY = "session_user";
-    private static final long SESSION_DURATION_MS = 7200000; // 2 horas
 
     private final Context context;
     private final EncryptedSharedPreferences encryptedSharedPrefs;
@@ -52,14 +50,13 @@ public class SessionManager {
         return encryptedSharedPrefs != null;
     }
 
-    private void persistSession(String token, long expiryTime, String userId) {
+    private void persistSession(String token, String userId) {
         if (!hasPrefs()) {
             return;
         }
 
         encryptedSharedPrefs.edit()
                 .putString(SESSION_TOKEN_KEY, token)
-                .putLong(SESSION_EXPIRY_KEY, expiryTime)
                 .putString(SESSION_USER_KEY, userId)
                 .apply();
     }
@@ -71,7 +68,6 @@ public class SessionManager {
 
         encryptedSharedPrefs.edit()
                 .remove(SESSION_TOKEN_KEY)
-                .remove(SESSION_EXPIRY_KEY)
                 .remove(SESSION_USER_KEY)
                 .apply();
     }
@@ -88,13 +84,11 @@ public class SessionManager {
             return;
         }
 
-        long expiryTime = System.currentTimeMillis() + SESSION_DURATION_MS;
-
         user.getIdToken(false)
                 .addOnSuccessListener(tokenResult -> {
                     String token = tokenResult.getToken();
                     if (token != null) {
-                        persistSession(token, expiryTime, userId);
+                        persistSession(token, userId);
                     } else {
                         Log.w(TAG, "createSession: token result was null");
                     }
@@ -106,13 +100,8 @@ public class SessionManager {
         if (!hasPrefs()) {
             return false;
         }
-
-        long expiryTime = encryptedSharedPrefs.getLong(SESSION_EXPIRY_KEY, 0);
-        boolean valid = System.currentTimeMillis() < expiryTime;
-        if (!valid) {
-            clearStoredSession();
-        }
-        return valid;
+        // Session is valid if the token key exists. Infinite duration.
+        return encryptedSharedPrefs.contains(SESSION_TOKEN_KEY);
     }
 
     public String getSessionToken() {
@@ -129,8 +118,7 @@ public class SessionManager {
 
     public boolean validateAndRefreshToken() {
         if (!isSessionValid()) {
-            clearStoredSession();
-            return false;
+            // Don't clear immediately, check firebase
         }
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -143,8 +131,7 @@ public class SessionManager {
                 .addOnSuccessListener(tokenResult -> {
                     String token = tokenResult.getToken();
                     if (token != null) {
-                        persistSession(token, System.currentTimeMillis() + SESSION_DURATION_MS,
-                                encryptedSharedPrefs.getString(SESSION_USER_KEY, ""));
+                        persistSession(token, encryptedSharedPrefs.getString(SESSION_USER_KEY, ""));
                     }
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "validateAndRefreshToken: failed to refresh", e));
