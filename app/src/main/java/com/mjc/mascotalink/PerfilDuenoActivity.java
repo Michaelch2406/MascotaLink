@@ -246,9 +246,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         });
         
         btnNotificaciones.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Notificaciones", Toast.LENGTH_SHORT).show());
-        btnPrivacidad.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Privacidad", Toast.LENGTH_SHORT).show());
-        btnCentroAyuda.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Centro de Ayuda", Toast.LENGTH_SHORT).show());
-        btnTerminos.setOnClickListener(v -> Toast.makeText(this, "Próximamente: Términos y Condiciones", Toast.LENGTH_SHORT).show());
+        btnPrivacidad.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, PoliticaPrivacidadActivity.class)));
+        btnCentroAyuda.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, CentroAyudaActivity.class)));
+        btnTerminos.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, TerminosCondicionesActivity.class)));
 
         btnCerrarSesion.setOnClickListener(v -> {
             detachDataListeners();
