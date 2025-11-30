@@ -21,8 +21,7 @@ public class GaleriaActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_galeria);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar_galeria);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
 
         ViewPager2 viewPager = findViewById(R.id.view_pager_galeria_fullscreen);
         TabLayout tabLayout = findViewById(R.id.tab_layout_dots_fullscreen);

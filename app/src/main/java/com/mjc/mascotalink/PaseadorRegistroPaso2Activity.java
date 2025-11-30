@@ -34,6 +34,8 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private TextView tvValidationMessages;
     private Uri selfieUri;
     private Uri fotoPerfilUri;
+    private View layoutSelfieEmpty;
+    private View layoutFotoPerfilEmpty;
 
     private FirebaseAuth mAuth;
     private FirebaseStorage storage;
@@ -54,10 +56,13 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         previewSelfie = findViewById(R.id.preview_selfie);
         btnContinuarPaso3 = findViewById(R.id.btn_continuar_paso3);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
-        Button btnEliminarSelfie = findViewById(R.id.btn_eliminar_selfie);
-        Button btnEliminarFotoPerfil = findViewById(R.id.btn_eliminar_foto_perfil);
+        View btnEliminarSelfie = findViewById(R.id.btn_eliminar_selfie);
+        View btnEliminarFotoPerfil = findViewById(R.id.btn_eliminar_foto_perfil);
         Button btnElegirFoto = findViewById(R.id.btn_elegir_foto);
         Button btnTomarFoto = findViewById(R.id.btn_tomar_foto);
+        
+        layoutSelfieEmpty = findViewById(R.id.layout_selfie_empty);
+        layoutFotoPerfilEmpty = findViewById(R.id.layout_foto_perfil_empty);
 
         // Listeners
         findViewById(R.id.img_selfie_ilustracion).setOnClickListener(v -> activarCamaraSelfie());
@@ -218,6 +223,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private void mostrarPreviewSelfie(Uri uri) {
         try {
             Glide.with(this).load(uri).into(previewSelfie);
+            layoutSelfieEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
         } catch (Exception e) {
             Toast.makeText(this, "⚠️ No se pudo mostrar la preview de la selfie.", Toast.LENGTH_SHORT).show();
@@ -227,6 +233,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private void mostrarPreviewFotoPerfil(Uri uri) {
         try {
             Glide.with(this).load(uri).into(previewFotoPerfil);
+            layoutFotoPerfilEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
         } catch (Exception e) {
             Toast.makeText(this, "⚠️ No se pudo mostrar la preview de la foto.", Toast.LENGTH_SHORT).show();
@@ -235,6 +242,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private void eliminarSelfie() {
         selfieUri = null;
+        layoutSelfieEmpty.setVisibility(View.VISIBLE);
         findViewById(R.id.container_preview_selfie).setVisibility(View.GONE);
         saveState();
         verificarCompletitudPaso2();
@@ -242,6 +250,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private void eliminarFotoPerfil() {
         fotoPerfilUri = null;
+        layoutFotoPerfilEmpty.setVisibility(View.VISIBLE);
         findViewById(R.id.container_preview_foto_perfil).setVisibility(View.GONE);
         saveState();
         verificarCompletitudPaso2();

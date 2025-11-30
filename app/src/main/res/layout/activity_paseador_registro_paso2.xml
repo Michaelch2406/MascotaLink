@@ -29,7 +29,7 @@
             android:orientation="vertical"
             android:paddingTop="8dp">
 
-            <!-- Sección Selfie -->
+            <!-- ================= SECCIÓN SELFIE ================= -->
             <TextView
                 android:id="@+id/tv_selfie_title"
                 android:layout_width="wrap_content"
@@ -39,144 +39,197 @@
                 android:textColor="#111827"
                 android:text="Toma una selfie de verificación"/>
 
-            <TextView
-                android:id="@+id/tv_selfie_desc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_marginTop="6dp"
-                android:textColor="#6B7280"
-                android:text="Para completar la verificación, toma una selfie en tiempo real. Asegúrate de que tu rostro sea visible y que la foto sea clara."/>
-
-            <com.google.android.material.card.MaterialCardView
+            <!-- Estado Vacío: Instrucciones e Ilustración -->
+            <LinearLayout
+                android:id="@+id/layout_selfie_empty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardUseCompatPadding="true"
-                android:backgroundTint="#FFFFFF">
+                android:orientation="vertical"
+                android:visibility="visible">
 
-                <ImageView
-                    android:id="@+id/img_selfie_ilustracion"
+                <TextView
+                    android:id="@+id/tv_selfie_desc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/TextAppearance.Mascota.BodyMuted"
+                    android:layout_marginTop="6dp"
+                    android:textColor="#6B7280"
+                    android:text="Para completar la verificación, toma una selfie en tiempo real. Asegúrate de que tu rostro sea visible y que la foto sea clara."/>
+
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:src="@drawable/selfie"
-                    android:adjustViewBounds="true"
-                    android:contentDescription="Ilustración selfie"
-                    android:clickable="true"
-                    android:focusable="true"/>
-            </com.google.android.material.card.MaterialCardView>
+                    android:layout_marginTop="12dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardUseCompatPadding="true"
+                    android:backgroundTint="#FFFFFF">
+
+                    <ImageView
+                        android:id="@+id/img_selfie_ilustracion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:src="@drawable/selfie"
+                        android:adjustViewBounds="true"
+                        android:contentDescription="Ilustración selfie"
+                        android:clickable="true"
+                        android:focusable="true"/>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
             
-            <!-- Preview de selfie capturada -->
+            <!-- Estado Lleno: Preview de selfie capturada -->
             <RelativeLayout
                 android:id="@+id/container_preview_selfie"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 android:visibility="gone">
                 
-                <ImageView
-                    android:id="@+id/preview_selfie"
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:scaleType="centerCrop"
-                    android:background="#E5EDF1"
-                    android:contentDescription="Preview selfie capturada"/>
+                    android:layout_height="300dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
                     
-                <Button
+                    <ImageView
+                        android:id="@+id/preview_selfie"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:background="#E5EDF1"
+                        android:contentDescription="Preview selfie capturada"/>
+                </com.google.android.material.card.MaterialCardView>
+                    
+                <FrameLayout
                     android:id="@+id/btn_eliminar_selfie"
-                    android:layout_width="wrap_content"
+                    android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_alignParentEnd="true"
-                    android:layout_margin="8dp"
-                    android:text="Eliminar"
-                    android:textSize="12sp"
-                    android:textAllCaps="false"
-                    android:backgroundTint="#DC2626"
-                    android:textColor="#FFFFFF"/>
+                    android:layout_margin="12dp"
+                    android:elevation="4dp"
+                    android:background="@drawable/bg_circle_soft"
+                    android:backgroundTint="#CCFFFFFF">
+                    
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_close"
+                        app:tint="@color/red_error" />
+                </FrameLayout>
             </RelativeLayout>
 
-            <!-- Sección Foto de perfil -->
+            <!-- ================= SECCIÓN FOTO DE PERFIL ================= -->
             <TextView
                 android:id="@+id/tv_fotoperfil_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 style="@style/TextAppearance.Mascota.CardTitle"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
                 android:textColor="#111827"
                 android:text="Foto de perfil"/>
 
-            <TextView
-                android:id="@+id/tv_fotoperfil_desc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_marginTop="6dp"
-                android:textColor="#6B7280"
-                android:text="Elige una foto de perfil clara para que las demás personas puedan reconocerte."/>
-
+            <!-- Estado Vacío: Instrucciones y Botones -->
             <LinearLayout
+                android:id="@+id/layout_foto_perfil_empty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_horizontal"
-                android:layout_marginTop="12dp">
+                android:orientation="vertical"
+                android:visibility="visible">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_elegir_foto"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Elegir foto"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:textAllCaps="false"
-                    android:textStyle="bold"
-                    android:textColor="#111827"
-                    app:strokeColor="#CBD5E1"
-                    app:strokeWidth="1dp"/>
+                <TextView
+                    android:id="@+id/tv_fotoperfil_desc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    style="@style/TextAppearance.Mascota.BodyMuted"
+                    android:layout_marginTop="6dp"
+                    android:textColor="#6B7280"
+                    android:text="Elige una foto de perfil clara para que las demás personas puedan reconocerte."/>
 
-                <View
-                    android:layout_width="12dp"
-                    android:layout_height="0dp"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_horizontal"
+                    android:layout_marginTop="12dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_tomar_foto"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Tomar foto"
-                    style="@style/Widget.Mascota.PrimaryPillButton"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_elegir_foto"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Galería"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        app:icon="@android:drawable/ic_menu_gallery"
+                        app:iconTint="#111827"
+                        android:textAllCaps="false"
+                        android:textStyle="bold"
+                        android:textColor="#111827"
+                        app:cornerRadius="12dp"
+                        app:strokeColor="#CBD5E1"
+                        app:strokeWidth="1dp"/>
 
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="0dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_tomar_foto"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Cámara"
+                        app:icon="@android:drawable/ic_menu_camera"
+                        style="@style/Widget.Mascota.PrimaryPillButton"
+                        app:cornerRadius="12dp"/>
+
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Previsualizaciones opcionales -->
+            <!-- Estado Lleno: Preview Foto Perfil -->
             <RelativeLayout
                 android:id="@+id/container_preview_foto_perfil"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 android:visibility="gone">
                 
-                <ImageView
-                    android:id="@+id/preview_foto_perfil"
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:scaleType="centerCrop"
-                    android:background="#E5EDF1"
-                    android:contentDescription="Preview foto de perfil"/>
+                    android:layout_height="300dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp">
+                
+                    <ImageView
+                        android:id="@+id/preview_foto_perfil"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:background="#E5EDF1"
+                        android:contentDescription="Preview foto de perfil"/>
+                </com.google.android.material.card.MaterialCardView>
                     
-                <Button
+                <FrameLayout
                     android:id="@+id/btn_eliminar_foto_perfil"
-                    android:layout_width="wrap_content"
+                    android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_alignParentEnd="true"
-                    android:layout_margin="8dp"
-                    android:text="Eliminar"
-                    android:textSize="12sp"
-                    android:textAllCaps="false"
-                    android:backgroundTint="#DC2626"
-                    android:textColor="#FFFFFF"/>
+                    android:layout_margin="12dp"
+                    android:elevation="4dp"
+                    android:background="@drawable/bg_circle_soft"
+                    android:backgroundTint="#CCFFFFFF">
+                    
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_close"
+                        app:tint="@color/red_error" />
+                </FrameLayout>
             </RelativeLayout>
+            
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="80dp"/>
 
         </LinearLayout>
     </ScrollView>
@@ -187,6 +240,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:padding="16dp"
+        android:background="#F7FAFC"
         android:orientation="vertical">
         
         <!-- Mensajes de validación -->
@@ -200,15 +254,17 @@
             android:visibility="gone"
             android:text="Faltan campos por completar"/>
 
-        <!-- Botón para continuar al paso 3 (se muestra solo cuando ambas fotos están completas) -->
+        <!-- Botón para continuar al paso 3 -->
         <Button
             android:id="@+id/btn_continuar_paso3"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="56dp"
             android:text="Continuar al Paso 3"
             android:visibility="gone"
             android:textAllCaps="false"
+            android:textSize="16sp"
             android:textStyle="bold"
+            app:cornerRadius="16dp"
             style="@style/Widget.Mascota.PrimaryButton"/>
 
     </LinearLayout>

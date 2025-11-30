@@ -73,42 +73,53 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="Video de presentación"/>
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Graba un video corto (30–60 segundos) para que los dueños te conozcan mejor."/>
+            
+            <!-- Estado Vacío: Descripción y Botones -->
             <LinearLayout
+                android:id="@+id/layout_video_empty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:visibility="visible">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_subir_video"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
+                <TextView
+                    style="@style/TextAppearance.Mascota.BodyMuted"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Subir video"
-                    app:icon="@android:drawable/ic_menu_upload" />
-
-                <View
-                    android:layout_width="16dp"
-                    android:layout_height="0dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_grabar_video"
-                    style="@style/Widget.Mascota.PrimaryPillButton"
-                    android:layout_width="0dp"
+                    android:layout_marginTop="6dp"
+                    android:text="Graba un video corto (30–60 segundos) para que los dueños te conozcan mejor."/>
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Grabar video"
-                    app:icon="@android:drawable/ic_menu_camera" />
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
 
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_subir_video"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Subir video"
+                        app:icon="@android:drawable/ic_menu_upload" />
+
+                    <View
+                        android:layout_width="16dp"
+                        android:layout_height="0dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_grabar_video"
+                        style="@style/Widget.Mascota.PrimaryPillButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Grabar video"
+                        app:icon="@android:drawable/ic_menu_camera" />
+
+                </LinearLayout>
             </LinearLayout>
 
+            <!-- Estado Lleno: Preview de Video -->
             <FrameLayout
                 android:id="@+id/video_preview_container"
                 android:layout_width="match_parent"
@@ -130,17 +141,22 @@
                     android:src="@android:drawable/ic_media_play"
                     app:tint="@android:color/white"/>
 
-                <Button
+                <FrameLayout
                     android:id="@+id/btn_eliminar_video"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
-                    android:text="Eliminar"
-                    android:textSize="12sp"
-                    android:textAllCaps="false"
-                    android:backgroundTint="#DC2626"
-                    android:textColor="#FFFFFF"/>
+                    android:background="@drawable/bg_circle_soft"
+                    android:backgroundTint="#CCFFFFFF">
+                    
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_close"
+                        app:tint="@color/red_error" />
+                </FrameLayout>
 
             </FrameLayout>
 
@@ -226,7 +242,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:padding="12dp"
-                android:background="#FFFFFF"
+                android:background="@android:color/white"
                 android:layout_marginTop="8dp"
                 android:clickable="true"
                 android:focusable="true"
@@ -275,7 +291,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:padding="12dp"
-                android:background="#FFFFFF"
+                android:background="@android:color/white"
                 android:layout_marginTop="8dp"
                 android:clickable="true"
                 android:focusable="true"

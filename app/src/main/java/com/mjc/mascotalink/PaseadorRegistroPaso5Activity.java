@@ -66,6 +66,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     private TextView tvValidationMessages;
     private ImageView ivPagoCheck, ivDisponibilidadCheck, ivPerrosCheck, ivZonasCheck;
     private TextInputEditText etPrecioHora;
+    private View layoutVideoEmpty;
 
     private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
@@ -116,6 +117,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         ivPerrosCheck = findViewById(R.id.iv_perros_check);
         ivZonasCheck = findViewById(R.id.iv_zonas_check);
         etPrecioHora = findViewById(R.id.et_precio_hora);
+        layoutVideoEmpty = findViewById(R.id.layout_video_empty);
     }
 
     private void setupListeners() {
@@ -135,7 +137,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
             btnSubirVideo.setOnClickListener(v -> subirVideoPresentacion());
         }
         
-        Button btnEliminarVideo = findViewById(R.id.btn_eliminar_video);
+        View btnEliminarVideo = findViewById(R.id.btn_eliminar_video);
         if (btnEliminarVideo != null) {
             btnEliminarVideo.setOnClickListener(v -> eliminarVideo());
         }
@@ -232,6 +234,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
         editor.remove("videoPresentacionUri");
         editor.apply();
+        layoutVideoEmpty.setVisibility(View.VISIBLE);
         findViewById(R.id.video_preview_container).setVisibility(View.GONE);
         verificarCompletitudTotal();
     }
@@ -265,6 +268,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         }
 
         container.setVisibility(View.VISIBLE);
+        layoutVideoEmpty.setVisibility(View.GONE);
     }
 
     private void verificarCompletitudTotal() {
