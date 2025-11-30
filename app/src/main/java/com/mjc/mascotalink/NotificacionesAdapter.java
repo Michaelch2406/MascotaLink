@@ -85,19 +85,19 @@ public class NotificacionesAdapter extends RecyclerView.Adapter<NotificacionesAd
                         iconTint = R.color.blue_primary;
                         break;
                     case "MENSAJE":
-                        iconRes = R.drawable.ic_chat;
-                        iconTint = R.color.green;
+                        iconRes = R.drawable.ic_messages;
+                        iconTint = R.color.green_success;
                         break;
                     case "PASEO":
                         iconRes = R.drawable.ic_walk;
-                        iconTint = R.color.orange;
+                        iconTint = R.color.orange_500;
                         break;
                     case "PAGO":
                         iconRes = R.drawable.ic_payment;
-                        iconTint = R.color.green;
+                        iconTint = R.color.green_success;
                         break;
                     case "SISTEMA":
-                        iconRes = R.drawable.ic_info;
+                        iconRes = R.drawable.ic_notifications;
                         iconTint = R.color.text_secondary;
                         break;
                 }

@@ -1,8 +1,10 @@
 package com.mjc.mascotalink;
 
+import android.app.Dialog;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -11,8 +13,11 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.button.MaterialButton;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -32,8 +37,10 @@ public class NotificacionesActivity extends AppCompatActivity implements Notific
     private LinearLayout layoutEmptyState;
     private ProgressBar progressBar;
     private TextView tvMarcarTodasLeidas;
+    private ImageView ivConfiguracion;
 
     private NotificacionesAdapter adapter;
+    private com.mjc.mascotalink.utils.NotificacionesPreferences notifPrefs;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private String currentUserId;
@@ -46,6 +53,7 @@ public class NotificacionesActivity extends AppCompatActivity implements Notific
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        notifPrefs = new com.mjc.mascotalink.utils.NotificacionesPreferences(this);
 
         if (mAuth.getCurrentUser() != null) {
             currentUserId = mAuth.getCurrentUser().getUid();
@@ -68,8 +76,10 @@ public class NotificacionesActivity extends AppCompatActivity implements Notific
         layoutEmptyState = findViewById(R.id.layout_empty_state);
         progressBar = findViewById(R.id.progress_bar);
         tvMarcarTodasLeidas = findViewById(R.id.tv_marcar_todas_leidas);
+        ivConfiguracion = findViewById(R.id.iv_configuracion);
 
         tvMarcarTodasLeidas.setOnClickListener(v -> marcarTodasComoLeidas());
+        ivConfiguracion.setOnClickListener(v -> mostrarDialogoConfiguracion());
     }
 
     private void setupRecyclerView() {
@@ -179,6 +189,45 @@ public class NotificacionesActivity extends AppCompatActivity implements Notific
     private void showEmptyState(boolean show) {
         layoutEmptyState.setVisibility(show ? View.VISIBLE : View.GONE);
         rvNotificaciones.setVisibility(show ? View.GONE : View.VISIBLE);
+    }
+
+    private void mostrarDialogoConfiguracion() {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_configuracion_notificaciones);
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        // Views del diálogo
+        SwitchCompat switchReservas = dialog.findViewById(R.id.switch_reservas);
+        SwitchCompat switchMensajes = dialog.findViewById(R.id.switch_mensajes);
+        SwitchCompat switchPaseos = dialog.findViewById(R.id.switch_paseos);
+        SwitchCompat switchPagos = dialog.findViewById(R.id.switch_pagos);
+        MaterialButton btnCancelar = dialog.findViewById(R.id.btn_cancelar);
+        MaterialButton btnGuardar = dialog.findViewById(R.id.btn_guardar);
+
+        // Cargar preferencias actuales
+        notifPrefs.loadFromFirestore(() -> {
+            switchReservas.setChecked(notifPrefs.isReservasEnabled());
+            switchMensajes.setChecked(notifPrefs.isMensajesEnabled());
+            switchPaseos.setChecked(notifPrefs.isPaseosEnabled());
+            switchPagos.setChecked(notifPrefs.isPagosEnabled());
+        });
+
+        // Botón cancelar
+        btnCancelar.setOnClickListener(v -> dialog.dismiss());
+
+        // Botón guardar
+        btnGuardar.setOnClickListener(v -> {
+            notifPrefs.setReservasEnabled(switchReservas.isChecked());
+            notifPrefs.setMensajesEnabled(switchMensajes.isChecked());
+            notifPrefs.setPaseosEnabled(switchPaseos.isChecked());
+            notifPrefs.setPagosEnabled(switchPagos.isChecked());
+
+            Toast.makeText(this, "Preferencias guardadas", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+
+        dialog.show();
     }
 
     @Override

@@ -773,17 +773,32 @@
                             app:drawableStartCompat="@drawable/ic_walk"
                             app:drawableTint="@color/gray_dark" />
 
-                        <TextView
+                        <LinearLayout
                             android:id="@+id/btn_notificaciones"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
                             android:background="?attr/selectableItemBackground"
-                            android:drawablePadding="12dp"
-                            android:paddingVertical="12dp"
-                            android:text="Notificaciones"
-                            android:textColor="@color/gray_dark"
-                            app:drawableStartCompat="@drawable/ic_notifications"
-                            app:drawableTint="@color/gray_dark" />
+                            android:paddingVertical="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:drawablePadding="12dp"
+                                android:text="Notificaciones"
+                                android:textColor="@color/gray_dark"
+                                app:drawableStartCompat="@drawable/ic_notifications"
+                                app:drawableTint="@color/gray_dark" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switch_notificaciones"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/btn_metodos_pago"

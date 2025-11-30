@@ -37,6 +37,18 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
+        <!-- Settings button -->
+        <ImageView
+            android:id="@+id/iv_configuracion"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_settings"
+            android:contentDescription="Configuración"
+            app:tint="@color/text_secondary"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="4dp" />
+
         <!-- Mark all as read button -->
         <TextView
             android:id="@+id/tv_marcar_todas_leidas"

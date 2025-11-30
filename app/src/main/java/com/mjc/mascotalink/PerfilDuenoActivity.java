@@ -75,7 +75,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private LinearLayout llAcercaDe, llResenas, ajustes_section, soporte_section;
     private TabLayout tabLayout;
     private Button btnCerrarSesion;
-    private TextView btnFavoritos, btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos, btnMisPaseos;
+    private TextView btnFavoritos, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos, btnMisPaseos;
+    private View btnNotificaciones;
+    private androidx.appcompat.widget.SwitchCompat switchNotificaciones;
     private TextView tvEmailDueno, tvTelefonoDueno;
     private ImageView btnCopyEmail, btnCopyTelefono;
     private View skeletonLayout;
@@ -200,6 +202,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnMisPaseos = findViewById(R.id.btn_mis_paseos);
         btnFavoritos = findViewById(R.id.btn_favoritos);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
+        switchNotificaciones = findViewById(R.id.switch_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         
         soporte_section = findViewById(R.id.soporte_section);
@@ -246,6 +249,21 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         });
         
         btnNotificaciones.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, NotificacionesActivity.class)));
+
+        // Configurar switch de notificaciones
+        com.mjc.mascotalink.utils.NotificacionesPreferences notifPrefs = new com.mjc.mascotalink.utils.NotificacionesPreferences(this);
+        notifPrefs.loadFromFirestore(() -> {
+            switchNotificaciones.setChecked(notifPrefs.isNotificacionesEnabled());
+        });
+
+        switchNotificaciones.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (buttonView.isPressed()) { // Solo si el cambio fue por el usuario
+                notifPrefs.setNotificacionesEnabled(isChecked);
+                String mensaje = isChecked ? "Notificaciones activadas" : "Notificaciones desactivadas";
+                Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+            }
+        });
+
         btnPrivacidad.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, PoliticaPrivacidadActivity.class)));
         btnCentroAyuda.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, CentroAyudaActivity.class)));
         btnTerminos.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, TerminosCondicionesActivity.class)));

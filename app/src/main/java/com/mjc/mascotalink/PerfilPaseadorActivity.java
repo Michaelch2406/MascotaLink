@@ -120,6 +120,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private GoogleMap googleMap;
     private List<Circle> mapCircles = new ArrayList<>();
     private View btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos, btnMisPaseos;
+    private androidx.appcompat.widget.SwitchCompat switchNotificaciones;
     private String metodoPagoId;
     private View skeletonLayout;
     private NestedScrollView scrollViewContent;
@@ -275,6 +276,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
         btnMisPaseos = findViewById(R.id.btn_mis_paseos);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
+        switchNotificaciones = findViewById(R.id.switch_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
         btnCentroAyuda = findViewById(R.id.btn_centro_ayuda);
@@ -432,6 +434,21 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
 
         btnNotificaciones.setOnClickListener(v -> startActivity(new Intent(PerfilPaseadorActivity.this, NotificacionesActivity.class)));
+
+        // Configurar switch de notificaciones
+        com.mjc.mascotalink.utils.NotificacionesPreferences notifPrefs = new com.mjc.mascotalink.utils.NotificacionesPreferences(this);
+        notifPrefs.loadFromFirestore(() -> {
+            switchNotificaciones.setChecked(notifPrefs.isNotificacionesEnabled());
+        });
+
+        switchNotificaciones.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (buttonView.isPressed()) { // Solo si el cambio fue por el usuario
+                notifPrefs.setNotificacionesEnabled(isChecked);
+                String mensaje = isChecked ? "Notificaciones activadas" : "Notificaciones desactivadas";
+                Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+            }
+        });
+
         btnMetodosPago.setOnClickListener(v -> {
              Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
              if (metodoPagoId != null && !metodoPagoId.isEmpty()) {
