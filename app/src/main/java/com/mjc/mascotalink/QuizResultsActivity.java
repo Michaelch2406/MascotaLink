@@ -36,11 +36,12 @@ public class QuizResultsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz_results);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
 
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
+        
+        ImageView ivResultIcon = findViewById(R.id.iv_result_icon);
         TextView tvResultStatus = findViewById(R.id.tv_result_status);
         TextView tvResultScore = findViewById(R.id.tv_result_score);
         TextView tvResultMessage = findViewById(R.id.tv_result_message);
@@ -53,7 +54,6 @@ public class QuizResultsActivity extends AppCompatActivity {
         int maxScore = getIntent().getIntExtra("maxScore", 18);
         ArrayList<Integer> incorrectIndices = getIntent().getIntegerArrayListExtra("incorrectIndices");
 
-        // Guardar el estado de aprobación en SharedPreferences para que el Paso 4 lo sepa
         getSharedPreferences("WizardPaseador", MODE_PRIVATE).edit()
             .putBoolean("quiz_aprobado", passed)
             .apply();
@@ -61,13 +61,17 @@ public class QuizResultsActivity extends AppCompatActivity {
         tvResultScore.setText(String.format("Tu puntaje: %d de %d", totalScore, maxScore));
 
         if (passed) {
+            ivResultIcon.setImageResource(R.drawable.ic_check_circle);
+            ivResultIcon.setColorFilter(ContextCompat.getColor(this, R.color.green_success));
             tvResultStatus.setText("¡Aprobado!");
             tvResultStatus.setTextColor(ContextCompat.getColor(this, R.color.green_success));
             tvResultMessage.setText("¡Felicidades! Has demostrado tener los conocimientos necesarios para ser un excelente paseador.");
             btnContinue.setText("Continuar con el Registro");
         } else {
+            ivResultIcon.setImageResource(R.drawable.ic_close); // Ensure ic_close exists or use android standard
+            ivResultIcon.setColorFilter(ContextCompat.getColor(this, R.color.red_error));
             tvResultStatus.setText("No Aprobado");
-            tvResultStatus.setTextColor(ContextCompat.getColor(this, R.color.error_red));
+            tvResultStatus.setTextColor(ContextCompat.getColor(this, R.color.red_error));
             tvResultMessage.setText("Necesitas repasar algunos conceptos clave. Revisa tus respuestas incorrectas a continuación.");
             btnContinue.setText("Volver a Intentar");
         }

@@ -4,10 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardElevation="2dp"
-    app:cardCornerRadius="8dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp">
+    app:cardElevation="0dp"
+    app:cardCornerRadius="16dp"
+    app:strokeColor="#E5E7EB"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/white"
+    android:layout_marginBottom="12dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,35 +19,39 @@
 
         <TextView
             android:id="@+id/tv_feedback_question"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:text="Cuando un perro camina con la cola muy baja y orejas hacia atrás, ¿qué indica esto con mayor probabilidad?"
+            tools:text="¿Pregunta de ejemplo?"
+            android:textSize="16sp"
+            android:textColor="@color/black"
             android:textStyle="bold"/>
 
         <TextView
             android:id="@+id/tv_feedback_your_answer"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:text="Tu respuesta: Está cómodo y jugando"
-            android:textColor="#D32F2F"
+            tools:text="Tu respuesta: Incorrecta"
+            android:textSize="14sp"
+            android:textColor="@color/red_error"
             android:layout_marginTop="8dp"/>
 
         <TextView
             android:id="@+id/tv_feedback_correct_answer"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:text="Respuesta correcta: Miedo o estrés"
-            android:textColor="#388E3C"
+            tools:text="Respuesta correcta: Correcta"
+            android:textSize="14sp"
+            android:textColor="@color/green_success"
             android:layout_marginTop="4dp"/>
 
         <TextView
             android:id="@+id/tv_feedback_explanation"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#F1F5F9"
-            android:padding="8dp"
-            tools:text="Explicación: Cola baja + orejas atrás suelen indicate miedo/ansiedad; observa el conjunto de señales."
-            android:layout_marginTop="12dp"/>
+            tools:text="Explicación del concepto."
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="8dp"/>
 
     </LinearLayout>
 

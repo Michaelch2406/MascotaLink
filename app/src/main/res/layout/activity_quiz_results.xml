@@ -1,44 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC"
+    android:background="#F9FAFB"
+    android:orientation="vertical"
     tools:context=".QuizResultsActivity">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <!-- Header / Toolbar -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        app:title="Resultados del Cuestionario"
-        app:titleTextColor="@color/black"
-        android:background="@color/white"/>
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="20dp"
+        android:background="@android:color/transparent">
 
-    <ScrollView
+        <ImageView
+            android:id="@+id/iv_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_icon_container"
+            android:contentDescription="Atrás"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/black" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Resultados"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- Spacer for centering -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:layout_above="@+id/bottom_bar">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="20dp">
 
+            <!-- Result Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="24dp"
                 app:cardElevation="4dp"
-                app:cardCornerRadius="8dp">
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp"
+                    android:padding="32dp"
                     android:gravity="center">
+
+                    <!-- Status Icon (Dynamic) -->
+                    <ImageView
+                        android:id="@+id/iv_result_icon"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@color/green_success"
+                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:id="@+id/tv_result_status"
@@ -47,35 +89,42 @@
                         tools:text="¡Aprobado!"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        tools:textColor="#4CAF50"/>
+                        tools:textColor="#4CAF50"
+                        android:layout_marginBottom="8dp"/>
 
                     <TextView
                         android:id="@+id/tv_result_score"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        tools:text="Tu puntaje: 16 de 18"
-                        android:textSize="18sp"
-                        android:layout_marginTop="8dp"/>
+                        tools:text="16 de 18 aciertos"
+                        android:textSize="16sp"
+                        android:textColor="@color/text_secondary"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:id="@+id/tv_result_message"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAlignment="center"
-                        tools:text="¡Felicidades! Has demostrado tener los conocimientos necesarios."
-                        android:layout_marginTop="16dp"/>
+                        tools:text="¡Felicidades! Has demostrado tener los conocimientos necesarios para ser un excelente paseador."
+                        android:textSize="14sp"
+                        android:textColor="@color/gray_dark"
+                        android:lineSpacingMultiplier="1.2"/>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Feedback Section -->
             <TextView
                 android:id="@+id/tv_feedback_header"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Revisión de respuestas incorrectas"
+                android:text="Respuestas Incorrectas"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginTop="24dp"
+                android:textColor="@color/black"
+                android:layout_marginBottom="16dp"
                 android:visibility="gone"/>
 
             <LinearLayout
@@ -83,25 +132,30 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="8dp"/>
+                android:visibility="gone"/>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
+    <!-- Bottom Bar -->
     <LinearLayout
         android:id="@+id/bottom_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:padding="16dp"
-        android:background="@color/white">
+        android:padding="20dp"
+        android:background="@color/white"
+        android:elevation="8dp">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_continue"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Continuar con el Registro"
-            style="@style/Widget.Mascota.PrimaryButton"/>
+            android:layout_height="56dp"
+            android:text="Continuar"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/white"
+            app:cornerRadius="16dp"
+            app:elevation="4dp"/>
     </LinearLayout>
 
-</RelativeLayout>
+</LinearLayout>
