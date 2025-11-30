@@ -325,9 +325,20 @@ public class SelfieActivity extends AppCompatActivity {
             captureButton.setEnabled(overallReady);
             statusText.setText(uiMessage);
             int faceColor = ContextCompat.getColor(this,
-                    overallReady ? R.color.green_success : (faceReady ? R.color.colorPrimary : R.color.error_red));
-            statusText.setTextColor(faceColor);
-            pulseBadge.setVisibility(overallReady ? View.INVISIBLE : View.VISIBLE);
+                    overallReady ? R.color.green_success : (faceReady ? R.color.blue_primary : R.color.red_error));
+            
+            // Mantener texto blanco para contraste, colorear el badge
+            statusText.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            if (pulseBadge.getBackground() != null) {
+                pulseBadge.getBackground().setTint(faceColor);
+            }
+
+            // Actualizar borde del botón de captura
+            captureButton.setStrokeColor(android.content.res.ColorStateList.valueOf(
+                    overallReady ? faceColor : ContextCompat.getColor(this, R.color.gray_light)
+            ));
+
+            pulseBadge.setVisibility(overallReady ? View.VISIBLE : View.VISIBLE); // Siempre visible para indicar estado
             overlayView.setReady(overallReady);
             overlayView.setProgress(overlayProgress);
             challengeStatus.setText(challengeMsg);

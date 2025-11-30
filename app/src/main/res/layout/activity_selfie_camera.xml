@@ -3,182 +3,70 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black">
+    android:background="@color/black">
 
+    <!-- Camera Preview -->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:keepScreenOn="true"
-        app:implementationMode="performance"
-        app:scaleType="fitCenter"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:scaleType="fillCenter" />
 
+    <!-- Overlay View -->
     <com.mjc.mascotalink.ui.camera.OverlayView
         android:id="@+id/overlayView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/headerContainer"
-        android:layout_width="0dp"
+    <!-- Header (Close Button) -->
+    <FrameLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingStart="24dp"
-        android:paddingTop="20dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="12dp"
-        android:background="#32000000"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:id="@+id/tvTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:text="@string/selfie_title"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btnClose" />
-
-        <TextView
-            android:id="@+id/tvSubtitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:text="@string/selfie_subtitle"
-            android:textColor="@android:color/white"
-            android:textSize="14sp"
-            app:layout_constraintTop_toBottomOf="@id/tvTitle"
-            app:layout_constraintStart_toStartOf="@id/tvTitle"
-            app:layout_constraintEnd_toStartOf="@+id/btnClose" />
+        android:padding="16dp"
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
             android:id="@+id/btnClose"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@android:color/transparent"
+            android:background="@drawable/bg_circle_soft"
+            android:backgroundTint="#80000000"
             android:contentDescription="@string/selfie_close"
             android:padding="8dp"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            app:tint="@android:color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            android:src="@drawable/ic_close"
+            app:tint="@color/white" />
+            
+    </FrameLayout>
 
-    <LinearLayout
-        android:id="@+id/challengeContainer"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bg_panel_round"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="14dp"
-        app:layout_constraintBottom_toTopOf="@+id/statusContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageView
-            android:id="@+id/imgChallenge"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:contentDescription="@string/selfie_title"
-            android:padding="2dp"
-            android:src="@android:drawable/ic_menu_recent_history"
-            app:tint="@color/green_accent" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tvChallengeStep"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/gray_light"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/tvChallengeTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/selfie_challenge_smile_title"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvChallengeHint"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="@string/selfie_challenge_smile_hint"
-                android:textColor="@android:color/white"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tvChallengeStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/gray_light"
-                android:textSize="13sp" />
-
-            <ProgressBar
-                android:id="@+id/progressChallenge"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="6dp"
-                android:layout_marginTop="6dp"
-                android:max="100"
-                android:progress="0"
-                android:progressTint="@color/green_accent"
-                android:indeterminate="false"
-                android:backgroundTint="@color/gray_disabled" />
-        </LinearLayout>
-    </LinearLayout>
-
+    <!-- Status Chip -->
     <LinearLayout
         android:id="@+id/statusContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="80dp"
         android:background="@drawable/bg_status_chip"
+        android:backgroundTint="#80000000"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="14dp"
-        android:paddingTop="10dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="10dp"
-        app:layout_constraintTop_toBottomOf="@+id/headerContainer"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <View
             android:id="@+id/badgePulse"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:layout_marginEnd="10dp"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
             android:background="@drawable/bg_badge_pulse" />
 
         <TextView
@@ -186,38 +74,121 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/selfie_status_position"
-            android:textColor="@android:color/white"
-            android:textSize="14sp" />
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvTips"
-        android:layout_width="0dp"
+    <!-- Challenge Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/challengeContainer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="12dp"
-        android:text="@string/selfie_tips"
-        android:textColor="@color/gray_light"
-        android:textSize="12sp"
-        app:layout_constraintBottom_toTopOf="@+id/btnCapture"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="24dp"
+        app:cardBackgroundColor="#CC000000"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/captureContainer">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCapture"
-        style="@style/Widget.MaterialComponents.Button"
-        android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/imgChallenge"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_camera"
+                    app:tint="@color/green_accent" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvChallengeStep"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Paso 1 de 2"
+                        android:textColor="@color/gray_light"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvChallengeTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/selfie_challenge_smile_title"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvChallengeHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/selfie_challenge_smile_hint"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvChallengeStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Detectando..."
+                android:textColor="@color/green_accent"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <ProgressBar
+                android:id="@+id/progressChallenge"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="12dp"
+                android:progress="0"
+                android:progressDrawable="@drawable/bg_status_chip" 
+                android:progressTint="@color/green_accent" />
+                <!-- Note: progressDrawable custom needed for rounded corners if desired -->
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Capture Button Container -->
+    <FrameLayout
+        android:id="@+id/captureContainer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="28dp"
-        android:enabled="false"
-        android:text="@string/selfie_button_capture"
-        android:textAllCaps="false"
-        android:textSize="16sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_marginBottom="32dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCapture"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_circle_soft"
+            android:enabled="false"
+            app:backgroundTint="@color/white"
+            app:cornerRadius="36dp"
+            app:strokeColor="@color/gray_light"
+            app:strokeWidth="4dp" />
+            
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
