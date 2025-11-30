@@ -44,240 +44,262 @@
 
     </LinearLayout>
 
-    <androidx.core.widget.NestedScrollView
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="match_parent">
 
-        <LinearLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingBottom="20dp">
+            android:layout_height="match_parent"
+            android:fillViewport="true">
 
-            <!-- Map Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="320dp"
-                android:layout_marginBottom="20dp"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <fragment
-                        android:id="@+id/map"
-                        android:name="com.google.android.gms.maps.SupportMapFragment"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
-
-                    <!-- My Location Button -->
-                    <ImageView
-                        android:id="@+id/iv_my_location"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_alignParentTop="true"
-                        android:layout_margin="16dp"
-                        android:background="@drawable/bg_circle_soft"
-                        android:padding="12dp"
-                        android:src="@drawable/ic_my_location"
-                        android:elevation="6dp"
-                        app:tint="@color/blue_primary"
-                        android:contentDescription="Mi ubicación" />
-
-                    <!-- Overlay Instruction -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentBottom="true"
-                        android:layout_centerHorizontal="true"
-                        android:layout_marginBottom="12dp"
-                        android:background="@drawable/bg_status_chip"
-                        android:backgroundTint="#CCFFFFFF"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:text="Toca el mapa para añadir zona"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/blue_primary"
-                        android:elevation="6dp"/>
-
-                </RelativeLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Controls Card -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="0dp">
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingBottom="20dp">
 
-                <LinearLayout
+                <!-- Map Card -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:layout_height="320dp"
+                    android:layout_marginBottom="20dp"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="4dp"
+                    app:strokeWidth="0dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Definir Nueva Zona"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/black"
-                        android:layout_marginBottom="16dp" />
-
-                    <!-- Search Bar -->
-                    <LinearLayout
+                    <RelativeLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:background="@drawable/bg_input_rounded"
-                        android:padding="4dp"
-                        android:layout_marginBottom="16dp">
+                        android:layout_height="match_parent">
 
-                        <EditText
-                            android:id="@+id/et_direccion_zona"
-                            android:layout_width="0dp"
-                            android:layout_height="50dp"
-                            android:layout_weight="1"
-                            android:background="@android:color/transparent"
-                            android:hint="Buscar dirección..."
-                            android:paddingStart="16dp"
-                            android:paddingEnd="8dp"
-                            android:textSize="14sp"
-                            android:focusable="false"
-                            android:clickable="true"/>
+                        <fragment
+                            android:id="@+id/map"
+                            android:name="com.google.android.gms.maps.SupportMapFragment"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
 
-                        <FrameLayout
+                        <!-- My Location Button -->
+                        <ImageView
+                            android:id="@+id/iv_my_location"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:layout_gravity="center_vertical">
-                            
-                            <ImageView
-                                android:id="@+id/iv_geolocate_zona"
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_search"
-                                app:tint="@color/blue_primary" />
-                            
-                            <ProgressBar
-                                android:id="@+id/pb_geolocate_zona"
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_gravity="center"
-                                android:visibility="gone" />
-                        </FrameLayout>
-                    </LinearLayout>
+                            android:layout_alignParentEnd="true"
+                            android:layout_alignParentTop="true"
+                            android:layout_margin="16dp"
+                            android:background="@drawable/bg_circle_soft"
+                            android:padding="12dp"
+                            android:src="@drawable/ic_my_location"
+                            android:elevation="6dp"
+                            app:tint="@color/blue_primary"
+                            android:contentDescription="Mi ubicación" />
 
-                    <!-- Slider Section -->
+                        <!-- Overlay Instruction -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentBottom="true"
+                            android:layout_centerHorizontal="true"
+                            android:layout_marginBottom="12dp"
+                            android:background="@drawable/bg_status_chip"
+                            android:backgroundTint="#CCFFFFFF"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="6dp"
+                            android:text="Toca el mapa para añadir zona"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/blue_primary"
+                            android:elevation="6dp"/>
+
+                    </RelativeLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Controls Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp"
+                    app:strokeWidth="0dp">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="8dp">
-                        
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Radio de cobertura"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="14sp" />
+                        android:orientation="vertical"
+                        android:padding="20dp">
 
                         <TextView
-                            android:id="@+id/tv_radio"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="2.0 km"
-                            android:textSize="16sp"
+                            android:text="Definir Nueva Zona"
+                            android:textSize="18sp"
                             android:textStyle="bold"
-                            android:textColor="@color/blue_primary" />
+                            android:textColor="@color/black"
+                            android:layout_marginBottom="16dp" />
+
+                        <!-- Search Bar -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:background="@drawable/bg_input_rounded"
+                            android:padding="4dp"
+                            android:layout_marginBottom="16dp">
+
+                            <EditText
+                                android:id="@+id/et_direccion_zona"
+                                android:layout_width="0dp"
+                                android:layout_height="50dp"
+                                android:layout_weight="1"
+                                android:background="@android:color/transparent"
+                                android:hint="Buscar dirección..."
+                                android:paddingStart="16dp"
+                                android:paddingEnd="8dp"
+                                android:textSize="14sp"
+                                android:focusable="false"
+                                android:clickable="true"/>
+
+                            <FrameLayout
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_gravity="center_vertical">
+                                
+                                <ImageView
+                                    android:id="@+id/iv_geolocate_zona"
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_search"
+                                    app:tint="@color/blue_primary" />
+                                
+                                <ProgressBar
+                                    android:id="@+id/pb_geolocate_zona"
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:layout_gravity="center"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+                        </LinearLayout>
+
+                        <!-- Slider Section -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+                            
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Radio de cobertura"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="14sp" />
+
+                            <TextView
+                                android:id="@+id/tv_radio"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="2.0 km"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/blue_primary" />
+                        </LinearLayout>
+
+                        <com.google.android.material.slider.Slider
+                            android:id="@+id/slider_radio"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:valueFrom="0.5"
+                            android:valueTo="5.0"
+                            android:stepSize="0.5"
+                            android:value="2.0"
+                            app:thumbColor="@color/blue_primary"
+                            app:trackColorActive="@color/blue_primary"
+                            app:trackColorInactive="@color/gray_100"
+                            android:layout_marginBottom="16dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_agregar_zona"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:text="Agregar Esta Zona"
+                            android:enabled="false"
+                            app:cornerRadius="16dp"
+                            app:backgroundTint="@null"
+                            android:background="@drawable/button_primary_selector"
+                            android:textColor="@color/white"
+                            android:textStyle="bold" />
+
                     </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                    <com.google.android.material.slider.Slider
-                        android:id="@+id/slider_radio"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:valueFrom="0.5"
-                        android:valueTo="5.0"
-                        android:stepSize="0.5"
-                        android:value="2.0"
-                        app:thumbColor="@color/blue_primary"
-                        app:trackColorActive="@color/blue_primary"
-                        app:trackColorInactive="@color/gray_100"
-                        android:layout_marginBottom="16dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_agregar_zona"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="Agregar Esta Zona"
-                        android:enabled="false"
-                        app:cornerRadius="16dp"
-                        app:backgroundTint="@null"
-                        android:background="@drawable/button_primary_selector"
-                        android:textColor="@color/white"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Instructions / Info -->
-             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="24dp"
-                android:paddingHorizontal="8dp">
-                
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_help"
-                    app:tint="@color/text_secondary"
-                    android:layout_marginEnd="8dp"
-                    android:layout_marginTop="2dp"/>
-                
-                <TextView
+                <!-- Instructions / Info -->
+                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Agrega múltiples zonas si cubres áreas separadas. Toca una zona verde en el mapa para eliminarla."
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary"
-                    android:lineSpacingMultiplier="1.2"/>
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="24dp"
+                    android:paddingHorizontal="8dp">
+                    
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_help"
+                        app:tint="@color/text_secondary"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginTop="2dp"/>
+                    
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Agrega múltiples zonas si cubres áreas separadas. Toca una zona verde en el mapa para eliminarla."
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:lineSpacingMultiplier="1.2"/>
+                </LinearLayout>
+
+                <Space
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- Save Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_guardar_zonas"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="Guardar Todo"
+                    android:enabled="false"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="16dp"
+                    app:elevation="4dp"
+                    app:backgroundTint="@null"
+                    android:background="@drawable/button_primary_selector" />
+
             </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
 
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
+        <!-- Loading Overlay -->
+        <FrameLayout
+            android:id="@+id/loading_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80FFFFFF"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true">
 
-            <!-- Save Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_guardar_zonas"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="Guardar Todo"
-                android:enabled="false"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:cornerRadius="16dp"
-                app:elevation="4dp"
-                app:backgroundTint="@null"
-                android:background="@drawable/button_primary_selector" />
+            <ProgressBar
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+        </FrameLayout>
 
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
 
 </LinearLayout>

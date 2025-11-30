@@ -71,6 +71,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     private Button btnAgregarZona, btnGuardarZonas;
     private Slider sliderRadio;
     private TextView tvRadio;
+    private View loadingOverlay;
 
     private Marker currentMarker;
     private Circle currentCircle;
@@ -78,6 +79,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     private List<Marker> savedMarkers = new ArrayList<>();
     private List<Circle> savedCircles = new ArrayList<>();
     private String selectedAddressName;
+    private boolean isDataLoaded = false;
 
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String> requestPermissionLauncher;
@@ -117,6 +119,10 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         btnGuardarZonas = findViewById(R.id.btn_guardar_zonas);
         sliderRadio = findViewById(R.id.slider_radio);
         tvRadio = findViewById(R.id.tv_radio);
+        loadingOverlay = findViewById(R.id.loading_overlay);
+
+        btnAgregarZona.setEnabled(false);
+        btnGuardarZonas.setEnabled(false);
 
         updateRadioText();
     }
@@ -263,9 +269,12 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             return;
         }
 
+        if (loadingOverlay != null) loadingOverlay.setVisibility(View.VISIBLE);
+
         db.collection("paseadores").document(currentUserId).collection("zonas_servicio")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
+                    isDataLoaded = true;
                     zonasSeleccionadas.clear();
                     for (com.google.firebase.firestore.QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         com.google.firebase.firestore.GeoPoint centro = null;
@@ -289,8 +298,10 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
                         }
                     }
                     displaySavedZones();
+                    if (loadingOverlay != null) loadingOverlay.setVisibility(View.GONE);
                 })
                 .addOnFailureListener(e -> {
+                    if (loadingOverlay != null) loadingOverlay.setVisibility(View.GONE);
                     Toast.makeText(this, "Error al cargar zonas de servicio.", Toast.LENGTH_SHORT).show();
                     Log.e(TAG, "Error loading zones from Firestore", e);
                 });
@@ -326,6 +337,11 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     }
 
     private void agregarZona() {
+        if (currentUserId != null && !isDataLoaded) {
+            Toast.makeText(this, "Espere a que carguen las zonas guardadas.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (currentMarker == null) {
             Toast.makeText(this, "Selecciona una ubicación en el mapa o búscala", Toast.LENGTH_SHORT).show();
             return;
@@ -379,6 +395,11 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
 
     // Nuevo flujo seguro: guarda en prefs para el registro y, si hay usuario logueado, en Firestore.
     private void guardarZonasSeguro() {
+        if (currentUserId != null && !isDataLoaded) {
+            Toast.makeText(this, "Espere a que se sincronicen los datos.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (zonasSeleccionadas.isEmpty()) {
             Toast.makeText(this, "Agrega al menos una zona.", Toast.LENGTH_SHORT).show();
             return;
@@ -417,7 +438,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
             }
 
             batch.commit().addOnSuccessListener(aVoid -> {
-                Toast.makeText(this, "Zonas de servicio guardadas con Ǹxito", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Zonas de servicio guardadas con Éxito", Toast.LENGTH_SHORT).show();
                 setResult(RESULT_OK);
                 finish();
             }).addOnFailureListener(e -> {
