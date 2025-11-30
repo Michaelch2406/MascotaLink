@@ -10,10 +10,10 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_chat_bubble_sent"
+        android:background="@drawable/bg_chat_bubble_received"
         android:orientation="vertical"
         android:padding="4dp"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.cardview.widget.CardView
@@ -28,45 +28,27 @@
                 android:layout_height="200dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_gallery" />
-                
+
             <ProgressBar
                 android:id="@+id/progress_upload"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:visibility="gone"/>
-                
+
         </androidx.cardview.widget.CardView>
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/tv_hora"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
             android:layout_marginTop="4dp"
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/tv_hora"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:alpha="0.8"
-                android:textColor="@android:color/white"
-                android:textSize="10sp"
-                tools:text="10:32 AM" />
-
-            <ImageView
-                android:id="@+id/iv_estado"
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_check_single"
-                app:tint="@android:color/white"
-                android:alpha="0.8"/>
-
-        </LinearLayout>
+            android:textColor="#757575"
+            android:textSize="10sp"
+            tools:text="10:33 AM" />
 
     </LinearLayout>
 

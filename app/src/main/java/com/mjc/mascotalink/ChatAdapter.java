@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -226,7 +227,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 return new ImageMessageHolder(view, true);
                 
             case VIEW_TYPE_IMAGE_RECEIVED:
-                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_imagen_enviado, parent, false);
+                view = LayoutInflater.from(context).inflate(R.layout.item_mensaje_imagen_recibido, parent, false);
                 return new ImageMessageHolder(view, false);
                 
             case VIEW_TYPE_LOCATION_SENT:
@@ -435,79 +436,105 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * ViewHolder para mensajes de ubicación.
      */
     static class LocationMessageHolder extends RecyclerView.ViewHolder {
-        TextView tvUbicacion, tvHora;
-        ImageView ivEstado;
-        ImageView ivMapa;
+        // Vistas para mensaje enviado
+        LinearLayout llSentLocation;
+        ImageView ivMapaSent;
+        TextView tvUbicacionSent, tvHoraSent;
+        ImageView ivEstadoSent;
+
+        // Vistas para mensaje recibido
+        LinearLayout llReceivedLocation;
+        ImageView ivMapaReceived;
+        TextView tvUbicacionReceived, tvHoraReceived;
+        
         boolean isSent;
         
         LocationMessageHolder(View itemView, boolean isSent) {
             super(itemView);
             this.isSent = isSent;
-            tvUbicacion = itemView.findViewById(R.id.tv_ubicacion);
-            tvHora = itemView.findViewById(R.id.tv_hora);
-            ivMapa = itemView.findViewById(R.id.iv_mapa);
-            
-            if (isSent) {
-                ivEstado = itemView.findViewById(R.id.iv_estado);
-            }
+
+            llSentLocation = itemView.findViewById(R.id.ll_sent_location);
+            ivMapaSent = itemView.findViewById(R.id.iv_mapa_sent);
+            tvUbicacionSent = itemView.findViewById(R.id.tv_ubicacion_sent);
+            tvHoraSent = itemView.findViewById(R.id.tv_hora_sent);
+            ivEstadoSent = itemView.findViewById(R.id.iv_estado_sent);
+
+            llReceivedLocation = itemView.findViewById(R.id.ll_received_location);
+            ivMapaReceived = itemView.findViewById(R.id.iv_mapa_received);
+            tvUbicacionReceived = itemView.findViewById(R.id.tv_ubicacion_received);
+            tvHoraReceived = itemView.findViewById(R.id.tv_hora_received);
         }
         
         void bind(Mensaje mensaje, String time) {
-            tvHora.setText(time);
-            tvUbicacion.setText("📍 Ubicación compartida");
-            
+            if (isSent) {
+                llSentLocation.setVisibility(View.VISIBLE);
+                llReceivedLocation.setVisibility(View.GONE);
+
+                tvHoraSent.setText(time);
+                tvUbicacionSent.setText("📍 Ubicación compartida");
+
+                setupMapClick(mensaje, ivMapaSent, itemView);
+                updateMessageStatus(mensaje, ivEstadoSent);
+
+            } else {
+                llSentLocation.setVisibility(View.GONE);
+                llReceivedLocation.setVisibility(View.VISIBLE);
+
+                tvHoraReceived.setText(time);
+                tvUbicacionReceived.setText("📍 Ubicación compartida");
+                
+                setupMapClick(mensaje, ivMapaReceived, itemView);
+            }
+        }
+        
+        private void setupMapClick(Mensaje mensaje, ImageView ivMapa, View itemView) {
             if (mensaje.getLatitud() != null && mensaje.getLongitud() != null) {
                 double lat = mensaje.getLatitud();
                 double lng = mensaje.getLongitud();
-                
-                // Cargar mapa estático de Google Maps
+
                 String staticMapUrl = "https://maps.googleapis.com/maps/api/staticmap?" +
                     "center=" + lat + "," + lng +
                     "&zoom=15" +
                     "&size=400x200" +
                     "&markers=color:red%7C" + lat + "," + lng +
                     "&key=" + BuildConfig.MAPS_API_KEY;
-                
-                if (ivMapa != null) {
-                    Glide.with(itemView.getContext())
-                        .load(staticMapUrl)
-                        .placeholder(R.drawable.ic_location)
-                        .error(R.drawable.ic_location)
-                        .into(ivMapa);
-                }
-                
-                // Click para abrir en Google Maps
+
+                Glide.with(itemView.getContext())
+                    .load(staticMapUrl)
+                    .placeholder(R.drawable.ic_location)
+                    .error(R.drawable.ic_location)
+                    .into(ivMapa);
+
                 itemView.setOnClickListener(v -> {
                     String uri = "geo:" + lat + "," + lng + "?q=" + lat + "," + lng;
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
                     intent.setPackage("com.google.android.apps.maps");
-                    
+
                     if (intent.resolveActivity(itemView.getContext().getPackageManager()) != null) {
                         itemView.getContext().startActivity(intent);
                     } else {
-                        // Si Google Maps no está instalado, abrir en navegador
                         String browserUri = "https://www.google.com/maps/search/?api=1&query=" + lat + "," + lng;
                         Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(browserUri));
                         itemView.getContext().startActivity(browserIntent);
                     }
                 });
             }
-            
-            // Actualizar estado si es mensaje enviado
-            if (isSent && ivEstado != null) {
-                if (mensaje.isLeido()) {
-                    ivEstado.setImageResource(R.drawable.ic_check_double);
-                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#2196F3"));
-                    ivEstado.setContentDescription("Leído");
-                } else if (mensaje.isEntregado()) {
-                    ivEstado.setImageResource(R.drawable.ic_check_double);
-                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
-                    ivEstado.setContentDescription("Entregado");
-                } else {
-                    ivEstado.setImageResource(R.drawable.ic_check_single);
-                    ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
-                    ivEstado.setContentDescription("Enviado");
-                }
+        }
+
+        private void updateMessageStatus(Mensaje mensaje, ImageView ivEstado) {
+            if (ivEstado == null) return;
+            if (mensaje.isLeido()) {
+                ivEstado.setImageResource(R.drawable.ic_check_double);
+                ivEstado.setColorFilter(android.graphics.Color.parseColor("#2196F3"));
+                ivEstado.setContentDescription("Leído");
+            } else if (mensaje.isEntregado()) {
+                ivEstado.setImageResource(R.drawable.ic_check_double);
+                ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                ivEstado.setContentDescription("Entregado");
+            } else {
+                ivEstado.setImageResource(R.drawable.ic_check_single);
+                ivEstado.setColorFilter(android.graphics.Color.parseColor("#E0E0E0"));
+                ivEstado.setContentDescription("Enviado");
             }
         }
     }
