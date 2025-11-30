@@ -11,7 +11,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +20,8 @@ public class TiposPerrosActivity extends AppCompatActivity {
 
     private static final String PREFS = "WizardPaseador";
 
-    private CheckBox cbPequeno, cbMediano, cbGrande;
-    private CheckBox cbCalmo, cbActivo, cbReactividadBaja, cbReactividadAlta;
+    private MaterialCheckBox cbPequeno, cbMediano, cbGrande;
+    private MaterialCheckBox cbCalmo, cbActivo, cbReactividadBaja, cbReactividadAlta;
     private TextView tvValidationMessages;
 
     @Override
@@ -29,8 +29,8 @@ public class TiposPerrosActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tipos_perros);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        // Custom Back Button
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
 
         cbPequeno = findViewById(R.id.cb_pequeno);
         cbMediano = findViewById(R.id.cb_mediano);

@@ -1,162 +1,256 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:orientation="vertical"
+    android:background="#F9FAFB"
+    tools:context=".TiposPerrosActivity">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <!-- Header / Toolbar -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        app:title="Tipos de Perros"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material" />
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="20dp"
+        android:background="@android:color/transparent">
 
-    <ScrollView
+        <ImageView
+            android:id="@+id/iv_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_icon_container"
+            android:contentDescription="Atrás"
+            android:padding="10dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/black" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Tipos de Perros"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- Spacer for centering -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:padding="16dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="20dp">
 
-            <!-- Logo -->
-            <ImageView
-                android:layout_width="150dp"
-                android:layout_height="75dp"
-                android:layout_marginBottom="24dp"
-                android:src="@drawable/walki_logo_principal"
-                android:contentDescription="Walki Logo" />
+            <!-- Info Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Selecciona los tamaños y temperamentos de perros que estás dispuesto a pasear."
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:layout_marginBottom="24dp"/>
 
-            <!-- Título -->
+            <!-- Tamaño Card -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Tipos de perros"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:gravity="center" />
-
-            <!-- Descripción -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:text="Especifica los tamaños y temperamentos de perros que puedes manejar."
-                android:textSize="14sp"
-                android:textColor="#666666"
-                android:gravity="center" />
-
-            <!-- Sección Tamaño -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
                 android:text="Tamaño"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="#F4A261" />
+                android:textColor="@color/black"
+                android:layout_marginBottom="12dp"
+                android:layout_marginStart="4dp"/>
 
-            <CheckBox
-                android:id="@+id/cb_pequeno"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Pequeño (hasta 10kg)"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"
-                android:buttonTint="#F4A261" />
-
-            <CheckBox
-                android:id="@+id/cb_mediano"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Mediano (10-25kg)"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"
-                android:buttonTint="#F4A261" />
-
-            <CheckBox
-                android:id="@+id/cb_grande"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Grande (más de 25kg)"
-                android:textSize="16sp"
                 android:layout_marginBottom="24dp"
-                android:buttonTint="#F4A261" />
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
-            <!-- Sección Temperamento -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_pequeno"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Pequeño (hasta 10kg)"
+                        android:textSize="16sp"
+                        android:padding="8dp"
+                        app:buttonTint="@color/blue_primary" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F3F4F6"
+                        android:layout_marginHorizontal="16dp"/>
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_mediano"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Mediano (10-25kg)"
+                        android:textSize="16sp"
+                        android:padding="8dp"
+                        app:buttonTint="@color/blue_primary" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F3F4F6"
+                        android:layout_marginHorizontal="16dp"/>
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_grande"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Grande (más de 25kg)"
+                        android:textSize="16sp"
+                        android:padding="8dp"
+                        app:buttonTint="@color/blue_primary" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Temperamento Card -->
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
                 android:text="Temperamento"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="#F4A261" />
+                android:textColor="@color/black"
+                android:layout_marginBottom="12dp"
+                android:layout_marginStart="4dp"/>
 
-            <CheckBox
-                android:id="@+id/cb_calmo"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Calmo/Tranquilo"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"
-                android:buttonTint="#F4A261" />
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
-            <CheckBox
-                android:id="@+id/cb_activo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Activo/Energético"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"
-                android:buttonTint="#F4A261" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="8dp">
 
-            <CheckBox
-                android:id="@+id/cb_reactividad_baja"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Baja reactividad (sociable con otros perros)"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"
-                android:buttonTint="#F4A261" />
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_calmo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Calmo/Tranquilo"
+                        android:textSize="16sp"
+                        android:padding="8dp"
+                        app:buttonTint="@color/blue_primary" />
 
-            <CheckBox
-                android:id="@+id/cb_reactividad_alta"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Alta reactividad (requiere manejo especial)"
-                android:textSize="16sp"
-                android:layout_marginBottom="32dp"
-                android:buttonTint="#F4A261" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F3F4F6"
+                        android:layout_marginHorizontal="16dp"/>
 
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_activo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Activo/Energético"
+                        android:textSize="16sp"
+                        android:padding="8dp"
+                        app:buttonTint="@color/blue_primary" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F3F4F6"
+                        android:layout_marginHorizontal="16dp"/>
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_reactividad_baja"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Baja reactividad (Sociable)"
+                        android:textSize="16sp"
+                        android:padding="8dp"
+                        app:buttonTint="@color/blue_primary" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F3F4F6"
+                        android:layout_marginHorizontal="16dp"/>
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/cb_reactividad_alta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Alta reactividad (Manejo especial)"
+                        android:textSize="16sp"
+                        android:padding="8dp"
+                        app:buttonTint="@color/blue_primary" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Validation & Save -->
             <TextView
                 android:id="@+id/tv_validation_messages"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:gravity="center"
-                android:textColor="@color/colorError"
+                android:background="@drawable/bg_status_chip"
+                android:backgroundTint="#FEE2E2"
+                android:padding="12dp"
+                android:textColor="@color/red_error"
+                android:textSize="14sp"
                 android:visibility="gone" />
 
-            <!-- Botón Guardar -->
-            <Button
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_guardar_tipos"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
+                android:layout_height="56dp"
                 android:text="Guardar Preferencias"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:background="@drawable/button_background"
-                android:layout_marginTop="24dp" />
+                android:textColor="@color/white"
+                app:cornerRadius="16dp"
+                app:elevation="4dp"
+                android:layout_marginBottom="20dp"
+                app:backgroundTint="@null"
+                android:background="@drawable/button_primary_selector"/>
 
         </LinearLayout>
-    </ScrollView>
-</RelativeLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>
