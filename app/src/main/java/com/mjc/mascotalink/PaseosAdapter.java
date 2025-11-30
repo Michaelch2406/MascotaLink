@@ -66,8 +66,9 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         Paseo paseo = paseosList.get(position);
         if (paseo == null) return;
 
-        // 1. Fecha
+        // 1. Fecha y Hora
         holder.tvFecha.setText(paseo.getFechaFormateada() != null ? paseo.getFechaFormateada() : "");
+        holder.tvHoraInicioPaseo.setText(paseo.getHoraFormateada() != null ? paseo.getHoraFormateada() : "");
 
         // 2. Info Principal (Mascota) y Secundaria (Paseador/Dueño)
         String nombreMascota = paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Mascota";
@@ -228,6 +229,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     static class PaseoViewHolder extends RecyclerView.ViewHolder {
         TextView tvFecha;
+        TextView tvHoraInicioPaseo;
         TextView tvNombrePrincipal;
         TextView tvNombreSecundario;
         ShapeableImageView ivFotoPerfil;
@@ -241,6 +243,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         public PaseoViewHolder(@NonNull View itemView) {
             super(itemView);
             tvFecha = itemView.findViewById(R.id.tv_fecha_paseo);
+            tvHoraInicioPaseo = itemView.findViewById(R.id.tv_hora_inicio_paseo);
             tvNombrePrincipal = itemView.findViewById(R.id.tv_nombre_principal);
             tvNombreSecundario = itemView.findViewById(R.id.tv_nombre_secundario);
             ivFotoPerfil = itemView.findViewById(R.id.iv_foto_perfil_paseo);

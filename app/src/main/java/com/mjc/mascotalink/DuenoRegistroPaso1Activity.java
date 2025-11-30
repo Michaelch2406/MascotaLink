@@ -411,9 +411,9 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private String getTextoTerminosCompleto() {
-        return "TÉRMINOS Y CONDICIONES DE USO - MascotaLink (Dueños)\n\n" +
+        return "TÉRMINOS Y CONDICIONES DE USO - Walki (Dueños)\n\n" +
                 "1. ACEPTACIÓN DE TÉRMINOS\n" +
-                "Al registrarte como dueño de mascota en MascotaLink, aceptas cumplir con estos términos y condiciones.\n\n" +
+                "Al registrarte como dueño de mascota en Walki, aceptas cumplir con estos términos y condiciones.\n\n" +
                 "2. RESPONSABILIDADES DEL DUEÑO\n" +
                 "- Proporcionar información precisa y completa sobre tu mascota.\n" +
                 "- Asegurarte de que tu mascota esté al día con sus vacunas y tratamientos.\n" +
@@ -426,9 +426,9 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
                 "- No solicitar ni realizar pagos fuera de la plataforma.\n\n" +
                 "5. PRIVACIDAD Y DATOS\n" +
                 "- Aceptas que la información de tu perfil sea visible para los paseadores.\n" +
-                "- MascotaLink se compromete a proteger tus datos según la política de privacidad.\n\n" +
+                "- Walki se compromete a proteger tus datos según la política de privacidad.\n\n" +
                 "6. LIMITACIÓN DE RESPONSABILIDAD\n" +
-                "MascotaLink actúa como intermediario y no se hace responsable de incidentes ocurridos durante los paseos.\n\n" +
+                "Walki actúa como intermediario y no se hace responsable de incidentes ocurridos durante los paseos.\n\n" +
                 "Al marcar esta casilla, confirmas que has leído, entendido y aceptas cumplir con todos estos términos y condiciones.\n\n" +
                 "Fecha de última actualización: Octubre 2025";
     }

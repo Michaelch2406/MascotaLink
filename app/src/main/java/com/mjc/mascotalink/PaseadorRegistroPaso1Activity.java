@@ -260,9 +260,9 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private String getTextoTerminosCompleto() {
-        return "TÉRMINOS Y CONDICIONES DE USO - MascotaLink\n\n" +
+        return "TÉRMINOS Y CONDICIONES DE USO - Walki\n\n" +
                 "1. ACEPTACIÓN DE TÉRMINOS\n" +
-                "Al registrarte como paseador en MascotaLink, aceptas cumplir con estos términos y condiciones.\n\n" +
+                "Al registrarte como paseador en Walki, aceptas cumplir con estos términos y condiciones.\n\n" +
                 "2. RESPONSABILIDADES DEL PASEADOR\n" +
                 "- Cuidar la seguridad y bienestar de las mascotas bajo tu responsabilidad\n" +
                 "- Seguir las instrucciones específicas del dueño de la mascota\n" +
@@ -281,7 +281,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
                 "- No compartir datos de contacto fuera de la plataforma\n" +
                 "- Respetar la privacidad de los hogares visitados\n\n" +
                 "6. TERMINACIÓN DEL SERVICIO\n" +
-                "MascotaLink se reserva el derecho de suspender o terminar el acceso del paseador en caso de incumplimiento de estos términos.\n\n" +
+                "Walki se reserva el derecho de suspender o terminar el acceso del paseador en caso de incumplimiento de estos términos.\n\n" +
                 "Al marcar esta casilla, confirmas que has leído, entendido y aceptas cumplir con todos estos términos y condiciones.\n\n" +
                 "Fecha de última actualización: Septiembre 2025";
     }

@@ -1163,7 +1163,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                                 nuevasResenas.get(i).setAutorNombre(userDoc.getString("nombre_display"));
                                 nuevasResenas.get(i).setAutorFotoUrl(userDoc.getString("foto_perfil"));
                             } else {
-                                nuevasResenas.get(i).setAutorNombre("Usuario de MascotaLink");
+                                nuevasResenas.get(i).setAutorNombre("Usuario de Walki");
                             }
                         }
                     }

@@ -16,23 +16,48 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Header: Date & Price -->
-        <TextView
-            android:id="@+id/tv_fecha_paseo"
+        <!-- Header: Date, Time & Price -->
+        <LinearLayout
+            android:id="@+id/ll_fecha_hora"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="28 Nov, 10:00 AM"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:textStyle="bold"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/tv_fecha_paseo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="28 Nov"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="4dp"
+                android:layout_height="4dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_circle_soft"
+                android:backgroundTint="@color/text_secondary"/>
+
+            <TextView
+                android:id="@+id/tv_hora_inicio_paseo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                tools:text="10:00 AM"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_costo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="$15.00"
+            tools:text="$15.00"
             android:textColor="@color/blue_primary"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -48,7 +73,7 @@
             android:background="@color/gray_100"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_fecha_paseo" />
+            app:layout_constraintTop_toBottomOf="@id/ll_fecha_hora" />
 
         <!-- Content: Avatar & Info -->
         <com.google.android.material.imageview.ShapeableImageView
