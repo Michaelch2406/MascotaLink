@@ -24,3 +24,8 @@ BUSQUEDA_PASEADORES_README.md
 google-services.json
 README_Codex.md
 STATE_TRANSITIONS.md
+
+# Archivos de configuración de red (solo para desarrollo local)
+NETWORK_CONFIG_GUIDE.md
+ACCESO_NETWORK_CONFIG_ADB.md
+abrir_network_config.bat
