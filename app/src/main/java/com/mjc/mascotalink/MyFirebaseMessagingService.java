@@ -204,11 +204,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setContentIntent(pendingIntent)
                         .setPriority(NotificationCompat.PRIORITY_HIGH);
         
-        int currentNotificationId = messageNotificationId++;
+        int currentNotificationId;
+        String chatId = null;
+        if (isChatMessage) {
+            chatId = data.get("chat_id");
+            // Usar el hashCode del chatId para que sea único por conversación pero constante
+            currentNotificationId = chatId != null ? chatId.hashCode() : messageNotificationId++;
+        } else {
+            currentNotificationId = messageNotificationId++;
+        }
 
         // Si es mensaje de chat, agregar respuesta rápida y agrupar
         if (isChatMessage) {
-            String chatId = data.get("chat_id");
             String otherUserId = data.get("id_otro_usuario");
             
             // Agrupar notificaciones de mensajes

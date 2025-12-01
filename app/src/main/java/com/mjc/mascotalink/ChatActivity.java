@@ -2,6 +2,8 @@ package com.mjc.mascotalink;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -146,6 +148,12 @@ public class ChatActivity extends AppCompatActivity {
         } else if (chatId == null) {
             finish();
             return;
+        }
+
+        // Cancelar notificación si se abrió desde una
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.cancel(chatId.hashCode());
         }
 
         initViews();
@@ -991,6 +999,15 @@ public class ChatActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         currentChatId = chatId;
+
+        // Cancelar notificación de este chat específico al entrar
+        if (chatId != null) {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.cancel(chatId.hashCode());
+            }
+        }
+
         actualizarEstadoEscribiendo(false);
         attachNewMessagesListener();
         
