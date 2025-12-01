@@ -379,6 +379,8 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatId}/mensajes/{mensa
       chat_id: chatId,
       id_otro_usuario: remit,
       message_id: event.params.mensajeId,
+      title: "Nuevo mensaje",
+      message: preview,
     },
     android: { 
       priority: "high",

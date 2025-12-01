@@ -81,6 +81,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Map<String, String> data = remoteMessage.getData();
         String title = data.get("title");
         String message = data.get("message");
+
+        // Fallback to notification payload if data doesn't have title/message
+        if (remoteMessage.getNotification() != null) {
+            if (title == null) {
+                title = remoteMessage.getNotification().getTitle();
+            }
+            if (message == null) {
+                message = remoteMessage.getNotification().getBody();
+            }
+        }
         
         // Mark message as delivered if it's a chat message
         if (data.containsKey("chat_id") && data.containsKey("message_id")) {

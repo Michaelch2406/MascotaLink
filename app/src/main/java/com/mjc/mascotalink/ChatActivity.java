@@ -25,6 +25,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.RemoteInput;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -153,6 +154,26 @@ public class ChatActivity extends AppCompatActivity {
         loadInitialMessages();
         cargarDatosOtroUsuario();
         escucharEstadoChat();
+        handleRemoteInput(getIntent());
+    }
+
+    private void handleRemoteInput(Intent intent) {
+        Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
+        if (remoteInput != null) {
+            CharSequence replyText = remoteInput.getCharSequence("key_text_reply");
+            if (replyText != null) {
+                String message = replyText.toString().trim();
+                if (!message.isEmpty()) {
+                    // Asegurar que los IDs estén listos (ya deberían estarlo por onCreate)
+                    if (chatId != null && currentUserId != null && otroUsuarioId != null) {
+                        enviarMensaje(message);
+                        Toast.makeText(this, "Respuesta enviada", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Log.e(TAG, "Datos incompletos para enviar respuesta remota");
+                    }
+                }
+            }
+        }
     }
 
     private void initViews() {
