@@ -21,6 +21,7 @@ public class Chat {
     private String nombreOtroUsuario;
     private String fotoOtroUsuario;
     private String estadoOtroUsuario;
+    private int mensajesNoLeidosCount;
 
     public Chat() {}
 
@@ -60,4 +61,7 @@ public class Chat {
 
     public String getEstadoOtroUsuario() { return estadoOtroUsuario; }
     public void setEstadoOtroUsuario(String estadoOtroUsuario) { this.estadoOtroUsuario = estadoOtroUsuario; }
+
+    public int getMensajesNoLeidosCount() { return mensajesNoLeidosCount; }
+    public void setMensajesNoLeidos(int mensajesNoLeidosCount) { this.mensajesNoLeidosCount = mensajesNoLeidosCount; }
 }

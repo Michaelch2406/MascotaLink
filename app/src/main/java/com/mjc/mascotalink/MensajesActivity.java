@@ -183,6 +183,22 @@ public class MensajesActivity extends AppCompatActivity {
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
                             Chat chat = doc.toObject(Chat.class);
                             chat.setChatId(doc.getId());
+                            
+                            // Capturar conteo de mensajes no leídos para el usuario actual
+                            Object noLeidosObj = doc.get("mensajes_no_leidos");
+                            if (noLeidosObj instanceof java.util.Map) {
+                                java.util.Map<String, Long> noLeidosMap = (java.util.Map<String, Long>) noLeidosObj;
+                                if (noLeidosMap != null && noLeidosMap.containsKey(currentUserId)) {
+                                    Object val = noLeidosMap.get(currentUserId);
+                                    // Firestore puede devolver Long o Integer
+                                    if (val instanceof Long) {
+                                        chat.setMensajesNoLeidos(((Long) val).intValue());
+                                    } else if (val instanceof Integer) {
+                                        chat.setMensajesNoLeidos((Integer) val);
+                                    }
+                                }
+                            }
+
                             conversaciones.add(chat);
 
                             // Find other user ID to fetch details
