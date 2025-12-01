@@ -60,6 +60,7 @@ async function sincronizarPaseador(docId) {
       precio_hora: paseadorData.precio_hora || 0,
       tipos_perro_aceptados: paseadorData.manejo_perros?.tamanos || [],
       anos_experiencia: anosExperiencia,
+      verificacion_estado: paseadorData.verificacion_estado || "pendiente",
     };
 
     console.log(`Actualizando documento de búsqueda para el paseador: ${docId}`);

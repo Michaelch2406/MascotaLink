@@ -117,6 +117,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      * Create and show a simple notification containing the received FCM message.
      */
     private void sendNotification(String title, String messageBody, java.util.Map<String, String> data) {
+        // Verificar preferencias de notificación antes de mostrar
+        com.mjc.mascotalink.utils.NotificacionesPreferences prefs = new com.mjc.mascotalink.utils.NotificacionesPreferences(this);
+        if (!prefs.isNotificacionesEnabled()) {
+            Log.d(TAG, "Notificaciones deshabilitadas globalmente.");
+            return;
+        }
+
+        boolean isChatMessage = data != null && data.containsKey("chat_id") && data.containsKey("id_otro_usuario");
+        if (isChatMessage && !prefs.isMensajesEnabled()) {
+            Log.d(TAG, "Notificaciones de mensajes deshabilitadas.");
+            return;
+        }
+
         // Check if the chat is currently open to suppress notification
         if (data != null && data.containsKey("chat_id")) {
             String chatId = data.get("chat_id");
@@ -189,8 +202,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
                 PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
-        // Determinar si es un mensaje de chat para usar notificación especial
-        boolean isChatMessage = data != null && data.containsKey("chat_id") && data.containsKey("id_otro_usuario");
+        // Determinar canal basado en si es mensaje de chat
         String channelId = isChatMessage ? CHANNEL_ID_MESSAGES : CHANNEL_ID_PAYMENTS;
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         

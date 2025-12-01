@@ -199,6 +199,12 @@ service cloud.firestore {
       }
     }
 
+    // notificaciones collection
+    match /notificaciones/{notificacionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
     // audit_logs collection
     match /audit_logs/{logId} {
       allow read: if false;

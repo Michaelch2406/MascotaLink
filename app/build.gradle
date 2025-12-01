@@ -39,10 +39,20 @@ android {
         debug {
             debuggable true
             minifyEnabled false
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    outputFileName = "Walki-debug.apk"
+                }
+            }
         }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    outputFileName = "Walki.apk"
+                }
+            }
         }
     }
     lint {

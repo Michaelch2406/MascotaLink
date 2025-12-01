@@ -1252,6 +1252,12 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 if (task1.isSuccessful()) {
                     DocumentSnapshot paseadorDoc = task1.getResult();
                     if (paseadorDoc.exists()) {
+                        // Verificar estado de aprobación
+                        String estadoVerificacion = paseadorDoc.getString("verificacion_estado");
+                        if (!"APROBADO".equals(estadoVerificacion)) {
+                            return Tasks.forResult(null);
+                        }
+
                         double calificacion = paseadorDoc.getDouble("calificacion_promedio") != null ? paseadorDoc.getDouble("calificacion_promedio") : 0.0;
                         
                         // Chain 1: Check Availability (Schedule)

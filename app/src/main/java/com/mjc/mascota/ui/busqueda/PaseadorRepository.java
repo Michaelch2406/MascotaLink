@@ -84,6 +84,9 @@ public class PaseadorRepository {
 
                     if (!paseadorDoc.exists()) continue;
 
+                    String estado = paseadorDoc.getString("verificacion_estado");
+                    if (!"APROBADO".equals(estado)) continue;
+
                     PaseadorResultado resultado = new PaseadorResultado();
                     resultado.setId(userDoc.getId());
                     resultado.setNombre(getStringSafely(userDoc, "nombre_display", "N/A"));
@@ -134,7 +137,9 @@ public class PaseadorRepository {
                 ? db.collection("usuarios").document(currentUser.getUid()).collection("favoritos").get()
                 : Tasks.forResult(null);
 
-        Query firestoreQuery = db.collection("paseadores_search").whereEqualTo("activo", true);
+        Query firestoreQuery = db.collection("paseadores_search")
+                .whereEqualTo("activo", true)
+                .whereEqualTo("verificacion_estado", "APROBADO");
         if (query != null && !query.isEmpty()) {
             String queryNormalizado = query.toLowerCase();
             firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
