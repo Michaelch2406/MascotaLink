@@ -806,6 +806,8 @@ public class ChatActivity extends AppCompatActivity {
                                 maybeScrollToBottom();
                                 if (m.getId_destinatario() != null && m.getId_destinatario().equals(currentUserId) && !m.isLeido()) {
                                     marcarLeido(change.getDocument().getId());
+                                    // También resetear el contador global del chat por si se incrementó
+                                    marcarTodosLeidos();
                                 }
                             } else if (change.getType() == DocumentChange.Type.MODIFIED) {
                                 // Actualizar estado de mensaje existente (leido/entregado)
@@ -1005,6 +1007,21 @@ public class ChatActivity extends AppCompatActivity {
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (notificationManager != null) {
                 notificationManager.cancel(chatId.hashCode());
+
+                // Verificar si quedan otras notificaciones del grupo MESSAGES
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    boolean otherChatsExist = false;
+                    for (android.service.notification.StatusBarNotification sbn : notificationManager.getActiveNotifications()) {
+                        // ID 0 es el resumen, buscamos otros hijos
+                        if (sbn.getId() != 0 && "com.mjc.mascotalink.MESSAGES".equals(sbn.getNotification().getGroup())) {
+                            otherChatsExist = true;
+                            break;
+                        }
+                    }
+                    if (!otherChatsExist) {
+                        notificationManager.cancel(0); // Cancelar resumen
+                    }
+                }
             }
         }
 
