@@ -90,6 +90,10 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver
+            android:name=".NotificationReplyReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".SplashActivity"
             android:exported="true"

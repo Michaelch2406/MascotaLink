@@ -360,33 +360,44 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatId}/mensajes/{mensa
     }
   }
 
-  // Obtener token del destinatario
-  const userDoc = await db.collection("usuarios").doc(dest).get();
+  // Obtener datos del destinatario y del remitente en paralelo
+  const [userDoc, remitDoc] = await Promise.all([
+    db.collection("usuarios").doc(dest).get(),
+    db.collection("usuarios").doc(remit).get()
+  ]);
+
   const token = userDoc.exists ? userDoc.get("fcmToken") : null;
   if (!token) {
     console.warn(`sendChatNotification: sin token FCM para ${dest}`);
     return null;
   }
 
+  // Obtener datos del remitente para personalizar la notificación
+  const remitName = remitDoc.exists ? (remitDoc.data().nombre_display || "Nuevo mensaje") : "Nuevo mensaje";
+  const remitPhoto = remitDoc.exists ? (remitDoc.data().foto_perfil || "") : "";
+
   const preview = texto.length > 80 ? `${texto.slice(0, 77)}...` : texto;
 
   const payload = {
     notification: {
-      title: "Nuevo mensaje",
+      title: remitName,
       body: preview,
     },
     data: {
       chat_id: chatId,
       id_otro_usuario: remit,
       message_id: event.params.mensajeId,
-      title: "Nuevo mensaje",
+      title: remitName,
       message: preview,
+      sender_name: remitName,
+      sender_photo_url: remitPhoto,
     },
     android: { 
       priority: "high",
       notification: {
         sound: "default",
-        icon: "walki_logo_secundario"
+        icon: "walki_logo_secundario",
+        // color: "#00AAFF" // Opcional: color de acento de tu app
       }
     },
     apns: { 

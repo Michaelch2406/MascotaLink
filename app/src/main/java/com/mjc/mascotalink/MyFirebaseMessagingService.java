@@ -12,6 +12,11 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.Person;
+import androidx.core.graphics.drawable.IconCompat;
+
+import com.bumptech.glide.Glide;
+import android.graphics.Bitmap;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -199,6 +204,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setContentIntent(pendingIntent)
                         .setPriority(NotificationCompat.PRIORITY_HIGH);
         
+        int currentNotificationId = messageNotificationId++;
+
         // Si es mensaje de chat, agregar respuesta rápida y agrupar
         if (isChatMessage) {
             String chatId = data.get("chat_id");
@@ -208,14 +215,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             notificationBuilder.setGroup(GROUP_KEY_MESSAGES);
             
             // Agregar acción de respuesta rápida
-            Intent replyIntent = new Intent(this, ChatActivity.class);
+            Intent replyIntent = new Intent(this, NotificationReplyReceiver.class);
             replyIntent.putExtra("chat_id", chatId);
             replyIntent.putExtra("id_otro_usuario", otherUserId);
+            replyIntent.putExtra("notification_id", currentNotificationId);
             
             // IMPORTANTE: Debe ser MUTABLE para RemoteInput
-            PendingIntent replyPendingIntent = PendingIntent.getActivity(
+            PendingIntent replyPendingIntent = PendingIntent.getBroadcast(
                 this, 
-                messageNotificationId++, 
+                currentNotificationId, 
                 replyIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
             );
@@ -235,9 +243,29 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             notificationBuilder.addAction(replyAction);
             
             // Estilo de mensajería
+            String senderName = data.containsKey("sender_name") ? data.get("sender_name") : (title != null ? title : "Usuario");
+            String senderPhotoUrl = data.get("sender_photo_url");
+            
+            Person.Builder personBuilder = new Person.Builder()
+                    .setName(senderName);
+            
+            if (senderPhotoUrl != null && !senderPhotoUrl.isEmpty()) {
+                try {
+                    Bitmap bitmap = Glide.with(this)
+                            .asBitmap()
+                            .load(senderPhotoUrl)
+                            .submit()
+                            .get();
+                    personBuilder.setIcon(IconCompat.createWithBitmap(bitmap));
+                } catch (Exception e) {
+                    Log.e(TAG, "Error downloading sender image", e);
+                }
+            }
+            
+            Person senderPerson = personBuilder.build();
+            
             NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle("Tú")
-                    .setConversationTitle(title)
-                    .addMessage(messageBody, System.currentTimeMillis(), title);
+                    .addMessage(messageBody, System.currentTimeMillis(), senderPerson);
             
             notificationBuilder.setStyle(messagingStyle);
         }
@@ -248,7 +276,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (isChatMessage) {
             createNotificationChannel(notificationManager, CHANNEL_ID_MESSAGES, CHANNEL_NAME_MESSAGES, CHANNEL_DESCRIPTION_MESSAGES);
             // Usar ID único para cada mensaje pero agruparlos
-            notificationManager.notify(messageNotificationId++, notificationBuilder.build());
+            notificationManager.notify(currentNotificationId, notificationBuilder.build());
             
             // Crear notificación de resumen del grupo
             NotificationCompat.Builder summaryBuilder = new NotificationCompat.Builder(this, CHANNEL_ID_MESSAGES)
