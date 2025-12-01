@@ -204,7 +204,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         switchNotificaciones = findViewById(R.id.switch_notificaciones);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
-        
+
         soporte_section = findViewById(R.id.soporte_section);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
         btnCentroAyuda = findViewById(R.id.btn_centro_ayuda);
@@ -247,7 +247,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             }
             startActivity(intent);
         });
-        
+
         btnNotificaciones.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, NotificacionesActivity.class)));
 
         // Configurar switch de notificaciones

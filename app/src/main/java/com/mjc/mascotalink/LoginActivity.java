@@ -126,40 +126,40 @@ public class LoginActivity extends AppCompatActivity {
                                             Log.d(TAG, "Re-authentication successful. Redirigiendo...");
                                             updateFcmTokenForCurrentUser();
                                             db.collection("usuarios").document(user.getUid()).get()
-                                                .addOnSuccessListener(documentSnapshot -> {
-                                                    if (documentSnapshot.exists()) {
-                                                        String reAuthRol = documentSnapshot.getString("rol");
-                                                        if ("PASEADOR".equalsIgnoreCase(reAuthRol)) {
-                                                            db.collection("paseadores").document(user.getUid()).get()
-                                                                .addOnSuccessListener(paseadorDoc -> {
-                                                                    String reAuthVerificacionEstado = paseadorDoc.getString("verificacion_estado");
-                                                                    redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
-                                                                }).addOnFailureListener(e -> {
-                                                                    Log.e(TAG, "Error re-fetching paseador verification status", e);
-                                                                    redirigirSegunRol(reAuthRol, null);
-                                                                });
-                                                        } else if ("DUEÑO".equalsIgnoreCase(reAuthRol)) {
-                                                            db.collection("duenos").document(user.getUid()).get()
-                                                                .addOnSuccessListener(duenoDoc -> {
-                                                                    String reAuthVerificacionEstado = duenoDoc.getString("verificacion_estado");
-                                                                    redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
-                                                                }).addOnFailureListener(e -> {
-                                                                    Log.e(TAG, "Error re-fetching dueno verification status", e);
-                                                                    redirigirSegunRol(reAuthRol, null);
-                                                                });
+                                                    .addOnSuccessListener(documentSnapshot -> {
+                                                        if (documentSnapshot.exists()) {
+                                                            String reAuthRol = documentSnapshot.getString("rol");
+                                                            if ("PASEADOR".equalsIgnoreCase(reAuthRol)) {
+                                                                db.collection("paseadores").document(user.getUid()).get()
+                                                                        .addOnSuccessListener(paseadorDoc -> {
+                                                                            String reAuthVerificacionEstado = paseadorDoc.getString("verificacion_estado");
+                                                                            redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
+                                                                        }).addOnFailureListener(e -> {
+                                                                            Log.e(TAG, "Error re-fetching paseador verification status", e);
+                                                                            redirigirSegunRol(reAuthRol, null);
+                                                                        });
+                                                            } else if ("DUEÑO".equalsIgnoreCase(reAuthRol)) {
+                                                                db.collection("duenos").document(user.getUid()).get()
+                                                                        .addOnSuccessListener(duenoDoc -> {
+                                                                            String reAuthVerificacionEstado = duenoDoc.getString("verificacion_estado");
+                                                                            redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
+                                                                        }).addOnFailureListener(e -> {
+                                                                            Log.e(TAG, "Error re-fetching dueno verification status", e);
+                                                                            redirigirSegunRol(reAuthRol, null);
+                                                                        });
+                                                            } else {
+                                                                redirigirSegunRol(reAuthRol, null);
+                                                            }
                                                         } else {
-                                                            redirigirSegunRol(reAuthRol, null);
+                                                            Log.w(TAG, "User profile not found after re-authentication. Falling back to normal login.");
+                                                            credentialMgr.clearCredentials();
+                                                            mostrarError("Perfil de usuario no encontrado. Inicia sesión de nuevo.");
                                                         }
-                                                    } else {
-                                                        Log.w(TAG, "User profile not found after re-authentication. Falling back to normal login.");
+                                                    }).addOnFailureListener(e -> {
+                                                        Log.e(TAG, "Error re-fetching user role after re-authentication", e);
                                                         credentialMgr.clearCredentials();
-                                                        mostrarError("Perfil de usuario no encontrado. Inicia sesión de nuevo.");
-                                                    }
-                                                }).addOnFailureListener(e -> {
-                                                    Log.e(TAG, "Error re-fetching user role after re-authentication", e);
-                                                    credentialMgr.clearCredentials();
-                                                    mostrarError("Error al cargar perfil. Inicia sesión de nuevo.");
-                                                });
+                                                        mostrarError("Error al cargar perfil. Inicia sesión de nuevo.");
+                                                    });
                                         } else {
                                             Log.w(TAG, "Re-authentication successful, but UID mismatch or user null. Clearing credentials.");
                                             credentialMgr.clearCredentials();
@@ -339,7 +339,7 @@ public class LoginActivity extends AppCompatActivity {
         String normalizedRol = rol.toUpperCase();
 
         String clickAction = getIntent().getStringExtra("click_action");
-        
+
         if (clickAction != null && "APROBADO".equals(estadoVerificacion)) {
             switch (clickAction) {
                 case "OPEN_WALKS_ACTIVITY":
@@ -494,10 +494,10 @@ public class LoginActivity extends AppCompatActivity {
     private void mostrarError(String msg) {
         if (msg.length() > 100) {
             new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Error")
-                .setMessage(msg)
-                .setPositiveButton("Entendido", null)
-                .show();
+                    .setTitle("Error")
+                    .setMessage(msg)
+                    .setPositiveButton("Entendido", null)
+                    .show();
         } else {
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
         }

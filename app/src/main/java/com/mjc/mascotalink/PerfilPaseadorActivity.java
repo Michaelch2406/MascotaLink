@@ -456,6 +456,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
              }
              startActivity(intent);
          });
+
         btnPrivacidad.setOnClickListener(v -> startActivity(new Intent(PerfilPaseadorActivity.this, PoliticaPrivacidadActivity.class)));
         btnCentroAyuda.setOnClickListener(v -> startActivity(new Intent(PerfilPaseadorActivity.this, CentroAyudaActivity.class)));
         btnTerminos.setOnClickListener(v -> startActivity(new Intent(PerfilPaseadorActivity.this, TerminosCondicionesActivity.class)));

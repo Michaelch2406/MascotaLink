@@ -419,6 +419,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Activity de configuración de red (para debugging) -->
+        <activity
+            android:name=".NetworkConfigActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:label="Configuración de Red" />
+
     </application>
 
 </manifest>

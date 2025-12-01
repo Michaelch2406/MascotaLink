@@ -17,6 +17,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -25,105 +26,184 @@ import java.util.concurrent.TimeUnit;
 
 public class NetworkDetector {
     private static final String TAG = "NetworkDetector";
-    
-    // Configuración de redes
+
+    // Configuración de redes (OPCIONAL - Solo como fallback legacy)
     private static final Map<String, NetworkConfig> NETWORK_CONFIGS = new HashMap<>();
-    
+
     static {
+        // NOTA: Estas configuraciones son OPCIONALES y solo se usan como fallback
+        // El sistema ahora detecta automáticamente Tailscale y Gateway
+
         // Casa - Red fija
-        NETWORK_CONFIGS.put("INNO_FLIA_CHASIGUANO_5G", 
+        NETWORK_CONFIGS.put("INNO_FLIA_CHASIGUANO_5G",
             new NetworkConfig("Casa", "192.168.0.147", "192.168.0", false));
-        
+
+        // Escuela - Red fija
+        NETWORK_CONFIGS.put("CABLESPEED APOLO",
+            new NetworkConfig("Escuela", "192.168.1.86", "192.168.1", false));
+
         // Trabajo - Red fija
-        NETWORK_CONFIGS.put("ESTUDIANTES_IST", 
+        NETWORK_CONFIGS.put("ESTUDIANTES_IST",
             new NetworkConfig("Trabajo", "10.10.0.142", "10.10.0", false));
-        
+
         // Hotspot móvil
-        NETWORK_CONFIGS.put("POCO X5 PRO 5G", 
+        NETWORK_CONFIGS.put("POCO X5 PRO 5G",
             new NetworkConfig("Hotspot", "10.246.204.132", "10.246.204", false));
-        
+
         // Desktop hotspot - IP DINÁMICA, necesita detección
-        NETWORK_CONFIGS.put("DESKTOP-EVP8AVD 0845", 
+        NETWORK_CONFIGS.put("DESKTOP-EVP8AVD 0845",
             new NetworkConfig("Desktop", null, "192.168.137", true));
     }
-    
-    private static final String DEFAULT_HOST = "10.246.204.132"; // Hotspot como default
+
+    private static final String DEFAULT_HOST = "127.0.0.1"; // Localhost como último fallback
     private static String cachedDesktopIp = null; // Cache para la IP del desktop
+    private static NetworkConfigManager configManager = null;
     
     /**
-     * Detecta la red actual usando múltiples métodos para mayor precisión
+     * Inicializa el gestor de configuración
+     */
+    private static void initConfigManager(Context context) {
+        if (configManager == null) {
+            configManager = new NetworkConfigManager(context);
+        }
+    }
+
+    /**
+     * Detecta la red actual usando sistema HÍBRIDO de prioridades:
+     * 1. Tailscale (si está activo y configurado)
+     * 2. SSID conocido (redes configuradas)
+     * 3. Configuración manual
+     * 4. Gateway local (auto-detección - solo como último recurso)
+     * 5. Fallback (localhost)
      */
     @NonNull
     public static String detectCurrentHost(Context context) {
+        initConfigManager(context);
+
         try {
-            // Método 1: Por SSID
-            String ssid = getWifiSsid(context);
-            if (ssid != null) {
-                NetworkConfig config = NETWORK_CONFIGS.get(ssid);
-                if (config != null) {
-                    // Si es una red con IP dinámica, detectarla
-                    if (config.isDynamic) {
-                        String detectedIp = detectDesktopIp(context);
-                        if (detectedIp != null) {
-                            cachedDesktopIp = detectedIp;
-                            Log.i(TAG, "✓ Red Desktop detectada con IP dinámica: " + detectedIp);
-                            return detectedIp;
-                        } else if (cachedDesktopIp != null) {
-                            Log.i(TAG, "✓ Usando IP Desktop cacheada: " + cachedDesktopIp);
-                            return cachedDesktopIp;
-                        } else {
-                            Log.w(TAG, "No se pudo detectar IP del Desktop, usando última conocida");
-                            return "10.10.0.142"; // Fallback a tu última IP conocida
+            Log.d(TAG, "=== INICIANDO DETECCIÓN DE RED HÍBRIDA ===");
+
+            // ===== PRIORIDAD 1: TAILSCALE =====
+            if (configManager.shouldPreferTailscale()) {
+                String tailscaleIp = detectTailscaleConnection(context);
+                if (tailscaleIp != null) {
+                    Log.i(TAG, "✅ [PRIORIDAD 1] Tailscale detectado: " + tailscaleIp);
+                    return tailscaleIp;
+                }
+            }
+
+            // ===== PRIORIDAD 2: SSID CONOCIDO =====
+            // Redes conocidas tienen prioridad sobre gateway porque son más confiables
+            String ssidBasedIp = detectBySSID(context);
+            if (ssidBasedIp != null) {
+                Log.i(TAG, "✅ [PRIORIDAD 2] Red conocida por SSID: " + ssidBasedIp);
+                return ssidBasedIp;
+            }
+
+            // ===== PRIORIDAD 3: CONFIGURACIÓN MANUAL =====
+            String manualIp = configManager.getManualIp();
+            if (manualIp != null && !manualIp.isEmpty()) {
+                Log.i(TAG, "✅ [PRIORIDAD 3] IP manual configurada: " + manualIp);
+                return manualIp;
+            }
+
+            // ===== PRIORIDAD 4: GATEWAY LOCAL (AUTO-DETECCIÓN) =====
+            // NOTA: Gateway suele ser el router (192.168.0.1) no la PC con emulador
+            // Solo usar como último recurso (útil para hotspots donde gateway = PC)
+            if (configManager.isAutoDetectEnabled()) {
+                String gatewayIp = detectGatewayIp(context);
+                if (gatewayIp != null && isValidLocalIp(gatewayIp)) {
+                    Log.i(TAG, "✅ [PRIORIDAD 4] Gateway detectado: " + gatewayIp);
+                    Log.w(TAG, "⚠️ ADVERTENCIA: Gateway detectado puede ser el router, no el emulador");
+                    return gatewayIp;
+                }
+            }
+
+            // ===== PRIORIDAD 5: FALLBACK =====
+            Log.w(TAG, "⚠️ [FALLBACK] No se detectó ninguna red, usando: " + DEFAULT_HOST);
+            return DEFAULT_HOST;
+
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error al detectar red: " + e.getMessage(), e);
+            return DEFAULT_HOST;
+        }
+    }
+
+    /**
+     * PRIORIDAD 1: Detecta si el dispositivo está conectado a Tailscale
+     * y retorna la IP del servidor configurado
+     */
+    @Nullable
+    private static String detectTailscaleConnection(Context context) {
+        try {
+            List<NetworkInterface> interfaces = Collections.list(
+                NetworkInterface.getNetworkInterfaces());
+
+            for (NetworkInterface intf : interfaces) {
+                String name = intf.getName().toLowerCase();
+
+                // Tailscale usa "tun0" o "tailscale0" en Android
+                if (name.startsWith("tun") || name.contains("tailscale")) {
+                    List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                    for (InetAddress addr : addrs) {
+                        if (!addr.isLoopbackAddress()) {
+                            String localIp = addr.getHostAddress();
+
+                            // Verificar si es IP de Tailscale (rango CGNAT 100.64.0.0/10)
+                            if (localIp != null && localIp.startsWith("100.")) {
+                                String serverIp = configManager.getTailscaleServerIp();
+                                Log.d(TAG, "Tailscale activo - IP local: " + localIp +
+                                      ", IP servidor: " + serverIp);
+                                return serverIp;
+                            }
                         }
                     }
-                    
-                    // Red con IP fija
-                    Log.i(TAG, "✓ Red detectada por SSID: " + config.name + 
-                          " (" + ssid + ") -> " + config.host);
-                    return config.host;
                 }
-                Log.w(TAG, "SSID desconocido: " + ssid);
             }
-            
-            // Método 2: Por rango de IP local
-            String localIp = getLocalIpAddress(context);
-            if (localIp != null) {
-                Log.d(TAG, "IP local detectada: " + localIp);
-                
-                // Si estamos en el rango de Windows hotspot (192.168.137.x)
-                if (localIp.startsWith("192.168.137.")) {
-                    String desktopIp = detectDesktopIp(context);
-                    if (desktopIp != null) {
-                        cachedDesktopIp = desktopIp;
-                        Log.i(TAG, "✓ Desktop hotspot detectado por IP, host: " + desktopIp);
-                        return desktopIp;
+
+            Log.d(TAG, "Tailscale no detectado en interfaces de red");
+        } catch (SocketException e) {
+            Log.e(TAG, "Error detectando Tailscale: " + e.getMessage(), e);
+        }
+
+        return null;
+    }
+
+    /**
+     * PRIORIDAD 2: Detecta la IP del gateway automáticamente
+     */
+    @Nullable
+    private static String detectGatewayIp(Context context) {
+        return getGatewayIp(context);
+    }
+
+    /**
+     * PRIORIDAD 3: Detección por SSID (sistema legacy)
+     */
+    @Nullable
+    private static String detectBySSID(Context context) {
+        String ssid = getWifiSsid(context);
+        if (ssid != null) {
+            NetworkConfig config = NETWORK_CONFIGS.get(ssid);
+            if (config != null) {
+                // Si es una red con IP dinámica, detectarla
+                if (config.isDynamic) {
+                    String detectedIp = detectDesktopIp(context);
+                    if (detectedIp != null) {
+                        cachedDesktopIp = detectedIp;
+                        return detectedIp;
                     } else if (cachedDesktopIp != null) {
-                        Log.i(TAG, "✓ Usando IP Desktop cacheada: " + cachedDesktopIp);
                         return cachedDesktopIp;
                     }
                 }
-                
-                // Buscar en otras configuraciones
-                for (NetworkConfig config : NETWORK_CONFIGS.values()) {
-                    if (!config.isDynamic && localIp.startsWith(config.ipPrefix)) {
-                        Log.i(TAG, "✓ Red detectada por IP: " + config.name + 
-                              " (IP: " + localIp + ") -> " + config.host);
-                        return config.host;
-                    }
+
+                // Red con IP fija
+                if (config.host != null) {
+                    return config.host;
                 }
-                Log.w(TAG, "IP local no coincide con redes conocidas: " + localIp);
             }
-            
-            // Método 3: Verificar tipo de conexión
-            String connectionType = getConnectionType(context);
-            Log.i(TAG, "Tipo de conexión: " + connectionType);
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Error al detectar red: " + e.getMessage(), e);
         }
-        
-        Log.w(TAG, "Usando host por defecto: " + DEFAULT_HOST);
-        return DEFAULT_HOST;
+        return null;
     }
     
     /**
@@ -179,32 +259,47 @@ public class NetworkDetector {
     }
     
     /**
-     * Verifica si una IP es válida y de red local
+     * Verifica si una IP es válida y de red local/VPN
+     * Incluye rangos privados RFC1918 + Tailscale CGNAT
      */
     private static boolean isValidLocalIp(String ip) {
-        if (ip == null || ip.equals("0.0.0.0")) {
+        if (ip == null || ip.equals("0.0.0.0") || ip.equals("127.0.0.1")) {
             return false;
         }
-        
-        // Rangos de IP privadas
-        return ip.startsWith("192.168.") || 
-               ip.startsWith("10.") || 
-               ip.startsWith("172.16.") ||
-               ip.startsWith("172.17.") ||
-               ip.startsWith("172.18.") ||
-               ip.startsWith("172.19.") ||
-               ip.startsWith("172.20.") ||
-               ip.startsWith("172.21.") ||
-               ip.startsWith("172.22.") ||
-               ip.startsWith("172.23.") ||
-               ip.startsWith("172.24.") ||
-               ip.startsWith("172.25.") ||
-               ip.startsWith("172.26.") ||
-               ip.startsWith("172.27.") ||
-               ip.startsWith("172.28.") ||
-               ip.startsWith("172.29.") ||
-               ip.startsWith("172.30.") ||
-               ip.startsWith("172.31.");
+
+        // Rangos de IP privadas RFC1918
+        if (ip.startsWith("192.168.") || ip.startsWith("10.")) {
+            return true;
+        }
+
+        // Rango 172.16.0.0 - 172.31.255.255
+        if (ip.startsWith("172.")) {
+            try {
+                String[] parts = ip.split("\\.");
+                int secondOctet = Integer.parseInt(parts[1]);
+                if (secondOctet >= 16 && secondOctet <= 31) {
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Error validando IP 172.x: " + ip);
+            }
+        }
+
+        // ✅ Rango CGNAT de Tailscale: 100.64.0.0/10 (100.64.0.0 - 100.127.255.255)
+        if (ip.startsWith("100.")) {
+            try {
+                String[] parts = ip.split("\\.");
+                int secondOctet = Integer.parseInt(parts[1]);
+                if (secondOctet >= 64 && secondOctet <= 127) {
+                    Log.d(TAG, "IP Tailscale válida: " + ip);
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Error validando IP Tailscale: " + ip);
+            }
+        }
+
+        return false;
     }
     
     /**
@@ -396,16 +491,34 @@ public class NetworkDetector {
      * Información detallada de la red actual (para debugging)
      */
     public static String getNetworkInfo(Context context) {
+        initConfigManager(context);
+
         StringBuilder info = new StringBuilder();
-        info.append("=== INFORMACIÓN DE RED ===\n");
+        info.append("=== INFORMACIÓN DE RED COMPLETA ===\n\n");
+
+        // Información de configuración
+        info.append("--- Configuración ---\n");
+        info.append(configManager.getConfigInfo()).append("\n");
+
+        // Información de red actual
+        info.append("--- Red Actual ---\n");
         info.append("SSID: ").append(getWifiSsid(context)).append("\n");
         info.append("IP Local: ").append(getLocalIpAddress(context)).append("\n");
-        info.append("Gateway (IP PC): ").append(getGatewayIp(context)).append("\n");
+        info.append("Gateway: ").append(getGatewayIp(context)).append("\n");
         info.append("Tipo: ").append(getConnectionType(context)).append("\n");
-        info.append("Host detectado: ").append(detectCurrentHost(context)).append("\n");
+
+        // Detección de Tailscale
+        String tailscale = detectTailscaleConnection(context);
+        info.append("Tailscale: ").append(tailscale != null ? "Activo (" + tailscale + ")" : "Inactivo").append("\n");
+
+        // Host final detectado
+        info.append("\n--- Resultado ---\n");
+        info.append("Host seleccionado: ").append(detectCurrentHost(context)).append("\n");
+
         if (cachedDesktopIp != null) {
             info.append("IP Desktop cacheada: ").append(cachedDesktopIp).append("\n");
         }
+
         return info.toString();
     }
     
@@ -415,5 +528,50 @@ public class NetworkDetector {
     public static void clearCache() {
         cachedDesktopIp = null;
         Log.d(TAG, "Cache de IP del Desktop limpiado");
+    }
+
+    /**
+     * Obtiene el gestor de configuración de red
+     * Útil para configurar IPs manualmente desde la app
+     */
+    public static NetworkConfigManager getConfigManager(Context context) {
+        initConfigManager(context);
+        return configManager;
+    }
+
+    /**
+     * Configura manualmente la IP del servidor Tailscale
+     */
+    public static void setTailscaleServerIp(Context context, String ip) {
+        initConfigManager(context);
+        configManager.setTailscaleServerIp(ip);
+        Log.i(TAG, "IP de Tailscale actualizada a: " + ip);
+    }
+
+    /**
+     * Configura manualmente una IP personalizada
+     */
+    public static void setManualIp(Context context, String ip) {
+        initConfigManager(context);
+        configManager.setManualIp(ip);
+        Log.i(TAG, "IP manual configurada: " + ip);
+    }
+
+    /**
+     * Limpia la configuración manual y resetea a detección automática
+     */
+    public static void resetToAutoDetect(Context context) {
+        initConfigManager(context);
+        configManager.clearManualIp();
+        configManager.setAutoDetectEnabled(true);
+        clearCache();
+        Log.i(TAG, "Configuración reseteada a auto-detección");
+    }
+
+    /**
+     * Verifica si Tailscale está activo en este momento
+     */
+    public static boolean isTailscaleActive(Context context) {
+        return detectTailscaleConnection(context) != null;
     }
 }
