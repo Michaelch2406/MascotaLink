@@ -112,6 +112,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     // Listeners
     private FirebaseAuth.AuthStateListener mAuthListener;
     private ListenerRegistration duenoListener;
+    private ListenerRegistration duenoStatsListener;
     private ListenerRegistration mascotasListener;
     private ListenerRegistration metodoPagoListener;
 
@@ -271,12 +272,15 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         btnCerrarSesion.setOnClickListener(v -> {
             detachDataListeners();
+            com.mjc.mascotalink.util.UnreadBadgeManager.stop();
             new CredentialManager(PerfilDuenoActivity.this).clearCredentials();
             try {
                 EncryptedPreferencesHelper.getInstance(PerfilDuenoActivity.this).clear();
             } catch (Exception e) {
                 Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
             }
+            // Desconectar WebSocket antes de cerrar sesión
+            com.mjc.mascotalink.network.SocketManager.getInstance(PerfilDuenoActivity.this).disconnect();
             mAuth.signOut();
         });
 
@@ -451,7 +455,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         });
 
         // 2. Load Dueno specific Stats
-        db.collection("duenos").document(duenoId).addSnapshotListener((duenoDoc, e) -> {
+        duenoStatsListener = db.collection("duenos").document(duenoId).addSnapshotListener((duenoDoc, e) -> {
              if (e != null) return;
              if (duenoDoc != null && duenoDoc.exists()) {
                  String verificacion = duenoDoc.getString("verificacion_estado");
@@ -636,6 +640,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private void detachDataListeners() {
         if (duenoListener != null) duenoListener.remove();
+        if (duenoStatsListener != null) duenoStatsListener.remove();
         if (mascotasListener != null) mascotasListener.remove();
         if (metodoPagoListener != null) metodoPagoListener.remove();
     }

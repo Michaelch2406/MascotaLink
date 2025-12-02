@@ -125,6 +125,8 @@ public class LoginActivity extends AppCompatActivity {
                                         if (user != null && user.getUid().equals(userId)) {
                                             Log.d(TAG, "Re-authentication successful. Redirigiendo...");
                                             updateFcmTokenForCurrentUser();
+                                            // Reconectar WebSocket después de re-autenticación
+                                            com.mjc.mascotalink.network.SocketManager.getInstance(LoginActivity.this).connect();
                                             db.collection("usuarios").document(user.getUid()).get()
                                                     .addOnSuccessListener(documentSnapshot -> {
                                                         if (documentSnapshot.exists()) {
@@ -268,6 +270,9 @@ public class LoginActivity extends AppCompatActivity {
                             return;
                         }
                         updateFcmTokenForCurrentUser();
+
+                        // Reconectar WebSocket con el nuevo token del usuario
+                        com.mjc.mascotalink.network.SocketManager.getInstance(LoginActivity.this).connect();
 
                         if ("PASEADOR".equalsIgnoreCase(rol)) {
                             db.collection("paseadores").document(uid).get()

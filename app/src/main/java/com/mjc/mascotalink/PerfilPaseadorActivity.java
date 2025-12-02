@@ -425,12 +425,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
         btnCerrarSesion.setOnClickListener(v -> {
             detachDataListeners();
+            com.mjc.mascotalink.util.UnreadBadgeManager.stop();
             new CredentialManager(PerfilPaseadorActivity.this).clearCredentials();
             try {
                 EncryptedPreferencesHelper.getInstance(PerfilPaseadorActivity.this).clear();
             } catch (Exception e) {
                 Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
             }
+            // Desconectar WebSocket antes de cerrar sesión
+            com.mjc.mascotalink.network.SocketManager.getInstance(PerfilPaseadorActivity.this).disconnect();
             mAuth.signOut();
         });
 

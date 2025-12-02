@@ -49,9 +49,10 @@ public class SocketManager {
      * Conecta al servidor WebSocket usando Firebase Auth token
      */
     public void connect() {
-        if (socket != null && socket.connected()) {
-            Log.d(TAG, "Socket ya conectado");
-            return;
+        // Si ya hay una conexión, desconectar primero para reconectar con nuevo token
+        if (socket != null) {
+            Log.d(TAG, "Desconectando socket existente para reconectar con nuevo token");
+            disconnect();
         }
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();

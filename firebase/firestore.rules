@@ -171,8 +171,9 @@ service cloud.firestore {
 
       // Permitir list (queries) si está autenticado - la query whereArrayContains ya filtra
       allow list: if isAuthenticated();
-      // Permitir get (lectura individual) solo si es participante
-      allow get: if isParticipantInResource();
+      // Permitir get (lectura individual) solo si es participante o si el doc no existe y el usuario es parte del ID
+      allow get: if (resource != null && isParticipantInResource())
+                 || (resource == null && isAuthenticated() && chatId.matches('.*' + request.auth.uid + '.*'));
       allow create: if isParticipantInCreate();
       allow update: if isParticipantInResource()
         && request.resource.data.keys().hasOnly([
