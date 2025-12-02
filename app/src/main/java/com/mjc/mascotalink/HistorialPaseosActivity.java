@@ -129,24 +129,37 @@ public class HistorialPaseosActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    // Listener para actualizaciones en tiempo real
+    private com.google.firebase.firestore.ListenerRegistration firestoreListener;
+
     private void cargarHistorial() {
+        // Detener listener anterior si existe
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
+        }
+
         swipeRefresh.setRefreshing(true);
-        listaPaseos.clear();
+        // No limpiamos listaPaseos aquí para evitar parpadeo, se limpia al recibir datos
 
         String campoFiltro = "PASEADOR".equalsIgnoreCase(userRole) ? "id_paseador" : "id_dueno";
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
 
         // Consultamos paseos donde el usuario participa
-        // Nota: Firestore requiere índices compuestos para whereIn + orderBy. 
-        // Si falla, simplificaremos la query y ordenaremos en cliente.
-        
         Query query = db.collection("reservas")
                 .whereEqualTo(campoFiltro, userRef)
                 .whereIn("estado", Arrays.asList("COMPLETADO", "CANCELADO", "RECHAZADO", "FINALIZADO"));
                 //.orderBy("fecha", Query.Direction.DESCENDING); // Comentado por si falta índice
 
-        query.get().addOnSuccessListener(querySnapshot -> {
-            if (querySnapshot.isEmpty()) {
+        firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
+            if (e != null) {
+                manejarError(e);
+                return;
+            }
+
+            if (querySnapshot == null || querySnapshot.isEmpty()) {
+                listaPaseos.clear();
+                filtrarListaLocalmente();
                 swipeRefresh.setRefreshing(false);
                 mostrarEstadoVacio();
                 return;
@@ -189,6 +202,8 @@ public class HistorialPaseosActivity extends AppCompatActivity {
             }
 
             Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
+                if (isDestroyed() || isFinishing()) return;
+
                 for (int i = 0; i < paseosTemp.size(); i++) {
                     Paseo p = paseosTemp.get(i);
                     DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(i * 3);
@@ -217,17 +232,26 @@ public class HistorialPaseosActivity extends AppCompatActivity {
                     return d2.compareTo(d1);
                 });
                 
+                // Actualizar lista maestra y filtrar
+                listaPaseos.clear();
                 listaPaseos.addAll(paseosTemp);
-                filtrarListaLocalmente(); // Aplica el filtro seleccionado
+                filtrarListaLocalmente(); 
                 swipeRefresh.setRefreshing(false);
                 
-            }).addOnFailureListener(e -> {
-                manejarError(e);
+            }).addOnFailureListener(ex -> {
+                Log.e(TAG, "Error cargando detalles relacionados", ex);
+                swipeRefresh.setRefreshing(false);
             });
-
-        }).addOnFailureListener(e -> {
-            manejarError(e);
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
+        }
     }
     
     private void filtrarListaLocalmente() {

@@ -146,9 +146,18 @@ public class SolicitudesActivity extends AppCompatActivity {
         swipeRefresh.setColorSchemeResources(R.color.blue_primary);
     }
 
+    // Listener para actualizaciones en tiempo real
+    private com.google.firebase.firestore.ListenerRegistration firestoreListener;
+
     private void cargarSolicitudes() {
+        // Detener listener anterior si existe
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
+        }
+
         swipeRefresh.setRefreshing(true);
-        solicitudesList.clear();
+        // solicitudesList.clear(); // Opcional: evitar limpiar inmediatamente para reducir parpadeo
 
         // Consultar reservas donde el paseador es el actual y el estado es PENDIENTE_ACEPTACION
         Query query = db.collection("reservas")
@@ -156,14 +165,23 @@ public class SolicitudesActivity extends AppCompatActivity {
                 .whereEqualTo("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION)
                 .orderBy("fecha_creacion", Query.Direction.DESCENDING);
 
-        query.get().addOnSuccessListener(querySnapshot -> {
-            if (querySnapshot.isEmpty()) {
+        firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
+            if (e != null) {
+                manejarError(e);
+                return;
+            }
+
+            if (querySnapshot == null || querySnapshot.isEmpty()) {
+                solicitudesList.clear();
+                if (solicitudesAdapter != null) {
+                    solicitudesAdapter.updateList(solicitudesList);
+                }
                 finalizarCarga();
                 return;
             }
 
-            final int totalSolicitudes = querySnapshot.size();
-            final int[] solicitudesProcesadas = {0};
+            List<Solicitud> solicitudesTemporales = new ArrayList<>();
+            List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
 
             for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                 Solicitud solicitud = new Solicitud();
@@ -176,74 +194,72 @@ public class SolicitudesActivity extends AppCompatActivity {
                 solicitud.setIdDueno(duenoRef);
                 solicitud.setIdMascota(idMascota);
 
-                // Tareas para obtener datos relacionados (dueño y mascota)
-                Task<DocumentSnapshot> duenoTask = null;
+                solicitudesTemporales.add(solicitud);
+
+                // Preparar tareas para obtener datos relacionados
                 if (duenoRef != null) {
-                    duenoTask = duenoRef.get();
-                }
-
-                Task<DocumentSnapshot> mascotaTask = null;
-                if (duenoRef != null && idMascota != null && !idMascota.isEmpty()) {
-                    String duenoId = duenoRef.getId();
-                    mascotaTask = db.collection("duenos").document(duenoId).collection("mascotas").document(idMascota).get();
-                }
-
-                // Combinar tareas y procesar resultados
-                Task<DocumentSnapshot> finalDuenoTask = duenoTask;
-                Task<DocumentSnapshot> finalMascotaTask = mascotaTask;
-
-                // Procesar tarea del dueño
-                if (finalDuenoTask != null) {
-                    finalDuenoTask.addOnSuccessListener(duenoDoc -> {
-                        if (duenoDoc.exists()) {
-                            solicitud.setDuenoNombre(duenoDoc.getString("nombre_display"));
-                            solicitud.setDuenoFotoUrl(duenoDoc.getString("foto_perfil"));
-                        } else {
-                            solicitud.setDuenoNombre("Usuario desconocido");
-                        }
-
-                        // Una vez obtenido el dueño, procesar la mascota
-                        if (finalMascotaTask != null) {
-                            finalMascotaTask.addOnSuccessListener(mascotaDoc -> {
-                                if (mascotaDoc.exists()) {
-                                    solicitud.setMascotaRaza(mascotaDoc.getString("raza"));
-                                } else {
-                                    solicitud.setMascotaRaza("Mascota");
-                                }
-                                solicitudesList.add(solicitud);
-                                if (++solicitudesProcesadas[0] == totalSolicitudes) {
-                                    actualizarYFinalizar();
-                                }
-                            }).addOnFailureListener(e -> {
-                                solicitud.setMascotaRaza("Error");
-                                solicitudesList.add(solicitud);
-                                if (++solicitudesProcesadas[0] == totalSolicitudes) {
-                                    actualizarYFinalizar();
-                                }
-                            });
-                        } else {
-                            solicitud.setMascotaRaza("Mascota no especificada");
-                            solicitudesList.add(solicitud);
-                            if (++solicitudesProcesadas[0] == totalSolicitudes) {
-                                actualizarYFinalizar();
-                            }
-                        }
-                    }).addOnFailureListener(e -> {
-                        solicitud.setDuenoNombre("Error al cargar");
-                        solicitudesList.add(solicitud);
-                        if (++solicitudesProcesadas[0] == totalSolicitudes) {
-                            actualizarYFinalizar();
-                        }
-                    });
-                } else {
-                    solicitud.setDuenoNombre("Dueño no especificado");
-                    solicitudesList.add(solicitud);
-                    if (++solicitudesProcesadas[0] == totalSolicitudes) {
-                        actualizarYFinalizar();
+                    tareas.add(duenoRef.get());
+                    if (idMascota != null && !idMascota.isEmpty()) {
+                        tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas").document(idMascota).get());
+                    } else {
+                        tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
                     }
+                } else {
+                    tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
+                    tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
                 }
             }
-        }).addOnFailureListener(this::manejarError);
+
+            if (tareas.isEmpty()) {
+                finalizarCarga();
+                return;
+            }
+
+            com.google.android.gms.tasks.Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
+                if (isDestroyed() || isFinishing()) return;
+
+                List<Solicitud> nuevasSolicitudes = new ArrayList<>();
+                int resultIndex = 0;
+
+                for (Solicitud solicitud : solicitudesTemporales) {
+                    DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(resultIndex++);
+                    DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(resultIndex++);
+
+                    if (duenoDoc != null && duenoDoc.exists()) {
+                        solicitud.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                        solicitud.setDuenoFotoUrl(duenoDoc.getString("foto_perfil"));
+                    } else {
+                        solicitud.setDuenoNombre(duenoDoc != null ? "Usuario desconocido" : "Dueño no especificado");
+                    }
+
+                    if (mascotaDoc != null && mascotaDoc.exists()) {
+                        solicitud.setMascotaRaza(mascotaDoc.getString("raza"));
+                    } else {
+                        solicitud.setMascotaRaza("Mascota");
+                    }
+
+                    nuevasSolicitudes.add(solicitud);
+                }
+                
+                // Reemplazar lista y notificar
+                solicitudesList.clear();
+                solicitudesList.addAll(nuevasSolicitudes);
+                actualizarYFinalizar();
+
+            }).addOnFailureListener(ex -> {
+                Log.e(TAG, "Error cargando detalles relacionados", ex);
+                finalizarCarga();
+            });
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
+        }
     }
 
     private void actualizarYFinalizar() {

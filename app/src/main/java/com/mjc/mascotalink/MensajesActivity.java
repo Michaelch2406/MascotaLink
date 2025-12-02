@@ -81,15 +81,6 @@ public class MensajesActivity extends AppCompatActivity {
         super.onPause();
         stopPeriodicUpdate();
     }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (messagesListener != null) {
-            messagesListener.remove();
-            messagesListener = null;
-        }
-    }
     
     @Override
     protected void onDestroy() {

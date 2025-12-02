@@ -294,9 +294,19 @@ public class PaseosActivity extends AppCompatActivity {
         swipeRefresh.setColorSchemeResources(R.color.blue_primary);
     }
 
+    // Listener para actualizaciones en tiempo real
+    private com.google.firebase.firestore.ListenerRegistration firestoreListener;
+
     private void cargarPaseos(String role) {
+        // Detener listener anterior si existe para evitar duplicados
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
+        }
+
         swipeRefresh.setRefreshing(true);
-        paseosList.clear();
+        // No limpiamos la lista inmediatamente para evitar parpadeos visuales bruscos
+        // paseosList.clear(); 
 
         String fieldToFilter = "PASEADOR".equalsIgnoreCase(role) ? "id_paseador" : "id_dueno";
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
@@ -305,8 +315,17 @@ public class PaseosActivity extends AppCompatActivity {
                 .whereEqualTo(fieldToFilter, userRef)
                 .whereEqualTo("estado", estadoActual);
 
-        query.get().addOnSuccessListener(querySnapshot -> {
-            if (querySnapshot.isEmpty()) {
+        firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
+            if (e != null) {
+                manejarError(e);
+                return;
+            }
+
+            if (querySnapshot == null || querySnapshot.isEmpty()) {
+                paseosList.clear();
+                if (paseosAdapter != null) {
+                    paseosAdapter.updateList(paseosList);
+                }
                 finalizarCarga();
                 return;
             }
@@ -337,6 +356,7 @@ public class PaseosActivity extends AppCompatActivity {
                 }
             }
 
+            // Ordenar preliminarmente (aunque se reordenará después de obtener detalles)
             java.util.Collections.sort(paseosTemporales, (p1, p2) -> {
                 if (p1.getFecha() == null || p2.getFecha() == null) return 0;
                 return p2.getFecha().compareTo(p1.getFecha());
@@ -348,6 +368,8 @@ public class PaseosActivity extends AppCompatActivity {
             }
 
             Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
+                if (isDestroyed() || isFinishing()) return; // Evitar crashes si la actividad ya cerró
+
                 Date now = new Date();
                 List<Paseo> nuevosPaseos = new ArrayList<>();
 
@@ -355,12 +377,20 @@ public class PaseosActivity extends AppCompatActivity {
                     Paseo paseo = paseosTemporales.get(i);
 
                     // Auto-corrección de estado (EN_CURSO)
+                    // Nota: Al hacer update aquí, se disparará el listener de nuevo,
+                    // lo cual es correcto para que el item se mueva de lista automáticamente.
                     if ("CONFIRMADO".equals(paseo.getEstado()) && paseo.getHora_inicio() != null && paseo.getHora_inicio().before(now)) {
-                        paseo.setEstado("EN_CURSO");
+                        // Verificamos si ya hicimos la transición para evitar bucles infinitos de actualizaciones locales
+                        // aunque Firestore maneja esto bien, es buena práctica.
+                        // En este caso, simplemente lanzamos el update. El listener se encargará de refrescar la UI
+                        // cuando el servidor confirme el cambio.
                         db.collection("reservas").document(paseo.getReservaId())
                                 .update("estado", "EN_CURSO", 
                                         "hasTransitionedToInCourse", true,
                                         "fecha_inicio_paseo", new com.google.firebase.Timestamp(paseo.getHora_inicio()));
+                        // No lo añadimos a la lista local actual porque ya no pertenece a este estado (si estamos en CONFIRMADO)
+                        // O si estamos en EN_CURSO, aparecerá en la siguiente actualización del listener.
+                        continue; 
                     }
 
                     DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(i * 3);
@@ -395,8 +425,20 @@ public class PaseosActivity extends AppCompatActivity {
                     paseosAdapter.updateList(paseosList);
                 }
                 finalizarCarga();
-            }).addOnFailureListener(this::manejarError);
-        }).addOnFailureListener(this::manejarError);
+            }).addOnFailureListener(ex -> {
+               Log.e(TAG, "Error cargando detalles relacionados", ex);
+               finalizarCarga();
+            });
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
+        }
     }
 
     private void finalizarCarga() {
