@@ -914,6 +914,14 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             else if (selectedId == R.id.rb_seguridad) motivo = "Problema de seguridad";
             else if (selectedId == R.id.rb_otro) motivo = etOtroMotivo.getText().toString();
             else if (selectedId == R.id.rb_finalizar_exito) { // Opción para finalizar con éxito
+                 long tiempoTranscurrido = calcularTiempoTranscurrido();
+                 long tiempoMinimo = obtenerTiempoMinimo();
+                 if (tiempoTranscurrido < tiempoMinimo) {
+                     long minutosRestantes = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo - tiempoTranscurrido);
+                     long minutosMinimos = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo);
+                     Toast.makeText(this, "No puedes finalizar el paseo antes de " + minutosMinimos + " minutos (75% del tiempo). Faltan " + minutosRestantes + " minutos.", Toast.LENGTH_LONG).show();
+                     return;
+                 }
                  confirmarFinalizacionExito(); // Reutilizar lógica de éxito
                  return;
             }
@@ -1028,7 +1036,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private long obtenerTiempoMinimo() {
         if (duracionMinutos <= 0) return 0;
-        return (long) (duracionMinutos * 60000 * 0.8f);
+        return (long) (duracionMinutos * 60000 * 0.75f);
     }
 
     private void startTimer() {
