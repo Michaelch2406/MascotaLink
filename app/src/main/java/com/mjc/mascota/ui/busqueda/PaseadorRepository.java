@@ -112,7 +112,8 @@ public class PaseadorRepository {
                     for (int i = 0; i < zonaSnapshots.size(); i++) {
                         QuerySnapshot zonaSnapshot = (QuerySnapshot) zonaSnapshots.get(i);
                         if (!zonaSnapshot.isEmpty()) {
-                            resultados.get(i).setZonaPrincipal(zonaSnapshot.getDocuments().get(0).getString("direccion"));
+                            String direccion = zonaSnapshot.getDocuments().get(0).getString("direccion");
+                            resultados.get(i).setZonaPrincipal(direccion != null ? direccion : "Sin zona especificada");
                         } else {
                             resultados.get(i).setZonaPrincipal("Sin zona especificada");
                         }

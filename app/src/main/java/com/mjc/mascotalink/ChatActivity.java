@@ -940,7 +940,8 @@ public class ChatActivity extends AppCompatActivity {
         db.collection("usuarios").document(otroUsuarioId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        tvNombreChat.setText(doc.getString("nombre_display"));
+                        String nombreDisplay = doc.getString("nombre_display");
+                        tvNombreChat.setText(nombreDisplay != null ? nombreDisplay : "Usuario");
                         String foto = doc.getString("foto_perfil");
                         if (foto != null) {
                             Glide.with(this).load(MyApplication.getFixedUrl(foto)).placeholder(R.drawable.ic_user_placeholder).into(ivAvatarChat);

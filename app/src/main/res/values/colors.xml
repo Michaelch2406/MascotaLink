@@ -3,10 +3,10 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="primary">#7FAFCF</color>
-    <color name="secondary">#6B7280</color>
+    <color name="secondary">#4B5563</color>
     <color name="blue_button">#3B82F6</color>
     <color name="error_red">#DC2626</color>
-    <color name="helper_text_gray">#6B7280</color>
+    <color name="helper_text_gray">#4B5563</color>
     <color name="checkbox_blue">#13A4EC</color>
     <color name="google_button_gray">#4285F4</color>
     <color name="blue_primary">#13A4EC</color>
@@ -47,7 +47,7 @@
 
     <!-- Modern UI Colors -->
     <color name="background_modern">#F9FAFB</color>
-    <color name="text_secondary">#6B7280</color>
+    <color name="text_secondary">#4B5563</color>
     <color name="blue_100">#E3F2FD</color>
     <color name="green_100">#E8F5E9</color>
     <color name="red_100">#FFEBEE</color>
