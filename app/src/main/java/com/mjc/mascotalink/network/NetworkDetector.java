@@ -71,10 +71,11 @@ public class NetworkDetector {
     /**
      * Detecta la red actual usando sistema HÍBRIDO de prioridades:
      * 1. Tailscale (si está activo y configurado)
-     * 2. SSID conocido (redes configuradas)
-     * 3. Configuración manual
-     * 4. Gateway local (auto-detección - solo como último recurso)
-     * 5. Fallback (localhost)
+     * 2. SSID conocido con caché (aprendizaje automático)
+     * 3. Subred conocida (hardcoded para redes comunes)
+     * 4. Configuración manual
+     * 5. Auto-detección inteligente (sondeo de IPs comunes)
+     * 6. Fallback (localhost)
      */
     @NonNull
     public static String detectCurrentHost(Context context) {
@@ -83,25 +84,8 @@ public class NetworkDetector {
         try {
             Log.d(TAG, "=== INICIANDO DETECCIÓN DE RED HÍBRIDA ===");
 
-            // ===== PRIORIDAD 0: DETECCIÓN INTELIGENTE POR SUBRED (HARDCODED PARA TU ENTORNO) =====
-            // Esto soluciona el problema de cambio de red instantáneamente
             String localIp = getLocalIpAddress(context);
-            if (localIp != null) {
-                Log.d(TAG, "IP Local detectada: " + localIp);
-                if (localIp.startsWith("192.168.0.")) {
-                    // Estás en casa (INNO_FLIA)
-                    Log.i(TAG, "✅ [PRIORIDAD 0] Subred Casa (192.168.0.x) detectada. Usando: 192.168.0.147");
-                    return "192.168.0.147";
-                } else if (localIp.startsWith("192.168.137.")) {
-                    // Estás en hotspot Windows (Trabajo/PC)
-                    Log.i(TAG, "✅ [PRIORIDAD 0] Subred Hotspot (192.168.137.x) detectada. Usando: 192.168.137.1");
-                    return "192.168.137.1";
-                } else if (localIp.startsWith("10.10.0.")) {
-                    // Estás en la red del trabajo (ESTUDIANTES_IST)
-                    Log.i(TAG, "✅ [PRIORIDAD 0] Subred Trabajo (10.10.0.x) detectada. Usando: 10.10.0.142");
-                    return "10.10.0.142";
-                }
-            }
+            String ssid = getWifiSsid(context);
 
             // ===== PRIORIDAD 1: TAILSCALE =====
             if (configManager.shouldPreferTailscale()) {
@@ -112,34 +96,59 @@ public class NetworkDetector {
                 }
             }
 
-            // ===== PRIORIDAD 2: SSID CONOCIDO =====
-            // Redes conocidas tienen prioridad sobre gateway porque son más confiables
-            String ssidBasedIp = detectBySSID(context);
-            if (ssidBasedIp != null) {
-                Log.i(TAG, "✅ [PRIORIDAD 2] Red conocida por SSID: " + ssidBasedIp);
-                return ssidBasedIp;
-            }
-
-            // ===== PRIORIDAD 3: CONFIGURACIÓN MANUAL =====
-            String manualIp = configManager.getManualIp();
-            if (manualIp != null && !manualIp.isEmpty()) {
-                Log.i(TAG, "✅ [PRIORIDAD 3] IP manual configurada: " + manualIp);
-                return manualIp;
-            }
-
-            // ===== PRIORIDAD 4: GATEWAY LOCAL (AUTO-DETECCIÓN) =====
-            // NOTA: Gateway suele ser el router (192.168.0.1) no la PC con emulador
-            // Solo usar como último recurso (útil para hotspots donde gateway = PC)
-            if (configManager.isAutoDetectEnabled()) {
-                String gatewayIp = detectGatewayIp(context);
-                if (gatewayIp != null && isValidLocalIp(gatewayIp)) {
-                    Log.i(TAG, "✅ [PRIORIDAD 4] Gateway detectado: " + gatewayIp);
-                    Log.w(TAG, "⚠️ ADVERTENCIA: Gateway detectado puede ser el router, no el emulador");
-                    return gatewayIp;
+            // ===== PRIORIDAD 2: CACHÉ DE IP POR SSID (APRENDIZAJE AUTOMÁTICO) =====
+            if (ssid != null) {
+                String cachedIp = getCachedIpForSsid(context, ssid);
+                if (cachedIp != null) {
+                    Log.i(TAG, "✅ [PRIORIDAD 2] IP en caché para SSID '" + ssid + "': " + cachedIp);
+                    return cachedIp;
                 }
             }
 
-            // ===== PRIORIDAD 5: FALLBACK =====
+            // ===== PRIORIDAD 3: DETECCIÓN RÁPIDA POR SUBRED (HARDCODED) =====
+            if (localIp != null) {
+                Log.d(TAG, "IP Local detectada: " + localIp);
+                String hardcodedIp = getHardcodedIpForSubnet(localIp);
+                if (hardcodedIp != null) {
+                    // Guardar en caché para próxima vez
+                    if (ssid != null) {
+                        cacheIpForSsid(context, ssid, hardcodedIp);
+                    }
+                    return hardcodedIp;
+                }
+            }
+
+            // ===== PRIORIDAD 4: SSID CONOCIDO (LEGACY) =====
+            String ssidBasedIp = detectBySSID(context);
+            if (ssidBasedIp != null) {
+                Log.i(TAG, "✅ [PRIORIDAD 4] Red conocida por SSID legacy: " + ssidBasedIp);
+                if (ssid != null) {
+                    cacheIpForSsid(context, ssid, ssidBasedIp);
+                }
+                return ssidBasedIp;
+            }
+
+            // ===== PRIORIDAD 5: CONFIGURACIÓN MANUAL =====
+            String manualIp = configManager.getManualIp();
+            if (manualIp != null && !manualIp.isEmpty()) {
+                Log.i(TAG, "✅ [PRIORIDAD 5] IP manual configurada: " + manualIp);
+                return manualIp;
+            }
+
+            // ===== PRIORIDAD 6: AUTO-DETECCIÓN INTELIGENTE (SONDEO) =====
+            if (configManager.isAutoDetectEnabled() && localIp != null) {
+                String detectedIp = smartDetectEmulatorIp(context, localIp);
+                if (detectedIp != null) {
+                    Log.i(TAG, "✅ [PRIORIDAD 6] IP detectada automáticamente: " + detectedIp);
+                    // Guardar en caché para futuras conexiones
+                    if (ssid != null) {
+                        cacheIpForSsid(context, ssid, detectedIp);
+                    }
+                    return detectedIp;
+                }
+            }
+
+            // ===== PRIORIDAD 7: FALLBACK =====
             Log.w(TAG, "⚠️ [FALLBACK] No se detectó ninguna red, usando: " + DEFAULT_HOST);
             return DEFAULT_HOST;
 
@@ -147,6 +156,103 @@ public class NetworkDetector {
             Log.e(TAG, "❌ Error al detectar red: " + e.getMessage(), e);
             return DEFAULT_HOST;
         }
+    }
+
+    /**
+     * Obtiene la IP hardcodeada para una subred conocida
+     */
+    @Nullable
+    private static String getHardcodedIpForSubnet(String localIp) {
+        if (localIp.startsWith("192.168.0.")) {
+            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Casa (192.168.0.x) detectada. Usando: 192.168.0.147");
+            return "192.168.0.147";
+        } else if (localIp.startsWith("192.168.1.")) {
+            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Escuela (192.168.1.x) detectada. Usando: 192.168.1.86");
+            return "192.168.1.86";
+        } else if (localIp.startsWith("192.168.137.")) {
+            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Hotspot (192.168.137.x) detectada. Usando: 192.168.137.1");
+            return "192.168.137.1";
+        } else if (localIp.startsWith("10.10.0.")) {
+            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Trabajo (10.10.0.x) detectada. Usando: 10.10.0.142");
+            return "10.10.0.142";
+        }
+        return null;
+    }
+
+    /**
+     * Detección inteligente del emulador mediante sondeo de IPs comunes
+     */
+    @Nullable
+    private static String smartDetectEmulatorIp(Context context, String localIp) {
+        Log.d(TAG, "Iniciando detección inteligente de emulador...");
+
+        // Extraer prefijo de subred (primeros 3 octetos)
+        String[] parts = localIp.split("\\.");
+        if (parts.length != 4) return null;
+
+        String subnet = parts[0] + "." + parts[1] + "." + parts[2] + ".";
+
+        // IPs comunes a probar (ordenadas por probabilidad)
+        String[] commonIps = {
+            subnet + "1",     // Gateway típico
+            subnet + "147",   // Tu IP común
+            subnet + "100",   // IP común
+            subnet + "142",   // Tu IP de trabajo
+            subnet + "2",     // Segundo gateway común
+            subnet + "254"    // Último host común
+        };
+
+        // Intentar gateway primero
+        String gateway = getGatewayIp(context);
+        if (gateway != null && isEmulatorRunningAt(gateway)) {
+            Log.i(TAG, "Emulador encontrado en gateway: " + gateway);
+            return gateway;
+        }
+
+        // Probar IPs comunes
+        for (String ip : commonIps) {
+            if (ip.equals(localIp)) continue; // Saltar IP local del dispositivo
+
+            if (isEmulatorRunningAt(ip)) {
+                Log.i(TAG, "Emulador encontrado en: " + ip);
+                return ip;
+            }
+        }
+
+        Log.w(TAG, "No se pudo detectar el emulador automáticamente");
+        return null;
+    }
+
+    /**
+     * Verifica si el emulador de Firebase Storage está corriendo en una IP
+     */
+    private static boolean isEmulatorRunningAt(String ip) {
+        try {
+            java.net.Socket socket = new java.net.Socket();
+            socket.connect(new java.net.InetSocketAddress(ip, 9199), 500); // 500ms timeout
+            socket.close();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene la IP en caché para un SSID específico
+     */
+    @Nullable
+    private static String getCachedIpForSsid(Context context, String ssid) {
+        android.content.SharedPreferences prefs = context.getSharedPreferences("network_cache", Context.MODE_PRIVATE);
+        return prefs.getString("ip_" + ssid, null);
+    }
+
+    /**
+     * Guarda la IP exitosa para un SSID (aprendizaje automático)
+     */
+    private static void cacheIpForSsid(Context context, String ssid, String ip) {
+        android.content.SharedPreferences prefs = context.getSharedPreferences("network_cache", Context.MODE_PRIVATE);
+        prefs.edit().putString("ip_" + ssid, ip).apply();
+        Log.d(TAG, "IP guardada en caché: SSID='" + ssid + "' → IP=" + ip);
     }
 
     /**
