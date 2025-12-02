@@ -146,6 +146,18 @@ public class NetworkMonitorHelper {
                     }
                 }, NETWORK_VERIFICATION_DELAY);
             }
+
+            @Override
+            public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities capabilities) {
+                boolean hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                boolean isValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+
+                // Solo loggear si cambia de no-internet a internet
+                if (hasInternet && isValidated) {
+                    Log.d(TAG, "🌐 Red con internet validado disponible");
+                }
+                // NO reconectar aquí para evitar loops - solo en onAvailable
+            }
         };
 
         try {

@@ -6,10 +6,6 @@ import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -61,6 +57,7 @@ import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.network.SocketManager;
+import com.mjc.mascotalink.network.NetworkMonitorHelper;
 
 import com.mjc.mascotalink.util.WhatsAppUtil;
 
@@ -95,11 +92,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private DocumentReference reservaRef;
     private ListenerRegistration reservaListener;
     private SocketManager socketManager;
-    private ConnectivityManager connectivityManager;
-    private ConnectivityManager.NetworkCallback networkCallback;
-    private boolean isReconnecting = false;
-    private long lastReconnectTime = 0;
-    private static final long MIN_RECONNECT_INTERVAL = 5000; // 5 segundos mínimo entre reconexiones
+    private NetworkMonitorHelper networkMonitor;
 
     private TextView tvNombreMascota;
     private TextView tvPaseador;
@@ -156,7 +149,24 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
         socketManager = SocketManager.getInstance(this);
-        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+
+        // Inicializar NetworkMonitorHelper para monitoreo robusto de red
+        networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
+            @Override
+            public void onNetworkLost() {
+                runOnUiThread(() -> actualizarEstadoUbicacion("Ubicación: sin red"));
+            }
+
+            @Override
+            public void onNetworkAvailable() {
+                Log.d(TAG, "Red disponible nuevamente");
+            }
+
+            @Override
+            public void onReconnected() {
+                Log.d(TAG, "Reconectado exitosamente");
+            }
+        });
 
         initViews();
         setupToolbar();
@@ -179,8 +189,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             socketManager.joinPaseo(idReserva);
         }
 
-        // Configurar detección de cambios de red
-        setupNetworkMonitoring();
+        // Configurar detección de cambios de red con NetworkMonitorHelper
+        networkMonitor.setCurrentRoom(idReserva, NetworkMonitorHelper.RoomType.PASEO);
+        networkMonitor.register();
 
         // Luego sincronizar con Firestore en segundo plano
         escucharReserva();
@@ -1101,115 +1112,11 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
 
         // Limpiar monitor de red
-        if (networkCallback != null && connectivityManager != null) {
-            try {
-                connectivityManager.unregisterNetworkCallback(networkCallback);
-            } catch (Exception e) {
-                Log.e(TAG, "Error al desregistrar NetworkCallback", e);
-            }
+        if (networkMonitor != null) {
+            networkMonitor.unregister();
         }
     }
 
-    /**
-     * Configura monitoreo de cambios de red para reconectar WebSocket
-     */
-    private void setupNetworkMonitoring() {
-        if (connectivityManager == null) return;
-
-        NetworkRequest networkRequest = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build();
-
-        networkCallback = new ConnectivityManager.NetworkCallback() {
-            @Override
-            public void onAvailable(@NonNull Network network) {
-                Log.d(TAG, "🌐 Red disponible");
-                runOnUiThread(() -> {
-                    // Dar tiempo a que la red se estabilice antes de intentar reconectar
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        reconnectWebSocket();
-                    }, 3000); // Aumentado a 3 segundos para evitar reconexiones prematuras
-                });
-            }
-
-            @Override
-            public void onLost(@NonNull Network network) {
-                Log.w(TAG, "🌐 Red perdida");
-                runOnUiThread(() -> {
-                    // Esperar 2 segundos para ver si hay otra red disponible
-                    // (puede ser solo cambio de red, no pérdida total)
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        if (connectivityManager != null) {
-                            Network activeNetwork = connectivityManager.getActiveNetwork();
-                            if (activeNetwork == null) {
-                                // Realmente no hay red
-                                actualizarEstadoUbicacion("Ubicación: sin red");
-                            } else {
-                                // Hay otra red disponible (fue cambio de red)
-                                Log.d(TAG, "Cambio de red detectado, hay red disponible");
-                            }
-                        }
-                    }, 2000);
-                });
-            }
-
-            @Override
-            public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities capabilities) {
-                boolean hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-                boolean isValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
-
-                // Solo loggear si cambia de no-internet a internet
-                if (hasInternet && isValidated) {
-                    Log.d(TAG, "🌐 Red con internet validado disponible");
-                }
-                // NO reconectar aquí para evitar loops - solo en onAvailable
-            }
-        };
-
-        try {
-            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
-            Log.d(TAG, "✅ NetworkCallback registrado");
-        } catch (Exception e) {
-            Log.e(TAG, "Error registrando NetworkCallback", e);
-        }
-    }
-
-    /**
-     * Reconecta WebSocket y se une al paseo (con throttling para evitar loops)
-     */
-    private void reconnectWebSocket() {
-        // Evitar reconexiones múltiples simultáneas
-        if (isReconnecting) {
-            Log.d(TAG, "⏸️ Reconexión ya en progreso, ignorando...");
-            return;
-        }
-
-        // Throttling: mínimo 5 segundos entre reconexiones
-        long now = System.currentTimeMillis();
-        if (now - lastReconnectTime < MIN_RECONNECT_INTERVAL) {
-            Log.d(TAG, "⏸️ Muy pronto para reconectar, esperando...");
-            return;
-        }
-
-        if (!socketManager.isConnected()) {
-            isReconnecting = true;
-            lastReconnectTime = now;
-
-            Log.d(TAG, "🔄 Reconectando SocketManager...");
-            socketManager.connect();
-
-            // Esperar a que se conecte y luego unirse al paseo UNA SOLA VEZ
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (idReserva != null && socketManager.isConnected()) {
-                    socketManager.joinPaseo(idReserva);
-                    Log.d(TAG, "✅ Re-unido al paseo tras cambio de red");
-                }
-                isReconnecting = false;
-            }, 2000);
-        } else {
-            Log.d(TAG, "✅ Socket ya está conectado, no se requiere reconexión");
-        }
-    }
 
     private void setupLocationUpdates() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
