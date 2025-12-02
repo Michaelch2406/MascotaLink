@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.mjc.mascotalink.network.NetworkDetector;
+import com.mjc.mascotalink.network.SocketManager;
 
 public class MyApplication extends Application {
 
@@ -93,7 +94,8 @@ public class MyApplication extends Application {
             Log.d(TAG, NetworkDetector.getNetworkInfo(this));
         }
 
-
+        // Inicializar WebSocket
+        SocketManager.getInstance(this).connect();
     }
 
     public static String getCurrentEmulatorHost(Context context) {

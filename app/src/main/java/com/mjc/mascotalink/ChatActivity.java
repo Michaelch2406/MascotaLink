@@ -53,6 +53,10 @@ import com.google.firebase.storage.StorageReference;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.network.SocketManager;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -76,9 +80,13 @@ public class ChatActivity extends AppCompatActivity {
     private static final long TYPING_DEBOUNCE_MS = 500;
     private static final int REQUEST_LOCATION_PERMISSION = 100;
 
+    // Feature flag: activar/desactivar WebSocket
+    private static final boolean USE_WEBSOCKET = true;
+
     public static String currentChatId = null;
 
     private FirebaseFirestore db;
+    private SocketManager socketManager;
     private String currentUserId;
     private String chatId;
     private String otroUsuarioId;
@@ -126,12 +134,15 @@ public class ChatActivity extends AppCompatActivity {
 
         // Inicializar launchers ANTES de setContentView
         initializeLaunchers();
-        
+
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
         storageRef = storage.getReference();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        
+
+        // Inicializar SocketManager
+        socketManager = SocketManager.getInstance(this);
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             currentUserId = user.getUid();
@@ -160,7 +171,15 @@ public class ChatActivity extends AppCompatActivity {
         initViews();
         setupRecyclerView();
         setupListeners();
-        loadInitialMessages();
+
+        // Configurar WebSocket si está habilitado
+        if (USE_WEBSOCKET && socketManager.isConnected()) {
+            setupWebSocketListeners();
+        } else {
+            // Fallback a Firestore
+            loadInitialMessages();
+        }
+
         cargarDatosOtroUsuario();
         escucharEstadoChat();
         handleRemoteInput(getIntent());
@@ -274,7 +293,12 @@ public class ChatActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 long now = SystemClock.elapsedRealtime();
                 if (now - lastTypingUpdateMs > TYPING_DEBOUNCE_MS) {
-                    actualizarEstadoEscribiendo(true);
+                    // Enviar typing por WebSocket o Firestore
+                    if (USE_WEBSOCKET && socketManager.isConnected()) {
+                        socketManager.sendTyping(chatId);
+                    } else {
+                        actualizarEstadoEscribiendo(true);
+                    }
                     lastTypingUpdateMs = now;
                 }
                 if (typingTimer != null) {
@@ -288,7 +312,12 @@ public class ChatActivity extends AppCompatActivity {
                 typingTimer.schedule(new TimerTask() {
                     @Override
                     public void run() {
-                        actualizarEstadoEscribiendo(false);
+                        // Enviar stop typing por WebSocket o Firestore
+                        if (USE_WEBSOCKET && socketManager.isConnected()) {
+                            socketManager.sendStopTyping(chatId);
+                        } else {
+                            actualizarEstadoEscribiendo(false);
+                        }
                     }
                 }, 2000);
             }
@@ -301,15 +330,26 @@ public class ChatActivity extends AppCompatActivity {
             Log.w(TAG, "Intento de envío mientras ya se está enviando un mensaje");
             return;
         }
-        
+
         isSending = true;
         btnEnviar.setEnabled(false);
         btnEnviar.setAlpha(0.5f); // Indicador visual
         lastSendAtMs = SystemClock.elapsedRealtime();
-        
+
         // Guardar el texto por si falla el envío
         final String textoOriginal = texto;
 
+        // Enviar por WebSocket si está disponible
+        if (USE_WEBSOCKET && socketManager.isConnected()) {
+            socketManager.sendMessage(chatId, otroUsuarioId, texto);
+            etMensaje.setText("");
+            resetSendButton();
+            vibrarSutil();
+            Log.d(TAG, "Mensaje enviado vía WebSocket");
+            return;
+        }
+
+        // Fallback: Enviar por Firestore
         Map<String, Object> mensaje = new HashMap<>();
         mensaje.put("id_remitente", currentUserId);
         mensaje.put("id_destinatario", otroUsuarioId);
@@ -999,6 +1039,164 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
+    // ========================================
+    // WEBSOCKET INTEGRATION
+    // ========================================
+
+    /**
+     * Configura los listeners de WebSocket para mensajes en tiempo real
+     */
+    private void setupWebSocketListeners() {
+        if (!socketManager.isConnected()) {
+            Log.w(TAG, "Socket no conectado, usando Firestore fallback");
+            loadInitialMessages();
+            return;
+        }
+
+        // Unirse al chat
+        socketManager.joinChat(chatId);
+
+        // Cargar mensajes iniciales desde Firestore
+        loadInitialMessages();
+
+        // Listener para nuevos mensajes
+        socketManager.on("new_message", args -> {
+            if (args.length == 0) return;
+
+            try {
+                JSONObject data = (JSONObject) args[0];
+
+                // Crear objeto Mensaje desde JSON
+                Mensaje mensaje = new Mensaje();
+                mensaje.setId(data.optString("id", ""));
+                mensaje.setId_remitente(data.optString("id_remitente", ""));
+                mensaje.setId_destinatario(data.optString("id_destinatario", ""));
+                mensaje.setTexto(data.optString("texto", ""));
+                mensaje.setTipo(data.optString("tipo", "texto"));
+                mensaje.setLeido(data.optBoolean("leido", false));
+                mensaje.setEntregado(data.optBoolean("entregado", true));
+
+                // Parsear timestamp
+                String timestampStr = data.optString("timestamp", "");
+                if (!timestampStr.isEmpty()) {
+                    try {
+                        Date date = new java.text.SimpleDateFormat(
+                            "yyyy-MM-dd'T'HH:mm:ss",
+                            java.util.Locale.US
+                        ).parse(timestampStr);
+                        if (date != null) {
+                            mensaje.setTimestamp(date);
+                        }
+                    } catch (Exception e) {
+                        mensaje.setTimestamp(new Date());
+                    }
+                } else {
+                    mensaje.setTimestamp(new Date());
+                }
+
+                // Imagen o ubicación
+                if (data.has("imagen_url")) {
+                    mensaje.setImagen_url(data.optString("imagen_url"));
+                }
+                if (data.has("latitud") && data.has("longitud")) {
+                    mensaje.setLatitud(data.optDouble("latitud"));
+                    mensaje.setLongitud(data.optDouble("longitud"));
+                }
+
+                runOnUiThread(() -> {
+                    // Evitar duplicados
+                    if (!messageIds.contains(mensaje.getId())) {
+                        messageIds.add(mensaje.getId());
+                        adapter.agregarMensaje(mensaje);
+                        rvMensajes.smoothScrollToPosition(adapter.getItemCount() - 1);
+
+                        // Marcar como leído si no es mensaje propio
+                        if (!mensaje.getId_remitente().equals(currentUserId)) {
+                            socketManager.markMessageRead(chatId, mensaje.getId());
+                            vibrarSutil();
+                        }
+                    }
+                });
+
+                Log.d(TAG, "Mensaje recibido vía WebSocket");
+            } catch (Exception e) {
+                Log.e(TAG, "Error parseando mensaje WebSocket", e);
+            }
+        });
+
+        // Listener para read receipts
+        socketManager.on("message_read", args -> {
+            if (args.length == 0) return;
+
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String messageId = data.getString("messageId");
+
+                runOnUiThread(() -> {
+                    // Actualizar el adapter para mostrar doble check
+                    // TODO: Implementar método marcarComoLeido() en ChatAdapter si es necesario
+                    adapter.notifyDataSetChanged();
+                });
+
+                Log.d(TAG, "Read receipt recibido para mensaje: " + messageId);
+            } catch (JSONException e) {
+                Log.e(TAG, "Error parseando read receipt", e);
+            }
+        });
+
+        // Listener para typing indicator
+        socketManager.on("user_typing", args -> {
+            if (args.length == 0) return;
+
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                // Solo mostrar si NO es el usuario actual
+                if (!userId.equals(currentUserId)) {
+                    runOnUiThread(() -> {
+                        if (tvEstadoChat != null) {
+                            tvEstadoChat.setText("Escribiendo...");
+                            tvEstadoChat.setVisibility(View.VISIBLE);
+                        }
+                    });
+                }
+
+                Log.d(TAG, "Usuario escribiendo: " + userId);
+            } catch (JSONException e) {
+                Log.e(TAG, "Error parseando user_typing", e);
+            }
+        });
+
+        // Listener para stop typing
+        socketManager.on("user_stop_typing", args -> {
+            if (args.length == 0) return;
+
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                if (!userId.equals(currentUserId)) {
+                    runOnUiThread(() -> {
+                        if (tvEstadoChat != null) {
+                            tvEstadoChat.setText(""); // O mostrar "Online" si está online
+                            tvEstadoChat.setVisibility(View.GONE);
+                        }
+                    });
+                }
+
+                Log.d(TAG, "Usuario dejó de escribir: " + userId);
+            } catch (JSONException e) {
+                Log.e(TAG, "Error parseando user_stop_typing", e);
+            }
+        });
+
+        // Resetear contador de no leídos
+        socketManager.resetUnreadCount(chatId);
+
+        Log.d(TAG, "WebSocket listeners configurados para chat: " + chatId);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -1028,14 +1226,21 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         actualizarEstadoEscribiendo(false);
-        attachNewMessagesListener();
-        
+
+        // WebSocket: Re-unirse al chat si estaba conectado
+        if (USE_WEBSOCKET && socketManager.isConnected()) {
+            socketManager.joinChat(chatId);
+            socketManager.resetUnreadCount(chatId);
+        } else {
+            attachNewMessagesListener();
+        }
+
         // Marcar todos los mensajes como leídos y resetear contador
         // Usar un pequeño delay para asegurar que todo esté inicializado
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             marcarTodosLeidos();
         }, 300);
-        
+
         db.collection("chats").document(chatId)
                 .update("chat_abierto." + currentUserId, chatId);
     }
@@ -1044,6 +1249,13 @@ public class ChatActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         currentChatId = null;
+
+        // WebSocket: Salir del chat
+        if (USE_WEBSOCKET && socketManager.isConnected()) {
+            socketManager.leaveChat(chatId);
+            socketManager.sendStopTyping(chatId);
+        }
+
         db.collection("chats").document(chatId)
                 .update("estado_usuarios." + currentUserId, "offline",
                         "ultima_actividad." + currentUserId, FieldValue.serverTimestamp(),
@@ -1056,5 +1268,20 @@ public class ChatActivity extends AppCompatActivity {
             statusUpdatesListener.remove();
             statusUpdatesListener = null;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar listeners de WebSocket
+        if (USE_WEBSOCKET) {
+            socketManager.off("new_message");
+            socketManager.off("user_typing");
+            socketManager.off("user_stop_typing");
+            socketManager.off("message_read");
+        }
+
+        Log.d(TAG, "ChatActivity destroyed, listeners limpiados");
     }
 }

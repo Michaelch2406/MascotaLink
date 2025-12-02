@@ -1099,7 +1099,7 @@ exports.onReservaStatusChange = onDocumentUpdated("reservas/{reservaId}", async 
 exports.recalcularContadores = onRequest(async (req, res) => {
     try {
         console.log("Iniciando recálculo masivo de paseos completados...");
-        
+
         // 1. Obtener todas las reservas completadas
         const reservasSnapshot = await db.collection("reservas")
             .where("estado", "==", "COMPLETADO")
@@ -1107,13 +1107,13 @@ exports.recalcularContadores = onRequest(async (req, res) => {
 
         console.log(`Se encontraron ${reservasSnapshot.size} reservas completadas en total.`);
 
-        const paseadorCounts = {}; 
+        const paseadorCounts = {};
         const duenoCounts = {};
 
         // 2. Contar paseos
         reservasSnapshot.forEach(doc => {
             const data = doc.data();
-            
+
             // -- Paseador --
             const paseadorRef = data.id_paseador;
             let paseadorId = null;
@@ -1159,7 +1159,7 @@ exports.recalcularContadores = onRequest(async (req, res) => {
             counter++;
             if (counter >= 400) { updates.push(batch.commit()); batch = db.batch(); counter = 0; }
         }
-        
+
         if (counter > 0) {
             updates.push(batch.commit());
         }
@@ -1176,4 +1176,41 @@ exports.recalcularContadores = onRequest(async (req, res) => {
         console.error("Error en recálculo:", error);
         res.status(500).send({ error: error.message });
     }
+});
+
+// ========================================
+// WEBSOCKET SERVER con Socket.IO
+// ========================================
+
+const express = require("express");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
+const { initializeSocketServer } = require("./websocket");
+
+const app = express();
+app.use(cors({ origin: "*" }));
+
+// Endpoint de salud
+app.get("/health", (req, res) => {
+  res.json({ status: "OK", service: "MascotaLink WebSocket Server" });
+});
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ["websocket", "polling"],
+});
+
+// Inicializar servidor WebSocket
+initializeSocketServer(io, db);
+
+// Exportar como Cloud Function
+exports.websocket = onRequest((req, res) => {
+  httpServer.emit("request", req, res);
 });
