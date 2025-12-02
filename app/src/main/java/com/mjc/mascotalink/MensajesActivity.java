@@ -40,6 +40,7 @@ public class MensajesActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String currentUserId;
     private String userRole;
+    private com.google.firebase.firestore.ListenerRegistration messagesListener;
     
     // Handler para actualizar timestamps periódicamente
     private Handler updateHandler;
@@ -80,10 +81,23 @@ public class MensajesActivity extends AppCompatActivity {
         super.onPause();
         stopPeriodicUpdate();
     }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (messagesListener != null) {
+            messagesListener.remove();
+            messagesListener = null;
+        }
+    }
     
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (messagesListener != null) {
+            messagesListener.remove();
+            messagesListener = null;
+        }
         stopPeriodicUpdate();
     }
 
@@ -138,11 +152,15 @@ public class MensajesActivity extends AppCompatActivity {
     }
 
     private void cargarConversaciones() {
+        if (messagesListener != null) {
+            messagesListener.remove();
+        }
+
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         
         Log.d("Mensajes", "Cargando conversaciones para userId: " + currentUserId + ", role: " + userRole);
         
-        db.collection("chats")
+        messagesListener = db.collection("chats")
                 .whereArrayContains("participantes", currentUserId)
                 .orderBy("ultimo_timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshot, error) -> {
@@ -150,6 +168,9 @@ public class MensajesActivity extends AppCompatActivity {
                     if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
 
                     if (error != null) {
+                        // Si el usuario ya cerró sesión, ignorar el error de permisos
+                        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+
                         Log.e("Mensajes", "Error al cargar chats: " + error.getMessage());
                         Log.e("Mensajes", "Error code: " + error.getCode());
                         
