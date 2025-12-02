@@ -16,6 +16,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.mjc.mascotalink.SolicitudesActivity.Solicitud;
 import com.mjc.mascotalink.utils.SolicitudDiffCallback;
+import com.mjc.mascotalink.MyApplication;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -72,7 +73,7 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
         // Foto (ShapeableImageView del layout)
         if (solicitud.getDuenoFotoUrl() != null && !solicitud.getDuenoFotoUrl().isEmpty()) {
             Glide.with(context)
-                    .load(solicitud.getDuenoFotoUrl())
+                    .load(MyApplication.getFixedUrl(solicitud.getDuenoFotoUrl()))
                     .placeholder(R.drawable.ic_pet_placeholder)
                     .error(R.drawable.ic_pet_placeholder)
                     .centerCrop()

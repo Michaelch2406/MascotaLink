@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.Timestamp;
+import com.mjc.mascotalink.MyApplication;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -270,7 +271,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
 
                         if (fotoUrl != null && !fotoUrl.isEmpty()) {
                             Glide.with(this)
-                                    .load(fotoUrl)
+                                    .load(MyApplication.getFixedUrl(fotoUrl))
                                     .placeholder(R.drawable.ic_person)
                                     .circleCrop()
                                     .into(ivDuenoFoto);

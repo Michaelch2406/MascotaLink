@@ -20,6 +20,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.Timestamp;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -107,7 +108,7 @@ public class NotificationReplyReceiver extends BroadcastReceiver {
                 try {
                     userIcon = com.bumptech.glide.Glide.with(context)
                             .asBitmap()
-                            .load(userPhotoUrl)
+                            .load(MyApplication.getFixedUrl(userPhotoUrl))
                             .submit()
                             .get();
                 } catch (Exception e) {

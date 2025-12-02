@@ -55,6 +55,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.MyApplication;
 
 import com.mjc.mascotalink.util.WhatsAppUtil;
 
@@ -505,7 +506,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             Log.d(TAG, "Intentando cargar foto con Glide: " + urlFoto);
             if (!isDestroyed() && !isFinishing()) {
                 Glide.with(this)
-                        .load(urlFoto)
+                        .load(MyApplication.getFixedUrl(urlFoto))
                         .placeholder(R.drawable.ic_pet_placeholder)
                         .error(R.drawable.ic_pet_placeholder)
                         .into(ivFotoMascota);
@@ -737,7 +738,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_fullscreen_image, null);
         com.google.android.material.imageview.ShapeableImageView imageView = dialogView.findViewById(R.id.iv_fullscreen);
         Glide.with(this)
-                .load(url)
+                .load(MyApplication.getFixedUrl(url))
                 .placeholder(R.drawable.ic_pet_placeholder)
                 .error(R.drawable.ic_pet_placeholder)
                 .into(imageView);

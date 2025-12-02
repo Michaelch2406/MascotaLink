@@ -103,4 +103,12 @@ public class MyApplication extends Application {
     public static Context getAppContext() {
         return appContext;
     }
+
+    /**
+     * Helper estático para corregir URLs del emulador en toda la app.
+     */
+    public static String getFixedUrl(String url) {
+        if (appContext == null) return url;
+        return NetworkDetector.fixEmulatorUrl(url, appContext);
+    }
 }

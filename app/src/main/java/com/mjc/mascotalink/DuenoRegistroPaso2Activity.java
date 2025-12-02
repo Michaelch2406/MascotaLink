@@ -16,6 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.mjc.mascotalink.MyApplication;
+
 import android.content.SharedPreferences;
 
 public class DuenoRegistroPaso2Activity extends AppCompatActivity {
@@ -124,7 +126,7 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
     private void updateUI() {
         // Selfie
         if (selfieUri != null) {
-            Glide.with(this).load(selfieUri).into(previewSelfie);
+            Glide.with(this).load(MyApplication.getFixedUrl(selfieUri.toString())).into(previewSelfie);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
         } else {
             findViewById(R.id.container_preview_selfie).setVisibility(View.GONE);
@@ -132,7 +134,7 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
 
         // Foto de perfil
         if (fotoPerfilUri != null) {
-            Glide.with(this).load(fotoPerfilUri).into(previewFotoPerfil);
+            Glide.with(this).load(MyApplication.getFixedUrl(fotoPerfilUri.toString())).into(previewFotoPerfil);
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
         } else {
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.GONE);

@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.R;
 import com.mjc.mascota.modelo.PaseadorResultado;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -103,7 +104,7 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
             totalResenasTextView.setText(String.format(Locale.getDefault(), "(%d)", paseador.getTotalResenas()));
 
             Glide.with(context)
-                    .load(paseador.getFotoUrl())
+                    .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
                     .placeholder(R.drawable.ic_user_placeholder)
                     .error(R.drawable.ic_user_placeholder)
                     .circleCrop()

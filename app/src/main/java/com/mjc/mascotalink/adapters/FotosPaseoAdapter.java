@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,7 @@ public class FotosPaseoAdapter extends RecyclerView.Adapter<FotosPaseoAdapter.Fo
         String url = fotos.get(position);
 
         Glide.with(context)
-                .load(url)
+                .load(MyApplication.getFixedUrl(url))
                 .placeholder(R.drawable.ic_pet_placeholder)
                 .error(R.drawable.ic_pet_placeholder)
                 .into(holder.imageView);

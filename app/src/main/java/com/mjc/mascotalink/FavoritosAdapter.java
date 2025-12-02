@@ -4,7 +4,7 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
+import android.widget.FrameLayout;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.modelo.PaseadorFavorito;
+import com.mjc.mascotalink.MyApplication;
 import java.util.Locale;
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -62,7 +63,7 @@ public class FavoritosAdapter extends ListAdapter<PaseadorFavorito, FavoritosAda
         private final TextView tvNombre;
         private final RatingBar ratingBar;
         private final TextView tvPrecio;
-        private final ImageButton btnQuitarFavorito;
+        private final FrameLayout btnQuitarFavorito;
 
         public FavoritoViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -78,7 +79,7 @@ public class FavoritosAdapter extends ListAdapter<PaseadorFavorito, FavoritosAda
 
             if (favorito.getFoto_perfil_url() != null && !favorito.getFoto_perfil_url().isEmpty()) {
                 Glide.with(itemView.getContext())
-                     .load(favorito.getFoto_perfil_url())
+                     .load(MyApplication.getFixedUrl(favorito.getFoto_perfil_url()))
                      .placeholder(R.drawable.ic_person)
                      .into(ivAvatar);
             }

@@ -305,7 +305,7 @@ public class ReservaActivity extends AppCompatActivity {
         rvMascotas.setLayoutManager(layoutManager);
         
         // Optimización para scrolling suave
-        rvMascotas.setHasFixedSize(true);
+        // rvMascotas.setHasFixedSize(true); // Eliminado para resolver InvalidSetHasFixedSize
         rvMascotas.setItemViewCacheSize(20);
         rvMascotas.setDrawingCacheEnabled(true);
         rvMascotas.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);

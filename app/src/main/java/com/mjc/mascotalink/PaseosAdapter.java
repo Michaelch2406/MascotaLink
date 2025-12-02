@@ -20,6 +20,7 @@ import com.google.android.material.imageview.ShapeableImageView;
 import com.mjc.mascotalink.utils.PaseoDiffCallback;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 import com.mjc.mascotalink.Paseo;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -123,7 +124,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
     private void cargarImagen(ImageView imageView, String url, int placeholder) {
         if (url != null && !url.isEmpty()) {
             Glide.with(context)
-                    .load(url)
+                    .load(MyApplication.getFixedUrl(url))
                     .placeholder(placeholder)
                     .error(placeholder)
                     .circleCrop()

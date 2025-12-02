@@ -14,6 +14,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.MyApplication;
 
 public class PaseadorInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 
@@ -56,7 +57,7 @@ public class PaseadorInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
 
             if (paseador.getFotoUrl() != null && !paseador.getFotoUrl().isEmpty()) {
                 Glide.with(mContext)
-                        .load(paseador.getFotoUrl())
+                        .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
                         .transform(new CircleCrop())
                         .placeholder(R.drawable.ic_person) // Placeholder si la imagen no carga
                         .into(ivPaseadorPhoto);

@@ -29,6 +29,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.mjc.mascotalink.MyApplication;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -180,7 +181,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
 
                         oldPhotoUrl = document.getString("foto_principal_url");
                         if (oldPhotoUrl != null && !oldPhotoUrl.isEmpty()) {
-                            Glide.with(this).load(oldPhotoUrl).circleCrop().into(ivAvatarMascota);
+                            Glide.with(this).load(MyApplication.getFixedUrl(oldPhotoUrl)).circleCrop().into(ivAvatarMascota);
                         }
 
                         // Load nested maps

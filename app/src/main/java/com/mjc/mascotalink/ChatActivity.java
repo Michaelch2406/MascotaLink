@@ -52,6 +52,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -942,7 +943,7 @@ public class ChatActivity extends AppCompatActivity {
                         tvNombreChat.setText(doc.getString("nombre_display"));
                         String foto = doc.getString("foto_perfil");
                         if (foto != null) {
-                            Glide.with(this).load(foto).placeholder(R.drawable.ic_user_placeholder).into(ivAvatarChat);
+                            Glide.with(this).load(MyApplication.getFixedUrl(foto)).placeholder(R.drawable.ic_user_placeholder).into(ivAvatarChat);
                         }
                     }
                 });

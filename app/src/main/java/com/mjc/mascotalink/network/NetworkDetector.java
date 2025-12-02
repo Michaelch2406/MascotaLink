@@ -83,6 +83,26 @@ public class NetworkDetector {
         try {
             Log.d(TAG, "=== INICIANDO DETECCIÓN DE RED HÍBRIDA ===");
 
+            // ===== PRIORIDAD 0: DETECCIÓN INTELIGENTE POR SUBRED (HARDCODED PARA TU ENTORNO) =====
+            // Esto soluciona el problema de cambio de red instantáneamente
+            String localIp = getLocalIpAddress(context);
+            if (localIp != null) {
+                Log.d(TAG, "IP Local detectada: " + localIp);
+                if (localIp.startsWith("192.168.0.")) {
+                    // Estás en casa (INNO_FLIA)
+                    Log.i(TAG, "✅ [PRIORIDAD 0] Subred Casa (192.168.0.x) detectada. Usando: 192.168.0.147");
+                    return "192.168.0.147";
+                } else if (localIp.startsWith("192.168.137.")) {
+                    // Estás en hotspot Windows (Trabajo/PC)
+                    Log.i(TAG, "✅ [PRIORIDAD 0] Subred Hotspot (192.168.137.x) detectada. Usando: 192.168.137.1");
+                    return "192.168.137.1";
+                } else if (localIp.startsWith("10.10.0.")) {
+                    // Estás en la red del trabajo (ESTUDIANTES_IST)
+                    Log.i(TAG, "✅ [PRIORIDAD 0] Subred Trabajo (10.10.0.x) detectada. Usando: 10.10.0.142");
+                    return "10.10.0.142";
+                }
+            }
+
             // ===== PRIORIDAD 1: TAILSCALE =====
             if (configManager.shouldPreferTailscale()) {
                 String tailscaleIp = detectTailscaleConnection(context);
@@ -573,5 +593,54 @@ public class NetworkDetector {
      */
     public static boolean isTailscaleActive(Context context) {
         return detectTailscaleConnection(context) != null;
+    }
+
+    /**
+     * Corrige URLs del emulador de Firebase Storage reemplazando la IP original
+     * por la IP actual del emulador.
+     * Útil cuando las imágenes se subieron con una IP (ej. red trabajo) y se intentan ver
+     * desde otra red (ej. casa), ya que la URL guardada tiene la IP antigua "quemada".
+     */
+    public static String fixEmulatorUrl(String url, Context context) {
+        if (url == null || url.isEmpty()) return url;
+
+        // Corregir URLs malformadas (http:/ en lugar de http://)
+        if (url.startsWith("http:/") && !url.startsWith("http://")) {
+            url = url.replace("http:/", "http://");
+            Log.w(TAG, "URL malformada corregida: agregada barra faltante");
+        }
+
+        // Verificar si es una URL del emulador (puerto 9199 por defecto de Storage)
+        if (url.contains(":9199")) {
+            try {
+                // Extraer el host actual
+                String currentHost = detectCurrentHost(context);
+
+                // Encontrar la parte de la IP en la URL: http://[IP]:9199/...
+                int protocolEnd = url.indexOf("://");
+                if (protocolEnd != -1) {
+                    int ipStart = protocolEnd + 3;
+                    int portStart = url.indexOf(":9199", ipStart);
+
+                    if (portStart != -1) {
+                        String oldIp = url.substring(ipStart, portStart);
+
+                        // Solo reemplazamos si la IP es diferente
+                        if (!oldIp.equals(currentHost)) {
+                            String fixedUrl = url.replace("http://" + oldIp + ":9199", "http://" + currentHost + ":9199");
+                            Log.d(TAG, "URL de emulador corregida: " + oldIp + " -> " + currentHost);
+                            return fixedUrl;
+                        } else {
+                            Log.v(TAG, "URL ya tiene la IP correcta: " + currentHost);
+                        }
+                    }
+                } else {
+                    Log.w(TAG, "URL del emulador sin formato correcto: " + url);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error corrigiendo URL de emulador: " + e.getMessage(), e);
+            }
+        }
+        return url;
     }
 }

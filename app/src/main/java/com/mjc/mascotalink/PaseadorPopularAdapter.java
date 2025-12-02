@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.mjc.mascota.modelo.PaseadorResultado;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.List;
 import java.util.Locale;
@@ -40,7 +41,7 @@ public class PaseadorPopularAdapter extends RecyclerView.Adapter<PaseadorPopular
 
         // Avatar
         Glide.with(context)
-                .load(paseador.getFotoUrl())
+                .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
                 .placeholder(R.drawable.paseador_mascota)
                 .circleCrop()
                 .into(holder.ivAvatar);

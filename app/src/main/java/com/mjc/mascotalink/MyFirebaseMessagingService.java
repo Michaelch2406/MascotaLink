@@ -17,6 +17,7 @@ import androidx.core.graphics.drawable.IconCompat;
 
 import com.bumptech.glide.Glide;
 import android.graphics.Bitmap;
+import com.mjc.mascotalink.MyApplication;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -272,7 +273,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 try {
                     Bitmap bitmap = Glide.with(this)
                             .asBitmap()
-                            .load(senderPhotoUrl)
+                            .load(MyApplication.getFixedUrl(senderPhotoUrl))
                             .submit()
                             .get();
                     personBuilder.setIcon(IconCompat.createWithBitmap(bitmap));

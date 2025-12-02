@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class GaleriaPerfilAdapter extends RecyclerView.Adapter<GaleriaPerfilAdap
     public void onBindViewHolder(@NonNull GaleriaViewHolder holder, int position) {
         String imageUrl = imageUrls.get(position);
         Glide.with(context)
-                .load(imageUrl)
+                .load(MyApplication.getFixedUrl(imageUrl))
                 .into(holder.imageView);
     }
 

@@ -18,10 +18,11 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.auth.FirebaseAuth;
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.storage.FirebaseStorage;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -126,7 +127,7 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         } else { // Es imagen
             pdfPreview.setVisibility(View.GONE);
             imgPreview.setVisibility(View.VISIBLE);
-            Glide.with(this).load(uri).into(imgPreview);
+            Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).into(imgPreview);
         }
     }
 

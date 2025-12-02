@@ -23,6 +23,7 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.storage.FirebaseStorage;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -194,7 +195,7 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
             if (i < localUris.size()) {
                 Uri uri = localUris.get(i);
                 placeholders[i].setAlpha(1.0f);
-                Glide.with(this).load(uri).centerCrop().into(placeholders[i]);
+                Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).centerCrop().into(placeholders[i]);
 
                 String mimeType = getContentResolver().getType(uri);
                 playIcons[i].setVisibility(mimeType != null && mimeType.startsWith("video/") ? View.VISIBLE : View.GONE);

@@ -13,6 +13,7 @@ import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +70,7 @@ public class GestionGaleriaAdapter extends RecyclerView.Adapter<RecyclerView.Vie
             vh.cvImage.setVisibility(View.VISIBLE);
             
             String url = imageUrls.get(position);
-            Glide.with(context).load(url).centerCrop().into(vh.ivImage);
+            Glide.with(context).load(MyApplication.getFixedUrl(url)).centerCrop().into(vh.ivImage);
             
             vh.btnDelete.setOnClickListener(v -> listener.onDeleteClick(position, url));
         }

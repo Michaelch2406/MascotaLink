@@ -60,6 +60,7 @@ import android.animation.ValueAnimator;
 import android.view.animation.LinearInterpolator;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.Polyline;
+import com.mjc.mascotalink.MyApplication;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -801,7 +802,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 if (fotoUrl != null && !fotoUrl.isEmpty()) {
                     if (!isDestroyed() && !isFinishing()) {
                         Glide.with(this)
-                                .load(fotoUrl)
+                                .load(MyApplication.getFixedUrl(fotoUrl))
                                 .circleCrop()
                                 .placeholder(R.drawable.ic_user_placeholder)
                                 .error(R.drawable.ic_user_placeholder)
@@ -1065,7 +1066,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private void mostrarFotoCompleta(String url) {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_fullscreen_image, null);
         ShapeableImageView imageView = dialogView.findViewById(R.id.iv_fullscreen);
-        Glide.with(this).load(url).into(imageView);
+        Glide.with(this).load(MyApplication.getFixedUrl(url)).into(imageView);
         new AlertDialog.Builder(this).setView(dialogView).setPositiveButton("Cerrar", null).show();
     }
 

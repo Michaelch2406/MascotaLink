@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class GalleryPreviewAdapter extends RecyclerView.Adapter<GalleryPreviewAd
     public void onBindViewHolder(@NonNull GalleryViewHolder holder, int position) {
         String imageUrl = imageUrls.get(position);
         Glide.with(context)
-                .load(imageUrl)
+                .load(MyApplication.getFixedUrl(imageUrl))
                 .centerCrop()
                 .placeholder(R.drawable.galeria_paseos_foto1) // Use a placeholder
                 .into(holder.ivGalleryThumbnail);

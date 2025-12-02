@@ -30,6 +30,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -103,7 +104,7 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
 
                 String fotoUrl = userDoc.getString("foto_perfil");
                 if (fotoUrl != null && !fotoUrl.isEmpty()) {
-                    Glide.with(this).load(fotoUrl).circleCrop().into(ivAvatar);
+                    Glide.with(this).load(MyApplication.getFixedUrl(fotoUrl)).circleCrop().into(ivAvatar);
                 }
                 validateFields();
             }

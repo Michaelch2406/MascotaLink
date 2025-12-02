@@ -19,6 +19,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
@@ -208,7 +209,7 @@ public class SelfieActivity extends AppCompatActivity {
         cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture, imageAnalysis);
     }
 
-    @ExperimentalGetImage
+    @OptIn(markerClass = ExperimentalGetImage.class)
     private void analyzeFrame(@NonNull ImageProxy imageProxy) {
         if (imageProxy.getImage() == null) {
             imageProxy.close();

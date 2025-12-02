@@ -17,6 +17,7 @@ import com.mjc.mascotalink.modelo.ChatItem;
 import com.mjc.mascotalink.modelo.DateSeparator;
 import com.mjc.mascotalink.modelo.Mensaje;
 import com.mjc.mascotalink.util.TimeUtils;
+import com.mjc.mascotalink.MyApplication;
 import com.bumptech.glide.Glide;
 import android.content.Intent;
 import android.net.Uri;
@@ -395,9 +396,10 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Cargar imagen con Glide
             if (mensaje.getImagen_url() != null && !mensaje.getImagen_url().isEmpty()) {
                 progressUpload.setVisibility(View.GONE);
+                String fixedUrl = MyApplication.getFixedUrl(mensaje.getImagen_url());
                 
                 Glide.with(itemView.getContext())
-                    .load(mensaje.getImagen_url())
+                    .load(fixedUrl)
                     .placeholder(R.drawable.ic_gallery)
                     .error(R.drawable.ic_gallery)
                     .centerCrop()
@@ -406,7 +408,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 // Click para ver en fullscreen
                 ivImagen.setOnClickListener(v -> {
                     Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setDataAndType(Uri.parse(mensaje.getImagen_url()), "image/*");
+                    intent.setDataAndType(Uri.parse(fixedUrl), "image/*");
                     itemView.getContext().startActivity(intent);
                 });
             } else {

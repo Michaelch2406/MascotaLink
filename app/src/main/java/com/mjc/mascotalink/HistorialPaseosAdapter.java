@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.android.material.chip.Chip;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.List;
 import java.util.Locale;
@@ -82,7 +83,7 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
         // Cargar imagen
         if (fotoUrl != null && !fotoUrl.isEmpty()) {
             Glide.with(context)
-                    .load(fotoUrl)
+                    .load(MyApplication.getFixedUrl(fotoUrl))
                     .placeholder(R.drawable.ic_pet_placeholder) // Fallback genérico
                     .error(R.drawable.ic_pet_placeholder)
                     .centerCrop()

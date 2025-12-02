@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
+import com.mjc.mascotalink.MyApplication;
 import java.util.List;
 
 public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdapter.ViewHolder> {
@@ -37,7 +38,7 @@ public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdap
         holder.tvRaza.setText(pet.getBreed()); // Assuming Pet class has getBreed()
 
         Glide.with(context)
-                .load(pet.getAvatarUrl()) // Assuming Pet class has getAvatarUrl()
+                .load(MyApplication.getFixedUrl(pet.getAvatarUrl())) // Assuming Pet class has getAvatarUrl()
                 .placeholder(R.drawable.foto_principal_mascota)
                 .circleCrop()
                 .into(holder.ivMascota);

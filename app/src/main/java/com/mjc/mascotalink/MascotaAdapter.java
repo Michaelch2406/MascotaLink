@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.android.material.imageview.ShapeableImageView;
+import com.mjc.mascotalink.MyApplication;
 import java.util.List;
 
 public class MascotaAdapter extends RecyclerView.Adapter<MascotaAdapter.MascotaViewHolder> {
@@ -34,7 +35,7 @@ public class MascotaAdapter extends RecyclerView.Adapter<MascotaAdapter.MascotaV
         holder.tvPetName.setText(pet.getName());
 
         Glide.with(context)
-                .load(pet.getAvatarUrl())
+                .load(MyApplication.getFixedUrl(pet.getAvatarUrl()))
                 .placeholder(R.drawable.foto_principal_mascota) // Placeholder image
                 .circleCrop()
                 .into(holder.ivAvatar);

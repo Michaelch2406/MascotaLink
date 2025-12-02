@@ -37,6 +37,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.mjc.mascotalink.MyApplication;
 
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -250,7 +251,10 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
 
             if (bitmap != null) {
                 Glide.with(this)
-                    .load(bitmap)
+                    .load(bitmap) // Bitmap doesn't need fixUrl, but if uri was used directly:
+                    // .load(MyApplication.getFixedUrl(uri.toString())) 
+                    // Here we load bitmap extracted from local file, so no fix needed for bitmap load.
+                    // However, if we were loading from URL:
                     .centerCrop()
                     .into(thumbnail);
             } else {

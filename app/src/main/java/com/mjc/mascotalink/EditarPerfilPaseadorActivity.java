@@ -38,6 +38,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.mjc.mascotalink.MyApplication;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -141,7 +142,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                 String fotoUrl = userDoc.getString("foto_perfil");
                 if (fotoUrl != null && !fotoUrl.isEmpty()) {
                     com.bumptech.glide.Glide.with(this)
-                            .load(fotoUrl)
+                            .load(MyApplication.getFixedUrl(fotoUrl))
                             .circleCrop()
                             .into(ivAvatarPaseador);
                 }
@@ -173,7 +174,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                     String videoUrl = (String) perfilProfesional.get("video_presentacion_url");
                     if (videoUrl != null && !videoUrl.isEmpty()) {
                         video_progress.setVisibility(View.VISIBLE);
-                        video_preview.setVideoURI(Uri.parse(videoUrl));
+                        video_preview.setVideoURI(Uri.parse(MyApplication.getFixedUrl(videoUrl)));
                         MediaController mediaController = new MediaController(this);
                         video_preview.setMediaController(mediaController);
                         video_preview.setOnPreparedListener(mp -> {

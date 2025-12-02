@@ -66,6 +66,7 @@ import com.firebase.geofire.GeoFireUtils;
 import com.firebase.geofire.GeoLocation;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
@@ -906,7 +907,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             if (usuarioDoc != null && usuarioDoc.exists()) {
                 tvNombre.setText(usuarioDoc.getString("nombre_display"));
                 if (!isDestroyed() && !isFinishing()) {
-                    Glide.with(this).load(usuarioDoc.getString("foto_perfil")).placeholder(R.drawable.ic_person).into(ivAvatar);
+                    Glide.with(this).load(MyApplication.getFixedUrl(usuarioDoc.getString("foto_perfil"))).placeholder(R.drawable.ic_person).into(ivAvatar);
                 }
                 Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
                 if (fechaRegistro != null) {
@@ -956,7 +957,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 Map<String, Object> perfil = (Map<String, Object>) paseadorDoc.get("perfil_profesional");
                 if (perfil != null) {
                     tvDescripcion.setText((String) perfil.get("motivacion"));
-                    videoUrl = (String) perfil.get("video_presentacion_url");
+                    videoUrl = MyApplication.getFixedUrl((String) perfil.get("video_presentacion_url"));
                     if (!isDestroyed() && !isFinishing()) {
                         Glide.with(this).load(videoUrl).centerCrop().placeholder(R.drawable.galeria_paseos_foto1).into(ivVideoThumbnail);
                     }
@@ -969,12 +970,21 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     galleryPreviewList.clear();
                     
                     if (urlsGaleria != null && !urlsGaleria.isEmpty()) {
-                        galeriaImageUrls.addAll(urlsGaleria);
+                        for (String url : urlsGaleria) {
+                            String fixedUrl = MyApplication.getFixedUrl(url);
+                            galeriaImageUrls.add(fixedUrl);
+                            galleryPreviewList.add(fixedUrl);
+                        }
                         
-                        // Mostrar preview (max 4)
-                        int limit = Math.min(urlsGaleria.size(), 4);
+                        // Actualizar adaptador de preview (ya tiene la lista actualizada en galleryPreviewList)
+                        // galleryPreviewAdapter usa la referencia a galleryPreviewList pero es mejor asegurarse
+                        // Sin embargo, en el código original se añadían a galleryPreviewList limitada a 4
+                        // Vamos a recrear la lógica original pero con URLs corregidas
+                        
+                        galleryPreviewList.clear(); // Limpiamos de nuevo para llenar solo con max 4
+                        int limit = Math.min(galeriaImageUrls.size(), 4);
                         for (int i = 0; i < limit; i++) {
-                            galleryPreviewList.add(urlsGaleria.get(i));
+                            galleryPreviewList.add(galeriaImageUrls.get(i));
                         }
                         galleryPreviewAdapter.setImageUrls(galleryPreviewList);
                         

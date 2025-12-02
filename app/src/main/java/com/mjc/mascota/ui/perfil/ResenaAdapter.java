@@ -15,6 +15,7 @@ import com.bumptech.glide.Glide;
 import com.google.firebase.Timestamp;
 import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.MyApplication;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -51,7 +52,7 @@ public class ResenaAdapter extends RecyclerView.Adapter<ResenaAdapter.ResenaView
         }
 
         Glide.with(context)
-                .load(resena.getAutorFotoUrl())
+                .load(MyApplication.getFixedUrl(resena.getAutorFotoUrl()))
                 .circleCrop()
                 .placeholder(R.drawable.ic_person)
                 .into(holder.ivAutor);

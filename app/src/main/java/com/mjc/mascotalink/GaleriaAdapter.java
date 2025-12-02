@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.List;
 
@@ -34,7 +35,7 @@ public class GaleriaAdapter extends RecyclerView.Adapter<GaleriaAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         String imageUrl = imageUrls.get(position);
         Glide.with(context)
-                .load(imageUrl)
+                .load(MyApplication.getFixedUrl(imageUrl))
                 .centerCrop()
                 .placeholder(R.drawable.foto_principal_mascota)
                 .into(holder.ivGaleriaFoto);

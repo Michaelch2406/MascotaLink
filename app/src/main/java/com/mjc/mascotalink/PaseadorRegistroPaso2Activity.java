@@ -20,6 +20,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.storage.FirebaseStorage;
 import com.bumptech.glide.Glide;
+import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -222,7 +223,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private void mostrarPreviewSelfie(Uri uri) {
         try {
-            Glide.with(this).load(uri).into(previewSelfie);
+            Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).into(previewSelfie);
             layoutSelfieEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
         } catch (Exception e) {
@@ -232,7 +233,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private void mostrarPreviewFotoPerfil(Uri uri) {
         try {
-            Glide.with(this).load(uri).into(previewFotoPerfil);
+            Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).into(previewFotoPerfil);
             layoutFotoPerfilEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
         } catch (Exception e) {

@@ -22,6 +22,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.MyApplication;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -280,7 +281,7 @@ public class PerfilMascotaActivity extends AppCompatActivity {
                         // Foto principal
                         String fotoUrl = document.getString("foto_principal_url");
                         if (fotoUrl != null && !fotoUrl.isEmpty()) {
-                            Glide.with(this).load(fotoUrl).circleCrop().into(ivAvatarMascota);
+                            Glide.with(this).load(MyApplication.getFixedUrl(fotoUrl)).circleCrop().into(ivAvatarMascota);
                         } else {
                             ivAvatarMascota.setImageResource(R.drawable.ic_pet_placeholder);
                         }
@@ -289,10 +290,12 @@ public class PerfilMascotaActivity extends AppCompatActivity {
                         galeriaUrls.clear();
                         List<String> galeria = (List<String>) document.get("galeria_fotos");
                         if (galeria != null && !galeria.isEmpty()) {
-                            galeriaUrls.addAll(galeria);
+                            for (String url : galeria) {
+                                galeriaUrls.add(MyApplication.getFixedUrl(url));
+                            }
                         } else if (fotoUrl != null) {
                             // Si no hay galería, usar la foto principal
-                            galeriaUrls.add(fotoUrl);
+                            galeriaUrls.add(MyApplication.getFixedUrl(fotoUrl));
                         }
                         galeriaAdapter.notifyDataSetChanged();
 

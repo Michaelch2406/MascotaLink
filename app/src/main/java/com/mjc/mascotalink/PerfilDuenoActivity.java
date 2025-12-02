@@ -41,6 +41,7 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascota.ui.perfil.ResenaAdapter;
 import com.mjc.mascotalink.security.CredentialManager;
@@ -432,7 +433,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             if (usuarioDoc != null && usuarioDoc.exists()) {
                 tvNombre.setText(usuarioDoc.getString("nombre_display"));
                 if (!isDestroyed() && !isFinishing()) {
-                    Glide.with(this).load(usuarioDoc.getString("foto_perfil")).placeholder(R.drawable.ic_user_placeholder).into(ivAvatar);
+                    Glide.with(this).load(MyApplication.getFixedUrl(usuarioDoc.getString("foto_perfil"))).placeholder(R.drawable.ic_user_placeholder).into(ivAvatar);
                 }
                 
                 tvEmailDueno.setText(usuarioDoc.getString("correo"));
@@ -510,7 +511,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                             pet.setId(doc.getId());
                             pet.setName(doc.getString("nombre"));
                             pet.setBreed(doc.getString("raza"));
-                            pet.setAvatarUrl(doc.getString("foto_principal_url"));
+                            pet.setAvatarUrl(MyApplication.getFixedUrl(doc.getString("foto_principal_url")));
                             pet.setOwnerId(duenoId);
                             petList.add(pet);
                         }

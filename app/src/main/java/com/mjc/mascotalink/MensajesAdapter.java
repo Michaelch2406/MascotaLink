@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.modelo.Chat;
 import com.mjc.mascotalink.util.TimeUtils;
+import com.mjc.mascotalink.MyApplication;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class MensajesAdapter extends RecyclerView.Adapter<MensajesAdapter.ViewHo
 
         if (chat.getFotoOtroUsuario() != null && !chat.getFotoOtroUsuario().isEmpty()) {
             Glide.with(context)
-                    .load(chat.getFotoOtroUsuario())
+                    .load(MyApplication.getFixedUrl(chat.getFotoOtroUsuario()))
                     .placeholder(R.drawable.ic_user_placeholder)
                     .into(holder.ivAvatar);
         } else {

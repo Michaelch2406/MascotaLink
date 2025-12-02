@@ -84,6 +84,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.mjc.mascota.modelo.Filtros;
 import com.mjc.mascota.modelo.PaseadorResultado;
+import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.LoginActivity;
 import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
@@ -1406,7 +1407,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             Context glideCtx = glideContext != null ? glideContext : getApplicationContext();
             Bitmap bitmap = Glide.with(glideCtx)
                     .asBitmap()
-                    .load(paseador.getFotoUrl())
+                    .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
                     .apply(RequestOptions.circleCropTransform())
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .submit(MARKER_IMAGE_SIZE, MARKER_IMAGE_SIZE)
@@ -1534,7 +1535,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             
             Glide.with(glideCtx)
                 .asBitmap()
-                .load(paseador.getFotoUrl())
+                .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
                 .apply(RequestOptions.circleCropTransform()
                         .placeholder(R.drawable.ic_person)
                         .diskCacheStrategy(DiskCacheStrategy.ALL))
@@ -1563,7 +1564,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
             Glide.with(glideCtx)
                     .asBitmap()
-                    .load(paseador.getFotoUrl())
+                    .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
                     .apply(RequestOptions.circleCropTransform()
                             .placeholder(R.drawable.ic_person)
                             .diskCacheStrategy(DiskCacheStrategy.ALL))

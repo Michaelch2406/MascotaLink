@@ -20,6 +20,7 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.PaseoEnCursoActivity;
@@ -99,7 +100,7 @@ public class HomeFragment extends Fragment {
                 String nombre = (String) data.get("nombre_display");
                 String foto = (String) data.get("foto_perfil");
                 if (nombre != null) tvNombre.setText(nombre);
-                if (foto != null) Glide.with(this).load(foto).into(ivPerfil);
+                if (foto != null) Glide.with(this).load(MyApplication.getFixedUrl(foto)).into(ivPerfil);
             }
         });
 
@@ -168,7 +169,7 @@ public class HomeFragment extends Fragment {
                 String nombre = (String) data.get("nombre_display");
                 String foto = (String) data.get("foto_perfil");
                 if (nombre != null) tvNombre.setText(nombre);
-                if (foto != null) Glide.with(this).load(foto).into(ivPerfil);
+                if (foto != null) Glide.with(this).load(MyApplication.getFixedUrl(foto)).into(ivPerfil);
             }
         });
         

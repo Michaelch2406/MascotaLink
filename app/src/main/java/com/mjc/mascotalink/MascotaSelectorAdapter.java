@@ -8,6 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.mjc.mascotalink.MyApplication;
 import de.hdodenhof.circleimageview.CircleImageView;
 import java.util.List;
 
@@ -42,7 +43,7 @@ public class MascotaSelectorAdapter extends RecyclerView.Adapter<MascotaSelector
 
         // Cargar foto de la mascota
         Glide.with(context)
-                .load(mascota.getFotoUrl())
+                .load(MyApplication.getFixedUrl(mascota.getFotoUrl()))
                 .placeholder(R.drawable.ic_pet_placeholder)
                 .circleCrop()
                 .into(holder.ivFoto);

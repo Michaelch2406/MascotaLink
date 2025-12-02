@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.R;
+import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascota.modelo.PaseadorResultado;
 import java.util.Locale;
 import java.util.Objects;
@@ -76,7 +77,7 @@ public class PaseadorPopularAdapter extends ListAdapter<PaseadorResultado, Pasea
             precioTextView.setText(String.format(Locale.getDefault(), "$%.2f/h", paseador.getTarifaPorHora()));
 
             Glide.with(itemView.getContext())
-                    .load(paseador.getFotoUrl())
+                    .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
                     .placeholder(R.drawable.ic_user_placeholder)
                     .error(R.drawable.ic_user_placeholder)
                     .circleCrop()

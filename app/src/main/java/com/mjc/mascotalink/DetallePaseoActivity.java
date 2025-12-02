@@ -22,6 +22,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.utils.PdfGenerator;
+import com.mjc.mascotalink.MyApplication;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -228,7 +229,7 @@ public class DetallePaseoActivity extends AppCompatActivity {
 
     private void cargarImagen(String url, CircleImageView iv) {
         if (url != null && !url.isEmpty()) {
-            Glide.with(this).load(url).placeholder(R.drawable.ic_pet_placeholder).into(iv);
+            Glide.with(this).load(MyApplication.getFixedUrl(url)).placeholder(R.drawable.ic_pet_placeholder).into(iv);
         }
     }
 
