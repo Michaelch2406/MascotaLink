@@ -6,6 +6,10 @@ import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -56,6 +60,7 @@ import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.network.SocketManager;
 
 import com.mjc.mascotalink.util.WhatsAppUtil;
 
@@ -89,6 +94,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private DocumentReference reservaRef;
     private ListenerRegistration reservaListener;
+    private SocketManager socketManager;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private boolean isReconnecting = false;
+    private long lastReconnectTime = 0;
+    private static final long MIN_RECONNECT_INTERVAL = 5000; // 5 segundos mínimo entre reconexiones
 
     private TextView tvNombreMascota;
     private TextView tvPaseador;
@@ -117,6 +128,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private boolean isUpdatingNotesFromRemote = false;
     private android.location.Location lastSentLocation = null;
     private long lastSentAt = 0L;
+    private long lastGoodLocationTime = 0; // Última vez que se obtuvo buena precisión
 
     private Date fechaInicioPaseo;
     private long duracionMinutos = 0L;
@@ -143,7 +155,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
-
+        socketManager = SocketManager.getInstance(this);
+        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
 
         initViews();
         setupToolbar();
@@ -161,7 +174,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         reservaRef = db.collection("reservas").document(idReserva);
 
+        // Unirse al paseo vía WebSocket para streaming en tiempo real
+        if (socketManager.isConnected()) {
+            socketManager.joinPaseo(idReserva);
+        }
 
+        // Configurar detección de cambios de red
+        setupNetworkMonitoring();
 
         // Luego sincronizar con Firestore en segundo plano
         escucharReserva();
@@ -176,6 +195,11 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             startTimer();
         }
         startLocationUpdates();
+
+        // Reconectar al paseo si es necesario
+        if (idReserva != null && socketManager.isConnected()) {
+            socketManager.joinPaseo(idReserva);
+        }
     }
 
     private void initViews() {
@@ -1075,6 +1099,116 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         if (reservaListener != null) {
             reservaListener.remove();
         }
+
+        // Limpiar monitor de red
+        if (networkCallback != null && connectivityManager != null) {
+            try {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            } catch (Exception e) {
+                Log.e(TAG, "Error al desregistrar NetworkCallback", e);
+            }
+        }
+    }
+
+    /**
+     * Configura monitoreo de cambios de red para reconectar WebSocket
+     */
+    private void setupNetworkMonitoring() {
+        if (connectivityManager == null) return;
+
+        NetworkRequest networkRequest = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                Log.d(TAG, "🌐 Red disponible");
+                runOnUiThread(() -> {
+                    // Dar tiempo a que la red se estabilice antes de intentar reconectar
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        reconnectWebSocket();
+                    }, 3000); // Aumentado a 3 segundos para evitar reconexiones prematuras
+                });
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                Log.w(TAG, "🌐 Red perdida");
+                runOnUiThread(() -> {
+                    // Esperar 2 segundos para ver si hay otra red disponible
+                    // (puede ser solo cambio de red, no pérdida total)
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        if (connectivityManager != null) {
+                            Network activeNetwork = connectivityManager.getActiveNetwork();
+                            if (activeNetwork == null) {
+                                // Realmente no hay red
+                                actualizarEstadoUbicacion("Ubicación: sin red");
+                            } else {
+                                // Hay otra red disponible (fue cambio de red)
+                                Log.d(TAG, "Cambio de red detectado, hay red disponible");
+                            }
+                        }
+                    }, 2000);
+                });
+            }
+
+            @Override
+            public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities capabilities) {
+                boolean hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                boolean isValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+
+                // Solo loggear si cambia de no-internet a internet
+                if (hasInternet && isValidated) {
+                    Log.d(TAG, "🌐 Red con internet validado disponible");
+                }
+                // NO reconectar aquí para evitar loops - solo en onAvailable
+            }
+        };
+
+        try {
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+            Log.d(TAG, "✅ NetworkCallback registrado");
+        } catch (Exception e) {
+            Log.e(TAG, "Error registrando NetworkCallback", e);
+        }
+    }
+
+    /**
+     * Reconecta WebSocket y se une al paseo (con throttling para evitar loops)
+     */
+    private void reconnectWebSocket() {
+        // Evitar reconexiones múltiples simultáneas
+        if (isReconnecting) {
+            Log.d(TAG, "⏸️ Reconexión ya en progreso, ignorando...");
+            return;
+        }
+
+        // Throttling: mínimo 5 segundos entre reconexiones
+        long now = System.currentTimeMillis();
+        if (now - lastReconnectTime < MIN_RECONNECT_INTERVAL) {
+            Log.d(TAG, "⏸️ Muy pronto para reconectar, esperando...");
+            return;
+        }
+
+        if (!socketManager.isConnected()) {
+            isReconnecting = true;
+            lastReconnectTime = now;
+
+            Log.d(TAG, "🔄 Reconectando SocketManager...");
+            socketManager.connect();
+
+            // Esperar a que se conecte y luego unirse al paseo UNA SOLA VEZ
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (idReserva != null && socketManager.isConnected()) {
+                    socketManager.joinPaseo(idReserva);
+                    Log.d(TAG, "✅ Re-unido al paseo tras cambio de red");
+                }
+                isReconnecting = false;
+            }, 2000);
+        } else {
+            Log.d(TAG, "✅ Socket ya está conectado, no se requiere reconexión");
+        }
     }
 
     private void setupLocationUpdates() {
@@ -1089,6 +1223,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
+                Log.d(TAG, "📡 LocationCallback ejecutado - Ubicaciones recibidas: " +
+                      locationResult.getLocations().size());
                 for (android.location.Location location : locationResult.getLocations()) {
                     if (location != null) {
                         procesarUbicacion(location);
@@ -1132,7 +1268,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             if (fusedLocationClient != null && locationCallback != null) {
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
                 actualizarEstadoUbicacion("Ubicación: buscando señal...");
+                Log.d(TAG, "✅ Location updates iniciados - Intervalo: 7s, Min distancia: 6m");
+            } else {
+                Log.e(TAG, "❌ No se puede iniciar location updates - fusedLocationClient o callback null");
             }
+        } else {
+            Log.e(TAG, "❌ Permiso ACCESS_FINE_LOCATION no otorgado");
         }
     }
 
@@ -1146,19 +1287,53 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         if (reservaRef == null || location == null) return;
         if (auth == null || auth.getCurrentUser() == null) return;
 
-        if (!location.hasAccuracy() || location.getAccuracy() > 50f) {
-            actualizarEstadoUbicacion("Ubicación: precisión baja (>50 m)");
+        // Log para debugging
+        float accuracy = location.hasAccuracy() ? location.getAccuracy() : -1;
+        Log.d(TAG, "📍 Ubicación recibida - Precisión: " + accuracy + "m, Lat: " +
+              location.getLatitude() + ", Lng: " + location.getLongitude());
+
+        // Sistema de dos niveles de precisión
+        long now = System.currentTimeMillis();
+        boolean isGoodPrecision = accuracy > 0 && accuracy <= 100f;
+        boolean isAcceptablePrecision = accuracy > 100f && accuracy <= 500f;
+        boolean isBadPrecision = !location.hasAccuracy() || accuracy > 500f;
+
+        // Rechazar si precisión es MUY mala (>500m)
+        if (isBadPrecision) {
+            String mensaje = "Ubicación: precisión muy baja (" + (int)accuracy + " m) - Rechazada";
+            actualizarEstadoUbicacion(mensaje);
+            Log.w(TAG, "❌ Ubicación rechazada - " + mensaje);
             return;
         }
 
-        long now = android.os.SystemClock.elapsedRealtime();
+        // Si precisión es ACEPTABLE (100-500m), solo usar como fallback
+        if (isAcceptablePrecision) {
+            // Solo usar si no hay buena ubicación en los últimos 30 segundos
+            if (now - lastGoodLocationTime < 30000) {
+                String mensaje = "Ubicación: esperando mejor señal (" + (int)accuracy + " m, aceptable)";
+                actualizarEstadoUbicacion(mensaje);
+                Log.d(TAG, "⏸️ Ubicación aceptable pero esperando mejor - " + mensaje);
+                return;
+            } else {
+                // Usar como fallback
+                Log.w(TAG, "⚠️ Usando ubicación aceptable como fallback (" + (int)accuracy + " m)");
+                String mensaje = "Ubicación: precisión aceptable (" + (int)accuracy + " m)";
+                actualizarEstadoUbicacion(mensaje);
+            }
+        } else {
+            // Precisión BUENA (<=100m)
+            lastGoodLocationTime = now;
+            Log.d(TAG, "✅ Ubicación con buena precisión (" + (int)accuracy + " m)");
+        }
+
+        long nowElapsed = android.os.SystemClock.elapsedRealtime();
         if (lastSentLocation != null) {
             float dist = location.distanceTo(lastSentLocation);
             if (dist < 5f) {
                 return; // no se movió lo suficiente
             }
         }
-        if (now - lastSentAt < 5000) {
+        if (nowElapsed - lastSentAt < 5000) {
             return; // throttling 5s
         }
 
@@ -1193,8 +1368,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .update(updates)
                 .addOnFailureListener(e -> Log.e(TAG, "Error publicando ubicación en tiempo real", e));
 
+        // 3. Enviar ubicación en tiempo real vía WebSocket
+        if (socketManager.isConnected() && idReserva != null) {
+            socketManager.updateLocation(idReserva, lat, lng, location.getAccuracy());
+        }
+
         lastSentLocation = location;
-        lastSentAt = now;
+        lastSentAt = nowElapsed;
         actualizarEstadoUbicacion(formatearEstadoUbicacion(location, enMovimiento));
     }
 

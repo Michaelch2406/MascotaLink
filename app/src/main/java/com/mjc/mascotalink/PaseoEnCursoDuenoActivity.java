@@ -3,6 +3,10 @@ package com.mjc.mascotalink;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -36,8 +40,11 @@ import com.mjc.mascotalink.adapters.ActividadPaseoAdapter;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.modelo.PaseoActividad;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.network.SocketManager;
 
 import com.mjc.mascotalink.util.WhatsAppUtil;
+
+import org.json.JSONObject;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -81,6 +88,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private DocumentReference reservaRef;
     private ListenerRegistration reservaListener;
     private GoogleMap mMap;
+    private SocketManager socketManager;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private boolean isReconnecting = false;
+    private long lastReconnectTime = 0;
+    private static final long MIN_RECONNECT_INTERVAL = 5000; // 5 segundos mínimo entre reconexiones
 
     // UI Elements
     private TextView tvNombrePaseador;
@@ -136,7 +149,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
-
+        socketManager = SocketManager.getInstance(this);
+        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
 
         initViews();
         setupToolbar();
@@ -167,7 +181,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         reservaRef = db.collection("reservas").document(idReserva);
 
+        // Configurar WebSocket listeners para ubicación en tiempo real
+        setupWebSocketListeners();
 
+        // Configurar monitoreo de cambios de red
+        setupNetworkMonitoring();
 
         // Luego verificar permisos y sincronizar con Firestore
         verificarPermisosYEscuchar();
@@ -225,6 +243,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         if (fechaInicioPaseo != null) {
             startTimer();
         }
+
+        // Reconectar al paseo para recibir ubicación en tiempo real
+        if (idReserva != null && socketManager.isConnected()) {
+            socketManager.joinPaseo(idReserva);
+        }
     }
 
     @Override
@@ -240,6 +263,19 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             reservaListener.remove();
         }
         stopTimer();
+
+        // Limpiar listeners de WebSocket
+        socketManager.off("walker_location");
+        socketManager.off("joined_paseo");
+
+        // Limpiar monitor de red
+        if (networkCallback != null && connectivityManager != null) {
+            try {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            } catch (Exception e) {
+                Log.e(TAG, "Error al desregistrar NetworkCallback", e);
+            }
+        }
     }
 
     private void initViews() {
@@ -305,7 +341,232 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         BottomNavManager.setupBottomNav(this, bottomNav, "DUEÑO", R.id.menu_walks);
     }
 
+    /**
+     * Configura monitoreo de cambios de red para reconectar WebSocket
+     */
+    private void setupNetworkMonitoring() {
+        if (connectivityManager == null) return;
 
+        NetworkRequest networkRequest = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                Log.d(TAG, "🌐 Red disponible");
+                runOnUiThread(() -> {
+                    // Dar tiempo a que la red se estabilice antes de intentar reconectar
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        reconnectWebSocket();
+                    }, 3000); // Aumentado a 3 segundos para evitar reconexiones prematuras
+                });
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                Log.w(TAG, "🌐 Red perdida");
+                runOnUiThread(() -> {
+                    // Esperar 2 segundos para ver si hay otra red disponible
+                    // (puede ser solo cambio de red, no pérdida total)
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        if (connectivityManager != null) {
+                            Network activeNetwork = connectivityManager.getActiveNetwork();
+                            if (activeNetwork == null && tvUbicacionEstado != null) {
+                                // Realmente no hay red
+                                tvUbicacionEstado.setText("Sin red");
+                                tvUbicacionEstado.setTextColor(ContextCompat.getColor(
+                                    PaseoEnCursoDuenoActivity.this, R.color.red_error));
+                            } else {
+                                // Hay otra red disponible (fue cambio de red)
+                                Log.d(TAG, "Cambio de red detectado, hay red disponible");
+                            }
+                        }
+                    }, 2000);
+                });
+            }
+
+            @Override
+            public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities capabilities) {
+                boolean hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                boolean isValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+
+                // Solo loggear si cambia de no-internet a internet
+                if (hasInternet && isValidated) {
+                    Log.d(TAG, "🌐 Red con internet validado disponible");
+                }
+                // NO reconectar aquí para evitar loops - solo en onAvailable
+            }
+        };
+
+        try {
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+            Log.d(TAG, "✅ NetworkCallback registrado");
+        } catch (Exception e) {
+            Log.e(TAG, "Error registrando NetworkCallback", e);
+        }
+    }
+
+    /**
+     * Reconecta WebSocket y se une al paseo (con throttling para evitar loops)
+     */
+    private void reconnectWebSocket() {
+        // Evitar reconexiones múltiples simultáneas
+        if (isReconnecting) {
+            Log.d(TAG, "⏸️ Reconexión ya en progreso, ignorando...");
+            return;
+        }
+
+        // Throttling: mínimo 5 segundos entre reconexiones
+        long now = System.currentTimeMillis();
+        if (now - lastReconnectTime < MIN_RECONNECT_INTERVAL) {
+            Log.d(TAG, "⏸️ Muy pronto para reconectar, esperando...");
+            return;
+        }
+
+        if (!socketManager.isConnected()) {
+            isReconnecting = true;
+            lastReconnectTime = now;
+
+            Log.d(TAG, "🔄 Reconectando SocketManager...");
+            socketManager.connect();
+
+            // Esperar a que se conecte y luego unirse al paseo UNA SOLA VEZ
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (idReserva != null && socketManager.isConnected()) {
+                    socketManager.joinPaseo(idReserva);
+                    Log.d(TAG, "✅ Re-unido al paseo tras cambio de red");
+
+                    if (tvUbicacionEstado != null) {
+                        tvUbicacionEstado.setText("Ubicación: reconectado");
+                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(
+                            PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
+                    }
+                }
+                isReconnecting = false;
+            }, 2000);
+        } else {
+            Log.d(TAG, "✅ Socket ya está conectado, no se requiere reconexión");
+        }
+    }
+
+    /**
+     * Configurar listeners de WebSocket para recibir ubicación en tiempo real
+     */
+    private void setupWebSocketListeners() {
+        // Listener para confirmación de unión al paseo
+        socketManager.on("joined_paseo", args -> {
+            if (args.length > 0) {
+                try {
+                    JSONObject data = (JSONObject) args[0];
+                    String paseoId = data.getString("paseoId");
+                    Log.d(TAG, "✅ Unido al paseo vía WebSocket: " + paseoId);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error parseando joined_paseo", e);
+                }
+            }
+        });
+
+        // Listener para actualizaciones de ubicación en tiempo real
+        socketManager.on("walker_location", args -> {
+            if (args.length > 0) {
+                try {
+                    JSONObject data = (JSONObject) args[0];
+                    double latitud = data.getDouble("latitud");
+                    double longitud = data.getDouble("longitud");
+                    double accuracy = data.optDouble("accuracy", 0);
+                    long timestamp = data.optLong("timestamp", System.currentTimeMillis());
+
+                    Log.d(TAG, "📍 Ubicación en tiempo real: " + latitud + ", " + longitud);
+
+                    // Actualizar mapa en el hilo principal
+                    runOnUiThread(() -> {
+                        LatLng nuevaUbicacion = new LatLng(latitud, longitud);
+
+                        // Agregar a la ruta
+                        if (!rutaPaseo.isEmpty()) {
+                            // Solo agregar si hay movimiento significativo
+                            LatLng ultima = rutaPaseo.get(rutaPaseo.size() - 1);
+                            float[] results = new float[1];
+                            android.location.Location.distanceBetween(
+                                ultima.latitude, ultima.longitude,
+                                latitud, longitud, results);
+
+                            if (results[0] > 5f) { // Más de 5 metros
+                                rutaPaseo.add(nuevaUbicacion);
+                            }
+                        } else {
+                            rutaPaseo.add(nuevaUbicacion);
+                        }
+
+                        ultimaUbicacionConocida = nuevaUbicacion;
+
+                        // Actualizar mapa inmediatamente
+                        if (mMap != null) {
+                            actualizarMapaEnTiempoReal(nuevaUbicacion, (float) accuracy);
+                        }
+
+                        // Actualizar estado de ubicación
+                        long diffSec = (System.currentTimeMillis() - timestamp) / 1000;
+                        String estado = String.format(Locale.US,
+                            "Ubicación: hace %d s (±%.0f m, en tiempo real)",
+                            diffSec, accuracy);
+                        if (tvUbicacionEstado != null) {
+                            tvUbicacionEstado.setText(estado);
+                            tvUbicacionEstado.setTextColor(
+                                ContextCompat.getColor(this, R.color.blue_primary));
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error procesando walker_location", e);
+                }
+            }
+        });
+
+        // Unirse al paseo si está conectado
+        if (idReserva != null && socketManager.isConnected()) {
+            socketManager.joinPaseo(idReserva);
+        }
+    }
+
+    /**
+     * Actualizar mapa en tiempo real con animación suave
+     */
+    private void actualizarMapaEnTiempoReal(LatLng nuevaPos, float accuracy) {
+        if (mMap == null) return;
+
+        // Actualizar polyline si existe
+        if (polylineRuta != null && !rutaPaseo.isEmpty()) {
+            polylineRuta.setPoints(rutaPaseo);
+        }
+
+        // Animar marcador a nueva posición
+        if (marcadorActual != null) {
+            animarMarcador(marcadorActual, nuevaPos);
+        } else {
+            // Crear marcador si no existe
+            BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120);
+            marcadorActual = mMap.addMarker(new MarkerOptions()
+                    .position(nuevaPos)
+                    .title("Paseador")
+                    .icon(walkerIcon != null ? walkerIcon : BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    .anchor(0.5f, 1.0f));
+        }
+
+        // Mover cámara suavemente si hay desplazamiento significativo
+        if (marcadorActual != null) {
+            LatLng currentCameraPos = mMap.getCameraPosition().target;
+            float[] results = new float[1];
+            android.location.Location.distanceBetween(
+                currentCameraPos.latitude, currentCameraPos.longitude,
+                nuevaPos.latitude, nuevaPos.longitude, results);
+
+            // Mover cámara solo si el paseador se movió más de 10 metros
+            if (results[0] > 10f) {
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(nuevaPos, 17f), 500, null);
+            }
+        }
+    }
 
 
 
