@@ -1107,7 +1107,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private void cargarMetodoPagoPredeterminado(String uid) {
         if (uid == null) return;
         if (metodoPagoListener != null) metodoPagoListener.remove();
-        db.collection("usuarios").document(uid).collection("metodos_pago")
+        metodoPagoListener = db.collection("usuarios").document(uid).collection("metodos_pago")
                 .whereEqualTo("predeterminado", true).limit(1)
                 .addSnapshotListener((queryDocumentSnapshots, e) -> {
                     if (e == null && queryDocumentSnapshots != null && !queryDocumentSnapshots.isEmpty()) {

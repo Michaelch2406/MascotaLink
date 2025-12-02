@@ -991,7 +991,8 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void escucharEstadoChat() {
-        db.collection("chats").document(chatId).addSnapshotListener((doc, e) -> {
+        if (statusUpdatesListener != null) statusUpdatesListener.remove();
+        statusUpdatesListener = db.collection("chats").document(chatId).addSnapshotListener((doc, e) -> {
             if (doc != null && doc.exists()) {
                 String estado = doc.getString("estado_usuarios." + otroUsuarioId);
                 if ("escribiendo".equals(estado)) {

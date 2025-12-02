@@ -530,7 +530,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private void cargarMetodoPagoPredeterminado(String uid) {
         if (metodoPagoListener != null) metodoPagoListener.remove();
-        db.collection("usuarios").document(uid).collection("metodos_pago")
+        metodoPagoListener = db.collection("usuarios").document(uid).collection("metodos_pago")
                 .whereEqualTo("predeterminado", true).limit(1)
                 .addSnapshotListener((queryDocumentSnapshots, e) -> {
                     if (e == null && queryDocumentSnapshots != null && !queryDocumentSnapshots.isEmpty()) {
