@@ -371,6 +371,46 @@ public class SocketManager {
     }
 
     // ========================================
+    // PRESENCIA DE USUARIOS
+    // ========================================
+
+    /**
+     * Suscribirse a cambios de presencia de usuarios específicos
+     */
+    public void subscribePresence(String[] userIds) {
+        if (!isConnected()) return;
+
+        try {
+            org.json.JSONArray array = new org.json.JSONArray();
+            for (String uid : userIds) {
+                array.put(uid);
+            }
+            socket.emit("subscribe_presence", array);
+            Log.d(TAG, "👁️ Suscrito a presencia de " + userIds.length + " usuarios");
+        } catch (Exception e) {
+            Log.e(TAG, "Error al suscribirse a presencia", e);
+        }
+    }
+
+    /**
+     * Desuscribirse de cambios de presencia
+     */
+    public void unsubscribePresence(String[] userIds) {
+        if (!isConnected()) return;
+
+        try {
+            org.json.JSONArray array = new org.json.JSONArray();
+            for (String uid : userIds) {
+                array.put(uid);
+            }
+            socket.emit("unsubscribe_presence", array);
+            Log.d(TAG, "👁️ Desuscrito de presencia de " + userIds.length + " usuarios");
+        } catch (Exception e) {
+            Log.e(TAG, "Error al desuscribirse de presencia", e);
+        }
+    }
+
+    // ========================================
     // INTERFACES DE CALLBACK
     // ========================================
 
@@ -395,5 +435,15 @@ public class SocketManager {
         void onConnected();
         void onDisconnected();
         void onError(String message);
+    }
+
+    public interface OnPresenceListener {
+        void onUserConnected(String userId, String userName);
+        void onUserDisconnected(String userId, String userName);
+        void onUserStatusChanged(String userId, String status);
+    }
+
+    public interface OnlineUsersListener {
+        void onOnlineUsersResponse(String[] onlineUsers, String[] offlineUsers);
     }
 }

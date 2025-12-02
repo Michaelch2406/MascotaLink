@@ -1222,6 +1222,99 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
+        // ========================================
+        // LISTENERS DE PRESENCIA
+        // ========================================
+
+        // Listener para cuando el otro usuario se conecta
+        socketManager.on("user_connected", args -> {
+            if (args.length == 0) return;
+
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                if (userId.equals(otroUsuarioId)) {
+                    runOnUiThread(() -> {
+                        if (tvEstadoChat != null) {
+                            tvEstadoChat.setText("En línea");
+                            tvEstadoChat.setTextColor(getColor(R.color.green_success));
+                            tvEstadoChat.setVisibility(View.VISIBLE);
+                        }
+                    });
+                    Log.d(TAG, "👁️ Otro usuario conectado: " + userId);
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, "Error parseando user_connected", e);
+            }
+        });
+
+        // Listener para cuando el otro usuario se desconecta
+        socketManager.on("user_disconnected", args -> {
+            if (args.length == 0) return;
+
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                if (userId.equals(otroUsuarioId)) {
+                    runOnUiThread(() -> {
+                        if (tvEstadoChat != null) {
+                            tvEstadoChat.setText("Desconectado");
+                            tvEstadoChat.setTextColor(getColor(R.color.gray_text));
+                            tvEstadoChat.setVisibility(View.VISIBLE);
+                        }
+                    });
+                    Log.d(TAG, "👁️ Otro usuario desconectado: " + userId);
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, "Error parseando user_disconnected", e);
+            }
+        });
+
+        // Listener para respuesta de usuarios online
+        socketManager.on("online_users_response", args -> {
+            if (args.length == 0) return;
+
+            try {
+                JSONObject data = (JSONObject) args[0];
+                org.json.JSONArray onlineUsers = data.getJSONArray("online");
+
+                // Verificar si el otro usuario está online
+                boolean isOnline = false;
+                for (int i = 0; i < onlineUsers.length(); i++) {
+                    if (onlineUsers.getString(i).equals(otroUsuarioId)) {
+                        isOnline = true;
+                        break;
+                    }
+                }
+
+                final boolean finalIsOnline = isOnline;
+                runOnUiThread(() -> {
+                    if (tvEstadoChat != null) {
+                        if (finalIsOnline) {
+                            tvEstadoChat.setText("En línea");
+                            tvEstadoChat.setTextColor(getColor(R.color.green_success));
+                        } else {
+                            tvEstadoChat.setText("Desconectado");
+                            tvEstadoChat.setTextColor(getColor(R.color.gray_text));
+                        }
+                        tvEstadoChat.setVisibility(View.VISIBLE);
+                    }
+                });
+
+                Log.d(TAG, "📊 Estado de presencia: " + (finalIsOnline ? "online" : "offline"));
+            } catch (JSONException e) {
+                Log.e(TAG, "Error parseando online_users_response", e);
+            }
+        });
+
+        // Consultar estado inicial del otro usuario
+        if (otroUsuarioId != null) {
+            socketManager.getOnlineUsers(new String[]{otroUsuarioId});
+            socketManager.subscribePresence(new String[]{otroUsuarioId});
+        }
+
         // Resetear contador de no leídos
         socketManager.resetUnreadCount(chatId);
 
@@ -1310,12 +1403,20 @@ public class ChatActivity extends AppCompatActivity {
             networkMonitor.unregister();
         }
 
+        // Desuscribirse de presencia
+        if (USE_WEBSOCKET && otroUsuarioId != null) {
+            socketManager.unsubscribePresence(new String[]{otroUsuarioId});
+        }
+
         // Limpiar listeners de WebSocket
         if (USE_WEBSOCKET) {
             socketManager.off("new_message");
             socketManager.off("user_typing");
             socketManager.off("user_stop_typing");
             socketManager.off("message_read");
+            socketManager.off("user_connected");
+            socketManager.off("user_disconnected");
+            socketManager.off("online_users_response");
         }
 
         Log.d(TAG, "ChatActivity destroyed, listeners limpiados");

@@ -121,6 +121,73 @@ io.on('connection', (socket) => {
   socket.join(socket.userId);
   updateUserPresence(socket.userId, 'online');
 
+  // Notificar a otros usuarios que este usuario está online
+  socket.broadcast.emit('user_connected', {
+    userId: socket.userId,
+    userName: socket.userName,
+    status: 'online',
+    timestamp: Date.now()
+  });
+
+  // ========================================
+  // EVENTOS DE PRESENCIA
+  // ========================================
+
+  // Consultar qué usuarios están online
+  socket.on('get_online_users', async (userIds) => {
+    try {
+      const onlineUsers = [];
+      const offlineUsers = [];
+
+      // Obtener todos los sockets conectados
+      const sockets = await io.fetchSockets();
+      const connectedUserIds = sockets.map(s => s.userId);
+
+      for (const userId of userIds) {
+        if (connectedUserIds.includes(userId)) {
+          onlineUsers.push(userId);
+        } else {
+          offlineUsers.push(userId);
+        }
+      }
+
+      socket.emit('online_users_response', {
+        online: onlineUsers,
+        offline: offlineUsers,
+        timestamp: Date.now()
+      });
+
+      console.log(`📊 Consulta de presencia: ${onlineUsers.length} online, ${offlineUsers.length} offline`);
+    } catch (error) {
+      console.error('Error al obtener usuarios online:', error);
+    }
+  });
+
+  // Suscribirse a cambios de presencia de usuarios específicos
+  socket.on('subscribe_presence', (userIds) => {
+    try {
+      // Unirse a rooms de presencia para cada usuario
+      for (const userId of userIds) {
+        socket.join(`presence_${userId}`);
+      }
+      console.log(`👁️ ${socket.userName} suscrito a presencia de ${userIds.length} usuarios`);
+    } catch (error) {
+      console.error('Error al suscribirse a presencia:', error);
+    }
+  });
+
+  // Desuscribirse de cambios de presencia
+  socket.on('unsubscribe_presence', (userIds) => {
+    try {
+      for (const userId of userIds) {
+        socket.leave(`presence_${userId}`);
+      }
+      console.log(`👁️ ${socket.userName} desuscrito de presencia de ${userIds.length} usuarios`);
+    } catch (error) {
+      console.error('Error al desuscribirse de presencia:', error);
+    }
+  });
+
   // ========================================
   // EVENTOS DE CHAT
   // ========================================
@@ -374,6 +441,21 @@ io.on('connection', (socket) => {
 
     try {
       await updateUserPresence(socket.userId, 'offline');
+
+      // Notificar a otros usuarios que este usuario está offline
+      socket.broadcast.emit('user_disconnected', {
+        userId: socket.userId,
+        userName: socket.userName,
+        status: 'offline',
+        timestamp: Date.now()
+      });
+
+      // Notificar a suscriptores específicos de presencia
+      io.to(`presence_${socket.userId}`).emit('user_status_changed', {
+        userId: socket.userId,
+        status: 'offline',
+        timestamp: Date.now()
+      });
 
       const chatsSnapshot = await db
         .collection('chats')
