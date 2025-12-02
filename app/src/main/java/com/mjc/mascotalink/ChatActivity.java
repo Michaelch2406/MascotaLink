@@ -54,6 +54,7 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.network.SocketManager;
+import com.mjc.mascotalink.network.NetworkMonitorHelper;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -87,6 +88,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
     private SocketManager socketManager;
+    private NetworkMonitorHelper networkMonitor;
     private String currentUserId;
     private String chatId;
     private String otroUsuarioId;
@@ -143,6 +145,30 @@ public class ChatActivity extends AppCompatActivity {
         // Inicializar SocketManager
         socketManager = SocketManager.getInstance(this);
 
+        // Inicializar NetworkMonitorHelper para monitoreo robusto de red
+        networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
+            @Override
+            public void onNetworkLost() {
+                runOnUiThread(() -> {
+                    tvEstadoChat.setText("Sin conexión");
+                    tvEstadoChat.setTextColor(getColor(R.color.red_error));
+                });
+            }
+
+            @Override
+            public void onNetworkAvailable() {
+                Log.d(TAG, "Red disponible nuevamente");
+            }
+
+            @Override
+            public void onReconnected() {
+                runOnUiThread(() -> {
+                    // Resetear contador de no leídos tras reconexión
+                    socketManager.resetUnreadCount(chatId);
+                });
+            }
+        });
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             currentUserId = user.getUid();
@@ -179,6 +205,10 @@ public class ChatActivity extends AppCompatActivity {
             // Fallback a Firestore
             loadInitialMessages();
         }
+
+        // Configurar el room actual para reconexión automática
+        networkMonitor.setCurrentRoom(chatId, NetworkMonitorHelper.RoomType.CHAT);
+        networkMonitor.register();
 
         cargarDatosOtroUsuario();
         escucharEstadoChat();
@@ -1274,6 +1304,11 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        // Desregistrar monitor de red
+        if (networkMonitor != null) {
+            networkMonitor.unregister();
+        }
 
         // Limpiar listeners de WebSocket
         if (USE_WEBSOCKET) {
