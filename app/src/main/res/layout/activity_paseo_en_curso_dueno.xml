@@ -315,7 +315,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:tint="@color/gray_text"
+                    app:tint="@color/gray_text"
                     android:src="@android:drawable/ic_menu_camera"
                     tools:ignore="ContentDescription" />
 

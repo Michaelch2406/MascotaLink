@@ -98,6 +98,7 @@
             app:tint="#E0E0E0" />
 
         <TextView
+            android:id="@+id/tv_empty_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -107,11 +108,13 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tv_empty_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Tus paseos completados aparecerán aquí."
-            android:textColor="@color/secondary" />
+            android:textColor="@color/secondary"
+            android:gravity="center_horizontal" />
     </LinearLayout>
 
     <ProgressBar

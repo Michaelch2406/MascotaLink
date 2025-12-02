@@ -52,6 +52,7 @@ public class PaseosActivity extends AppCompatActivity {
     private RecyclerView rvPaseos;
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout emptyView;
+    private TextView tvEmptyTitle, tvEmptySubtitle;
     private Button btnReservarPaseo; // Not used in layout but kept for logic logic if needed or removed
     private BottomNavigationView bottomNav;
     private android.widget.ImageView ivBack;
@@ -108,6 +109,8 @@ public class PaseosActivity extends AppCompatActivity {
         rvPaseos = findViewById(R.id.rv_paseos);
         swipeRefresh = findViewById(R.id.swipe_refresh);
         emptyView = findViewById(R.id.empty_view);
+        tvEmptyTitle = findViewById(R.id.tv_empty_title);
+        tvEmptySubtitle = findViewById(R.id.tv_empty_subtitle);
         // btnReservarPaseo removed from new layout, handled via Empty View logic or menu
         bottomNav = findViewById(R.id.bottom_nav);
 
@@ -163,7 +166,6 @@ public class PaseosActivity extends AppCompatActivity {
         addTab("Programados", ReservaEstadoValidator.ESTADO_CONFIRMADO);
         addTab("En Curso", "EN_CURSO");
         addTab("Completados", "COMPLETADO");
-        addTab("Cancelados", "CANCELADO");
 
         // Seleccionar tab correspondiente al estado actual
         int selectedIndex = getTabIndexForState(estadoActual);
@@ -202,7 +204,6 @@ public class PaseosActivity extends AppCompatActivity {
             case ReservaEstadoValidator.ESTADO_CONFIRMADO: return 1;
             case "EN_CURSO": return 2;
             case "COMPLETADO": return 3;
-            case "CANCELADO": return 4;
             default: return 0;
         }
     }
@@ -403,10 +404,47 @@ public class PaseosActivity extends AppCompatActivity {
         if (paseosList.isEmpty()) {
             rvPaseos.setVisibility(View.GONE);
             emptyView.setVisibility(View.VISIBLE);
+            actualizarTextoVacio();
         } else {
             rvPaseos.setVisibility(View.VISIBLE);
             emptyView.setVisibility(View.GONE);
         }
+    }
+
+    private void actualizarTextoVacio() {
+        String titulo;
+        String subtitulo;
+
+        switch (estadoActual) {
+            case ReservaEstadoValidator.ESTADO_ACEPTADO:
+                if ("PASEADOR".equalsIgnoreCase(userRole)) {
+                    titulo = "Todo al día";
+                    subtitulo = "No tienes paseos esperando confirmación de pago.";
+                } else { // DUEÑO
+                    titulo = "Ningún pago por confirmar";
+                    subtitulo = "Tus solicitudes aceptadas aparecerán aquí.";
+                }
+                break;
+            case ReservaEstadoValidator.ESTADO_CONFIRMADO:
+                titulo = "Sin paseos programados";
+                subtitulo = "Tus próximos paseos confirmados aparecerán aquí.";
+                break;
+            case "EN_CURSO":
+                titulo = "Ningún paseo activo";
+                subtitulo = "No hay paseos en curso actualmente.";
+                break;
+            case "COMPLETADO":
+                titulo = "Sin paseos recientes";
+                subtitulo = "Los paseos finalizados se mostrarán aquí.";
+                break;
+            default:
+                titulo = "Sin paseos";
+                subtitulo = "No hay información para mostrar.";
+                break;
+        }
+        
+        if (tvEmptyTitle != null) tvEmptyTitle.setText(titulo);
+        if (tvEmptySubtitle != null) tvEmptySubtitle.setText(subtitulo);
     }
 
     private void manejarError(Exception e) {
