@@ -38,9 +38,9 @@ public class NetworkMonitorHelper {
     private static final int MAX_RETRY_ATTEMPTS = 5; // Máximo 5 intentos antes de esperar más
     private static final long MAX_BACKOFF_DELAY = 60000; // Máximo 60s de delay
 
-    // Configuración de ping
-    private static final long PING_INTERVAL = 30000; // Ping cada 30s para verificar conexión
-    private static final long PING_TIMEOUT = 5000; // Timeout de 5s para pong
+    // Configuración de ping (optimizado para detección rápida)
+    private static final long PING_INTERVAL = 15000; // Ping cada 15s para verificar conexión (antes 30s)
+    private static final long PING_TIMEOUT = 3000; // Timeout de 3s para pong (antes 5s)
 
     private final Context context;
     private final SocketManager socketManager;

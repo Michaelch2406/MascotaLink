@@ -42,116 +42,147 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- SECCIÓN 1: INFORMACIÓN DEL PASEADOR -->
+            <!-- SECCIÓN 1: INFORMACIÓN DEL PASEADOR (Estilo item_solicitud) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_paseador"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:strokeColor="#F2F2F2"
-                app:strokeWidth="1dp">
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:rippleColor="#2013A4EC">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Foto del Paseador (Izquierda) -->
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:id="@+id/iv_foto_paseador"
-                        android:layout_width="100dp"
-                        android:layout_height="100dp"
-                        android:contentDescription="Foto del paseador"
-                        android:scaleType="centerCrop"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearance.Mascota.Radius12"
-                        app:srcCompat="@drawable/ic_user_placeholder" />
-
+                    <!-- Fila Superior: Info Principal -->
                     <LinearLayout
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:orientation="vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-                        <!-- Nombre Paseador -->
-                        <TextView
-                            android:id="@+id/tv_nombre_paseador"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            style="@style/TextAppearance.Mascota.CardTitle"
-                            android:textSize="16sp"
-                            tools:text="Alex" />
+                        <!-- Foto Paseador -->
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/iv_foto_paseador"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:scaleType="centerCrop"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
+                            tools:src="@drawable/ic_user_placeholder" />
 
-                        <!-- Rating -->
+                        <!-- Datos Paseador -->
                         <LinearLayout
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginTop="2dp">
-                            
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
                             <TextView
-                                android:id="@+id/tv_rating"
+                                android:id="@+id/tv_nombre_paseador"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="4.9 (123)"
-                                android:textSize="13sp"
-                                android:textColor="#9CA3AF" />
-                                
-                            <ImageView
-                                android:layout_width="14dp"
-                                android:layout_height="14dp"
-                                android:src="@drawable/ic_star_filled"
-                                app:tint="#FFC107"
-                                android:layout_marginStart="4dp"/>
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:textColor="@color/black"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                tools:text="Alex" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginTop="2dp">
+
+                                <ImageView
+                                    android:layout_width="14dp"
+                                    android:layout_height="14dp"
+                                    android:src="@drawable/ic_star_filled"
+                                    app:tint="#FFC107"/>
+
+                                <TextView
+                                    android:id="@+id/tv_rating"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:textColor="@color/secondary"
+                                    android:textSize="14sp"
+                                    tools:text="4.9 (123)" />
+                            </LinearLayout>
                         </LinearLayout>
 
-                        <!-- Etiqueta Paseador -->
-                        <TextView
+                        <!-- Label Rol -->
+                        <com.google.android.material.chip.Chip
+                            style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="32dp"
+                            android:clickable="false"
                             android:text="Paseador"
+                            android:textColor="@color/white"
                             android:textSize="12sp"
-                            android:textColor="#12A3ED"
-                            android:layout_marginTop="2dp"/>
+                            app:chipBackgroundColor="@color/blue_primary"
+                            app:chipMinHeight="24dp" />
+                    </LinearLayout>
 
-                        <!-- Info Mascota -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:layout_marginTop="8dp"
-                            android:gravity="center_vertical">
-                            
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp"
+                        android:background="#F0F0F0" />
+
+                    <!-- Info Mascota -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_dog"
+                            app:tint="@color/blue_primary"/>
+                        
                         <TextView
+                            android:id="@+id/tv_info_mascota"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="-"
-                            android:textSize="12sp"/>
-                                
-                            <TextView
-                                android:id="@+id/tv_info_mascota"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Buddy, Golden Retriever"
-                                android:textSize="12sp"
-                                android:textColor="#757575"
-                                android:layout_marginStart="4dp"/>
-                        </LinearLayout>
+                            android:layout_marginStart="10dp"
+                            tools:text="Buddy, Golden Retriever"
+                            android:textSize="14sp"
+                            android:textColor="@color/black"/>
+                    </LinearLayout>
 
-                        <!-- Fecha y Hora -->
+                    <!-- Fecha y Hora - Ahora en su propia línea para evitar truncamiento -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_access_time"
+                            app:tint="@color/secondary"/>
+
                         <TextView
                             android:id="@+id/tv_fecha_hora"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            style="@style/TextAppearance.Mascota.BodyMuted"
-                            android:textSize="12sp"
-                            tools:text="Hoy, 10:00 AM | 30 min Duracion" />
-
+                            android:layout_marginStart="10dp"
+                            tools:text="Hoy, 10:00 AM - 11:00 AM"
+                            android:textSize="14sp"
+                            android:textColor="@color/secondary"/>
                     </LinearLayout>
 
                 </LinearLayout>
@@ -161,9 +192,19 @@
                 android:id="@+id/tv_ubicacion_estado"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:text="Ubicacion: obteniendo señal..." />
+                android:layout_marginBottom="20dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_status_chip"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:drawablePadding="8dp"
+                app:drawableStartCompat="@drawable/ic_my_location"
+                app:drawableTint="#9CA3AF"
+                android:gravity="center_vertical"
+                android:text="Ubicación: obteniendo señal..."
+                android:textSize="13sp"
+                android:textColor="#4B5563"
+                tools:text="Ubicación: Hace 5s (±10m)" />
 
             <!-- SECCI??N 2: ESTADO Y TEMPORIZADOR -->
             <TextView
@@ -398,33 +439,33 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- FAB Cancelar (Arriba) -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/btn_cancelar_paseo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="192dp"
-        android:src="@android:drawable/ic_menu_close_clear_cancel"
-        app:backgroundTint="#F44336"
-        app:tint="@android:color/white"
-        app:fabSize="normal"
-        android:contentDescription="Cancelar paseo" />
-
-    <!-- FAB Contactar (Abajo) -->
+    <!-- FAB Contactar (Arriba - Posición 1) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btn_contactar_paseador"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="120dp"
+        android:layout_marginBottom="192dp"
         android:src="@drawable/ic_messages"
         app:backgroundTint="#12A3ED"
         app:tint="@android:color/white"
         app:fabSize="normal"
         android:contentDescription="Contactar paseador" />
+
+    <!-- FAB Cancelar (Abajo - Posición 2) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_cancelar_paseo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="120dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        app:backgroundTint="#F44336"
+        app:tint="@android:color/white"
+        app:fabSize="normal"
+        android:contentDescription="Cancelar paseo" />
 
     <View
         android:layout_width="match_parent"

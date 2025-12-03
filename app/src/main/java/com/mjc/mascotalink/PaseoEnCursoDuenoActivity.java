@@ -146,11 +146,28 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         // Inicializar NetworkMonitorHelper para monitoreo robusto de red
         networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
+            private com.google.android.material.snackbar.Snackbar reconnectSnackbar = null;
+
             @Override
             public void onNetworkLost() {
                 runOnUiThread(() -> {
                     if (tvUbicacionEstado != null) {
-                        tvUbicacionEstado.setText("Sin conexión");
+                        tvUbicacionEstado.setText("⚠️ Sin conexión - Intentando reconectar...");
+                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.red_error));
+                    }
+                    // Mostrar Snackbar persistente
+                    if (reconnectSnackbar == null || !reconnectSnackbar.isShown()) {
+                        reconnectSnackbar = com.google.android.material.snackbar.Snackbar.make(
+                            findViewById(android.R.id.content),
+                            "Conexión perdida. Reconectando...",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
+                        );
+                        reconnectSnackbar.setAction("Reintentar", v -> {
+                            if (networkMonitor != null) {
+                                networkMonitor.forceReconnect();
+                            }
+                        });
+                        reconnectSnackbar.show();
                     }
                 });
             }
@@ -158,11 +175,79 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             @Override
             public void onNetworkAvailable() {
                 Log.d(TAG, "Red disponible nuevamente");
+                runOnUiThread(() -> {
+                    if (tvUbicacionEstado != null) {
+                        tvUbicacionEstado.setText("Conectando...");
+                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
+                    }
+                });
             }
 
             @Override
             public void onReconnected() {
                 Log.d(TAG, "Reconectado exitosamente");
+                runOnUiThread(() -> {
+                    if (tvUbicacionEstado != null) {
+                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
+                    }
+                    // Dismiss Snackbar de reconexión
+                    if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                        reconnectSnackbar.dismiss();
+                    }
+                    // Mostrar confirmación
+                    com.google.android.material.snackbar.Snackbar.make(
+                        findViewById(android.R.id.content),
+                        "✅ Conexión restaurada",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                    ).show();
+                });
+            }
+
+            @Override
+            public void onRetrying(int attempt, long delayMs) {
+                runOnUiThread(() -> {
+                    String msg = String.format(java.util.Locale.US,
+                        "Reintentando conexión (%d/5)...", attempt);
+                    if (tvUbicacionEstado != null) {
+                        tvUbicacionEstado.setText(msg);
+                    }
+                    if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                        reconnectSnackbar.setText("Reintento " + attempt + "/5 en " + (delayMs/1000) + "s...");
+                    }
+                });
+            }
+
+            @Override
+            public void onReconnectionFailed(int attempts) {
+                runOnUiThread(() -> {
+                    if (tvUbicacionEstado != null) {
+                        tvUbicacionEstado.setText("❌ Conexión fallida tras " + attempts + " intentos");
+                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.red_error));
+                    }
+                    if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                        reconnectSnackbar.dismiss();
+                    }
+                    // Snackbar con acción de reintento manual
+                    com.google.android.material.snackbar.Snackbar.make(
+                        findViewById(android.R.id.content),
+                        "No se pudo reconectar. Verifica tu conexión.",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                    ).setAction("Reintentar", v -> {
+                        if (networkMonitor != null) {
+                            networkMonitor.forceReconnect();
+                        }
+                    }).show();
+                });
+            }
+
+            @Override
+            public void onNetworkTypeChanged(NetworkMonitorHelper.NetworkType type) {
+                Log.d(TAG, "Tipo de red cambió a: " + type);
+            }
+
+            @Override
+            public void onNetworkQualityChanged(NetworkMonitorHelper.NetworkQuality quality) {
+                Log.d(TAG, "Calidad de red: " + quality);
             }
         });
 
@@ -1021,9 +1106,20 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private void actualizarInfoFecha(Date inicio) {
         if (inicio == null)
             return;
-        SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM, hh:mm a", new Locale("es", "ES"));
-        String fechaStr = sdf.format(inicio);
-        tvFechaHora.setText(String.format(Locale.getDefault(), "%s | %d min Duración", fechaStr, duracionMinutos));
+        
+        // Calcular hora fin
+        long duracionMillis = TimeUnit.MINUTES.toMillis(Math.max(duracionMinutos, 0));
+        Date fin = new Date(inicio.getTime() + duracionMillis);
+
+        SimpleDateFormat fechaFormat = new SimpleDateFormat("d 'de' MMMM", new Locale("es", "ES"));
+        SimpleDateFormat horaFormat = new SimpleDateFormat("hh:mm a", Locale.US);
+        
+        // Formato: "12 de Mayo, 10:00 AM - 10:30 AM"
+        String fechaStr = fechaFormat.format(inicio);
+        String horaInicioStr = horaFormat.format(inicio);
+        String horaFinStr = horaFormat.format(fin);
+        
+        tvFechaHora.setText(String.format("%s, %s - %s", fechaStr, horaInicioStr, horaFinStr));
     }
 
     private void iniciarProcesoCancelacion() {

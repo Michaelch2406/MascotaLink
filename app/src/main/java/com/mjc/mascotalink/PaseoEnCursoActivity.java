@@ -107,6 +107,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private RecyclerView rvFotos;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnCancelar;
+    private com.google.android.material.floatingactionbutton.FloatingActionButton btnFinalizar;
     private MaterialButton btnAdjuntar;
     private BottomNavigationView bottomNav;
     private ProgressBar pbLoading;
@@ -122,6 +123,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private android.location.Location lastSentLocation = null;
     private long lastSentAt = 0L;
     private long lastGoodLocationTime = 0; // Última vez que se obtuvo buena precisión
+    private long lastFirestoreUpdate = 0L; // Última actualización a Firestore
+    private static final long FIRESTORE_UPDATE_INTERVAL = 30000; // 30 segundos entre actualizaciones a Firestore
 
     private Date fechaInicioPaseo;
     private long duracionMinutos = 0L;
@@ -227,6 +230,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         rvFotos = findViewById(R.id.rv_fotos);
         btnContactar = findViewById(R.id.btn_contactar);
         btnCancelar = findViewById(R.id.btn_cancelar_paseo);
+        btnFinalizar = findViewById(R.id.btn_finalizar_paseo);
         btnAdjuntar = findViewById(R.id.btn_adjuntar_fotos);
         bottomNav = findViewById(R.id.bottom_nav);
         pbLoading = findViewById(R.id.pb_loading);
@@ -275,6 +279,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private void setupButtons() {
         btnContactar.setOnClickListener(v -> mostrarOpcionesContacto());
         btnCancelar.setOnClickListener(v -> iniciarProcesoCancelacion());
+        btnFinalizar.setOnClickListener(v -> mostrarDialogoFinalizar());
         btnAdjuntar.setOnClickListener(v -> mostrarOpcionesAdjuntar());
         
         // Click listeners for direct navigation
@@ -306,6 +311,14 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
     }
 
+    private void mostrarDialogoFinalizar() {
+        new AlertDialog.Builder(this)
+            .setTitle("Finalizar Paseo")
+            .setMessage("¿Estás seguro de que deseas marcar el paseo como completado?")
+            .setPositiveButton("Sí, finalizar", (dialog, which) -> confirmarFinalizacionExito())
+            .setNegativeButton("Cancelar", null)
+            .show();
+    }
 
     private void cargarRoleYBottomNav() {
         FirebaseUser user = auth.getCurrentUser();
@@ -1092,7 +1105,20 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                         tvHoras.setText(String.format(Locale.getDefault(), "%02d", horas));
                         tvMinutos.setText(String.format(Locale.getDefault(), "%02d", minutos));
                         tvSegundos.setText(String.format(Locale.getDefault(), "%02d", segundos));
-                        // La lógica de habilitar botón Finalizar ahora está en el diálogo
+                        
+                        // Logic for button visibility (80% of agreed duration)
+                        if (duracionMinutos > 0) {
+                             long totalMillis = duracionMinutos * 60 * 1000;
+                             if (elapsed >= totalMillis * 0.8) {
+                                 if (btnFinalizar.getVisibility() != View.VISIBLE) {
+                                     btnFinalizar.setVisibility(View.VISIBLE);
+                                 }
+                             } else {
+                                 if (btnFinalizar.getVisibility() != View.GONE) {
+                                     btnFinalizar.setVisibility(View.GONE);
+                                 }
+                             }
+                        }
                     }
                 });
                 timerHandler.postDelayed(this, 1000);
@@ -1278,9 +1304,16 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
         boolean enMovimiento = location.getSpeed() > 0.7f; // ~2.5 km/h
 
-        // 1. Guardar en el historial del paseo (para el dueño)
-        reservaRef.update("ubicaciones", FieldValue.arrayUnion(puntoMap))
-                .addOnFailureListener(e -> Log.e(TAG, "Error actualizando historial de ubicación", e));
+        // 1. Guardar en el historial del paseo (para el dueño) - CON THROTTLING
+        // Solo guardar en Firestore cada 30 segundos para reducir writes
+        if (now - lastFirestoreUpdate >= FIRESTORE_UPDATE_INTERVAL) {
+            reservaRef.update("ubicaciones", FieldValue.arrayUnion(puntoMap))
+                    .addOnSuccessListener(aVoid -> {
+                        lastFirestoreUpdate = now;
+                        Log.d(TAG, "✅ Ubicación guardada en Firestore (backup)");
+                    })
+                    .addOnFailureListener(e -> Log.e(TAG, "Error actualizando historial de ubicación", e));
+        }
 
         // 2. Publicar en tiempo real en el perfil del usuario
         Map<String, Object> updates = new HashMap<>();
