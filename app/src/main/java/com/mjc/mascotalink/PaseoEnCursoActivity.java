@@ -287,7 +287,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         if (mascotaIdActual != null && duenoIdActual != null && !mascotaIdActual.isEmpty() && !duenoIdActual.isEmpty()) {
             Intent intent = new Intent(this, PerfilMascotaActivity.class);
             intent.putExtra("mascota_id", mascotaIdActual);
-            intent.putExtra("owner_id", duenoIdActual); // Pass owner ID for context
+            intent.putExtra("dueno_id", duenoIdActual); // Pass owner ID for context
             startActivity(intent);
         } else {
             Toast.makeText(this, "Información de la mascota no disponible.", Toast.LENGTH_SHORT).show();
@@ -448,12 +448,6 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
         actualizarGaleria(fotos);
 
-        String mascotaId = snapshot.getString("id_mascota");
-        if (mascotaId != null && !mascotaId.isEmpty() && !mascotaId.equals(mascotaIdActual)) {
-            mascotaIdActual = mascotaId;
-            cargarDatosMascota(mascotaId);
-        }
-
         DocumentReference duenoRef = snapshot.getDocumentReference("id_dueno");
         if (duenoRef == null) {
             String duenoPath = snapshot.getString("id_dueno");
@@ -466,7 +460,17 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             if (!nuevoDuenoId.equals(duenoIdActual)) {
                 duenoIdActual = nuevoDuenoId;
                 cargarDatosDueno(duenoRef);
+                // Si ya tenemos una mascota identificada, recargar sus datos ahora que tenemos el contexto del dueño
+                if (mascotaIdActual != null && !mascotaIdActual.isEmpty()) {
+                    cargarDatosMascota(mascotaIdActual);
+                }
             }
+        }
+
+        String mascotaId = snapshot.getString("id_mascota");
+        if (mascotaId != null && !mascotaId.isEmpty() && !mascotaId.equals(mascotaIdActual)) {
+            mascotaIdActual = mascotaId;
+            cargarDatosMascota(mascotaId);
         }
 
         DocumentReference paseadorRef = snapshot.getDocumentReference("id_paseador");
