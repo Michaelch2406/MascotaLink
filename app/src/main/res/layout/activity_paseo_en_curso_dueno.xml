@@ -163,7 +163,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 style="@style/TextAppearance.Mascota.BodyMuted"
-                android:text="Ubicacion: obteniendo senal..." />
+                android:text="Ubicacion: obteniendo señal..." />
 
             <!-- SECCI??N 2: ESTADO Y TEMPORIZADOR -->
             <TextView

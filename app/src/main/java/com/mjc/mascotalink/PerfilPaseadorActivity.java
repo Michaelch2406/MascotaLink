@@ -73,6 +73,8 @@ import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascota.ui.perfil.ResenaAdapter;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
+import com.mjc.mascotalink.network.SocketManager;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -92,6 +94,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private SocketManager socketManager;
 
     // Views
     private Toolbar toolbar;
@@ -179,6 +182,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        socketManager = SocketManager.getInstance(this);
 
         initViews();
         
@@ -1013,6 +1017,11 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         cargarDisponibilidad(paseadorId);
         cargarZonasServicio(paseadorId);
         cargarMetodoPagoPredeterminado(currentUserId != null ? currentUserId : paseadorId);
+
+        // Setup presence listeners if viewing someone else's profile
+        if (!isOwnProfile && paseadorId != null) {
+            setupPresenceListeners();
+        }
     }
 
     private void detachDataListeners() {
@@ -1021,6 +1030,140 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         if (disponibilidadListener != null) disponibilidadListener.remove();
         if (zonasListener != null) zonasListener.remove();
         if (metodoPagoListener != null) metodoPagoListener.remove();
+        cleanupPresenceListeners();
+    }
+
+    private void setupPresenceListeners() {
+        if (socketManager == null || !socketManager.isConnected()) {
+            Log.w(TAG, "SocketManager no conectado, no se puede configurar presencia");
+            return;
+        }
+
+        // Listen for when paseador connects
+        socketManager.on("user_connected", args -> {
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                if (userId.equals(paseadorId)) {
+                    runOnUiThread(() -> {
+                        tvUltimaConexion.setText("En línea");
+                        tvUltimaConexion.setTextColor(getColor(R.color.green_success));
+                    });
+                    Log.d(TAG, "👁️ Paseador conectado: " + userId);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error procesando user_connected", e);
+            }
+        });
+
+        // Listen for when paseador disconnects
+        socketManager.on("user_disconnected", args -> {
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                if (userId.equals(paseadorId)) {
+                    runOnUiThread(() -> {
+                        tvUltimaConexion.setTextColor(getColor(R.color.gray_text));
+                        // Reload from Firestore to get updated ultima_conexion
+                        reloadUltimaConexion();
+                    });
+                    Log.d(TAG, "👁️ Paseador desconectado: " + userId);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error procesando user_disconnected", e);
+            }
+        });
+
+        // Listen for online users query response
+        socketManager.on("online_users_response", args -> {
+            try {
+                JSONObject data = (JSONObject) args[0];
+                org.json.JSONArray onlineUsers = data.getJSONArray("online");
+                org.json.JSONArray offlineUsers = data.getJSONArray("offline");
+
+                boolean isOnline = false;
+                Long lastActivity = null;
+
+                // Check if paseador is online
+                for (int i = 0; i < onlineUsers.length(); i++) {
+                    JSONObject user = onlineUsers.getJSONObject(i);
+                    if (user.getString("userId").equals(paseadorId)) {
+                        isOnline = true;
+                        if (user.has("lastActivity")) {
+                            lastActivity = user.getLong("lastActivity");
+                        }
+                        break;
+                    }
+                }
+
+                // If not online, check offline users for lastActivity
+                if (!isOnline) {
+                    for (int i = 0; i < offlineUsers.length(); i++) {
+                        JSONObject user = offlineUsers.getJSONObject(i);
+                        if (user.getString("userId").equals(paseadorId)) {
+                            if (user.has("lastActivity") && !user.isNull("lastActivity")) {
+                                lastActivity = user.getLong("lastActivity");
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                final boolean finalIsOnline = isOnline;
+                final Long finalLastActivity = lastActivity;
+
+                runOnUiThread(() -> {
+                    if (finalIsOnline) {
+                        tvUltimaConexion.setText("En línea");
+                        tvUltimaConexion.setTextColor(getColor(R.color.green_success));
+                    } else if (finalLastActivity != null) {
+                        String relativeTime = DateUtils.getRelativeTimeSpanString(
+                            finalLastActivity,
+                            System.currentTimeMillis(),
+                            DateUtils.MINUTE_IN_MILLIS
+                        ).toString();
+                        tvUltimaConexion.setText("Activo " + relativeTime.toLowerCase());
+                        tvUltimaConexion.setTextColor(getColor(R.color.gray_text));
+                    } else {
+                        reloadUltimaConexion();
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error procesando online_users_response", e);
+            }
+        });
+
+        // Query initial status and subscribe to presence updates
+        socketManager.getOnlineUsers(new String[]{paseadorId});
+        socketManager.subscribePresence(new String[]{paseadorId});
+        Log.d(TAG, "👁️ Presencia configurada para paseador: " + paseadorId);
+    }
+
+    private void cleanupPresenceListeners() {
+        if (socketManager != null && !isOwnProfile && paseadorId != null) {
+            socketManager.off("user_connected");
+            socketManager.off("user_disconnected");
+            socketManager.off("online_users_response");
+            socketManager.unsubscribePresence(new String[]{paseadorId});
+            Log.d(TAG, "👁️ Limpieza de presencia para paseador: " + paseadorId);
+        }
+    }
+
+    private void reloadUltimaConexion() {
+        if (paseadorId == null) return;
+        db.collection("usuarios").document(paseadorId).get()
+            .addOnSuccessListener(doc -> {
+                if (doc != null && doc.exists()) {
+                    Timestamp ultimaConexion = doc.getTimestamp("ultima_conexion");
+                    if (ultimaConexion != null) {
+                        tvUltimaConexion.setText(String.format("Últ. conexión: %s", formatUltimaConexion(ultimaConexion)));
+                        tvUltimaConexion.setTextColor(getColor(R.color.gray_text));
+                    }
+                }
+            })
+            .addOnFailureListener(e -> Log.w(TAG, "Error recargando ultima_conexion", e));
     }
 
     private void showContent() {

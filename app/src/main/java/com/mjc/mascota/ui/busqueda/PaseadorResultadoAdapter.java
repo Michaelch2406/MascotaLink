@@ -41,7 +41,8 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
             return oldItem.getNombre().equals(newItem.getNombre())
                     && Objects.equals(oldItem.getFotoUrl(), newItem.getFotoUrl())
                     && oldItem.getCalificacion() == newItem.getCalificacion()
-                    && oldItem.isFavorito() == newItem.isFavorito();
+                    && oldItem.isFavorito() == newItem.isFavorito()
+                    && oldItem.isEnLinea() == newItem.isEnLinea();
         }
     };
 
@@ -83,6 +84,7 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
         private final TextView zonaTextView;
         private final TextView tarifaTextView;
         private final ImageView favoritoButton; // Changed from ImageButton
+        private final TextView badgeEnLinea;
 
         public PaseadorViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -93,6 +95,7 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
             zonaTextView = itemView.findViewById(R.id.tv_zona_paseador);
             tarifaTextView = itemView.findViewById(R.id.tv_precio);
             favoritoButton = itemView.findViewById(R.id.btn_favorito);
+            badgeEnLinea = itemView.findViewById(R.id.badge_en_linea);
         }
 
         public void bind(PaseadorResultado paseador, OnItemClickListener itemListener, OnFavoritoToggleListener favListener) {
@@ -109,6 +112,9 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
                     .error(R.drawable.ic_user_placeholder)
                     .circleCrop()
                     .into(avatarImageView);
+
+            // Show/hide online badge
+            badgeEnLinea.setVisibility(paseador.isEnLinea() ? View.VISIBLE : View.GONE);
 
             if (paseador.isFavorito()) {
                 favoritoButton.setImageResource(R.drawable.ic_corazon_lleno); // Assumes red heart drawable

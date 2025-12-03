@@ -16,6 +16,7 @@ public class PaseadorResultado {
     private double tarifaPorHora;
     private List<GeoPoint> zonasServicioGeoPoints;
     private boolean isFavorito;
+    private boolean enLinea;
 
     // Constructor vacío necesario para Firebase
     public PaseadorResultado() {}
@@ -33,6 +34,7 @@ public class PaseadorResultado {
     public double getTarifaPorHora() { return tarifaPorHora; }
     public List<GeoPoint> getZonasServicioGeoPoints() { return zonasServicioGeoPoints; }
     public boolean isFavorito() { return isFavorito; }
+    public boolean isEnLinea() { return enLinea; }
 
     // Setters
     public void setId(String id) { this.id = id; }
@@ -47,4 +49,5 @@ public class PaseadorResultado {
     public void setTarifaPorHora(double tarifaPorHora) { this.tarifaPorHora = tarifaPorHora; }
     public void setZonasServicioGeoPoints(List<GeoPoint> zonasServicioGeoPoints) { this.zonasServicioGeoPoints = zonasServicioGeoPoints; }
     public void setFavorito(boolean favorito) { isFavorito = favorito; }
+    public void setEnLinea(boolean enLinea) { this.enLinea = enLinea; }
 }

@@ -916,6 +916,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
             else if (selectedId == R.id.rb_finalizar_exito) { // Opción para finalizar con éxito
                  long tiempoTranscurrido = calcularTiempoTranscurrido();
                  long tiempoMinimo = obtenerTiempoMinimo();
+
+                 // Logs para depuración
+                 Log.d(TAG, "Intento de finalizar paseo:");
+                 Log.d(TAG, " - Duración acordada: " + duracionMinutos + " mins (Usado para cálculo: " + (duracionMinutos > 0 ? duracionMinutos : 60) + ")");
+                 Log.d(TAG, " - Tiempo transcurrido: " + TimeUnit.MILLISECONDS.toMinutes(tiempoTranscurrido) + " mins");
+                 Log.d(TAG, " - Tiempo mínimo requerido (75%): " + TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo) + " mins");
+
                  if (tiempoTranscurrido < tiempoMinimo) {
                      long minutosRestantes = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo - tiempoTranscurrido);
                      long minutosMinimos = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo);
@@ -1035,8 +1042,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     }
 
     private long obtenerTiempoMinimo() {
-        if (duracionMinutos <= 0) return 0;
-        return (long) (duracionMinutos * 60000 * 0.75f);
+        long duracionReal = duracionMinutos > 0 ? duracionMinutos : 60; // Si es 0, asumir 60 minutos por seguridad
+        return (long) (duracionReal * 60000 * 0.75f);
     }
 
     private void startTimer() {

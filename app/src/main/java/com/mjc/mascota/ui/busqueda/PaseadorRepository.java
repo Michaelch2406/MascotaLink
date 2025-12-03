@@ -96,6 +96,10 @@ public class PaseadorRepository {
                     resultado.setTarifaPorHora(getDoubleSafely(paseadorDoc, "precio_hora", 0.0)); // Corregido a precio_hora
                     resultado.setFavorito(favoritosIds.contains(userDoc.getId()));
 
+                    // Set online status from usuarios collection
+                    String estadoPresencia = getStringSafely(userDoc, "estado", "offline");
+                    resultado.setEnLinea("online".equalsIgnoreCase(estadoPresencia));
+
                     String experienciaStr = getStringSafely(paseadorDoc, "experiencia_general", "0");
                     try {
                         String numeros = experienciaStr.replaceAll("[^0-9]", "");
@@ -229,6 +233,7 @@ public class PaseadorRepository {
                 resultado.setAnosExperiencia(getLongSafely(doc, "anos_experiencia", 0L).intValue());
                 resultado.setZonaPrincipal("Sin zona especificada");
                 resultado.setFavorito(favoritosIds.contains(doc.getId()));
+                resultado.setEnLinea(false); // Default to offline, will update from usuarios doc
 
                 int idx = resultados.size();
                 indexMap.put(doc.getId(), idx);
@@ -249,6 +254,17 @@ public class PaseadorRepository {
                             if (total != null) res.setTotalResenas(total.intValue());
                         });
                 detailTasks.add(paseadorTask);
+
+                // Fetch online status from usuarios collection
+                Task<DocumentSnapshot> usuarioTask = db.collection("usuarios").document(doc.getId()).get()
+                        .addOnSuccessListener(uDoc -> {
+                            Integer position = indexMap.get(doc.getId());
+                            if (position == null || position >= resultados.size()) return;
+                            PaseadorResultado res = resultados.get(position);
+                            String estadoPresencia = uDoc.getString("estado");
+                            res.setEnLinea("online".equalsIgnoreCase(estadoPresencia));
+                        });
+                detailTasks.add(usuarioTask);
 
                 Task<QuerySnapshot> zonasTask = db.collection("paseadores").document(doc.getId())
                         .collection("zonas_servicio")

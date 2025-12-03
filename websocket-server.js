@@ -126,6 +126,7 @@ io.on('connection', (socket) => {
     userId: socket.userId,
     userName: socket.userName,
     status: 'online',
+    lastActivity: Date.now(),
     timestamp: Date.now()
   });
 
@@ -138,16 +139,38 @@ io.on('connection', (socket) => {
     try {
       const onlineUsers = [];
       const offlineUsers = [];
+      const userStatuses = {};
 
       // Obtener todos los sockets conectados
       const sockets = await io.fetchSockets();
       const connectedUserIds = sockets.map(s => s.userId);
 
+      // Obtener última actividad de Firestore para todos los usuarios
+      const usersSnapshot = await db.collection('usuarios')
+        .where(admin.firestore.FieldPath.documentId(), 'in', userIds.slice(0, 10)) // Firestore limit
+        .get();
+
+      usersSnapshot.forEach(doc => {
+        const data = doc.data();
+        userStatuses[doc.id] = {
+          lastActivity: data.ultima_actividad ? data.ultima_actividad.toMillis() : null,
+          estado: data.estado || 'offline'
+        };
+      });
+
       for (const userId of userIds) {
+        const status = userStatuses[userId] || { lastActivity: null, estado: 'offline' };
+
         if (connectedUserIds.includes(userId)) {
-          onlineUsers.push(userId);
+          onlineUsers.push({
+            userId: userId,
+            lastActivity: status.lastActivity || Date.now()
+          });
         } else {
-          offlineUsers.push(userId);
+          offlineUsers.push({
+            userId: userId,
+            lastActivity: status.lastActivity
+          });
         }
       }
 

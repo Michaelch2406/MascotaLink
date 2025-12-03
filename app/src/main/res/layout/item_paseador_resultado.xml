@@ -57,16 +57,37 @@
                 android:layout_marginStart="16dp"
                 android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/tv_nombre_paseador"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/black"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    tools:text="Carlos Ruiz" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tv_nombre_paseador"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/black"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        tools:text="Carlos Ruiz" />
+
+                    <TextView
+                        android:id="@+id/badge_en_linea"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="En línea"
+                        android:textColor="@color/green_success"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_badge_online"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:layout_marginStart="8dp"
+                        android:visibility="gone"/>
+                </LinearLayout>
 
                 <!-- Rating y Reseñas -->
                 <LinearLayout
