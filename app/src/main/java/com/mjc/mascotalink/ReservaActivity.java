@@ -47,6 +47,7 @@ public class ReservaActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private String currentUserId;
+    private com.mjc.mascotalink.network.NetworkMonitorHelper networkMonitor;
 
     // Views
     private ImageView ivBack;
@@ -139,6 +140,9 @@ public class ReservaActivity extends AppCompatActivity {
         if (cachedRole != null) {
             bottomNavRole = cachedRole;
         }
+
+        // Inicializar NetworkMonitorHelper para validar conexión antes de pagos
+        setupNetworkMonitor();
 
         initViews();
         setupListeners();
@@ -781,6 +785,17 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void confirmarReserva() {
+        // CRÍTICO: Validar conexión ANTES de cualquier operación de pago/reserva
+        if (networkMonitor != null && !networkMonitor.isNetworkAvailable()) {
+            new AlertDialog.Builder(this)
+                .setTitle("Sin conexión")
+                .setMessage("No se puede crear la reserva sin conexión a internet. Por favor, verifica tu conexión y vuelve a intentarlo.")
+                .setPositiveButton("Entendido", null)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+            return;
+        }
+
         if (!validarDatosReserva()) return;
         mostrarDialogoConfirmacion();
     }
@@ -954,6 +969,56 @@ public class ReservaActivity extends AppCompatActivity {
     private String capitalizeFirst(String str) {
         if (str == null || str.isEmpty()) return str;
         return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+
+    private void setupNetworkMonitor() {
+        com.mjc.mascotalink.network.SocketManager socketManager =
+            com.mjc.mascotalink.network.SocketManager.getInstance(this);
+
+        networkMonitor = new com.mjc.mascotalink.network.NetworkMonitorHelper(
+            this, socketManager,
+            new com.mjc.mascotalink.network.NetworkMonitorHelper.NetworkCallback() {
+                @Override
+                public void onNetworkLost() {
+                    runOnUiThread(() -> {
+                        // Deshabilitar botón de confirmar durante pérdida de conexión
+                        if (btnConfirmarReserva != null) {
+                            btnConfirmarReserva.setEnabled(false);
+                        }
+                        Toast.makeText(ReservaActivity.this,
+                            "⚠️ Sin conexión. No se puede crear la reserva.",
+                            Toast.LENGTH_LONG).show();
+                    });
+                }
+
+                @Override
+                public void onNetworkAvailable() {
+                    runOnUiThread(() -> {
+                        // Re-habilitar botón si todos los datos están completos
+                        verificarCamposCompletos();
+                    });
+                }
+
+                @Override
+                public void onReconnected() {
+                    runOnUiThread(() -> {
+                        Toast.makeText(ReservaActivity.this,
+                            "✅ Conexión restaurada",
+                            Toast.LENGTH_SHORT).show();
+                        verificarCamposCompletos();
+                    });
+                }
+            });
+
+        networkMonitor.register();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (networkMonitor != null) {
+            networkMonitor.unregister();
+        }
     }
 
     // Clase para espaciado horizontal consistente entre items del RecyclerView

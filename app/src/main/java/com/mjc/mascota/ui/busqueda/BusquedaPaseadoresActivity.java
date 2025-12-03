@@ -848,23 +848,101 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
       private void setupNetworkMonitoring() {
           networkMonitorHelper = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
+              private com.google.android.material.snackbar.Snackbar reconnectSnackbar = null;
+
               @Override
               public void onNetworkLost() {
                   Log.d(TAG, "📶 Red perdida - pausando suscripciones");
+                  runOnUiThread(() -> {
+                      // Mostrar Snackbar de conexión perdida
+                      if (reconnectSnackbar == null || !reconnectSnackbar.isShown()) {
+                          reconnectSnackbar = com.google.android.material.snackbar.Snackbar.make(
+                              findViewById(android.R.id.content),
+                              "⚠️ Sin conexión. El estado 'En línea' puede estar desactualizado.",
+                              com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
+                          );
+                          reconnectSnackbar.setAction("Reintentar", v -> {
+                              if (networkMonitorHelper != null) {
+                                  networkMonitorHelper.forceReconnect();
+                              }
+                          });
+                          reconnectSnackbar.show();
+                      }
+                  });
               }
 
               @Override
               public void onNetworkAvailable() {
                   Log.d(TAG, "📶 Red disponible");
+                  runOnUiThread(() -> {
+                      if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                          reconnectSnackbar.setText("🔄 Conectando...");
+                      }
+                  });
               }
 
               @Override
               public void onReconnected() {
                   Log.d(TAG, "🌐 WebSocket reconectado - re-suscribiendo a presencia");
-                  // Re-subscribe to presence when WebSocket reconnects
-                  if (!currentSearchResults.isEmpty()) {
-                      setupPresenceForResults(currentSearchResults);
-                  }
+                  runOnUiThread(() -> {
+                      // Dismiss Snackbar de reconexión
+                      if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                          reconnectSnackbar.dismiss();
+                      }
+
+                      // Mostrar confirmación breve
+                      com.google.android.material.snackbar.Snackbar.make(
+                          findViewById(android.R.id.content),
+                          "✅ Conexión restaurada. Actualizando estado de paseadores...",
+                          com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                      ).show();
+
+                      // Re-subscribe to presence when WebSocket reconnects
+                      if (!currentSearchResults.isEmpty()) {
+                          setupPresenceForResults(currentSearchResults);
+                      }
+                  });
+              }
+
+              @Override
+              public void onRetrying(int attempt, long delayMs) {
+                  Log.d(TAG, "🔄 Reintento " + attempt + "/5");
+                  runOnUiThread(() -> {
+                      if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                          reconnectSnackbar.setText("Reintento " + attempt + "/5 en " + (delayMs/1000) + "s...");
+                      }
+                  });
+              }
+
+              @Override
+              public void onReconnectionFailed(int attempts) {
+                  Log.w(TAG, "❌ Reconexión fallida tras " + attempts + " intentos");
+                  runOnUiThread(() -> {
+                      if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                          reconnectSnackbar.dismiss();
+                      }
+
+                      // Snackbar con opción de reintento manual
+                      com.google.android.material.snackbar.Snackbar.make(
+                          findViewById(android.R.id.content),
+                          "No se pudo conectar. El estado 'En línea' puede estar desactualizado.",
+                          com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                      ).setAction("Reintentar", v -> {
+                          if (networkMonitorHelper != null) {
+                              networkMonitorHelper.forceReconnect();
+                          }
+                      }).show();
+                  });
+              }
+
+              @Override
+              public void onNetworkTypeChanged(NetworkMonitorHelper.NetworkType type) {
+                  Log.d(TAG, "📡 Tipo de red cambió a: " + type);
+              }
+
+              @Override
+              public void onNetworkQualityChanged(NetworkMonitorHelper.NetworkQuality quality) {
+                  Log.d(TAG, "📶 Calidad de red: " + quality);
               }
           });
 
