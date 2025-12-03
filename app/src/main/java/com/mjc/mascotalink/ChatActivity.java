@@ -147,25 +147,130 @@ public class ChatActivity extends AppCompatActivity {
 
         // Inicializar NetworkMonitorHelper para monitoreo robusto de red
         networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
+            private com.google.android.material.snackbar.Snackbar reconnectSnackbar = null;
+
             @Override
             public void onNetworkLost() {
                 runOnUiThread(() -> {
-                    tvEstadoChat.setText("Sin conexión");
+                    tvEstadoChat.setText("⚠️ Sin conexión");
                     tvEstadoChat.setTextColor(getColor(R.color.red_error));
+
+                    // Mostrar Snackbar persistente
+                    if (reconnectSnackbar == null || !reconnectSnackbar.isShown()) {
+                        reconnectSnackbar = com.google.android.material.snackbar.Snackbar.make(
+                            findViewById(android.R.id.content),
+                            "Conexión perdida. Los mensajes se enviarán cuando vuelva la conexión.",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
+                        );
+                        reconnectSnackbar.setAction("Reintentar", v -> {
+                            if (networkMonitor != null) {
+                                networkMonitor.forceReconnect();
+                            }
+                        });
+                        reconnectSnackbar.show();
+                    }
+
+                    // Deshabilitar envío de mensajes hasta que reconecte
+                    btnEnviar.setEnabled(false);
+                    btnEnviar.setAlpha(0.5f);
                 });
             }
 
             @Override
             public void onNetworkAvailable() {
                 Log.d(TAG, "Red disponible nuevamente");
+                runOnUiThread(() -> {
+                    tvEstadoChat.setText("Conectando...");
+                    tvEstadoChat.setTextColor(getColor(R.color.secondary));
+                });
             }
 
             @Override
             public void onReconnected() {
                 runOnUiThread(() -> {
+                    Log.d(TAG, "✅ Reconectado al chat, re-configurando listeners");
+
+                    // Restaurar estado visual
+                    tvEstadoChat.setTextColor(getColor(R.color.gray_dark));
+
+                    // Dismiss Snackbar de reconexión
+                    if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                        reconnectSnackbar.dismiss();
+                    }
+
+                    // Mostrar confirmación breve
+                    com.google.android.material.snackbar.Snackbar.make(
+                        findViewById(android.R.id.content),
+                        "✅ Conexión restaurada",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                    ).show();
+
+                    // Re-habilitar envío de mensajes
+                    if (!isSending) {
+                        btnEnviar.setEnabled(true);
+                        btnEnviar.setAlpha(1.0f);
+                    }
+
                     // Resetear contador de no leídos tras reconexión
-                    socketManager.resetUnreadCount(chatId);
+                    if (chatId != null) {
+                        socketManager.resetUnreadCount(chatId);
+                    }
+
+                    // Re-configurar listeners de WebSocket si está habilitado
+                    if (USE_WEBSOCKET && socketManager.isConnected()) {
+                        setupWebSocketListeners();
+                    }
+
+                    // Cargar mensajes nuevos que pudieron llegar durante desconexión
+                    loadInitialMessages();
                 });
+            }
+
+            @Override
+            public void onRetrying(int attempt, long delayMs) {
+                runOnUiThread(() -> {
+                    String msg = String.format(java.util.Locale.US,
+                        "Reintentando conexión (%d/5)...", attempt);
+                    tvEstadoChat.setText(msg);
+
+                    if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                        reconnectSnackbar.setText("Reintento " + attempt + "/5 en " + (delayMs/1000) + "s...");
+                    }
+                });
+            }
+
+            @Override
+            public void onReconnectionFailed(int attempts) {
+                runOnUiThread(() -> {
+                    tvEstadoChat.setText("❌ Sin conexión");
+                    tvEstadoChat.setTextColor(getColor(R.color.red_error));
+
+                    if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
+                        reconnectSnackbar.dismiss();
+                    }
+
+                    // Snackbar con opción de reintento manual
+                    com.google.android.material.snackbar.Snackbar.make(
+                        findViewById(android.R.id.content),
+                        "No se pudo reconectar. Los mensajes se enviarán más tarde.",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                    ).setAction("Reintentar", v -> {
+                        if (networkMonitor != null) {
+                            networkMonitor.forceReconnect();
+                        }
+                    }).show();
+                });
+            }
+
+            @Override
+            public void onNetworkTypeChanged(NetworkMonitorHelper.NetworkType type) {
+                Log.d(TAG, "Tipo de red cambió a: " + type);
+            }
+
+            @Override
+            public void onNetworkQualityChanged(NetworkMonitorHelper.NetworkQuality quality) {
+                Log.d(TAG, "Calidad de red: " + quality);
+                // Opcional: Ajustar comportamiento según calidad (comprimir imágenes más en red lenta, etc.)
             }
         });
 
