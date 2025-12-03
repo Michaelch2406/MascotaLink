@@ -112,18 +112,13 @@ public class PaseosActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
-                        DocumentSnapshot doc = snapshots.getDocuments().get(0);
-                        String reservaId = doc.getId();
-                        
-                        Intent intent;
-                        if ("PASEADOR".equalsIgnoreCase(role)) {
-                            intent = new Intent(PaseosActivity.this, PaseoEnCursoActivity.class);
-                        } else {
-                            intent = new Intent(PaseosActivity.this, PaseoEnCursoDuenoActivity.class);
+                        // Si hay un paseo activo, cambiar automáticamente a la pestaña "En Curso" (Índice 2)
+                        if (tabLayout != null) {
+                            TabLayout.Tab tabEnCurso = tabLayout.getTabAt(2);
+                            if (tabEnCurso != null) {
+                                tabEnCurso.select();
+                            }
                         }
-                        intent.putExtra("id_reserva", reservaId);
-                        startActivity(intent);
-                        // We do NOT finish() here, so the user can press Back and see the list
                     }
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error checking active walk", e));

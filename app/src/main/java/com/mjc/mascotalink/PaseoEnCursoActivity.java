@@ -125,6 +125,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private long lastGoodLocationTime = 0; // Última vez que se obtuvo buena precisión
     private long lastFirestoreUpdate = 0L; // Última actualización a Firestore
     private static final long FIRESTORE_UPDATE_INTERVAL = 30000; // 30 segundos entre actualizaciones a Firestore
+    private long lastMovementTime = System.currentTimeMillis();
 
     private Date fechaInicioPaseo;
     private long duracionMinutos = 0L;
@@ -1106,10 +1107,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                         tvMinutos.setText(String.format(Locale.getDefault(), "%02d", minutos));
                         tvSegundos.setText(String.format(Locale.getDefault(), "%02d", segundos));
                         
-                        // Logic for button visibility (80% of agreed duration)
+                        // Logic for button visibility (70% of agreed duration)
                         if (duracionMinutos > 0) {
                              long totalMillis = duracionMinutos * 60 * 1000;
-                             if (elapsed >= totalMillis * 0.8) {
+                             if (elapsed >= totalMillis * 0.7) {
                                  if (btnFinalizar.getVisibility() != View.VISIBLE) {
                                      btnFinalizar.setVisibility(View.VISIBLE);
                                  }
@@ -1303,6 +1304,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         puntoMap.put("ts", Timestamp.now()); // arrayUnion no permite FieldValue.serverTimestamp
 
         boolean enMovimiento = location.getSpeed() > 0.7f; // ~2.5 km/h
+        if (enMovimiento) {
+            lastMovementTime = System.currentTimeMillis();
+        }
 
         // 1. Guardar en el historial del paseo (para el dueño) - CON THROTTLING
         // Solo guardar en Firestore cada 30 segundos para reducir writes
@@ -1339,7 +1343,26 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private String formatearEstadoUbicacion(android.location.Location loc, boolean enMovimiento) {
         int acc = (int) loc.getAccuracy();
+        long timeStationary = System.currentTimeMillis() - lastMovementTime;
+        boolean isStationaryLongTime = timeStationary > (6 * 60 * 1000); // 6 minutos
+
+        // Update Color based on stationary time
+        if (tvUbicacionEstado != null) {
+            if (isStationaryLongTime) {
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.red_error));
+            } else if (enMovimiento) {
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.blue_primary));
+            } else {
+                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
+            }
+        }
+
         String mov = enMovimiento ? "en movimiento" : "detenido";
+        if (isStationaryLongTime) {
+            long mins = TimeUnit.MILLISECONDS.toMinutes(timeStationary);
+            mov = "detenido por " + mins + " min";
+        }
+        
         return "Ubicación: hace instantes (±" + acc + " m, " + mov + ")";
     }
 

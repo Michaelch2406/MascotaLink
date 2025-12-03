@@ -130,6 +130,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private Marker marcadorActual;
     private Marker marcadorInicio;
     private Polyline polylineRuta;
+    private long lastWalkerMovementTime = System.currentTimeMillis(); // Rastrear inactividad del paseador
 
     // Cache
 
@@ -908,13 +909,13 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private void actualizarEstadoUbicacionDueno(Object ubicacionesRaw) {
         if (tvUbicacionEstado == null) return;
         if (!(ubicacionesRaw instanceof List)) {
-            tvUbicacionEstado.setText("Ubicacion: sin datos");
+            tvUbicacionEstado.setText("Ubicación: sin datos");
             tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
             return;
         }
         List<?> lista = (List<?>) ubicacionesRaw;
         if (lista.isEmpty()) {
-            tvUbicacionEstado.setText("Ubicacion: sin datos");
+            tvUbicacionEstado.setText("Ubicación: sin datos");
             tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
             return;
         }
@@ -936,41 +937,50 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 ts = new Timestamp((Date) tsObj);
             }
         } else if (last instanceof GeoPoint) {
-            tvUbicacionEstado.setText("Ubicacion: actualizada");
+            tvUbicacionEstado.setText("Ubicación: actualizada");
             tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
             return;
         }
-        StringBuilder sb = new StringBuilder("Ubicacion: ");
+
+        boolean enMovimiento = speed != null && speed > 0.7;
+        if (enMovimiento) {
+            lastWalkerMovementTime = System.currentTimeMillis();
+        }
+
+        long timeStationary = System.currentTimeMillis() - lastWalkerMovementTime;
+        boolean isStationaryLongTime = timeStationary > (6 * 60 * 1000); // 6 minutos
+
+        StringBuilder sb = new StringBuilder("Ubicación: ");
+        
         if (ts != null) {
             long diffSec = (new Date().getTime() - ts.toDate().getTime()) / 1000;
             if (diffSec < 60) {
                 sb.append("hace ").append(diffSec).append(" s");
-                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.blue_primary));
             } else {
                 sb.append("hace ").append(diffSec / 60).append(" min");
-                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, diffSec > 120 ? R.color.red_error : R.color.secondary));
             }
         } else {
             sb.append("actualizada");
-            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
         }
+
         if (acc != null) {
             sb.append(" (±").append(acc.intValue()).append(" m");
         }
-        if (speed != null) {
-            boolean enMovimiento = speed > 0.7;
-            sb.append(", ").append(enMovimiento ? "en movimiento" : "detenido");
-            if (enMovimiento) {
-                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.blue_primary));
-            } else if (ts != null && (new Date().getTime() - ts.toDate().getTime()) / 1000 > 120) {
-                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.red_error));
-            } else {
-                tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.secondary));
-            }
+
+        // Lógica de Color y Estado
+        if (isStationaryLongTime) {
+            long mins = TimeUnit.MILLISECONDS.toMinutes(timeStationary);
+            sb.append(", detenido por ").append(mins).append(" min");
+            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.red_error));
+        } else if (enMovimiento) {
+            sb.append(", en movimiento");
+            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.blue_primary));
+        } else {
+            sb.append(", detenido");
+            tvUbicacionEstado.setTextColor(ContextCompat.getColor(this, R.color.gray_dark));
         }
-        if (acc != null) {
-            sb.append(")");
-        }
+        
+        sb.append(")");
         tvUbicacionEstado.setText(sb.toString());
     }
 
