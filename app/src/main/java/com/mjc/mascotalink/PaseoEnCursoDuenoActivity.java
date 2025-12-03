@@ -1031,14 +1031,15 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     }
 
     private void cargarDatosPaseador(DocumentReference ref) {
-        ref.get().addOnSuccessListener(doc -> {
-            if (doc.exists()) {
-                nombrePaseador = doc.getString("nombre_display");
+        // 1. Cargar datos básicos del Usuario (Nombre, Foto, Teléfono)
+        ref.get().addOnSuccessListener(userDoc -> {
+            if (userDoc.exists()) {
+                nombrePaseador = userDoc.getString("nombre_display");
                 if (nombrePaseador == null)
-                    nombrePaseador = doc.getString("nombre");
+                    nombrePaseador = userDoc.getString("nombre");
                 tvNombrePaseador.setText(nombrePaseador != null ? nombrePaseador : "Paseador no disponible");
 
-                telefonoPaseador = doc.getString("telefono");
+                telefonoPaseador = userDoc.getString("telefono");
                 if (telefonoPaseador == null || telefonoPaseador.isEmpty()) {
                     btnContactar.setEnabled(false);
                     btnContactar.setAlpha(0.6f);
@@ -1047,16 +1048,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     btnContactar.setAlpha(1f);
                 }
 
-                Double rating = doc.getDouble("rating");
-                Long numResenas = doc.getLong("numero_resenas");
-                if (rating != null) {
-                    tvRating.setText(
-                            String.format(Locale.US, "%.1f (%d)", rating, numResenas != null ? numResenas : 0));
-                } else {
-                    tvRating.setText("N/A");
-                }
-
-                String fotoUrl = doc.getString("foto_perfil");
+                String fotoUrl = userDoc.getString("foto_perfil");
                 if (fotoUrl != null && !fotoUrl.isEmpty()) {
                     if (!isDestroyed() && !isFinishing()) {
                         Glide.with(this)
@@ -1069,8 +1061,28 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 } else {
                     ivFotoPaseador.setImageResource(R.drawable.ic_user_placeholder);
                 }
+
+                // 2. Cargar calificación desde la colección 'paseadores'
+                db.collection("paseadores").document(userDoc.getId()).get()
+                    .addOnSuccessListener(paseadorDoc -> {
+                        if (paseadorDoc.exists()) {
+                            Double rating = paseadorDoc.getDouble("calificacion_promedio");
+                            // Intentar obtener total_resenas, fallback a numero_resenas o num_servicios_completados si se prefiere
+                            Long numResenas = paseadorDoc.getLong("total_resenas");
+                            if (numResenas == null) numResenas = paseadorDoc.getLong("num_servicios_completados");
+
+                            if (rating != null) {
+                                tvRating.setText(String.format(Locale.US, "%.1f (%d)", rating, numResenas != null ? numResenas : 0));
+                            } else {
+                                tvRating.setText("N/A");
+                            }
+                        } else {
+                            tvRating.setText("N/A");
+                        }
+                    })
+                    .addOnFailureListener(e -> tvRating.setText("N/A"));
             }
-        });
+        }).addOnFailureListener(e -> Toast.makeText(this, "Error cargando datos del paseador", Toast.LENGTH_SHORT).show());
     }
 
     private void cargarDatosMascota(String mascotaId) {
