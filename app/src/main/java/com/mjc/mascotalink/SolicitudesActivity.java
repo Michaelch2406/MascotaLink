@@ -39,6 +39,9 @@ public class SolicitudesActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String currentUserId;
 
+    // Network monitoring
+    private com.mjc.mascotalink.network.NetworkMonitorHelper networkMonitor;
+
     // Views
     private android.widget.ImageView ivBack;
     private RecyclerView rvSolicitudes;
@@ -74,6 +77,9 @@ public class SolicitudesActivity extends AppCompatActivity {
         if (cachedRole != null) {
             userRole = cachedRole;
         }
+
+        // Inicializar NetworkMonitorHelper
+        setupNetworkMonitor();
 
         initViews();
         // Setup Bottom Navigation immediately to prevent flicker
@@ -260,6 +266,114 @@ public class SolicitudesActivity extends AppCompatActivity {
             firestoreListener.remove();
             firestoreListener = null;
         }
+        if (networkMonitor != null) {
+            networkMonitor.unregister();
+        }
+    }
+
+    private void setupNetworkMonitor() {
+        com.mjc.mascotalink.network.SocketManager socketManager =
+            com.mjc.mascotalink.network.SocketManager.getInstance(this);
+
+        networkMonitor = new com.mjc.mascotalink.network.NetworkMonitorHelper(
+            this, socketManager,
+            new com.mjc.mascotalink.network.NetworkMonitorHelper.NetworkCallback() {
+                private com.google.android.material.snackbar.Snackbar connectionSnackbar = null;
+
+                @Override
+                public void onNetworkLost() {
+                    runOnUiThread(() -> {
+                        Log.d(TAG, "📶 Red perdida - solicitudes pueden estar desactualizadas");
+
+                        // Mostrar Snackbar persistente
+                        if (connectionSnackbar == null || !connectionSnackbar.isShown()) {
+                            connectionSnackbar = com.google.android.material.snackbar.Snackbar.make(
+                                findViewById(android.R.id.content),
+                                "⚠️ Sin conexión. Las solicitudes pueden estar desactualizadas.",
+                                com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
+                            );
+                            connectionSnackbar.setAction("Reintentar", v -> {
+                                if (networkMonitor != null) {
+                                    networkMonitor.forceReconnect();
+                                }
+                            });
+                            connectionSnackbar.show();
+                        }
+                    });
+                }
+
+                @Override
+                public void onNetworkAvailable() {
+                    runOnUiThread(() -> {
+                        Log.d(TAG, "📶 Red disponible");
+                        if (connectionSnackbar != null && connectionSnackbar.isShown()) {
+                            connectionSnackbar.setText("🔄 Conectando...");
+                        }
+                    });
+                }
+
+                @Override
+                public void onReconnected() {
+                    runOnUiThread(() -> {
+                        Log.d(TAG, "🌐 Reconectado - actualizando solicitudes");
+
+                        // Dismiss Snackbar de reconexión
+                        if (connectionSnackbar != null && connectionSnackbar.isShown()) {
+                            connectionSnackbar.dismiss();
+                        }
+
+                        // Mostrar confirmación y auto-refresh
+                        com.google.android.material.snackbar.Snackbar.make(
+                            findViewById(android.R.id.content),
+                            "✅ Conexión restaurada. Actualizando...",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+                        ).show();
+
+                        // Auto-refresh de solicitudes
+                        cargarSolicitudes();
+                    });
+                }
+
+                @Override
+                public void onRetrying(int attempt, long delayMs) {
+                    runOnUiThread(() -> {
+                        if (connectionSnackbar != null && connectionSnackbar.isShown()) {
+                            connectionSnackbar.setText("Reintento " + attempt + "/5 en " + (delayMs/1000) + "s...");
+                        }
+                    });
+                }
+
+                @Override
+                public void onReconnectionFailed(int attempts) {
+                    runOnUiThread(() -> {
+                        if (connectionSnackbar != null && connectionSnackbar.isShown()) {
+                            connectionSnackbar.dismiss();
+                        }
+
+                        com.google.android.material.snackbar.Snackbar.make(
+                            findViewById(android.R.id.content),
+                            "No se pudo conectar. Usa 'Deslizar para actualizar'.",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                        ).setAction("Reintentar", v -> {
+                            if (networkMonitor != null) {
+                                networkMonitor.forceReconnect();
+                            }
+                        }).show();
+                    });
+                }
+
+                @Override
+                public void onNetworkTypeChanged(com.mjc.mascotalink.network.NetworkMonitorHelper.NetworkType type) {
+                    Log.d(TAG, "📡 Tipo de red cambió a: " + type);
+                }
+
+                @Override
+                public void onNetworkQualityChanged(com.mjc.mascotalink.network.NetworkMonitorHelper.NetworkQuality quality) {
+                    Log.d(TAG, "📶 Calidad de red: " + quality);
+                }
+            });
+
+        networkMonitor.register();
     }
 
     private void actualizarYFinalizar() {
