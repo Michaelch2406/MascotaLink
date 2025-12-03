@@ -889,9 +889,10 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("notas", notasAdicionalesMascota);
         reserva.put("reminderSent", false);
 
-        db.collection("reservas")
-            .add(reserva)
-            .addOnSuccessListener(documentReference -> {
+        // Operación CRÍTICA: Creación de reserva con retry (5 intentos)
+        com.mjc.mascotalink.util.FirestoreRetryHelper.executeCritical(
+            () -> db.collection("reservas").add(reserva),
+            documentReference -> {
                 String reservaId = documentReference.getId();
                 Toast.makeText(this, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show();
 
@@ -901,11 +902,13 @@ public class ReservaActivity extends AppCompatActivity {
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 finish();
-            })
-            .addOnFailureListener(e -> {
-                Toast.makeText(this, "Error al crear reserva: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            },
+            e -> {
+                Toast.makeText(this, "Error al crear reserva después de varios intentos. Verifica tu conexión y vuelve a intentar.", Toast.LENGTH_LONG).show();
                 btnConfirmarReserva.setEnabled(true);
-            });
+                Log.e(TAG, "Error crítico al crear reserva después de reintentos", e);
+            }
+        );
     }
 
     private boolean validarDatosReserva() {

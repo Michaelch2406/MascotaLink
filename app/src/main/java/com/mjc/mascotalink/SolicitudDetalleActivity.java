@@ -393,13 +393,14 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         btnRechazar.setEnabled(false);
         btnAceptar.setEnabled(false);
 
-        db.collection("reservas").document(idReserva)
-                .update(
+        // Usar retry helper para operación crítica de cambio de estado
+        com.mjc.mascotalink.util.FirestoreRetryHelper.execute(
+                () -> db.collection("reservas").document(idReserva).update(
                         "estado", ReservaEstadoValidator.ESTADO_RECHAZADO,
                         "motivo_rechazo", motivo,
                         "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
-                )
-                .addOnSuccessListener(aVoid -> {
+                ),
+                aVoid -> {
                     Toast.makeText(this, "Solicitud rechazada", Toast.LENGTH_SHORT).show();
                     estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
                     actualizarBotonesPorEstado();
@@ -407,13 +408,15 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     new android.os.Handler().postDelayed(() -> {
                         finish();
                     }, 1000);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al rechazar solicitud", e);
-                    Toast.makeText(this, "No se pudo rechazar. Intenta de nuevo.", Toast.LENGTH_SHORT).show();
+                },
+                e -> {
+                    Log.e(TAG, "Error al rechazar solicitud después de reintentos", e);
+                    Toast.makeText(this, "No se pudo rechazar después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
                     btnRechazar.setEnabled(true);
                     btnAceptar.setEnabled(true);
-                });
+                },
+                3  // 3 reintentos para operación crítica
+        );
     }
 
     private void aceptarSolicitud() {
@@ -425,12 +428,13 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         btnRechazar.setEnabled(false);
         btnVerPerfil.setEnabled(false);
 
-        db.collection("reservas").document(idReserva)
-                .update(
+        // Usar retry helper para operación crítica de aceptación
+        com.mjc.mascotalink.util.FirestoreRetryHelper.execute(
+                () -> db.collection("reservas").document(idReserva).update(
                         "estado", ReservaEstadoValidator.ESTADO_ACEPTADO,
                         "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
-                )
-                .addOnSuccessListener(aVoid -> {
+                ),
+                aVoid -> {
                     Toast.makeText(this, "¡Solicitud aceptada!", Toast.LENGTH_SHORT).show();
                     estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
                     actualizarBotonesPorEstado();
@@ -438,13 +442,15 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     new android.os.Handler().postDelayed(() -> {
                         finish();
                     }, 1000);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al aceptar solicitud", e);
-                    Toast.makeText(this, "No se pudo aceptar. Intenta de nuevo.", Toast.LENGTH_SHORT).show();
+                },
+                e -> {
+                    Log.e(TAG, "Error al aceptar solicitud después de reintentos", e);
+                    Toast.makeText(this, "No se pudo aceptar después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
                     btnAceptar.setEnabled(true);
                     btnRechazar.setEnabled(true);
                     btnVerPerfil.setEnabled(true);
-                });
+                },
+                3  // 3 reintentos para operación crítica
+        );
     }
 }

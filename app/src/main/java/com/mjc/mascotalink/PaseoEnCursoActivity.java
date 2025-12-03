@@ -759,18 +759,23 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         nuevaActividad.put("descripcion", "El paseador ha subido una nueva foto");
         nuevaActividad.put("timestamp", new Date());
 
-        reservaRef.update(
-                "fotos_paseo", FieldValue.arrayUnion(url),
-                "actividad", FieldValue.arrayUnion(nuevaActividad)
-        )
-                .addOnSuccessListener(unused -> {
+        // Usar retry helper para operación crítica
+        com.mjc.mascotalink.util.FirestoreRetryHelper.execute(
+                () -> reservaRef.update(
+                        "fotos_paseo", FieldValue.arrayUnion(url),
+                        "actividad", FieldValue.arrayUnion(nuevaActividad)
+                ),
+                unused -> {
                     mostrarLoading(false);
                     Toast.makeText(this, "Foto guardada", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
+                },
+                e -> {
                     mostrarLoading(false);
-                    Toast.makeText(this, "No se pudo guardar la foto", Toast.LENGTH_SHORT).show();
-                });
+                    Toast.makeText(this, "No se pudo guardar la foto después de varios intentos", Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Error guardando foto después de reintentos", e);
+                },
+                3  // 3 reintentos para operación importante
+        );
     }
 
     private void mostrarDialogEliminarFoto(String url) {
