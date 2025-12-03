@@ -47,6 +47,9 @@ import com.mjc.mascota.ui.perfil.ResenaAdapter;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.network.SocketManager;
+import org.json.JSONObject;
+import android.text.format.DateUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -61,6 +64,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private SocketManager socketManager;
 
     // Views
     private Toolbar toolbar;
@@ -70,6 +74,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private ImageButton btnMensaje;
     private ImageView ivVerificadoBadge;
     private TextView tvNombre, tvRol, tvVerificado;
+    private TextView badgePerfilEnLinea;
     private TextView tvMascotasRegistradas, tvPaseosSolicitados, tvMiembroDesdeStat;
     private TextView tvRatingValor, tvResenasTotal;
     private RatingBar ratingBar;
@@ -125,6 +130,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        socketManager = SocketManager.getInstance(this);
 
         initViews();
 
@@ -175,7 +181,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         tvRol = findViewById(R.id.tv_rol);
         ivVerificadoBadge = findViewById(R.id.iv_verificado_badge);
         tvVerificado = findViewById(R.id.tv_verificado);
-        
+        badgePerfilEnLinea = findViewById(R.id.badge_perfil_en_linea);
+
         tvMascotasRegistradas = findViewById(R.id.tv_mascotas_registradas);
         tvPaseosSolicitados = findViewById(R.id.tv_paseos_solicitados);
         tvMiembroDesdeStat = findViewById(R.id.tv_miembro_desde_stat);
@@ -499,6 +506,11 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         if (duenoId.equals(currentUserId)) {
             cargarMetodoPagoPredeterminado(duenoId);
         }
+
+        // Setup presence listeners if viewing someone else's profile
+        if (!duenoId.equals(currentUserId)) {
+            setupPresenceListeners();
+        }
     }
     
     private void cargarMascotas() {
@@ -643,6 +655,91 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         if (duenoStatsListener != null) duenoStatsListener.remove();
         if (mascotasListener != null) mascotasListener.remove();
         if (metodoPagoListener != null) metodoPagoListener.remove();
+        cleanupPresenceListeners();
+    }
+
+    private void setupPresenceListeners() {
+        if (socketManager == null || !socketManager.isConnected()) {
+            Log.w(TAG, "SocketManager no conectado, no se puede configurar presencia");
+            return;
+        }
+
+        // Listen for when dueño connects
+        socketManager.on("user_connected", args -> {
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                if (userId.equals(duenoId)) {
+                    runOnUiThread(() -> {
+                        badgePerfilEnLinea.setVisibility(View.VISIBLE);
+                    });
+                    Log.d(TAG, "👁️ Dueño conectado: " + userId);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error procesando user_connected", e);
+            }
+        });
+
+        // Listen for when dueño disconnects
+        socketManager.on("user_disconnected", args -> {
+            try {
+                JSONObject data = (JSONObject) args[0];
+                String userId = data.getString("userId");
+
+                if (userId.equals(duenoId)) {
+                    runOnUiThread(() -> {
+                        badgePerfilEnLinea.setVisibility(View.GONE);
+                    });
+                    Log.d(TAG, "👁️ Dueño desconectado: " + userId);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error procesando user_disconnected", e);
+            }
+        });
+
+        // Listen for online users query response
+        socketManager.on("online_users_response", args -> {
+            try {
+                JSONObject data = (JSONObject) args[0];
+                org.json.JSONArray onlineUsers = data.getJSONArray("online");
+
+                boolean isOnline = false;
+                for (int i = 0; i < onlineUsers.length(); i++) {
+                    JSONObject user = onlineUsers.getJSONObject(i);
+                    if (user.getString("userId").equals(duenoId)) {
+                        isOnline = true;
+                        break;
+                    }
+                }
+
+                final boolean finalIsOnline = isOnline;
+                runOnUiThread(() -> {
+                    if (finalIsOnline) {
+                        badgePerfilEnLinea.setVisibility(View.VISIBLE);
+                    } else {
+                        badgePerfilEnLinea.setVisibility(View.GONE);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error procesando online_users_response", e);
+            }
+        });
+
+        // Query initial status and subscribe to presence updates
+        socketManager.getOnlineUsers(new String[]{duenoId});
+        socketManager.subscribePresence(new String[]{duenoId});
+        Log.d(TAG, "👁️ Presencia configurada para dueño: " + duenoId);
+    }
+
+    private void cleanupPresenceListeners() {
+        if (socketManager != null && duenoId != null && !duenoId.equals(currentUserId)) {
+            socketManager.off("user_connected");
+            socketManager.off("user_disconnected");
+            socketManager.off("online_users_response");
+            socketManager.unsubscribePresence(new String[]{duenoId});
+            Log.d(TAG, "👁️ Limpieza de presencia para dueño: " + duenoId);
+        }
     }
 
     private void showContent() {

@@ -209,6 +209,20 @@
                             android:visibility="gone" />
 
                         <TextView
+                            android:id="@+id/badge_perfil_en_linea"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="En línea"
+                            android:textColor="@color/green_success"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/bg_badge_online"
+                            android:paddingHorizontal="6dp"
+                            android:paddingVertical="2dp"
+                            android:layout_marginStart="8dp"
+                            android:visibility="gone"/>
+
+                        <TextView
                             android:id="@+id/tv_precio"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

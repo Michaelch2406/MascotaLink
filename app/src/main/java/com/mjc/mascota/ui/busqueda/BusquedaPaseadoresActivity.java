@@ -90,6 +90,8 @@ import com.mjc.mascotalink.PerfilDuenoActivity;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.network.SocketManager;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,6 +118,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private BusquedaViewModel viewModel;
     private FirebaseAuth mAuth;
+    private SocketManager socketManager;
     private GoogleMap mMap;
     private ClusterManager<PaseadorClusterItem> mClusterManager;
 
@@ -185,8 +188,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         setContentView(R.layout.activity_busqueda_paseadores);
 
         mAuth = FirebaseAuth.getInstance();
+        socketManager = SocketManager.getInstance(this);
         glideContext = getApplicationContext();
-        
+
         // Initialize role from cache to prevent flicker
         String cachedRole = BottomNavManager.getUserRole(this);
         if (cachedRole != null) {
@@ -282,6 +286,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         if (mMap != null) {
             mMap.clear();
         }
+        cleanupPresenceListeners();
     }
 
     private void setupMapInteraction() {
@@ -704,6 +709,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         emptyStateView.setVisibility(View.GONE);
         errorStateView.setVisibility(View.GONE);
         resultadosAdapter.submitList(data);
+        setupPresenceForResults(data);
     }
 
     private void showLoading() {
@@ -721,6 +727,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         emptyStateView.setVisibility(View.GONE);
         errorStateView.setVisibility(View.GONE);
         popularesAdapter.submitList(data);
+        setupPresenceForResults(data);
     }
 
     private void showError(String message) {
@@ -738,6 +745,91 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
           recyclerViewResultados.setVisibility(View.GONE);
           emptyStateView.setVisibility(View.VISIBLE);
           errorStateView.setVisibility(View.GONE);
+      }
+
+      private void setupPresenceForResults(java.util.List<PaseadorResultado> data) {
+          if (data == null || data.isEmpty() || socketManager == null || !socketManager.isConnected()) {
+              return;
+          }
+
+          // Cleanup previous listeners
+          cleanupPresenceListeners();
+
+          // Extract all paseador IDs
+          String[] paseadorIds = new String[data.size()];
+          for (int i = 0; i < data.size(); i++) {
+              paseadorIds[i] = data.get(i).getId();
+          }
+
+          // Listen for user connections
+          socketManager.on("user_connected", args -> {
+              try {
+                  JSONObject jsonData = (JSONObject) args[0];
+                  String userId = jsonData.getString("userId");
+                  updatePaseadorOnlineStatus(userId, true);
+              } catch (Exception e) {
+                  Log.e(TAG, "Error procesando user_connected", e);
+              }
+          });
+
+          // Listen for user disconnections
+          socketManager.on("user_disconnected", args -> {
+              try {
+                  JSONObject jsonData = (JSONObject) args[0];
+                  String userId = jsonData.getString("userId");
+                  updatePaseadorOnlineStatus(userId, false);
+              } catch (Exception e) {
+                  Log.e(TAG, "Error procesando user_disconnected", e);
+              }
+          });
+
+          // Subscribe to presence updates
+          socketManager.subscribePresence(paseadorIds);
+          Log.d(TAG, "👁️ Suscrito a presencia de " + paseadorIds.length + " paseadores");
+      }
+
+      private void updatePaseadorOnlineStatus(String paseadorId, boolean isOnline) {
+          runOnUiThread(() -> {
+              // Get current list from adapter
+              java.util.List<PaseadorResultado> currentList = null;
+              if (recyclerViewResultados.getVisibility() == View.VISIBLE) {
+                  currentList = resultadosAdapter.getCurrentList();
+              } else if (contentScrollView.getVisibility() == View.VISIBLE) {
+                  currentList = popularesAdapter.getCurrentList();
+              }
+
+              if (currentList == null || currentList.isEmpty()) return;
+
+              // Find and update the paseador
+              boolean found = false;
+              java.util.List<PaseadorResultado> updatedList = new ArrayList<>(currentList);
+              for (int i = 0; i < updatedList.size(); i++) {
+                  PaseadorResultado paseador = updatedList.get(i);
+                  if (paseador.getId().equals(paseadorId)) {
+                      paseador.setEnLinea(isOnline);
+                      found = true;
+                      break;
+                  }
+              }
+
+              // Notify adapter if found
+              if (found) {
+                  if (recyclerViewResultados.getVisibility() == View.VISIBLE) {
+                      resultadosAdapter.submitList(updatedList);
+                  } else if (contentScrollView.getVisibility() == View.VISIBLE) {
+                      popularesAdapter.submitList(updatedList);
+                  }
+                  Log.d(TAG, "👁️ Actualizado estado online de paseador " + paseadorId + ": " + isOnline);
+              }
+          });
+      }
+
+      private void cleanupPresenceListeners() {
+          if (socketManager != null) {
+              socketManager.off("user_connected");
+              socketManager.off("user_disconnected");
+              Log.d(TAG, "👁️ Limpieza de listeners de presencia");
+          }
       }
 
       private void showBaseState() {

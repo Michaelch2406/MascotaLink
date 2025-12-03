@@ -109,6 +109,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private TextView tvPaseosCompletados, tvTiempoRespuesta, tvUltimaConexion, tvMiembroDesde;
     private TextView tvRatingValor, tvResenasTotal;
     private TextView tvEmailPaseador, tvTelefonoPaseador;
+    private TextView badgePerfilEnLinea;
     private ImageView btnCopyEmailPaseador, btnCopyTelefonoPaseador;
     private RatingBar ratingBar;
     private LinearLayout llAcercaDe, llResenas, ajustes_section, soporte_section;
@@ -261,6 +262,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         tvTiempoRespuesta = findViewById(R.id.tv_tiempo_respuesta);
         tvUltimaConexion = findViewById(R.id.tv_ultima_conexion);
         tvMiembroDesde = findViewById(R.id.tv_miembro_desde);
+        badgePerfilEnLinea = findViewById(R.id.badge_perfil_en_linea);
         tvRatingValor = findViewById(R.id.tv_rating_valor);
         ratingBar = findViewById(R.id.rating_bar);
         tvResenasTotal = findViewById(R.id.tv_resenas_total);
@@ -1047,8 +1049,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
                 if (userId.equals(paseadorId)) {
                     runOnUiThread(() -> {
-                        tvUltimaConexion.setText("En línea");
-                        tvUltimaConexion.setTextColor(getColor(R.color.green_success));
+                        badgePerfilEnLinea.setVisibility(View.VISIBLE);
                     });
                     Log.d(TAG, "👁️ Paseador conectado: " + userId);
                 }
@@ -1065,7 +1066,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
                 if (userId.equals(paseadorId)) {
                     runOnUiThread(() -> {
-                        tvUltimaConexion.setTextColor(getColor(R.color.gray_text));
+                        badgePerfilEnLinea.setVisibility(View.GONE);
                         // Reload from Firestore to get updated ultima_conexion
                         reloadUltimaConexion();
                     });
@@ -1116,18 +1117,20 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
                 runOnUiThread(() -> {
                     if (finalIsOnline) {
-                        tvUltimaConexion.setText("En línea");
-                        tvUltimaConexion.setTextColor(getColor(R.color.green_success));
-                    } else if (finalLastActivity != null) {
-                        String relativeTime = DateUtils.getRelativeTimeSpanString(
-                            finalLastActivity,
-                            System.currentTimeMillis(),
-                            DateUtils.MINUTE_IN_MILLIS
-                        ).toString();
-                        tvUltimaConexion.setText("Activo " + relativeTime.toLowerCase());
-                        tvUltimaConexion.setTextColor(getColor(R.color.gray_text));
+                        badgePerfilEnLinea.setVisibility(View.VISIBLE);
                     } else {
-                        reloadUltimaConexion();
+                        badgePerfilEnLinea.setVisibility(View.GONE);
+                        // Update ultima_conexion text with last activity if available
+                        if (finalLastActivity != null) {
+                            String relativeTime = DateUtils.getRelativeTimeSpanString(
+                                finalLastActivity,
+                                System.currentTimeMillis(),
+                                DateUtils.MINUTE_IN_MILLIS
+                            ).toString();
+                            tvUltimaConexion.setText("Activo " + relativeTime.toLowerCase());
+                        } else {
+                            reloadUltimaConexion();
+                        }
                     }
                 });
             } catch (Exception e) {
