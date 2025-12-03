@@ -91,6 +91,7 @@ import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.network.SocketManager;
+import com.mjc.mascotalink.network.NetworkMonitorHelper;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -119,6 +120,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private BusquedaViewModel viewModel;
     private FirebaseAuth mAuth;
     private SocketManager socketManager;
+    private NetworkMonitorHelper networkMonitorHelper;
     private GoogleMap mMap;
     private ClusterManager<PaseadorClusterItem> mClusterManager;
 
@@ -136,6 +138,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     // Cache para los marcadores de paseadores en el mapa
     private final ConcurrentHashMap<String, PaseadorMarker> cachedPaseadorMarkers = new ConcurrentHashMap<>();
+
+    // Current search results for presence monitoring
+    private java.util.List<PaseadorResultado> currentSearchResults = new ArrayList<>();
 
     // Handler para el retraso en la búsqueda
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
@@ -266,6 +271,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             }
             periodicRefreshHandler.postDelayed(periodicRefreshRunnable, PERIODIC_REFRESH_INTERVAL_MS);
         };
+
+        // Setup NetworkMonitorHelper for WebSocket stability
+        setupNetworkMonitoring();
     }
 
     @Override
@@ -287,6 +295,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             mMap.clear();
         }
         cleanupPresenceListeners();
+        if (networkMonitorHelper != null) {
+            networkMonitorHelper.unregister();
+        }
     }
 
     private void setupMapInteraction() {
@@ -752,6 +763,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
               return;
           }
 
+          // Save current results for re-subscription after reconnection
+          currentSearchResults = new ArrayList<>(data);
+
           // Cleanup previous listeners
           cleanupPresenceListeners();
 
@@ -830,6 +844,32 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
               socketManager.off("user_disconnected");
               Log.d(TAG, "👁️ Limpieza de listeners de presencia");
           }
+      }
+
+      private void setupNetworkMonitoring() {
+          networkMonitorHelper = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
+              @Override
+              public void onNetworkLost() {
+                  Log.d(TAG, "📶 Red perdida - pausando suscripciones");
+              }
+
+              @Override
+              public void onNetworkAvailable() {
+                  Log.d(TAG, "📶 Red disponible");
+              }
+
+              @Override
+              public void onReconnected() {
+                  Log.d(TAG, "🌐 WebSocket reconectado - re-suscribiendo a presencia");
+                  // Re-subscribe to presence when WebSocket reconnects
+                  if (!currentSearchResults.isEmpty()) {
+                      setupPresenceForResults(currentSearchResults);
+                  }
+              }
+          });
+
+          networkMonitorHelper.register();
+          Log.d(TAG, "🌐 NetworkMonitorHelper iniciado - reconexión automática habilitada");
       }
 
       private void showBaseState() {
