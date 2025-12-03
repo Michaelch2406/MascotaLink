@@ -582,6 +582,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                     String nombre = doc.getString("nombre_display");
                     if (nombre != null && !nombre.isEmpty()) {
                         nombreDueno = nombre.replace(" ", "_"); // Sanitizar para nombre de archivo
+                        // Mostrar nombre del dueño en la UI (reutilizando tvPaseador)
+                        tvPaseador.setText("Dueño: " + nombre);
                     }
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error cargando datos del dueño", e));
@@ -595,9 +597,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                     if (nombre == null || nombre.isEmpty()) {
                         nombre = doc.getString("nombre");
                     }
-                    if (nombre != null && !nombre.isEmpty()) {
-                        tvPaseador.setText(getString(R.string.paseo_en_curso_label_paseador, nombre));
-                    }
+                    // Ya no mostramos el nombre del paseador aquí, preferimos el dueño
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error cargando paseo", e));
     }
