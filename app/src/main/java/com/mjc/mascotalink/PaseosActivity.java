@@ -63,6 +63,7 @@ public class PaseosActivity extends AppCompatActivity {
 
     // Estado actual
     private String estadoActual = ReservaEstadoValidator.ESTADO_ACEPTADO;
+    private boolean hasCheckedActiveWalk = false; // Flag to prevent auto-nav loop
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,11 +90,43 @@ public class PaseosActivity extends AppCompatActivity {
         String cachedRole = BottomNavManager.getUserRole(this);
         if (cachedRole != null) {
             userRole = cachedRole;
+            checkActiveWalkAndRedirect(userRole); // Check for active walk immediately
             setupRecyclerView(userRole);
             setupTabLayout(userRole);
         }
         
         fetchUserRoleAndSetupUI();
+    }
+
+    private void checkActiveWalkAndRedirect(String role) {
+        if (hasCheckedActiveWalk) return;
+        hasCheckedActiveWalk = true;
+
+        String fieldToFilter = "PASEADOR".equalsIgnoreCase(role) ? "id_paseador" : "id_dueno";
+        DocumentReference userRef = db.collection("usuarios").document(currentUserId);
+
+        db.collection("reservas")
+                .whereEqualTo(fieldToFilter, userRef)
+                .whereIn("estado", java.util.Arrays.asList("EN_CURSO", "EN_PROGRESO"))
+                .limit(1)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    if (!snapshots.isEmpty()) {
+                        DocumentSnapshot doc = snapshots.getDocuments().get(0);
+                        String reservaId = doc.getId();
+                        
+                        Intent intent;
+                        if ("PASEADOR".equalsIgnoreCase(role)) {
+                            intent = new Intent(PaseosActivity.this, PaseoEnCursoActivity.class);
+                        } else {
+                            intent = new Intent(PaseosActivity.this, PaseoEnCursoDuenoActivity.class);
+                        }
+                        intent.putExtra("id_reserva", reservaId);
+                        startActivity(intent);
+                        // We do NOT finish() here, so the user can press Back and see the list
+                    }
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error checking active walk", e));
     }
 
     @Override

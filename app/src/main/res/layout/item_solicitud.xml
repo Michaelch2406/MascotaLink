@@ -79,17 +79,22 @@
                     android:textStyle="bold"
                     tools:text="$15.00" />
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_estado"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:clickable="false"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
-                    app:chipBackgroundColor="@color/blue_primary"
-                    app:chipMinHeight="24dp"
-                    tools:text="Pendiente" />
+        <!-- Chip Estado (Top Right) -->
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_estado"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Pendiente"
+            android:textSize="13sp"
+            android:textColor="@color/white"
+            app:chipBackgroundColor="@color/blue_primary"
+            app:chipMinHeight="32dp"
+            app:textStartPadding="8dp"
+            app:textEndPadding="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:clickable="false"/>
             </LinearLayout>
         </LinearLayout>
 

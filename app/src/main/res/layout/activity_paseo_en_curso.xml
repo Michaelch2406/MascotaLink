@@ -110,13 +110,13 @@
                         <com.google.android.material.chip.Chip
                             style="@style/Widget.MaterialComponents.Chip.Choice"
                             android:layout_width="wrap_content"
-                            android:layout_height="32dp"
+                            android:layout_height="36dp"
                             android:clickable="false"
                             android:text="Mascota"
                             android:textColor="@color/white"
-                            android:textSize="12sp"
+                            android:textSize="13sp"
                             app:chipBackgroundColor="@color/green_success"
-                            app:chipMinHeight="24dp" />
+                            app:chipMinHeight="32dp" />
                     </LinearLayout>
 
                     <View
