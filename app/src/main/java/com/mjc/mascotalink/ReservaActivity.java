@@ -807,68 +807,9 @@ public class ReservaActivity extends AppCompatActivity {
         inicioSolicitud.set(Calendar.MINUTE, horarioSeleccionado.getMinutos());
         inicioSolicitud.set(Calendar.SECOND, 0);
         
-        Calendar finSolicitud = (Calendar) inicioSolicitud.clone();
-        finSolicitud.add(Calendar.MINUTE, duracionMinutos);
-
-        // Consultar reservas del día para este paseador
-        // Nota: Esta consulta es básica, para producción idealmente usar Cloud Functions
-        // o una estructura de "slots" ocupados.
-        
-        Calendar inicioDia = (Calendar) inicioSolicitud.clone();
-        inicioDia.set(Calendar.HOUR_OF_DAY, 0);
-        inicioDia.set(Calendar.MINUTE, 0);
-        
-        Calendar finDia = (Calendar) inicioSolicitud.clone();
-        finDia.set(Calendar.HOUR_OF_DAY, 23);
-        finDia.set(Calendar.MINUTE, 59);
-
-        db.collection("reservas")
-            .whereEqualTo("id_paseador", db.collection("usuarios").document(paseadorId))
-            .whereGreaterThan("hora_inicio", new Timestamp(inicioDia.getTime()))
-            .whereLessThan("hora_inicio", new Timestamp(finDia.getTime()))
-            .get()
-            .addOnSuccessListener(querySnapshot -> {
-                boolean haySolapamiento = false;
-                for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                    // Ignorar canceladas o rechazadas
-                    String estado = doc.getString("estado");
-                    if (ReservaEstadoValidator.ESTADO_CANCELADO.equals(estado) || 
-                        ReservaEstadoValidator.ESTADO_RECHAZADO.equals(estado)) {
-                        continue;
-                    }
-
-                    Timestamp inicioExistenteTs = doc.getTimestamp("hora_inicio");
-                    if (inicioExistenteTs == null) continue;
-                    
-                    long duracionExistente = 60; // Default 1 hora si falta
-                    Long d = doc.getLong("duracion_minutos");
-                    if (d != null) duracionExistente = d;
-
-                    Calendar inicioExistente = Calendar.getInstance();
-                    inicioExistente.setTime(inicioExistenteTs.toDate());
-                    
-                    Calendar finExistente = (Calendar) inicioExistente.clone();
-                    finExistente.add(Calendar.MINUTE, (int) duracionExistente);
-
-                    // Chequeo de solapamiento: (StartA < EndB) and (EndA > StartB)
-                    if (inicioSolicitud.getTimeInMillis() < finExistente.getTimeInMillis() && 
-                        finSolicitud.getTimeInMillis() > inicioExistente.getTimeInMillis()) {
-                        haySolapamiento = true;
-                        break;
-                    }
-                }
-
-                if (haySolapamiento) {
-                    Toast.makeText(this, "El paseador ya tiene una reserva en ese horario.", Toast.LENGTH_LONG).show();
-                    btnConfirmarReserva.setEnabled(true);
-                } else {
-                    crearReservaFinal(costoTotalReal, tarifaConfirmada, inicioSolicitud.getTime());
-                }
-            })
-            .addOnFailureListener(e -> {
-                Toast.makeText(this, "Error validando disponibilidad: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                btnConfirmarReserva.setEnabled(true);
-            });
+        // Se elimina la validación de solapamiento para permitir múltiples paseos simultáneos.
+        // El paseador gestionará su propia capacidad aceptando o rechazando solicitudes.
+        crearReservaFinal(costoTotalReal, tarifaConfirmada, inicioSolicitud.getTime());
     }
 
     private void crearReservaFinal(double costoTotalReal, double tarifaConfirmada, Date horaInicio) {
@@ -888,6 +829,7 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_PENDIENTE);
         reserva.put("notas", notasAdicionalesMascota);
         reserva.put("reminderSent", false);
+        reserva.put("timeZone", java.util.TimeZone.getDefault().getID());
 
         // Operación CRÍTICA: Creación de reserva con retry (5 intentos)
         com.mjc.mascotalink.util.FirestoreRetryHelper.executeCritical(

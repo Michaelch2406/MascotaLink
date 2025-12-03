@@ -28,6 +28,7 @@ public class Paseo implements Serializable {
     private Boolean hasTransitionedToInCourse, reminderSent;
     private Date fecha_inicio_paseo;
     private Date fecha_fin_paseo;
+    private String timeZone;
 
     public Paseo() {}
 
@@ -60,6 +61,8 @@ public class Paseo implements Serializable {
     public void setMascotaFoto(String f) { this.mascotaFoto = f; }
     public String getRazonCancelacion() { return razonCancelacion; }
     public void setRazonCancelacion(String razonCancelacion) { this.razonCancelacion = razonCancelacion; }
+    public String getTimeZone() { return timeZone; }
+    public void setTimeZone(String timeZone) { this.timeZone = timeZone; }
     
     @PropertyName("id_mascota") public String getIdMascota() { return idMascota; }
     @PropertyName("id_mascota") public void setIdMascota(String id) { this.idMascota = id; }
@@ -100,19 +103,36 @@ public class Paseo implements Serializable {
         Calendar today = Calendar.getInstance();
         Calendar tomorrow = Calendar.getInstance();
         tomorrow.add(Calendar.DAY_OF_YEAR, 1);
+        
         Calendar paseoDate = Calendar.getInstance();
+        if (timeZone != null && !timeZone.isEmpty()) {
+             java.util.TimeZone tz = java.util.TimeZone.getTimeZone(timeZone);
+             today.setTimeZone(tz);
+             tomorrow.setTimeZone(tz);
+             paseoDate.setTimeZone(tz);
+        }
         paseoDate.setTime(fecha);
+        
         if (today.get(Calendar.YEAR) == paseoDate.get(Calendar.YEAR)
                 && today.get(Calendar.DAY_OF_YEAR) == paseoDate.get(Calendar.DAY_OF_YEAR))
             return "Hoy";
         if (tomorrow.get(Calendar.YEAR) == paseoDate.get(Calendar.YEAR)
                 && tomorrow.get(Calendar.DAY_OF_YEAR) == paseoDate.get(Calendar.DAY_OF_YEAR))
             return "Mañana";
-        return new SimpleDateFormat("d 'de' MMMM", new Locale("es", "ES")).format(fecha);
+            
+        SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM", new Locale("es", "ES"));
+        if (timeZone != null && !timeZone.isEmpty()) {
+            sdf.setTimeZone(java.util.TimeZone.getTimeZone(timeZone));
+        }
+        return sdf.format(fecha);
     }
 
     public String getHoraFormateada() {
         if (hora_inicio == null) return "";
-        return new SimpleDateFormat("h:mm a", Locale.US).format(hora_inicio);
+        SimpleDateFormat sdf = new SimpleDateFormat("h:mm a", Locale.US);
+        if (timeZone != null && !timeZone.isEmpty()) {
+            sdf.setTimeZone(java.util.TimeZone.getTimeZone(timeZone));
+        }
+        return sdf.format(hora_inicio);
     }
 }
