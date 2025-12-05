@@ -1,6 +1,8 @@
 package com.mjc.mascotalink.network;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -10,7 +12,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.socket.client.IO;
@@ -20,10 +24,25 @@ import io.socket.emitter.Emitter;
 /**
  * Singleton para gestionar la conexión WebSocket con Socket.IO
  * Se integra con NetworkDetector para manejar IPs dinámicas
+ *
+ * Optimizaciones implementadas:
+ * - Exponential backoff en reconexiones
+ * - Heartbeat inteligente (solo cuando app visible)
+ * - Offline queue para mensajes
+ * - Lazy reconnect (no reconectar si app en background)
  */
 public class SocketManager {
     private static final String TAG = "SocketManager";
     private static final int WEBSOCKET_PORT = 3000; // Puerto del servidor WebSocket standalone
+
+    // Configuración de reconexión exponencial
+    private static final int INITIAL_RECONNECT_DELAY = 1000; // 1s
+    private static final int MAX_RECONNECT_DELAY = 30000; // 30s
+    private static final int MAX_RECONNECT_ATTEMPTS = 10;
+
+    // Configuración de heartbeat
+    private static final long HEARTBEAT_INTERVAL = 30000; // 30s
+    private static final long BACKGROUND_RECONNECT_THRESHOLD = 5 * 60 * 1000; // 5 min
 
     private static SocketManager instance;
     private Socket socket;
@@ -34,8 +53,22 @@ public class SocketManager {
     // Callbacks registrados
     private Map<String, Emitter.Listener> eventListeners = new HashMap<>();
 
+    // Estado de la aplicación
+    private boolean isAppInForeground = true;
+    private long lastBackgroundTime = 0;
+
+    // Heartbeat
+    private Handler heartbeatHandler;
+    private Runnable heartbeatRunnable;
+
+    // Offline queue para mensajes
+    private List<QueuedMessage> offlineMessageQueue = new ArrayList<>();
+    private static final int MAX_QUEUE_SIZE = 100;
+
     private SocketManager(Context context) {
         this.context = context.getApplicationContext();
+        this.heartbeatHandler = new Handler(Looper.getMainLooper());
+        setupHeartbeat();
     }
 
     public static synchronized SocketManager getInstance(Context context) {
@@ -43,6 +76,96 @@ public class SocketManager {
             instance = new SocketManager(context);
         }
         return instance;
+    }
+
+    /**
+     * Clase interna para almacenar mensajes en cola offline
+     */
+    private static class QueuedMessage {
+        String chatId;
+        String destinatarioId;
+        String texto;
+        String tipo;
+        String imagenUrl;
+        Double latitud;
+        Double longitud;
+        long timestamp;
+
+        QueuedMessage(String chatId, String destinatarioId, String texto, String tipo,
+                     String imagenUrl, Double latitud, Double longitud) {
+            this.chatId = chatId;
+            this.destinatarioId = destinatarioId;
+            this.texto = texto;
+            this.tipo = tipo;
+            this.imagenUrl = imagenUrl;
+            this.latitud = latitud;
+            this.longitud = longitud;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+
+    // ========================================
+    // LIFECYCLE MANAGEMENT
+    // ========================================
+
+    /**
+     * Notificar cuando la app pasa a foreground
+     */
+    public void setAppInForeground() {
+        isAppInForeground = true;
+        startHeartbeat();
+
+        // Si estuvo en background poco tiempo, reconectar
+        if (!isConnected && lastBackgroundTime > 0) {
+            long backgroundDuration = System.currentTimeMillis() - lastBackgroundTime;
+            if (backgroundDuration < BACKGROUND_RECONNECT_THRESHOLD) {
+                Log.d(TAG, "App volvió a foreground, reconectando...");
+                connect();
+            }
+        }
+    }
+
+    /**
+     * Notificar cuando la app pasa a background
+     */
+    public void setAppInBackground() {
+        isAppInForeground = false;
+        lastBackgroundTime = System.currentTimeMillis();
+        stopHeartbeat();
+        Log.d(TAG, "App en background, heartbeat detenido");
+    }
+
+    /**
+     * Configurar heartbeat
+     */
+    private void setupHeartbeat() {
+        heartbeatRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isAppInForeground && isConnected) {
+                    ping();
+                    heartbeatHandler.postDelayed(this, HEARTBEAT_INTERVAL);
+                }
+            }
+        };
+    }
+
+    /**
+     * Iniciar heartbeat
+     */
+    private void startHeartbeat() {
+        stopHeartbeat();
+        if (isAppInForeground && isConnected) {
+            heartbeatHandler.postDelayed(heartbeatRunnable, HEARTBEAT_INTERVAL);
+            Log.d(TAG, "🫀 Heartbeat iniciado");
+        }
+    }
+
+    /**
+     * Detener heartbeat
+     */
+    private void stopHeartbeat() {
+        heartbeatHandler.removeCallbacks(heartbeatRunnable);
     }
 
     /**
@@ -74,9 +197,12 @@ public class SocketManager {
             options.auth = new HashMap<>();
             ((Map<String, String>) options.auth).put("token", token);
             options.reconnection = true;
-            options.reconnectionDelay = 1000;
-            options.reconnectionDelayMax = 5000;
-            options.reconnectionAttempts = Integer.MAX_VALUE;
+
+            // Exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s (máx)
+            options.reconnectionDelay = INITIAL_RECONNECT_DELAY;
+            options.reconnectionDelayMax = MAX_RECONNECT_DELAY;
+            options.reconnectionAttempts = MAX_RECONNECT_ATTEMPTS;
+
             options.timeout = 20000;
             options.transports = new String[]{"websocket", "polling"};
 
@@ -99,10 +225,13 @@ public class SocketManager {
         socket.on(Socket.EVENT_CONNECT, args -> {
             isConnected = true;
             Log.d(TAG, "✅ Socket conectado");
+            startHeartbeat();
+            processOfflineQueue();
         });
 
         socket.on(Socket.EVENT_DISCONNECT, args -> {
             isConnected = false;
+            stopHeartbeat();
             Log.d(TAG, "🔌 Socket desconectado");
         });
 
@@ -112,7 +241,11 @@ public class SocketManager {
 
         // Usar string "reconnect" en lugar de constante (no existe en v2.1.0)
         socket.on("reconnect", args -> {
+            isConnected = true;
             Log.d(TAG, "🔄 Socket reconectado");
+            startHeartbeat();
+            processOfflineQueue();
+
             // Re-unirse al chat si había uno abierto
             if (currentChatId != null) {
                 joinChat(currentChatId);
@@ -139,6 +272,7 @@ public class SocketManager {
      * Desconecta el socket y limpia recursos
      */
     public void disconnect() {
+        stopHeartbeat();
         if (socket != null) {
             socket.disconnect();
             socket.off();
@@ -147,6 +281,29 @@ public class SocketManager {
         isConnected = false;
         currentChatId = null;
         eventListeners.clear();
+    }
+
+    /**
+     * Procesa la cola de mensajes offline cuando se reconecta
+     */
+    private void processOfflineQueue() {
+        if (offlineMessageQueue.isEmpty()) return;
+
+        Log.d(TAG, "📤 Procesando " + offlineMessageQueue.size() + " mensajes offline");
+
+        List<QueuedMessage> toSend = new ArrayList<>(offlineMessageQueue);
+        offlineMessageQueue.clear();
+
+        for (QueuedMessage msg : toSend) {
+            // Verificar que el mensaje no sea muy antiguo (> 1 hora)
+            long age = System.currentTimeMillis() - msg.timestamp;
+            if (age < 3600000) { // 1 hora
+                sendMessage(msg.chatId, msg.destinatarioId, msg.texto, msg.tipo,
+                           msg.imagenUrl, msg.latitud, msg.longitud);
+            } else {
+                Log.w(TAG, "Mensaje muy antiguo, descartado");
+            }
+        }
     }
 
     public boolean isConnected() {
@@ -196,7 +353,17 @@ public class SocketManager {
     public void sendMessage(String chatId, String destinatarioId, String texto,
                            String tipo, String imagenUrl, Double latitud, Double longitud) {
         if (!isConnected) {
-            Log.w(TAG, "Socket no conectado, no se puede enviar mensaje");
+            Log.w(TAG, "Socket no conectado, agregando mensaje a cola offline");
+
+            // Agregar a cola offline (con límite)
+            if (offlineMessageQueue.size() < MAX_QUEUE_SIZE) {
+                QueuedMessage queuedMsg = new QueuedMessage(chatId, destinatarioId, texto,
+                        tipo, imagenUrl, latitud, longitud);
+                offlineMessageQueue.add(queuedMsg);
+                Log.d(TAG, "📥 Mensaje agregado a cola offline (" + offlineMessageQueue.size() + "/" + MAX_QUEUE_SIZE + ")");
+            } else {
+                Log.w(TAG, "⚠️ Cola offline llena, mensaje descartado");
+            }
             return;
         }
 

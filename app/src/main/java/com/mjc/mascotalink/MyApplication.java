@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.Context;
+import android.os.StrictMode;
 import android.util.Log;
 
 import com.google.android.libraries.places.api.Places;
@@ -25,6 +26,12 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        // Habilitar StrictMode en debug para detectar problemas de performance y memory leaks
+        if (BuildConfig.DEBUG) {
+            enableStrictMode();
+        }
+
         appContext = getApplicationContext();
         FirebaseApp.initializeApp(this);
 
@@ -108,5 +115,41 @@ public class MyApplication extends Application {
     public static String getFixedUrl(String url) {
         if (appContext == null) return url;
         return NetworkDetector.fixEmulatorUrl(url, appContext);
+    }
+
+    /**
+     * Habilita StrictMode para detectar problemas de performance y memory leaks en debug
+     *
+     * StrictMode detecta:
+     * - Operaciones de disco en el main thread
+     * - Operaciones de red en el main thread
+     * - Leaks de objetos (Activities, Services, etc.)
+     * - Cursores sin cerrar
+     * - Closeable sin cerrar
+     */
+    private void enableStrictMode() {
+        Log.d(TAG, "🔍 Habilitando StrictMode para debug");
+
+        // Thread Policy: detecta operaciones bloqueantes en el main thread
+        StrictMode.ThreadPolicy threadPolicy = new StrictMode.ThreadPolicy.Builder()
+                .detectAll() // Detectar todas las violaciones
+                .penaltyLog() // Log en logcat
+                .penaltyFlashScreen() // Flash rojo en pantalla (visual)
+                .build();
+
+        // VM Policy: detecta leaks y problemas de recursos
+        StrictMode.VmPolicy vmPolicy = new StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects() // SQLite cursors sin cerrar
+                .detectLeakedClosableObjects() // Streams, files sin cerrar
+                .detectActivityLeaks() // Activities leakeadas
+                .detectLeakedRegistrationObjects() // BroadcastReceivers sin unregister
+                .penaltyLog() // Log en logcat
+                // .penaltyDeath() // Crashea la app (muy estricto, usar solo en testing)
+                .build();
+
+        StrictMode.setThreadPolicy(threadPolicy);
+        StrictMode.setVmPolicy(vmPolicy);
+
+        Log.d(TAG, "✅ StrictMode habilitado - Se logearán violaciones en debug");
     }
 }

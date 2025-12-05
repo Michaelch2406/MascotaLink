@@ -7,6 +7,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.AsyncListDiffer;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mjc.mascotalink.R;
@@ -16,14 +18,37 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class ActividadPaseoAdapter extends RecyclerView.Adapter<ActividadPaseoAdapter.ViewHolder> {
 
-    private List<PaseoActividad> eventos = new ArrayList<>();
+    private final AsyncListDiffer<PaseoActividad> differ;
+
+    /**
+     * DiffUtil.ItemCallback para comparar eventos de actividad del paseo
+     */
+    private static final DiffUtil.ItemCallback<PaseoActividad> DIFF_CALLBACK = new DiffUtil.ItemCallback<PaseoActividad>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull PaseoActividad oldItem, @NonNull PaseoActividad newItem) {
+            // Comparar por timestamp + evento (pueden haber múltiples eventos del mismo tipo)
+            return Objects.equals(oldItem.getDate(), newItem.getDate()) &&
+                   Objects.equals(oldItem.getEvento(), newItem.getEvento());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull PaseoActividad oldItem, @NonNull PaseoActividad newItem) {
+            return Objects.equals(oldItem.getEvento(), newItem.getEvento()) &&
+                   Objects.equals(oldItem.getDescripcion(), newItem.getDescripcion()) &&
+                   Objects.equals(oldItem.getDate(), newItem.getDate());
+        }
+    };
+
+    public ActividadPaseoAdapter() {
+        this.differ = new AsyncListDiffer<>(this, DIFF_CALLBACK);
+    }
 
     public void setEventos(List<PaseoActividad> eventos) {
-        this.eventos = eventos != null ? eventos : new ArrayList<>();
-        notifyDataSetChanged();
+        differ.submitList(eventos != null ? new ArrayList<>(eventos) : new ArrayList<>());
     }
 
     @NonNull
@@ -35,7 +60,7 @@ public class ActividadPaseoAdapter extends RecyclerView.Adapter<ActividadPaseoAd
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        PaseoActividad evento = eventos.get(position);
+        PaseoActividad evento = differ.getCurrentList().get(position);
         
         holder.tvDescripcion.setText(evento.getDescripcion() != null ? evento.getDescripcion() : "");
 
@@ -73,7 +98,7 @@ public class ActividadPaseoAdapter extends RecyclerView.Adapter<ActividadPaseoAd
 
     @Override
     public int getItemCount() {
-        return eventos.size();
+        return differ.getCurrentList().size();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
