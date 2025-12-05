@@ -12,6 +12,12 @@ import com.mjc.mascotalink.ui.home.HomeFragment;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.util.UnreadBadgeManager;
 
+import javax.inject.Inject;
+import com.mjc.mascotalink.network.SocketManager; // Ensure this import exists
+
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNav;
@@ -19,11 +25,17 @@ public class MainActivity extends AppCompatActivity {
     private com.mjc.mascotalink.network.NetworkMonitorHelper networkMonitor;
     private android.widget.LinearLayout connectionBanner;
 
+    @Inject
+    FirebaseAuth auth;
+
+    @Inject
+    SocketManager socketManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser current = auth.getCurrentUser();
         if (current == null) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
@@ -80,8 +92,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupNetworkMonitor() {
-        com.mjc.mascotalink.network.SocketManager socketManager =
-            com.mjc.mascotalink.network.SocketManager.getInstance(this);
+        // socketManager ya está inyectado por Hilt
 
         networkMonitor = new com.mjc.mascotalink.network.NetworkMonitorHelper(
             this, socketManager,

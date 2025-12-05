@@ -4,23 +4,19 @@ import android.app.Application;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.Context;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
-import android.net.wifi.SupplicantState; // Added for SupplicantState
-
 import android.util.Log;
 
 import com.google.android.libraries.places.api.Places;
 import com.google.firebase.FirebaseApp;
-// import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory;
-// import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory;
-import com.google.firebase.appcheck.FirebaseAppCheck;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.mjc.mascotalink.network.NetworkDetector;
 import com.mjc.mascotalink.network.SocketManager;
 
+import dagger.hilt.android.HiltAndroidApp;
+
+@HiltAndroidApp
 public class MyApplication extends Application {
 
     private static final String TAG = "MyApplication";
