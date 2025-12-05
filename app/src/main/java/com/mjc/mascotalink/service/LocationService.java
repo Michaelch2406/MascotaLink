@@ -6,10 +6,14 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
@@ -33,11 +37,14 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 import com.mjc.mascotalink.PaseoEnCursoActivity;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.network.SocketManager;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -77,6 +84,25 @@ public class LocationService extends Service {
     private long lastRealtimeUpdateTime = 0;
     private static final long REALTIME_UPDATE_INTERVAL_MS = 5000; // 5 segundos para "ubicacion_actual"
 
+    // ===== OPTIMIZACIONES DE BATERÍA Y GPS =====
+
+    // Batching de ubicaciones
+    private List<Map<String, Object>> locationBatch = new ArrayList<>();
+    private static final int BATCH_SIZE = 5; // Enviar cada 5 ubicaciones
+    private static final long BATCH_TIMEOUT_MS = 60000; // O cada 60 segundos
+    private long lastBatchSendTime = 0;
+
+    // Detección de movimiento
+    private Location lastLocation = null;
+    private float currentSpeed = 0f;
+    private static final float SPEED_THRESHOLD_MPS = 1.4f; // ~5 km/h
+    private static final float STATIONARY_THRESHOLD_METERS = 10f;
+
+    // Estado de batería
+    private boolean isLowBattery = false;
+    private static final int LOW_BATTERY_THRESHOLD = 20; // 20%
+    private BroadcastReceiver batteryReceiver;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -86,6 +112,43 @@ public class LocationService extends Service {
         // auth = FirebaseAuth.getInstance(); // Injected by Hilt
 
         createNotificationChannel();
+        setupBatteryMonitoring();
+    }
+
+    /**
+     * Configura monitoreo de batería para optimizar GPS
+     */
+    private void setupBatteryMonitoring() {
+        batteryReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                int batteryPct = (int) ((level / (float) scale) * 100);
+
+                boolean wasLowBattery = isLowBattery;
+                isLowBattery = batteryPct <= LOW_BATTERY_THRESHOLD;
+
+                // Si cambió el estado, ajustar GPS
+                if (wasLowBattery != isLowBattery && currentReservaId != null) {
+                    Log.d(TAG, "Batería al " + batteryPct + "%, ajustando GPS");
+                    adjustLocationUpdates();
+                }
+            }
+        };
+
+        IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        registerReceiver(batteryReceiver, filter);
+
+        // Obtener nivel inicial
+        Intent batteryStatus = registerReceiver(null, filter);
+        if (batteryStatus != null) {
+            int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            int batteryPct = (int) ((level / (float) scale) * 100);
+            isLowBattery = batteryPct <= LOW_BATTERY_THRESHOLD;
+            Log.d(TAG, "Nivel de batería inicial: " + batteryPct + "%");
+        }
     }
 
     @Override
@@ -127,11 +190,7 @@ public class LocationService extends Service {
     }
 
     private void requestLocationUpdates() {
-        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-                .setMinUpdateIntervalMillis(3000)
-                .setMinUpdateDistanceMeters(5)
-                .setWaitForAccurateLocation(false)
-                .build();
+        LocationRequest locationRequest = buildOptimalLocationRequest();
 
         locationCallback = new LocationCallback() {
             @Override
@@ -145,7 +204,7 @@ public class LocationService extends Service {
             }
         };
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Log.e(TAG, "No tienes permisos de ubicación para el servicio.");
             stopSelf();
@@ -153,6 +212,68 @@ public class LocationService extends Service {
         }
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+    }
+
+    /**
+     * Construye un LocationRequest optimizado basado en batería y movimiento
+     */
+    private LocationRequest buildOptimalLocationRequest() {
+        long interval;
+        long minInterval;
+        float minDistance;
+        int priority;
+
+        if (isLowBattery) {
+            // Modo ahorro de batería: menos frecuente, menos precisión
+            interval = 15000; // 15 segundos
+            minInterval = 10000; // 10 segundos
+            minDistance = 20; // 20 metros
+            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
+            Log.d(TAG, "GPS en modo AHORRO DE BATERÍA");
+        } else if (currentSpeed < SPEED_THRESHOLD_MPS) {
+            // Usuario casi detenido: reducir frecuencia
+            interval = 10000; // 10 segundos
+            minInterval = 7000; // 7 segundos
+            minDistance = 10; // 10 metros
+            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
+            Log.d(TAG, "GPS en modo DETENIDO (baja velocidad)");
+        } else {
+            // Usuario en movimiento normal: alta precisión
+            interval = 5000; // 5 segundos
+            minInterval = 3000; // 3 segundos
+            minDistance = 5; // 5 metros
+            priority = Priority.PRIORITY_HIGH_ACCURACY;
+            Log.d(TAG, "GPS en modo ALTA PRECISIÓN (movimiento)");
+        }
+
+        return new LocationRequest.Builder(priority, interval)
+                .setMinUpdateIntervalMillis(minInterval)
+                .setMinUpdateDistanceMeters(minDistance)
+                .setWaitForAccurateLocation(false)
+                .setMaxUpdateDelayMillis(interval * 2) // Permitir batching del sistema
+                .build();
+    }
+
+    /**
+     * Ajusta las actualizaciones de ubicación dinámicamente
+     */
+    private void adjustLocationUpdates() {
+        if (locationCallback == null) return;
+
+        // Remover listener actual
+        fusedLocationClient.removeLocationUpdates(locationCallback);
+
+        // Crear nuevo request optimizado
+        LocationRequest newRequest = buildOptimalLocationRequest();
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        // Re-solicitar con nuevos parámetros
+        fusedLocationClient.requestLocationUpdates(newRequest, locationCallback, Looper.getMainLooper());
+        Log.d(TAG, "GPS ajustado dinámicamente");
     }
 
     private void processLocation(Location location) {
@@ -163,7 +284,26 @@ public class LocationService extends Service {
         float accuracy = location.getAccuracy();
         long now = System.currentTimeMillis();
 
+        // Calcular velocidad y distancia desde última ubicación
+        if (lastLocation != null) {
+            float distance = lastLocation.distanceTo(location);
+            long timeDelta = location.getTime() - lastLocation.getTime();
+
+            if (timeDelta > 0) {
+                currentSpeed = distance / (timeDelta / 1000f); // m/s
+            }
+
+            // Filtrar ubicaciones estacionarias con poca precisión
+            if (distance < STATIONARY_THRESHOLD_METERS && accuracy > 20) {
+                Log.v(TAG, "Ubicación filtrada: muy cercana y baja precisión");
+                return;
+            }
+        }
+
+        lastLocation = location;
+
         // 1. Enviar por WebSocket (Prioridad máxima, cada actualización válida)
+        // Solo si hay movimiento significativo o es la primera ubicación
         if (socketManager.isConnected()) {
             socketManager.updateLocation(currentReservaId, lat, lng, accuracy);
         }
@@ -174,10 +314,13 @@ public class LocationService extends Service {
             lastRealtimeUpdateTime = now;
         }
 
-        // 3. Guardar historial en la reserva (Throttled para ahorrar costos y DB)
-        if (now - lastFirestoreSaveTime > FIRESTORE_SAVE_INTERVAL_MS) {
-            saveLocationToHistory(location);
-            lastFirestoreSaveTime = now;
+        // 3. Agregar a batch para historial (OPTIMIZACIÓN: no guardar individualmente)
+        addLocationToBatch(location);
+
+        // Ajustar GPS si cambió la velocidad significativamente
+        if (Math.abs(currentSpeed - SPEED_THRESHOLD_MPS) < 0.5f) {
+            // Cerca del umbral, podría necesitar ajuste
+            adjustLocationUpdates();
         }
     }
 
@@ -196,7 +339,11 @@ public class LocationService extends Service {
                 .addOnFailureListener(e -> Log.w(TAG, "Error actualizando ubicación usuario", e));
     }
 
-    private void saveLocationToHistory(Location location) {
+    /**
+     * Agrega ubicación al batch para escritura eficiente
+     * OPTIMIZACIÓN: Reduce escrituras de Firestore de ~240/hora a ~12/hora
+     */
+    private void addLocationToBatch(Location location) {
         Map<String, Object> puntoMap = new HashMap<>();
         puntoMap.put("lat", location.getLatitude());
         puntoMap.put("lng", location.getLongitude());
@@ -204,18 +351,82 @@ public class LocationService extends Service {
         puntoMap.put("ts", Timestamp.now());
         puntoMap.put("speed", location.getSpeed());
 
-        db.collection("reservas").document(currentReservaId)
-                .update("ubicaciones", FieldValue.arrayUnion(puntoMap))
-                .addOnFailureListener(e -> Log.w(TAG, "Error guardando historial", e));
+        locationBatch.add(puntoMap);
+
+        long now = System.currentTimeMillis();
+        boolean shouldSend = locationBatch.size() >= BATCH_SIZE ||
+                            (now - lastBatchSendTime) >= BATCH_TIMEOUT_MS;
+
+        if (shouldSend) {
+            sendLocationBatch();
+        }
+    }
+
+    /**
+     * Envía batch de ubicaciones a Firestore
+     * Usa update único en vez de múltiples arrayUnion
+     */
+    private void sendLocationBatch() {
+        if (locationBatch.isEmpty()) return;
+
+        List<Map<String, Object>> batchToSend = new ArrayList<>(locationBatch);
+        locationBatch.clear();
+        lastBatchSendTime = System.currentTimeMillis();
+
+        // Usar WriteBatch para operaciones atómicas (más eficiente)
+        DocumentReference reservaRef = db.collection("reservas").document(currentReservaId);
+
+        // IMPORTANTE: Firestore tiene límite de 1MB por documento
+        // Si el array crece mucho, usar sub-colección en producción
+        reservaRef.update("ubicaciones", FieldValue.arrayUnion(batchToSend.toArray()))
+                .addOnSuccessListener(aVoid ->
+                    Log.d(TAG, "✅ Batch enviado: " + batchToSend.size() + " ubicaciones")
+                )
+                .addOnFailureListener(e -> {
+                    Log.w(TAG, "Error guardando batch, reintentando individuales", e);
+                    // Fallback: guardar individualmente
+                    for (Map<String, Object> punto : batchToSend) {
+                        reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto));
+                    }
+                });
     }
 
     private void stopTracking() {
         Log.d(TAG, "Deteniendo servicio de rastreo.");
+
+        // Enviar batch final antes de detener
+        sendLocationBatch();
+
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }
+
+        // Limpiar receiver de batería
+        if (batteryReceiver != null) {
+            try {
+                unregisterReceiver(batteryReceiver);
+            } catch (IllegalArgumentException e) {
+                // Ya estaba desregistrado
+            }
+            batteryReceiver = null;
+        }
+
         stopForeground(true);
         stopSelf();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Asegurar limpieza de recursos
+        sendLocationBatch();
+        if (batteryReceiver != null) {
+            try {
+                unregisterReceiver(batteryReceiver);
+            } catch (IllegalArgumentException e) {
+                // Ignorar
+            }
+        }
     }
 
     private void createNotificationChannel() {

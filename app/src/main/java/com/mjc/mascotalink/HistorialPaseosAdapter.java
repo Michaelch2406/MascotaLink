@@ -9,6 +9,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.AsyncListDiffer;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -18,11 +20,12 @@ import com.mjc.mascotalink.MyApplication;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseosAdapter.ViewHolder> {
 
     private Context context;
-    private List<Paseo> paseos;
+    private AsyncListDiffer<Paseo> differ;
     private OnPaseoClickListener listener;
     private String userRole;
 
@@ -30,16 +33,41 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
         void onPaseoClick(Paseo paseo);
     }
 
+    /**
+     * DiffUtil.ItemCallback para calcular diferencias entre listas de Paseo
+     */
+    private static final DiffUtil.ItemCallback<Paseo> DIFF_CALLBACK = new DiffUtil.ItemCallback<Paseo>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Paseo oldItem, @NonNull Paseo newItem) {
+            // Comparar por ID único
+            return Objects.equals(oldItem.getReservaId(), newItem.getReservaId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Paseo oldItem, @NonNull Paseo newItem) {
+            // Comparar contenido relevante
+            return Objects.equals(oldItem.getEstado(), newItem.getEstado()) &&
+                   oldItem.getCosto_total() == newItem.getCosto_total() &&
+                   oldItem.getDuracion_minutos() == newItem.getDuracion_minutos() &&
+                   Objects.equals(oldItem.getMascotaNombre(), newItem.getMascotaNombre()) &&
+                   Objects.equals(oldItem.getPaseadorNombre(), newItem.getPaseadorNombre());
+        }
+    };
+
     public HistorialPaseosAdapter(Context context, List<Paseo> paseos, String userRole, OnPaseoClickListener listener) {
         this.context = context;
-        this.paseos = paseos;
+        this.differ = new AsyncListDiffer<>(this, DIFF_CALLBACK);
         this.userRole = userRole;
         this.listener = listener;
+        // Inicializar con la lista proporcionada
+        this.differ.submitList(paseos);
     }
 
+    /**
+     * Actualiza la lista con DiffUtil (calcula diferencias automáticamente)
+     */
     public void updateList(List<Paseo> newPaseos) {
-        this.paseos = newPaseos;
-        notifyDataSetChanged();
+        differ.submitList(newPaseos);
     }
 
     @NonNull
@@ -51,7 +79,7 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Paseo paseo = paseos.get(position);
+        Paseo paseo = differ.getCurrentList().get(position);
 
         // Determinar qué nombre y foto mostrar según el rol del usuario
         String nombreMostrar;
@@ -133,7 +161,7 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
 
     @Override
     public int getItemCount() {
-        return paseos.size();
+        return differ.getCurrentList().size();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

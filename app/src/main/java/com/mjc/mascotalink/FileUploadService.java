@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -17,7 +18,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.mjc.mascotalink.util.ImageCompressor;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -61,7 +64,57 @@ public class FileUploadService extends Service {
     }
 
     private void uploadFile(Uri fileUri, String fullStoragePath, String firestoreCollection, String firestoreDocument, String firestoreField, int startId) {
-        // Use the exact path provided by the activity
+        // Detectar tipo de archivo
+        String mimeType = getMimeType(fileUri);
+        boolean isImage = mimeType != null && mimeType.startsWith("image/");
+
+        Log.d(TAG, "Subiendo archivo - Tipo: " + mimeType + ", Es imagen: " + isImage);
+
+        // Si es imagen, comprimirla primero
+        if (isImage) {
+            uploadImageWithCompression(fileUri, fullStoragePath, firestoreCollection, firestoreDocument, firestoreField, startId);
+        } else {
+            // Para videos y otros archivos, subir directamente
+            uploadFileDirect(fileUri, fullStoragePath, firestoreCollection, firestoreDocument, firestoreField, startId, null);
+        }
+    }
+
+    /**
+     * Sube una imagen con compresión automática
+     */
+    private void uploadImageWithCompression(Uri imageUri, String fullStoragePath, String firestoreCollection,
+                                           String firestoreDocument, String firestoreField, int startId) {
+        Log.d(TAG, "Comprimiendo imagen antes de subir...");
+
+        // Comprimir imagen en segundo plano
+        new Thread(() -> {
+            File compressedFile = ImageCompressor.compressImage(this, imageUri);
+
+            if (compressedFile != null && compressedFile.exists()) {
+                Uri compressedUri = Uri.fromFile(compressedFile);
+                long originalSize = new File(imageUri.getPath() != null ? imageUri.getPath() : "").length();
+                long compressedSize = compressedFile.length();
+
+                Log.d(TAG, String.format("✅ Imagen comprimida: %.1f KB -> %.1f KB (%.0f%% reducción)",
+                        originalSize / 1024f,
+                        compressedSize / 1024f,
+                        (1 - (compressedSize / (float) originalSize)) * 100
+                ));
+
+                // Subir imagen comprimida
+                uploadFileDirect(compressedUri, fullStoragePath, firestoreCollection, firestoreDocument, firestoreField, startId, compressedFile);
+            } else {
+                Log.w(TAG, "Compresión falló, subiendo imagen original");
+                uploadFileDirect(imageUri, fullStoragePath, firestoreCollection, firestoreDocument, firestoreField, startId, null);
+            }
+        }).start();
+    }
+
+    /**
+     * Sube archivo directamente a Firebase Storage
+     */
+    private void uploadFileDirect(Uri fileUri, String fullStoragePath, String firestoreCollection,
+                                 String firestoreDocument, String firestoreField, int startId, File tempFileToDelete) {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference().child(fullStoragePath);
 
         storageRef.putFile(fileUri)
@@ -72,12 +125,52 @@ public class FileUploadService extends Service {
                 .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
                     // Update the single, specific field in Firestore
                     updateFirestoreUrl(uri.toString(), firestoreCollection, firestoreDocument, firestoreField);
+
+                    // Limpiar archivo temporal si existe
+                    cleanupTempFile(tempFileToDelete);
+
                     stopSelf(startId);
                 }))
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Upload failed", e);
+
+                    // Limpiar archivo temporal si existe
+                    cleanupTempFile(tempFileToDelete);
+
                     stopSelf(startId);
                 });
+    }
+
+    /**
+     * Obtiene el MIME type de un archivo
+     */
+    private String getMimeType(Uri uri) {
+        String mimeType = null;
+
+        // Intentar obtener desde ContentResolver
+        if (uri.getScheme() != null && uri.getScheme().equals("content")) {
+            mimeType = getContentResolver().getType(uri);
+        }
+
+        // Fallback: obtener desde extensión de archivo
+        if (mimeType == null) {
+            String extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString());
+            if (extension != null) {
+                mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.toLowerCase());
+            }
+        }
+
+        return mimeType;
+    }
+
+    /**
+     * Limpia archivos temporales de compresión
+     */
+    private void cleanupTempFile(File tempFile) {
+        if (tempFile != null && tempFile.exists()) {
+            boolean deleted = tempFile.delete();
+            Log.d(TAG, "Archivo temporal " + (deleted ? "eliminado" : "no pudo ser eliminado"));
+        }
     }
 
     private void updateFirestoreUrl(String downloadUrl, String collection, String document, String field) {

@@ -7,30 +7,56 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.AsyncListDiffer;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mjc.mascotalink.modelo.Notificacion;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class NotificacionesAdapter extends RecyclerView.Adapter<NotificacionesAdapter.NotificacionViewHolder> {
 
-    private List<Notificacion> notificaciones = new ArrayList<>();
+    private AsyncListDiffer<Notificacion> differ;
     private OnNotificacionClickListener listener;
 
     public interface OnNotificacionClickListener {
         void onNotificacionClick(Notificacion notificacion);
     }
 
+    /**
+     * DiffUtil.ItemCallback para calcular diferencias entre listas de Notificacion
+     */
+    private static final DiffUtil.ItemCallback<Notificacion> DIFF_CALLBACK = new DiffUtil.ItemCallback<Notificacion>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Notificacion oldItem, @NonNull Notificacion newItem) {
+            // Comparar por ID único
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Notificacion oldItem, @NonNull Notificacion newItem) {
+            // Comparar contenido relevante
+            return Objects.equals(oldItem.getTitulo(), newItem.getTitulo()) &&
+                   Objects.equals(oldItem.getMensaje(), newItem.getMensaje()) &&
+                   oldItem.isLeida() == newItem.isLeida() &&
+                   Objects.equals(oldItem.getTipo(), newItem.getTipo());
+        }
+    };
+
     public NotificacionesAdapter(OnNotificacionClickListener listener) {
+        this.differ = new AsyncListDiffer<>(this, DIFF_CALLBACK);
         this.listener = listener;
     }
 
+    /**
+     * Actualiza la lista con DiffUtil (calcula diferencias automáticamente)
+     */
     public void setNotificaciones(List<Notificacion> notificaciones) {
-        this.notificaciones = notificaciones;
-        notifyDataSetChanged();
+        differ.submitList(notificaciones);
     }
 
     @NonNull
@@ -42,13 +68,13 @@ public class NotificacionesAdapter extends RecyclerView.Adapter<NotificacionesAd
 
     @Override
     public void onBindViewHolder(@NonNull NotificacionViewHolder holder, int position) {
-        Notificacion notificacion = notificaciones.get(position);
+        Notificacion notificacion = differ.getCurrentList().get(position);
         holder.bind(notificacion);
     }
 
     @Override
     public int getItemCount() {
-        return notificaciones.size();
+        return differ.getCurrentList().size();
     }
 
     class NotificacionViewHolder extends RecyclerView.ViewHolder {

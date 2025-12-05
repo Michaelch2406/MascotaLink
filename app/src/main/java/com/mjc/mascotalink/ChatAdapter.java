@@ -11,6 +11,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.AsyncListDiffer;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mjc.mascotalink.modelo.ChatItem;
@@ -27,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -39,14 +42,60 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int VIEW_TYPE_LOCATION_RECEIVED = 6;
 
     private Context context;
-    private List<ChatItem> items;
+    private AsyncListDiffer<ChatItem> differ;
     private String currentUserId;
     private int lastPosition = -1;
+
+    /**
+     * DiffUtil.ItemCallback para calcular diferencias entre listas de ChatItem
+     * Maneja tanto Mensaje como DateSeparator
+     */
+    private static final DiffUtil.ItemCallback<ChatItem> DIFF_CALLBACK = new DiffUtil.ItemCallback<ChatItem>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull ChatItem oldItem, @NonNull ChatItem newItem) {
+            // Verificar si son del mismo tipo
+            if (oldItem.getType() != newItem.getType()) {
+                return false;
+            }
+
+            // Comparar según tipo
+            if (oldItem instanceof Mensaje && newItem instanceof Mensaje) {
+                Mensaje oldMsg = (Mensaje) oldItem;
+                Mensaje newMsg = (Mensaje) newItem;
+                return Objects.equals(oldMsg.getId(), newMsg.getId());
+            } else if (oldItem instanceof DateSeparator && newItem instanceof DateSeparator) {
+                DateSeparator oldSep = (DateSeparator) oldItem;
+                DateSeparator newSep = (DateSeparator) newItem;
+                return Objects.equals(oldSep.getDateText(), newSep.getDateText());
+            }
+
+            return false;
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull ChatItem oldItem, @NonNull ChatItem newItem) {
+            if (oldItem instanceof Mensaje && newItem instanceof Mensaje) {
+                Mensaje oldMsg = (Mensaje) oldItem;
+                Mensaje newMsg = (Mensaje) newItem;
+                return Objects.equals(oldMsg.getTexto(), newMsg.getTexto()) &&
+                       oldMsg.isLeido() == newMsg.isLeido() &&
+                       oldMsg.isEntregado() == newMsg.isEntregado() &&
+                       Objects.equals(oldMsg.getTipo(), newMsg.getTipo()) &&
+                       Objects.equals(oldMsg.getImagen_url(), newMsg.getImagen_url());
+            } else if (oldItem instanceof DateSeparator && newItem instanceof DateSeparator) {
+                DateSeparator oldSep = (DateSeparator) oldItem;
+                DateSeparator newSep = (DateSeparator) newItem;
+                return Objects.equals(oldSep.getDateText(), newSep.getDateText());
+            }
+
+            return false;
+        }
+    };
 
     public ChatAdapter(Context context, String currentUserId) {
         this.context = context;
         this.currentUserId = currentUserId;
-        this.items = new ArrayList<>();
+        this.differ = new AsyncListDiffer<>(this, DIFF_CALLBACK);
     }
 
     /**
@@ -54,10 +103,12 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      */
     public void agregarMensaje(Mensaje mensaje) {
         if (mensaje == null) return;
-        
+
+        List<ChatItem> currentList = new ArrayList<>(differ.getCurrentList());
+
         // Verificar si necesitamos agregar un separador de fecha
-        if (!items.isEmpty()) {
-            ChatItem lastItem = items.get(items.size() - 1);
+        if (!currentList.isEmpty()) {
+            ChatItem lastItem = currentList.get(currentList.size() - 1);
             
             // Obtener la fecha del último mensaje (no separador)
             Mensaje lastMessage = getLastMessage();
@@ -67,36 +118,32 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (!TimeUtils.isSameDay(lastMessage.getTimestamp(), mensaje.getTimestamp())) {
                     String dateText = TimeUtils.getDateSeparatorText(mensaje.getTimestamp());
                     DateSeparator separator = new DateSeparator(dateText, mensaje.getTimestamp());
-                    items.add(separator);
-                    notifyItemInserted(items.size() - 1);
+                    currentList.add(separator);
                 }
             }
         } else if (mensaje.getTimestamp() != null) {
             // Primer mensaje, agregar separador
             String dateText = TimeUtils.getDateSeparatorText(mensaje.getTimestamp());
             DateSeparator separator = new DateSeparator(dateText, mensaje.getTimestamp());
-            items.add(separator);
-            notifyItemInserted(items.size() - 1);
+            currentList.add(separator);
         }
-        
+
         // Agregar el mensaje
-        items.add(mensaje);
-        notifyItemInserted(items.size() - 1);
+        currentList.add(mensaje);
+        differ.submitList(currentList);
     }
     
     /**
      * Establece la lista completa de mensajes, procesando e insertando separadores de fecha.
      */
     public void setMensajes(List<Mensaje> mensajes) {
-        items.clear();
-        
         if (mensajes == null || mensajes.isEmpty()) {
-            notifyDataSetChanged();
+            differ.submitList(new ArrayList<>());
             return;
         }
-        
-        items = procesarMensajesConSeparadores(mensajes);
-        notifyDataSetChanged();
+
+        List<ChatItem> newList = procesarMensajesConSeparadores(mensajes);
+        differ.submitList(newList);
     }
 
     /**
@@ -104,14 +151,16 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      */
     public void agregarMensajesAlInicio(List<Mensaje> nuevos) {
         if (nuevos == null || nuevos.isEmpty()) return;
-        
+
+        List<ChatItem> currentList = new ArrayList<>(differ.getCurrentList());
+
         // Procesar los nuevos mensajes con separadores
         List<ChatItem> nuevosItems = procesarMensajesConSeparadores(nuevos);
-        
+
         // Si ya hay items, verificar si necesitamos separador entre los nuevos y los existentes
-        if (!items.isEmpty() && !nuevosItems.isEmpty()) {
+        if (!currentList.isEmpty() && !nuevosItems.isEmpty()) {
             ChatItem lastNewItem = nuevosItems.get(nuevosItems.size() - 1);
-            ChatItem firstExistingItem = items.get(0);
+            ChatItem firstExistingItem = currentList.get(0);
             
             if (lastNewItem instanceof Mensaje && firstExistingItem instanceof Mensaje) {
                 Mensaje lastNew = (Mensaje) lastNewItem;
@@ -127,9 +176,9 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
             }
         }
-        
-        items.addAll(0, nuevosItems);
-        notifyItemRangeInserted(0, nuevosItems.size());
+
+        nuevosItems.addAll(currentList);
+        differ.submitList(nuevosItems);
     }
     
     /**
@@ -176,9 +225,10 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * Obtiene el último mensaje (no separador) de la lista.
      */
     private Mensaje getLastMessage() {
-        for (int i = items.size() - 1; i >= 0; i--) {
-            if (items.get(i) instanceof Mensaje) {
-                return (Mensaje) items.get(i);
+        List<ChatItem> currentList = differ.getCurrentList();
+        for (int i = currentList.size() - 1; i >= 0; i--) {
+            if (currentList.get(i) instanceof Mensaje) {
+                return (Mensaje) currentList.get(i);
             }
         }
         return null;
@@ -186,7 +236,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemViewType(int position) {
-        ChatItem item = items.get(position);
+        ChatItem item = differ.getCurrentList().get(position);
         
         if (item instanceof DateSeparator) {
             return VIEW_TYPE_DATE_SEPARATOR;
@@ -247,7 +297,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        ChatItem item = items.get(position);
+        ChatItem item = differ.getCurrentList().get(position);
         
         // Aplicar animación solo a items nuevos
         setAnimation(holder.itemView, position);
@@ -280,7 +330,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemCount() {
-        return items.size();
+        return differ.getCurrentList().size();
     }
     
     /**

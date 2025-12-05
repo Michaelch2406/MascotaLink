@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.AsyncListDiffer;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -18,28 +20,51 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
 public class MensajesAdapter extends RecyclerView.Adapter<MensajesAdapter.ViewHolder> {
 
     private Context context;
-    private List<Chat> chats;
+    private AsyncListDiffer<Chat> differ;
     private OnChatClickListener listener;
 
     public interface OnChatClickListener {
         void onChatClick(Chat chat);
     }
 
+    /**
+     * DiffUtil.ItemCallback para calcular diferencias entre listas de Chat
+     */
+    private static final DiffUtil.ItemCallback<Chat> DIFF_CALLBACK = new DiffUtil.ItemCallback<Chat>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Chat oldItem, @NonNull Chat newItem) {
+            // Comparar por ID único
+            return Objects.equals(oldItem.getChatId(), newItem.getChatId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Chat oldItem, @NonNull Chat newItem) {
+            // Comparar contenido relevante
+            return Objects.equals(oldItem.getUltimo_mensaje(), newItem.getUltimo_mensaje()) &&
+                   Objects.equals(oldItem.getUltimo_timestamp(), newItem.getUltimo_timestamp()) &&
+                   oldItem.getMensajesNoLeidosCount() == newItem.getMensajesNoLeidosCount() &&
+                   Objects.equals(oldItem.getEstadoOtroUsuario(), newItem.getEstadoOtroUsuario());
+        }
+    };
+
     public MensajesAdapter(Context context, OnChatClickListener listener) {
         this.context = context;
-        this.chats = new ArrayList<>();
+        this.differ = new AsyncListDiffer<>(this, DIFF_CALLBACK);
         this.listener = listener;
     }
 
+    /**
+     * Actualiza la lista con DiffUtil (calcula diferencias automáticamente)
+     */
     public void actualizarConversaciones(List<Chat> nuevosChats) {
-        this.chats = nuevosChats;
-        notifyDataSetChanged();
+        differ.submitList(nuevosChats);
     }
 
     @NonNull
@@ -51,7 +76,7 @@ public class MensajesAdapter extends RecyclerView.Adapter<MensajesAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Chat chat = chats.get(position);
+        Chat chat = differ.getCurrentList().get(position);
 
         holder.tvNombre.setText(chat.getNombreOtroUsuario());
         if (chat.getUltimo_timestamp() != null) {
@@ -112,7 +137,7 @@ public class MensajesAdapter extends RecyclerView.Adapter<MensajesAdapter.ViewHo
 
     @Override
     public int getItemCount() {
-        return chats.size();
+        return differ.getCurrentList().size();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
