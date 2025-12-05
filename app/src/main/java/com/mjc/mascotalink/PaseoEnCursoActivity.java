@@ -61,6 +61,8 @@ import com.mjc.mascotalink.network.NetworkMonitorHelper;
 
 import com.mjc.mascotalink.util.WhatsAppUtil;
 
+import com.mjc.mascotalink.service.LocationService;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -981,6 +983,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "Paseo cancelado.", Toast.LENGTH_SHORT).show();
                     mostrarLoading(false);
+                    stopLocationService(); // Stop tracking immediately
                     new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1000);
                 })
                 .addOnFailureListener(e -> {
@@ -1001,6 +1004,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "¡Paseo finalizado con éxito!", Toast.LENGTH_SHORT).show();
                     mostrarLoading(false);
+                    stopLocationService(); // Stop tracking immediately
                     
                     Intent intent = new Intent(PaseoEnCursoActivity.this, ResumenPaseoActivity.class);
                     intent.putExtra("id_reserva", idReserva);
@@ -1220,9 +1224,30 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         }
     }
 
+    private void startLocationService() {
+        Intent serviceIntent = new Intent(this, LocationService.class);
+        serviceIntent.setAction(LocationService.ACTION_START_TRACKING);
+        serviceIntent.putExtra(LocationService.EXTRA_RESERVA_ID, idReserva);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+    }
+
+    private void stopLocationService() {
+        Intent serviceIntent = new Intent(this, LocationService.class);
+        serviceIntent.setAction(LocationService.ACTION_STOP_TRACKING);
+        startService(serviceIntent);
+    }
+
     private void startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
+            
+            // Start the Foreground Service for background tracking
+            startLocationService();
+
             if (fusedLocationClient != null && locationCallback != null) {
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
                 actualizarEstadoUbicacion("Ubicación: buscando señal...");
@@ -1239,110 +1264,56 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }
+        stopLocationService();
     }
 
     private void procesarUbicacion(android.location.Location location) {
         if (reservaRef == null || location == null) return;
-        if (auth == null || auth.getCurrentUser() == null) return;
 
-        // Log para debugging
+        long now = System.currentTimeMillis();
         float accuracy = location.hasAccuracy() ? location.getAccuracy() : -1;
-        Log.d(TAG, "📍 Ubicación recibida - Precisión: " + accuracy + "m, Lat: " +
+        
+        Log.d(TAG, "📍 Procesando ubicación (UI): " + 
               location.getLatitude() + ", Lng: " + location.getLongitude());
 
-        // Sistema de dos niveles de precisión
-        long now = System.currentTimeMillis();
         boolean isGoodPrecision = accuracy > 0 && accuracy <= 100f;
         boolean isAcceptablePrecision = accuracy > 100f && accuracy <= 500f;
         boolean isBadPrecision = !location.hasAccuracy() || accuracy > 500f;
 
-        // Rechazar si precisión es MUY mala (>500m)
+        String mensaje = "Ubicación: ";
         if (isBadPrecision) {
-            String mensaje = "Ubicación: precisión muy baja (" + (int)accuracy + " m) - Rechazada";
+            mensaje += "buscando señal GPS...";
             actualizarEstadoUbicacion(mensaje);
-            Log.w(TAG, "❌ Ubicación rechazada - " + mensaje);
-            return;
+            return; // No actualizamos UI de movimiento si la precisión es mala
         }
 
-        // Si precisión es ACEPTABLE (100-500m), solo usar como fallback
         if (isAcceptablePrecision) {
-            // Solo usar si no hay buena ubicación en los últimos 30 segundos
+            mensaje += "señal débil (" + (int)accuracy + "m)";
             if (now - lastGoodLocationTime < 30000) {
-                String mensaje = "Ubicación: esperando mejor señal (" + (int)accuracy + " m, aceptable)";
+                // Si tuvimos buena señal hace poco, toleramos esta
                 actualizarEstadoUbicacion(mensaje);
-                Log.d(TAG, "⏸️ Ubicación aceptable pero esperando mejor - " + mensaje);
-                return;
             } else {
-                // Usar como fallback
-                Log.w(TAG, "⚠️ Usando ubicación aceptable como fallback (" + (int)accuracy + " m)");
-                String mensaje = "Ubicación: precisión aceptable (" + (int)accuracy + " m)";
+                // Si llevamos tiempo con mala señal, avisar
                 actualizarEstadoUbicacion(mensaje);
+                return; 
             }
         } else {
-            // Precisión BUENA (<=100m)
             lastGoodLocationTime = now;
-            Log.d(TAG, "✅ Ubicación con buena precisión (" + (int)accuracy + " m)");
         }
 
-        long nowElapsed = android.os.SystemClock.elapsedRealtime();
+        // Determinar si hay movimiento para la UI
+        boolean enMovimiento = location.getSpeed() > 0.7f; // ~2.5 km/h
         if (lastSentLocation != null) {
             float dist = location.distanceTo(lastSentLocation);
-            if (dist < 5f) {
-                return; // no se movió lo suficiente
+            if (dist > 10) { // Solo considerar movimiento si se ha movido 10 metros
+                 enMovimiento = true;
             }
         }
-        if (nowElapsed - lastSentAt < 5000) {
-            return; // throttling 5s
-        }
 
-        double lat = location.getLatitude();
-        double lng = location.getLongitude();
-        GeoPoint punto = new GeoPoint(lat, lng);
-        String geohash = GeoFireUtils.getGeoHashForLocation(new GeoLocation(lat, lng));
-
-        Map<String, Object> puntoMap = new HashMap<>();
-        puntoMap.put("lat", lat);
-        puntoMap.put("lng", lng);
-        puntoMap.put("acc", location.getAccuracy());
-        puntoMap.put("speed", location.getSpeed());
-        puntoMap.put("bearing", location.getBearing());
-        puntoMap.put("ts", Timestamp.now()); // arrayUnion no permite FieldValue.serverTimestamp
-
-        boolean enMovimiento = location.getSpeed() > 0.7f; // ~2.5 km/h
-        if (enMovimiento) {
-            lastMovementTime = System.currentTimeMillis();
-        }
-
-        // 1. Guardar en el historial del paseo (para el dueño) - CON THROTTLING
-        // Solo guardar en Firestore cada 30 segundos para reducir writes
-        if (now - lastFirestoreUpdate >= FIRESTORE_UPDATE_INTERVAL) {
-            reservaRef.update("ubicaciones", FieldValue.arrayUnion(puntoMap))
-                    .addOnSuccessListener(aVoid -> {
-                        lastFirestoreUpdate = now;
-                        Log.d(TAG, "✅ Ubicación guardada en Firestore (backup)");
-                    })
-                    .addOnFailureListener(e -> Log.e(TAG, "Error actualizando historial de ubicación", e));
-        }
-
-        // 2. Publicar en tiempo real en el perfil del usuario
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("ubicacion_actual", puntoMap);
-        updates.put("ubicacion_geohash", geohash);
-        updates.put("en_linea", true);
-        updates.put("en_movimiento", enMovimiento);
-        updates.put("last_seen", FieldValue.serverTimestamp());
-
-        db.collection("usuarios").document(auth.getCurrentUser().getUid())
-                .update(updates)
-                .addOnFailureListener(e -> Log.e(TAG, "Error publicando ubicación en tiempo real", e));
-
-        // 3. Enviar ubicación en tiempo real vía WebSocket
-        if (socketManager.isConnected() && idReserva != null) {
-            socketManager.updateLocation(idReserva, lat, lng, location.getAccuracy());
-        }
-
+        // La transmisión de datos (Firestore/Socket) ahora la maneja LocationService.
+        
         lastSentLocation = location;
-        lastSentAt = nowElapsed;
+        
         actualizarEstadoUbicacion(formatearEstadoUbicacion(location, enMovimiento));
     }
 

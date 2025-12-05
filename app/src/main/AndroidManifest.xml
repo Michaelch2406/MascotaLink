@@ -74,6 +74,12 @@
             android:foregroundServiceType="dataSync" />
 
         <service
+            android:name=".service.LocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <service
             android:name=".MyFirebaseMessagingService"
             android:exported="false">
             <intent-filter>
