@@ -50,11 +50,11 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.FirebaseQueryOptimizer;
 import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.network.SocketManager;
 import com.mjc.mascotalink.network.NetworkMonitorHelper;
@@ -99,7 +99,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     @Inject
     FirebaseAuth auth;
     private DocumentReference reservaRef;
-    private ListenerRegistration reservaListener;
+    private FirebaseQueryOptimizer firebaseOptimizer;
     @Inject
     SocketManager socketManager;
     private NetworkMonitorHelper networkMonitor;
@@ -164,6 +164,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         // db = FirebaseFirestore.getInstance();
         // auth = FirebaseAuth.getInstance();
         // socketManager = SocketManager.getInstance(this);
+
+        // Inicializar FirebaseQueryOptimizer para lifecycle-aware listeners
+        firebaseOptimizer = new FirebaseQueryOptimizer();
 
         // Inicializar NetworkMonitorHelper para monitoreo robusto de red
         networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
@@ -363,38 +366,45 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private void escucharReserva() {
         mostrarLoading(true);
 
-        reservaListener = reservaRef.addSnapshotListener((snapshot, error) -> {
-            if (error != null) {
-                Log.e(TAG, "Error escuchando reserva", error);
-                mostrarLoading(false);
-                Toast.makeText(this, "Error al cargar el paseo", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if (snapshot == null || !snapshot.exists()) {
-                mostrarLoading(false);
-                Toast.makeText(this, "La reserva ya no está disponible", Toast.LENGTH_SHORT).show();
-                // Limpiar caché cuando la reserva ya no existe
-                /*
-                FirebaseUser user = auth.getCurrentUser();
-                if (user != null) {
-                    cacheManager.clearCache(user.getUid());
+        firebaseOptimizer.addDocumentListener(this, reservaRef,
+            new FirebaseQueryOptimizer.DocumentSnapshotCallback() {
+                @Override
+                public void onSuccess(DocumentSnapshot snapshot) {
+                    if (snapshot == null || !snapshot.exists()) {
+                        mostrarLoading(false);
+                        Toast.makeText(PaseoEnCursoActivity.this,
+                            "La reserva ya no está disponible", Toast.LENGTH_SHORT).show();
+                        // Limpiar caché cuando la reserva ya no existe
+                        /*
+                        FirebaseUser user = auth.getCurrentUser();
+                        if (user != null) {
+                            cacheManager.clearCache(user.getUid());
+                        }
+                        */
+                        finish();
+                        return;
+                    }
+
+                    // Guardar en caché para futuras aperturas rápidas
+                    /*
+                    FirebaseUser user = auth.getCurrentUser();
+                    if (user != null) {
+                        cacheManager.saveReservaToCache(user.getUid(), snapshot);
+                    }
+                    */
+
+                    manejarSnapshotReserva(snapshot);
+                    mostrarLoading(false);
                 }
-                */
-                finish();
-                return;
-            }
 
-            // Guardar en caché para futuras aperturas rápidas
-            /*
-            FirebaseUser user = auth.getCurrentUser();
-            if (user != null) {
-                cacheManager.saveReservaToCache(user.getUid(), snapshot);
-            }
-            */
-
-            manejarSnapshotReserva(snapshot);
-            mostrarLoading(false);
-        });
+                @Override
+                public void onError(Exception e) {
+                    Log.e(TAG, "Error escuchando reserva", e);
+                    mostrarLoading(false);
+                    Toast.makeText(PaseoEnCursoActivity.this,
+                        "Error al cargar el paseo", Toast.LENGTH_SHORT).show();
+                }
+            });
     }
 
     private void manejarSnapshotReserva(@NonNull DocumentSnapshot snapshot) {
@@ -1171,9 +1181,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         stopTimer();
         stopLocationUpdates();
         saveHandler.removeCallbacksAndMessages(null);
-        if (reservaListener != null) {
-            reservaListener.remove();
-        }
+
+        // FirebaseQueryOptimizer maneja la limpieza de listeners automáticamente
+        // No es necesario remover listeners manualmente
 
         // Limpiar monitor de red
         if (networkMonitor != null) {

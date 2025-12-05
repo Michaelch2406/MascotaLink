@@ -31,11 +31,11 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascotalink.adapters.ActividadPaseoAdapter;
 import com.mjc.mascotalink.adapters.FotosPaseoAdapter;
 import com.mjc.mascotalink.modelo.PaseoActividad;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.FirebaseQueryOptimizer;
 import com.mjc.mascotalink.network.SocketManager;
 import com.mjc.mascotalink.network.NetworkMonitorHelper;
 
@@ -83,7 +83,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private FirebaseFirestore db;
     private FirebaseAuth auth;
     private DocumentReference reservaRef;
-    private ListenerRegistration reservaListener;
+    private FirebaseQueryOptimizer firebaseOptimizer;
     private GoogleMap mMap;
     private SocketManager socketManager;
     private NetworkMonitorHelper networkMonitor;
@@ -144,6 +144,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
         socketManager = SocketManager.getInstance(this);
+
+        // Inicializar FirebaseQueryOptimizer para lifecycle-aware listeners
+        firebaseOptimizer = new FirebaseQueryOptimizer();
 
         // Inicializar NetworkMonitorHelper para monitoreo robusto de red
         networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
@@ -360,9 +363,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (reservaListener != null) {
-            reservaListener.remove();
-        }
+
+        // FirebaseQueryOptimizer maneja la limpieza de listeners automáticamente
+        // No es necesario remover listeners manualmente
+
         stopTimer();
 
         // Limpiar listeners de WebSocket
@@ -605,40 +609,46 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     }
 
     private void escucharReserva() {
-        reservaListener = reservaRef.addSnapshotListener((snapshot, error) -> {
-            if (error != null) {
-                Log.e(TAG, "Error escuchando reserva", error);
-                return;
-            }
-            if (isFinishing() || isDestroyed()) {
-                return;
-            }
-            if (snapshot != null && snapshot.exists()) {
-                // Guardar en caché para futuras aperturas rápidas
-                /*
-                FirebaseUser user = auth.getCurrentUser();
-                if (user != null) {
-                    cacheManager.saveReservaToCache(user.getUid(), snapshot);
-                }
-                */
+        firebaseOptimizer.addDocumentListener(this, reservaRef,
+            new FirebaseQueryOptimizer.DocumentSnapshotCallback() {
+                @Override
+                public void onSuccess(DocumentSnapshot snapshot) {
+                    if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+                    if (snapshot != null && snapshot.exists()) {
+                        // Guardar en caché para futuras aperturas rápidas
+                        /*
+                        FirebaseUser user = auth.getCurrentUser();
+                        if (user != null) {
+                            cacheManager.saveReservaToCache(user.getUid(), snapshot);
+                        }
+                        */
 
-                manejarSnapshotReserva(snapshot);
-                mostrarLoading(false);
-                if (contentContainer != null) {
-                    contentContainer.setVisibility(View.VISIBLE);
+                        manejarSnapshotReserva(snapshot);
+                        mostrarLoading(false);
+                        if (contentContainer != null) {
+                            contentContainer.setVisibility(View.VISIBLE);
+                        }
+                    } else {
+                        // Limpiar caché cuando la reserva ya no existe
+                        /*
+                        FirebaseUser user = auth.getCurrentUser();
+                        if (user != null) {
+                            cacheManager.clearCache(user.getUid());
+                        }
+                        */
+                        Toast.makeText(PaseoEnCursoDuenoActivity.this,
+                            "El paseo ha finalizado o no existe", Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
                 }
-            } else {
-                // Limpiar caché cuando la reserva ya no existe
-                /*
-                FirebaseUser user = auth.getCurrentUser();
-                if (user != null) {
-                    cacheManager.clearCache(user.getUid());
+
+                @Override
+                public void onError(Exception e) {
+                    Log.e(TAG, "Error escuchando reserva", e);
                 }
-                */
-                Toast.makeText(this, "El paseo ha finalizado o no existe", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        });
+            });
     }
 
     private void manejarSnapshotReserva(DocumentSnapshot snapshot) {

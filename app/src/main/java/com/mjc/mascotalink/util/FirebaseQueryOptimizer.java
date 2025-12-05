@@ -188,13 +188,7 @@ public class FirebaseQueryOptimizer {
             return;
         }
 
-        // Configurar opciones de snapshot
-        com.google.firebase.firestore.SnapshotListenOptions options =
-                new com.google.firebase.firestore.SnapshotListenOptions.Builder()
-                        .setSource(source)
-                        .build();
-
-        // Registrar listener
+        // Registrar listener (Firebase maneja automáticamente caché + servidor)
         ListenerRegistration registration = query.addSnapshotListener((value, error) -> {
             if (error != null) {
                 Log.e(TAG, "Error en snapshot listener", error);
