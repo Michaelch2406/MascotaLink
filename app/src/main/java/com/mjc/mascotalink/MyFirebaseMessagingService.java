@@ -27,6 +27,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.inject.Inject; // Add this import
+
+import dagger.hilt.android.AndroidEntryPoint; // Add this import
+
 import com.mjc.mascotalink.PaseosActivity;
 import com.mjc.mascotalink.SolicitudesActivity;
 import com.mjc.mascotalink.SolicitudDetalleActivity;
@@ -34,6 +38,7 @@ import com.mjc.mascotalink.PaseoEnCursoActivity;
 import com.mjc.mascotalink.PaseoEnCursoDuenoActivity; // Add import
 import com.mjc.mascotalink.ConfirmarPagoActivity;
 
+@AndroidEntryPoint // Add this annotation
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "MyFirebaseMsgService";
@@ -47,6 +52,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     
     private static final String GROUP_KEY_MESSAGES = "com.mjc.mascotalink.MESSAGES";
     private static int messageNotificationId = 1000;
+
+    @Inject // Inject FirebaseAuth
+    FirebaseAuth auth;
+    @Inject // Inject FirebaseFirestore
+    FirebaseFirestore db;
 
     /**
      * Called when message is received.
@@ -103,8 +113,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             String chatId = data.get("chat_id");
             String messageId = data.get("message_id");
             if (chatId != null && messageId != null) {
-                FirebaseFirestore.getInstance()
-                        .collection("chats").document(chatId)
+                db.collection("chats").document(chatId) // Use injected db
                         .collection("mensajes").document(messageId)
                         .update("entregado", true)
                         .addOnFailureListener(e -> Log.e(TAG, "Error marking message as delivered", e));
@@ -321,15 +330,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void sendRegistrationToServer(String token) {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser currentUser = auth.getCurrentUser(); // Use injected auth
         if (currentUser != null) {
             String userId = currentUser.getUid();
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            // FirebaseFirestore db = FirebaseFirestore.getInstance(); // Use injected db
 
             Map<String, Object> tokenMap = new HashMap<>();
             tokenMap.put("fcmToken", token);
 
-            db.collection("usuarios").document(userId)
+            db.collection("usuarios").document(userId) // Use injected db
                     .update(tokenMap)
                     .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token successfully updated for user: " + userId))
                     .addOnFailureListener(e -> Log.e(TAG, "Error updating FCM token for user: " + userId, e));

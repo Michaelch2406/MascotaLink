@@ -40,10 +40,15 @@ import com.mjc.mascotalink.network.SocketManager;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+
 /**
  * Servicio en primer plano para mantener el rastreo del paseo activo
  * incluso cuando la aplicación se cierra o la pantalla se apaga.
  */
+@AndroidEntryPoint
 public class LocationService extends Service {
 
     private static final String TAG = "LocationService";
@@ -56,10 +61,13 @@ public class LocationService extends Service {
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
-    private SocketManager socketManager;
+    @Inject
+    SocketManager socketManager;
     private String currentReservaId;
-    private FirebaseFirestore db;
-    private FirebaseAuth auth;
+    @Inject
+    FirebaseFirestore db;
+    @Inject
+    FirebaseAuth auth;
 
     // Throttling para Firestore (guardar historial)
     private long lastFirestoreSaveTime = 0;
@@ -73,9 +81,9 @@ public class LocationService extends Service {
     public void onCreate() {
         super.onCreate();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        socketManager = SocketManager.getInstance(this);
-        db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
+        // socketManager = SocketManager.getInstance(this); // Injected by Hilt
+        // db = FirebaseFirestore.getInstance(); // Injected by Hilt
+        // auth = FirebaseAuth.getInstance(); // Injected by Hilt
 
         createNotificationChannel();
     }

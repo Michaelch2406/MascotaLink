@@ -75,6 +75,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
 public class PaseoEnCursoActivity extends AppCompatActivity {
 
     private static final String TAG = "PaseoEnCursoActivity";
@@ -89,11 +94,14 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private LocationCallback locationCallback;
     private LocationRequest locationRequest;
 
-    private FirebaseFirestore db;
-    private FirebaseAuth auth;
+    @Inject
+    FirebaseFirestore db;
+    @Inject
+    FirebaseAuth auth;
     private DocumentReference reservaRef;
     private ListenerRegistration reservaListener;
-    private SocketManager socketManager;
+    @Inject
+    SocketManager socketManager;
     private NetworkMonitorHelper networkMonitor;
 
     private TextView tvNombreMascota;
@@ -152,9 +160,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_paseo_en_curso);
 
-        db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
-        socketManager = SocketManager.getInstance(this);
+        // db, auth, and socketManager are now injected by Hilt
+        // db = FirebaseFirestore.getInstance();
+        // auth = FirebaseAuth.getInstance();
+        // socketManager = SocketManager.getInstance(this);
 
         // Inicializar NetworkMonitorHelper para monitoreo robusto de red
         networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
