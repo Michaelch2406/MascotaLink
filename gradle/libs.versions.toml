@@ -1,29 +1,132 @@
 [versions]
+# Build & Plugins
 agp = "8.13.1"
-junit = "4.13.2"
-junitVersion = "1.3.0"
-espressoCore = "3.7.0"
+hilt = "2.51.1"
+
+# AndroidX Core
 appcompat = "1.7.1"
 material = "1.12.0"
 activity = "1.10.1"
 constraintlayout = "2.2.1"
-firebaseAuth = "24.0.1"
+recyclerview = "1.3.1"
 swiperefreshlayout = "1.1.0"
-hilt = "2.51.1"
+
+# Lifecycle & ViewModel
+lifecycle = "2.6.1"
+archCoreTesting = "2.1.0"
+
+# Firebase
+firebaseBom = "34.2.0"
+firebaseUiAuth = "9.0.0"
+
+# Networking
+socketio = "2.1.0"
+retrofit = "2.10.0"
+okhttp = "4.11.0"
+
+# Security
+securityCrypto = "1.1.0-alpha06"
+biometric = "1.1.0"
+
+# Image Loading
+glide = "4.16.0"
+circleimageview = "3.1.0"
+
+# Google Play Services
+playServicesMaps = "19.2.0"
+playServicesLocation = "21.3.0"
+playServicesMlkit = "+"
+mapsUtils = "3.19.0"
+places = "4.1.0"
+geofire = "3.2.0"
+
+# CameraX
+camerax = "1.5.0"
+
+# PDF Generation
+itext7 = "7.2.5"
+
+# Compose (para validación de email)
+composeMaterial = "1.6.0"
+
+# Testing
+junit = "4.13.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+mockito = "4.5.1"
 
 
 [libraries]
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+# ========== NETWORKING ==========
+socketio = { group = "io.socket", name = "socket.io-client", version.ref = "socketio" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+
+# ========== FIREBASE ==========
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
+firebase-ui-auth = { group = "com.firebaseui", name = "firebase-ui-auth", version.ref = "firebaseUiAuth" }
+
+# ========== GOOGLE PLAY SERVICES ==========
+play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+play-services-mlkit-face = { group = "com.google.android.gms", name = "play-services-mlkit-face-detection", version.ref = "playServicesMlkit" }
+play-services-mlkit-text = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "playServicesMlkit" }
+maps-utils = { group = "com.google.maps.android", name = "android-maps-utils", version.ref = "mapsUtils" }
+places = { group = "com.google.android.libraries.places", name = "places", version.ref = "places" }
+geofire = { group = "com.firebase", name = "geofire-android", version.ref = "geofire" }
+
+# ========== CAMERAX ==========
+camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
+camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+camerax-video = { group = "androidx.camera", name = "camera-video", version.ref = "camerax" }
+
+# ========== SECURITY ==========
+security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+
+# ========== IMAGE LOADING ==========
+glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
+circleimageview = { group = "de.hdodenhof", name = "circleimageview", version.ref = "circleimageview" }
+
+# ========== ANDROIDX CORE ==========
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
+
+# ========== LIFECYCLE & VIEWMODEL ==========
+lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle" }
+
+# ========== DEPENDENCY INJECTION ==========
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+
+# ========== PDF GENERATION ==========
+itext7 = { group = "com.itextpdf", name = "itext7-core", version.ref = "itext7" }
+
+# ========== COMPOSE (solo para icons) ==========
+compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "composeMaterial" }
+
+# ========== TESTING ==========
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+mockito = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCoreTesting" }
 
 
 [plugins]

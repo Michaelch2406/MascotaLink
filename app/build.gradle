@@ -73,78 +73,77 @@ android {
 }
 
 dependencies {
-    implementation 'io.socket:socket.io-client:2.1.0'
+    // ========== NETWORKING ==========
+    implementation libs.socketio
+    implementation libs.retrofit
+    implementation libs.retrofit.gson
+    implementation libs.okhttp
+    implementation libs.okhttp.logging
 
-    implementation platform('com.google.firebase:firebase-bom:34.2.0')
-    implementation 'com.google.firebase:firebase-analytics'
-    implementation 'com.google.firebase:firebase-auth'
-    implementation 'com.google.firebase:firebase-firestore'
-    implementation 'com.google.firebase:firebase-storage'         // <- subir fotos, docs, videos
-    implementation 'com.google.firebase:firebase-messaging'       // <- push notifications
-    implementation 'com.google.firebase:firebase-functions'      // <- llamadas a Cloud Functions (opcional)
+    // ========== FIREBASE ==========
+    implementation platform(libs.firebase.bom)
+    implementation libs.firebase.analytics
+    implementation libs.firebase.auth
+    implementation libs.firebase.firestore
+    implementation libs.firebase.storage         // <- subir fotos, docs, videos
+    implementation libs.firebase.messaging       // <- push notifications
+    implementation libs.firebase.functions       // <- llamadas a Cloud Functions (opcional)
+    implementation libs.firebase.ui.auth         // <- facilita login/registro con providers
 
-
-    // Places API
-    implementation 'com.google.android.libraries.places:places:4.1.0'
-    implementation 'com.firebase:geofire-android:3.2.0'
-
-    // CameraX
-    implementation 'androidx.camera:camera-core:1.5.0'
-    implementation 'androidx.camera:camera-camera2:1.5.0'
-    implementation 'androidx.camera:camera-lifecycle:1.5.0'
-    implementation 'androidx.camera:camera-view:1.5.0'
-    implementation 'androidx.camera:camera-video:1.5.0'
+    // ========== GOOGLE PLAY SERVICES ==========
+    // Maps & Location
+    implementation libs.play.services.maps
+    implementation libs.maps.utils
+    implementation libs.play.services.location
+    implementation libs.places
+    implementation libs.geofire
 
     // ML Kit vía Google Play services (evita incluir .so en el APK)
-    implementation 'com.google.android.gms:play-services-mlkit-face-detection:+'
-    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:+'
+    implementation libs.play.services.mlkit.face
+    implementation libs.play.services.mlkit.text
 
-    // Google Play Services (Maps + Location para zonas y geoubicación)
-    implementation 'com.google.android.gms:play-services-maps:19.2.0'
-    implementation 'com.google.maps.android:android-maps-utils:3.19.0'
-    implementation 'com.google.android.gms:play-services-location:21.3.0'
+    // ========== CAMERAX ==========
+    implementation libs.camerax.core
+    implementation libs.camerax.camera2
+    implementation libs.camerax.lifecycle
+    implementation libs.camerax.view
+    implementation libs.camerax.video
 
-        // FirebaseUI Auth (opcional, facilita login/registro con providers)
-    implementation 'com.firebaseui:firebase-ui-auth:9.0.0'         // opcional pero muy práctico
+    // ========== SECURITY ==========
+    implementation libs.security.crypto
+    implementation libs.biometric
 
-    // Networking
-    implementation 'com.squareup.retrofit2:retrofit:2.10.0'
-    implementation 'com.squareup.retrofit2:converter-gson:2.10.0'
-    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
-    implementation 'com.squareup.okhttp3:logging-interceptor:4.11.0'
+    // ========== IMAGE LOADING ==========
+    implementation libs.glide
+    implementation libs.circleimageview
+    annotationProcessor libs.glide.compiler
 
-    // Seguridad
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
-    implementation 'androidx.biometric:biometric:1.1.0'
-
-    // Validación de email
-    implementation 'androidx.compose.material:material-icons-extended:1.6.0'
-
-    // Image loading / caching
-    implementation 'com.github.bumptech.glide:glide:4.16.0'
-    implementation 'de.hdodenhof:circleimageview:3.1.0'
-    implementation libs.swiperefreshlayout// Para vistas de imagen circulares
-
-    // TESTING Y VALIDACIÓN
-    testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:4.5.1'
-    testImplementation 'androidx.arch.core:core-testing:2.1.0'
-
-
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0' // Misma versión que la librería principal
+    // ========== ANDROIDX CORE ==========
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity
     implementation libs.constraintlayout
-    implementation 'androidx.recyclerview:recyclerview:1.3.1'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.1'
-    implementation 'com.itextpdf:itext7-core:7.2.5'
-    testImplementation libs.junit
-    androidTestImplementation libs.ext.junit
-    androidTestImplementation libs.espresso.core
+    implementation libs.recyclerview
+    implementation libs.swiperefreshlayout
 
-    // Hilt
+    // ========== LIFECYCLE & VIEWMODEL ==========
+    implementation libs.lifecycle.viewmodel
+    implementation libs.lifecycle.livedata
+
+    // ========== DEPENDENCY INJECTION ==========
     implementation libs.hilt.android
     annotationProcessor libs.hilt.compiler
+
+    // ========== PDF GENERATION ==========
+    implementation libs.itext7
+
+    // ========== COMPOSE (solo para icons) ==========
+    implementation libs.compose.material.icons
+
+    // ========== TESTING ==========
+    testImplementation libs.junit
+    testImplementation libs.mockito
+    testImplementation libs.arch.core.testing
+    androidTestImplementation libs.ext.junit
+    androidTestImplementation libs.espresso.core
 }
