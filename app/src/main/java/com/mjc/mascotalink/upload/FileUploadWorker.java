@@ -10,7 +10,6 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.FirebaseNetworkException;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;

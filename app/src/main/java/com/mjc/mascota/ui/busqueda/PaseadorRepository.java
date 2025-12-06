@@ -17,18 +17,31 @@ import com.mjc.mascota.modelo.PaseadorResultado;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import com.mjc.mascota.modelo.Filtros;
+import com.mjc.mascotalink.MyApplication;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import android.content.SharedPreferences;
+import android.text.TextUtils;
 
 public class PaseadorRepository {
     private static final String TAG = "PaseadorRepository";
+    private static final String POPULARES_CACHE_PREF = "paseadores_populares_cache";
+    private static final String POPULARES_CACHE_KEY = "populares_json";
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final List<ListenerRegistration> listeners = new ArrayList<>();
 
     public LiveData<UiState<List<PaseadorResultado>>> getPaseadoresPopulares() {
         MutableLiveData<UiState<List<PaseadorResultado>>> liveData = new MutableLiveData<>();
         liveData.setValue(new UiState.Loading<>());
+
+        // Mostrar cache inmediato si existe
+        List<PaseadorResultado> cached = readCachedPopulares();
+        if (cached != null && !cached.isEmpty()) {
+            liveData.setValue(new UiState.Success<>(cached));
+        }
 
         Query query = db.collection("usuarios")
                 .whereEqualTo("rol", "PASEADOR")
@@ -46,7 +59,12 @@ public class PaseadorRepository {
             if (value == null || value.isEmpty()) {
                 liveData.setValue(new UiState.Empty<>());
             } else {
-                combineUserDataWithPaseadorData(value).observeForever(liveData::setValue);
+                combineUserDataWithPaseadorData(value).observeForever(state -> {
+                    liveData.setValue(state);
+                    if (state instanceof UiState.Success) {
+                        cachePopulares(((UiState.Success<List<PaseadorResultado>>) state).getData());
+                    }
+                });
             }
         });
         listeners.add(listener);
@@ -131,6 +149,59 @@ public class PaseadorRepository {
             });
         });
         return liveData;
+    }
+
+    private void cachePopulares(List<PaseadorResultado> data) {
+        try {
+            JSONArray array = new JSONArray();
+            for (PaseadorResultado p : data) {
+                JSONObject obj = new JSONObject();
+                obj.put("id", p.getId());
+                obj.put("nombre", p.getNombre());
+                obj.put("foto", p.getFotoUrl());
+                obj.put("calificacion", p.getCalificacion());
+                obj.put("totalResenas", p.getTotalResenas());
+                obj.put("tarifa", p.getTarifaPorHora());
+                obj.put("zona", p.getZonaPrincipal());
+                obj.put("favorito", p.isFavorito());
+                obj.put("enLinea", p.isEnLinea());
+                obj.put("anosExp", p.getAnosExperiencia());
+                array.put(obj);
+            }
+            SharedPreferences prefs = MyApplication.getAppContext().getSharedPreferences(POPULARES_CACHE_PREF, android.content.Context.MODE_PRIVATE);
+            prefs.edit().putString(POPULARES_CACHE_KEY, array.toString()).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "No se pudo cachear populares", e);
+        }
+    }
+
+    private List<PaseadorResultado> readCachedPopulares() {
+        try {
+            SharedPreferences prefs = MyApplication.getAppContext().getSharedPreferences(POPULARES_CACHE_PREF, android.content.Context.MODE_PRIVATE);
+            String raw = prefs.getString(POPULARES_CACHE_KEY, null);
+            if (TextUtils.isEmpty(raw)) return null;
+            JSONArray array = new JSONArray(raw);
+            List<PaseadorResultado> list = new ArrayList<>();
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                PaseadorResultado p = new PaseadorResultado();
+                p.setId(obj.optString("id", ""));
+                p.setNombre(obj.optString("nombre", "N/A"));
+                p.setFotoUrl(obj.optString("foto", null));
+                p.setCalificacion(obj.optDouble("calificacion", 0));
+                p.setTotalResenas(obj.optInt("totalResenas", 0));
+                p.setTarifaPorHora(obj.optDouble("tarifa", 0));
+                p.setZonaPrincipal(obj.optString("zona", "Sin zona especificada"));
+                p.setFavorito(obj.optBoolean("favorito", false));
+                p.setEnLinea(obj.optBoolean("enLinea", false));
+                p.setAnosExperiencia(obj.optInt("anosExp", 0));
+                list.add(p);
+            }
+            return list;
+        } catch (Exception e) {
+            Log.w(TAG, "No se pudo leer cache de populares", e);
+            return null;
+        }
     }
 
     public LiveData<UiState<PaseadorSearchResult>> buscarPaseadores(String query, DocumentSnapshot lastVisible, Filtros filtros) {

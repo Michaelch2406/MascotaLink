@@ -1227,7 +1227,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         // Regla: Bloquear cancelaci??n antes de 10 minutos
         if (tiempoTranscurrido < 10 * 60 * 1000) {
             long minutosRestantes = 10 - TimeUnit.MILLISECONDS.toMinutes(tiempoTranscurrido);
-            Toast.makeText(this, "Debes esperar " + minutosRestantes + " minutos m??s para cancelar.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Debes esperar " + minutosRestantes + " minutos más para cancelar.", Toast.LENGTH_LONG).show();
             return;
         }
 

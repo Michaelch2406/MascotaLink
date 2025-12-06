@@ -708,7 +708,15 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
                 LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                if (layoutManager != null && layoutManager.findLastCompletelyVisibleItemPosition() == resultadosAdapter.getItemCount() - 1) {
+                if (layoutManager == null) return;
+
+                int total = resultadosAdapter.getItemCount();
+                if (total == 0) return;
+
+                int lastVisible = layoutManager.findLastVisibleItemPosition();
+                // Prefetch al 75% del scroll para que la siguiente pÇÉgina ya venga cargada
+                int prefetchThreshold = Math.max(0, (int) (total * 0.75f));
+                if (lastVisible >= prefetchThreshold) {
                     viewModel.loadMore();
                 }
             }
@@ -1516,6 +1524,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         if (distanciaKm <= currentSearchRadiusKm) {
             String nombre = userDoc.getString("nombre_display");
             String fotoUrl = userDoc.getString("foto_perfil");
+            if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                // Preload en cachÇ¸ para que el marker se pinte sin saltos
+                Glide.with(getApplicationContext())
+                        .load(MyApplication.getFixedUrl(fotoUrl))
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .preload();
+            }
 
             return FirebaseFirestore.getInstance().collection("paseadores").document(userId).get().continueWithTask(task1 -> {
                 if (task1.isSuccessful()) {
@@ -1955,5 +1970,3 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
     }
 }
-
-
