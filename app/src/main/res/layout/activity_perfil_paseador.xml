@@ -718,14 +718,6 @@
                                 android:name="com.google.android.gms.maps.SupportMapFragment"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent" />
-                            
-                            <!-- Overlay to intercept touches if needed, or just let map handle it -->
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:background="@android:color/transparent" 
-                                android:clickable="true"
-                                android:focusable="true"/> 
                                 
                         </androidx.cardview.widget.CardView>
 

@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup; // Added this import
+import android.view.MotionEvent; // Added this import
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -1408,11 +1410,44 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         return DateUtils.getRelativeTimeSpanString(timestamp.toDate().getTime(), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
     }
 
+    // Helper method to recursively set OnTouchListener to all views in a hierarchy
+    private void setTouchListenerRecursive(View view, View.OnTouchListener listener) {
+        if (view == null) return;
+        view.setOnTouchListener(listener);
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                setTouchListenerRecursive(viewGroup.getChildAt(i), listener);
+            }}
+    }
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         this.googleMap = googleMap;
         this.googleMap.getUiSettings().setAllGesturesEnabled(true);
         this.googleMap.getUiSettings().setZoomControlsEnabled(true); // This line enables the +/- buttons
+
+        // Apply recursive touch listener to map view
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_container);
+        if (mapFragment != null && mapFragment.getView() != null) {
+            setTouchListenerRecursive(mapFragment.getView(), (v, event) -> {
+                int action = event.getAction();
+                switch (action) {
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_MOVE:
+                        // Disallow parent NestedScrollView to intercept
+                        if (scrollViewContent != null) scrollViewContent.requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        // Allow parent NestedScrollView to intercept again
+                        if (scrollViewContent != null) scrollViewContent.requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false; // IMPORTANT: Return false so the event still reaches the map
+            });
+        }
+
         if (paseadorId == null) {
              this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(-0.180653, -78.467834), 12));
         }
