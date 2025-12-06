@@ -197,7 +197,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ivBack.setOnClickListener(v -> finish());
 
         setupListeners();
-        setupTabs();
+        // setupTabs() will be called after role is determined in setupRoleBasedUI
         setupResenasRecyclerView();
         setupAuthListener();
 
@@ -314,7 +314,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private void setupTabs() {
         llAcercaDe.setVisibility(View.VISIBLE);
         llResenas.setVisibility(View.GONE);
-        tabLayout.addTab(tabLayout.newTab().setText("Acerca de"), true);
+        tabLayout.removeAllTabs(); // Clear existing tabs
+
+        String aboutTabText = isOwnProfile ? "Mi perfil" : "Información";
+        tabLayout.addTab(tabLayout.newTab().setText(aboutTabText), true);
         tabLayout.addTab(tabLayout.newTab().setText("Reseñas"));
 
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -683,6 +686,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             bottomNavSelectedItem = R.id.menu_search;
         }
         setupBottomNavigation();
+        setupTabs(); // Call setupTabs here after isOwnProfile is determined
     }
 
     private void setupBottomNavigation() {
@@ -995,7 +999,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 tvTiempoRespuesta.setText(tiempoRespuesta != null ? String.format(Locale.getDefault(), "Respuesta en %d min", tiempoRespuesta) : "Respuesta en -- min");
 
                 Double rating = paseadorDoc.getDouble("calificacion_promedio");
-                Long numResenas = paseadorDoc.getLong("num_resenas");
+                Long numResenas = paseadorDoc.getLong("total_resenas");
                 tvRatingValor.setText(rating != null ? String.format(Locale.getDefault(), "%.1f", rating) : "0.0");
                 ratingBar.setRating(rating != null ? rating.floatValue() : 0f);
                 tvResenasTotal.setText(String.format(Locale.getDefault(), "%d reviews", numResenas != null ? numResenas : 0));

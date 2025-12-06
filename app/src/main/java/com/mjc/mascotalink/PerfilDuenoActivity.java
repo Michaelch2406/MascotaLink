@@ -113,6 +113,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private String metodoPagoId;
     private String bottomNavRole = "Dueño";
     private int bottomNavSelectedItem = R.id.menu_perfil;
+    private boolean isOwnProfile = false; // Declared as field
 
     // Listeners
     private FirebaseAuth.AuthStateListener mAuthListener;
@@ -142,7 +143,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         ivBack.setOnClickListener(v -> finish());
 
         setupListeners();
-        setupTabs();
+        // setupTabs() will be called after role is determined in setupRoleBasedUI
         setupResenasRecyclerView();
         setupAuthListener();
 
@@ -323,7 +324,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void setupTabs() {
         llAcercaDe.setVisibility(View.VISIBLE);
         llResenas.setVisibility(View.GONE);
-        tabLayout.addTab(tabLayout.newTab().setText("Acerca de"), true);
+        tabLayout.removeAllTabs(); // Clear existing tabs
+
+        String aboutTabText = isOwnProfile ? "Mi perfil" : "Información";
+        tabLayout.addTab(tabLayout.newTab().setText(aboutTabText), true);
         tabLayout.addTab(tabLayout.newTab().setText("Reseñas"));
 
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -399,12 +403,11 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 });
     }
 
-    private void setupRoleBasedUI() {
-        boolean isOwnProfile = duenoId != null && duenoId.equals(currentUserId);
-
-                if (isOwnProfile) {
-            toolbarTitle.setText("Perfil");
-            ivEditPerfil.setVisibility(View.VISIBLE);
+        private void setupRoleBasedUI() {
+            this.isOwnProfile = duenoId != null && duenoId.equals(currentUserId);
+    
+            if (this.isOwnProfile) {
+                toolbarTitle.setText("Perfil");            ivEditPerfil.setVisibility(View.VISIBLE);
             btnMensaje.setVisibility(View.GONE);
             ajustes_section.setVisibility(View.VISIBLE);
             soporte_section.setVisibility(View.VISIBLE);
@@ -425,6 +428,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         }
         com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
         setupBottomNavigation();
+        setupTabs(); // Call setupTabs here after isOwnProfile is determined
     }
 
     private void setupBottomNavigation() {

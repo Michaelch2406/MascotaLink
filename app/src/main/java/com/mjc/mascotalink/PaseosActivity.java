@@ -369,7 +369,60 @@ public class PaseosActivity extends AppCompatActivity {
                 return;
             }
 
-            if (querySnapshot == null || querySnapshot.isEmpty()) {
+            if (querySnapshot == null) return;
+
+            // Handle DocumentChanges to reactively remove items that changed state
+            boolean hasChanges = false;
+            for (com.google.firebase.firestore.DocumentChange dc : querySnapshot.getDocumentChanges()) {
+                switch (dc.getType()) {
+                    case REMOVED:
+                        // Item no longer matches query (e.g., state changed)
+                        // Find and remove from local list
+                        String removedId = dc.getDocument().getId();
+                        for (int i = 0; i < paseosList.size(); i++) {
+                            if (paseosList.get(i).getReservaId().equals(removedId)) {
+                                paseosList.remove(i);
+                                paseosAdapter.notifyItemRemoved(i);
+                                hasChanges = true;
+                                
+                                // If status changed to next logical step, try to redirect
+                                String newState = dc.getDocument().getString("estado");
+                                if (newState != null && !newState.equals(estadoActual)) {
+                                    // Simple logic: If we were in ACEPTADO/CONFIRMADO and it moved forward
+                                    // Just check active walk again or reload appropriate tab could be complex.
+                                    // For now, just removing it is correct visual feedback.
+                                    // If it became "EN_CURSO", checkActiveWalkAndRedirect will handle it on next onStart/Resume
+                                    // or we can trigger it here if we want instant redirect:
+                                    if ("EN_CURSO".equals(newState) || "EN_PROGRESO".equals(newState)) {
+                                        if (tabLayout != null) {
+                                            TabLayout.Tab tabEnCurso = tabLayout.getTabAt(2);
+                                            if (tabEnCurso != null && !tabEnCurso.isSelected()) {
+                                                tabEnCurso.select();
+                                            }
+                                        }
+                                    } else if (ReservaEstadoValidator.ESTADO_CONFIRMADO.equals(newState) 
+                                            && ReservaEstadoValidator.ESTADO_ACEPTADO.equals(estadoActual)) {
+                                         // Move to "Programados" tab automatically
+                                         TabLayout.Tab tabProgramados = tabLayout.getTabAt(1);
+                                         if (tabProgramados != null && !tabProgramados.isSelected()) {
+                                             tabProgramados.select();
+                                         }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        break;
+                    // ADDED/MODIFIED handled by full reload below for simplicity with joins
+                }
+            }
+            
+            if (hasChanges && querySnapshot.isEmpty()) {
+                 finalizarCarga();
+                 return;
+            }
+
+            if (querySnapshot.isEmpty()) {
                 paseosList.clear();
                 if (paseosAdapter != null) {
                     paseosAdapter.updateList(paseosList);
