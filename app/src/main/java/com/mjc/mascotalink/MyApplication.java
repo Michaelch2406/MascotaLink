@@ -15,6 +15,8 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.mjc.mascotalink.network.NetworkDetector;
 import com.mjc.mascotalink.network.SocketManager;
 import com.mjc.mascotalink.upload.UploadScheduler;
+import com.mjc.mascotalink.notifications.FcmTokenSyncWorker;
+import com.mjc.mascotalink.util.UnreadBadgeManager;
 
 import dagger.hilt.android.HiltAndroidApp;
 
@@ -103,6 +105,13 @@ public class MyApplication extends Application {
 
         // Reanudar subidas pendientes al arrancar (WorkManager ya las persistió)
         UploadScheduler.retryPendingUploads(this);
+
+        // Sincronizar FCM y badges si ya hay sesión
+        FirebaseAuth authInstance = FirebaseAuth.getInstance();
+        if (authInstance.getCurrentUser() != null) {
+            FcmTokenSyncWorker.enqueueNow(this);
+            UnreadBadgeManager.start(authInstance.getCurrentUser().getUid());
+        }
     }
 
     public static String getCurrentEmulatorHost(Context context) {

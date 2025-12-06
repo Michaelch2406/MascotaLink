@@ -347,6 +347,8 @@ public class LoginActivity extends AppCompatActivity {
     private void handleSessionAndRedirect(String uid, String rol, String verificacionEstado) {
         SessionManager sessionManager = new SessionManager(this);
         sessionManager.createSession(uid);
+        com.mjc.mascotalink.notifications.FcmTokenSyncWorker.enqueueNow(this);
+        com.mjc.mascotalink.util.UnreadBadgeManager.start(uid);
         if (cbRemember.isChecked()) {
             guardarPreferenciasLogin(uid, rol, verificacionEstado);
             if (pendingEmail != null && pendingPassword != null) {
