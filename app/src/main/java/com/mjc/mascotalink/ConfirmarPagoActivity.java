@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import android.util.Log;
 
 public class ConfirmarPagoActivity extends AppCompatActivity {
 
@@ -384,6 +385,7 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             
             String metodoPago = encryptedPrefs != null ? 
                 encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
+            Log.d(TAG, "Procesando pago con método: " + metodoPago);
             updates.put("metodo_pago", metodoPago);
 
             transaction.update(reservaRef, updates);

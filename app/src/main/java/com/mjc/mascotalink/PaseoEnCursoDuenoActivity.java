@@ -1129,10 +1129,15 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         String razaSafe = (raza != null && !raza.isEmpty()) ? raza : "raza no disponible";
         tvInfoMascota.setText(String.format("%s, %s", nombreSafe, razaSafe));
         
-        // FIX: Usar 'foto_url' que es el campo estándar, con fallback a 'foto_principal_url'
-        /* Nota: Si hay un ImageView para la mascota en esta pantalla, se cargar??a aquí.
-           Actualmente PaseoEnCursoDuenoActivity no tiene un ImageView específico para la mascota en el layout (ivFotoPaseador es para el paseador),
-           pero actualizamos este método para consistencia en caso de que se a??ada en el futuro o se use en otro lugar. */
+        // Cargar foto de la mascota si hay un ImageView disponible en el futuro
+        // Por ahora, solo logueamos la URL para depuración
+        String urlFoto = doc.getString("foto_url");
+        if (urlFoto == null || urlFoto.isEmpty()) {
+            urlFoto = doc.getString("foto_principal_url");
+        }
+        if (urlFoto != null) {
+            Log.d(TAG, "URL Foto Mascota: " + urlFoto);
+        }
     }
 
     private void actualizarInfoFecha(Date inicio) {

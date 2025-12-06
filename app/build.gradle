@@ -131,7 +131,7 @@ dependencies {
     testImplementation 'androidx.arch.core:core-testing:2.1.0'
 
 
-    annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5' // si usas Java (Glide requiere annotation processor)
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0' // Misma versión que la librería principal
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity

@@ -134,7 +134,7 @@ public class MyApplication extends Application {
         StrictMode.ThreadPolicy threadPolicy = new StrictMode.ThreadPolicy.Builder()
                 .detectAll() // Detectar todas las violaciones
                 .penaltyLog() // Log en logcat
-                .penaltyFlashScreen() // Flash rojo en pantalla (visual)
+                //.penaltyFlashScreen() // Flash rojo en pantalla (visual)
                 .build();
 
         // VM Policy: detecta leaks y problemas de recursos

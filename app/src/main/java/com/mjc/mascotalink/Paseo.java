@@ -9,6 +9,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
+import java.util.List;
+import java.util.Map;
+
 public class Paseo implements Serializable {
     private String reservaId;
     private String paseadorNombre, paseadorFoto, duenoNombre, mascotaNombre, mascotaFoto;
@@ -29,6 +32,13 @@ public class Paseo implements Serializable {
     private Date fecha_inicio_paseo;
     private Date fecha_fin_paseo;
     private String timeZone;
+
+    // Nuevos campos para evitar warnings de Firestore y soportar historial completo
+    private long tiempo_total_minutos;
+    private List<Map<String, Object>> ubicaciones;
+    private Map<String, Object> ubicacion_actual;
+    private Date ultima_actualizacion;
+    private String motivo_rechazo;
 
     public Paseo() {}
 
@@ -63,6 +73,18 @@ public class Paseo implements Serializable {
     public void setRazonCancelacion(String razonCancelacion) { this.razonCancelacion = razonCancelacion; }
     public String getTimeZone() { return timeZone; }
     public void setTimeZone(String timeZone) { this.timeZone = timeZone; }
+
+    // Getters y Setters para nuevos campos
+    public long getTiempo_total_minutos() { return tiempo_total_minutos; }
+    public void setTiempo_total_minutos(long tiempo_total_minutos) { this.tiempo_total_minutos = tiempo_total_minutos; }
+    public List<Map<String, Object>> getUbicaciones() { return ubicaciones; }
+    public void setUbicaciones(List<Map<String, Object>> ubicaciones) { this.ubicaciones = ubicaciones; }
+    public Map<String, Object> getUbicacion_actual() { return ubicacion_actual; }
+    public void setUbicacion_actual(Map<String, Object> ubicacion_actual) { this.ubicacion_actual = ubicacion_actual; }
+    public Date getUltima_actualizacion() { return ultima_actualizacion; }
+    public void setUltima_actualizacion(Date ultima_actualizacion) { this.ultima_actualizacion = ultima_actualizacion; }
+    public String getMotivo_rechazo() { return motivo_rechazo; }
+    public void setMotivo_rechazo(String motivo_rechazo) { this.motivo_rechazo = motivo_rechazo; }
     
     @PropertyName("id_mascota") public String getIdMascota() { return idMascota; }
     @PropertyName("id_mascota") public void setIdMascota(String id) { this.idMascota = id; }

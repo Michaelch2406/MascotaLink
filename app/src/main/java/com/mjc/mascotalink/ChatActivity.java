@@ -569,7 +569,7 @@ public class ChatActivity extends AppCompatActivity {
     private void actualizarMensajeEnAdapter(Mensaje mensajeActualizado) {
         // Buscar el mensaje en la lista del adapter y actualizarlo
         // Esto es más eficiente que notifyDataSetChanged()
-        adapter.notifyDataSetChanged(); // Por ahora, usar esto. Idealmente implementar con DiffUtil
+        adapter.updateMessage(mensajeActualizado);
     }
     
     /**

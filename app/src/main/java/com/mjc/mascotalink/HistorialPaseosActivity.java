@@ -256,7 +256,9 @@ public class HistorialPaseosActivity extends AppCompatActivity {
     
     private void filtrarListaLocalmente() {
         if (filtroEstado.equals("TODOS")) {
-            actualizarAdapter(listaPaseos);
+            // IMPORTANTE: Pasar una COPIA de la lista para que DiffUtil detecte el cambio.
+            // Si pasamos la misma referencia (listaPaseos), AsyncListDiffer ignora la actualización.
+            actualizarAdapter(new ArrayList<>(listaPaseos));
         } else {
             List<Paseo> filtrados = new ArrayList<>();
             for (Paseo p : listaPaseos) {

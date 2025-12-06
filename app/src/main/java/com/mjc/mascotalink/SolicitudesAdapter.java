@@ -62,8 +62,8 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
             return;
         }
 
-        // Nombre de mascota (usamos raza como fallback) y dueño
-        holder.tvNombreMascota.setText(solicitud.getMascotaRaza() != null ? solicitud.getMascotaRaza() : "Mascota");
+        // Nombre de mascota (usamos nombre, no raza) y dueño
+        holder.tvNombreMascota.setText(solicitud.getMascotaNombre() != null ? solicitud.getMascotaNombre() : "Mascota");
         holder.tvNombreDueno.setText(solicitud.getDuenoNombre() != null ? solicitud.getDuenoNombre() : "Usuario desconocido");
 
         // Fecha y hora en campos separados

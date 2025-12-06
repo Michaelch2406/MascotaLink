@@ -816,13 +816,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
               // Find and update the paseador
               boolean found = false;
-              java.util.List<PaseadorResultado> updatedList = new ArrayList<>(currentList);
-              for (int i = 0; i < updatedList.size(); i++) {
-                  PaseadorResultado paseador = updatedList.get(i);
-                  if (paseador.getId().equals(paseadorId)) {
-                      paseador.setEnLinea(isOnline);
+              java.util.List<PaseadorResultado> updatedList = new ArrayList<>();
+              for (int i = 0; i < currentList.size(); i++) {
+                  PaseadorResultado original = currentList.get(i);
+                  if (original.getId().equals(paseadorId)) {
+                      // Create a COPY of the item to modify, ensuring DiffUtil sees the change
+                      PaseadorResultado copy = new PaseadorResultado(original);
+                      copy.setEnLinea(isOnline);
+                      updatedList.add(copy);
                       found = true;
-                      break;
+                  } else {
+                      updatedList.add(original);
                   }
               }
 

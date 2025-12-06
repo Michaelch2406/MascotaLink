@@ -234,7 +234,7 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void configurarTerminosYCondiciones() {
-        String textoTerminos = "Acepto los <a href='#'>Términos y Condiciones</a> y la <a href='#'>Política de Privacidad</a>";
+        String textoTerminos = "Acepto los <a href='#'>Terminos y Condiciones</a> y la <a href='#'>Politica de Privacidad</a>";
         cbTerminos.setText(Html.fromHtml(textoTerminos, Html.FROM_HTML_MODE_LEGACY));
         cbTerminos.setMovementMethod(LinkMovementMethod.getInstance());
 

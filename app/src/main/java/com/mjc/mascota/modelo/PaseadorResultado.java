@@ -21,6 +21,23 @@ public class PaseadorResultado {
     // Constructor vacío necesario para Firebase
     public PaseadorResultado() {}
 
+    // Copy constructor
+    public PaseadorResultado(PaseadorResultado other) {
+        this.id = other.id;
+        this.nombre = other.nombre;
+        this.fotoUrl = other.fotoUrl;
+        this.calificacion = other.calificacion;
+        this.totalResenas = other.totalResenas;
+        this.zonaPrincipal = other.zonaPrincipal;
+        this.zonasServicio = other.zonasServicio; // Shallow copy of list is okay for this use case as we don't mutate the list
+        this.disponibleAhora = other.disponibleAhora;
+        this.anosExperiencia = other.anosExperiencia;
+        this.tarifaPorHora = other.tarifaPorHora;
+        this.zonasServicioGeoPoints = other.zonasServicioGeoPoints;
+        this.isFavorito = other.isFavorito;
+        this.enLinea = other.enLinea;
+    }
+
     // Getters
     public String getId() { return id; }
     public String getNombre() { return nombre; }

@@ -99,6 +99,31 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     /**
+     * Actualiza un mensaje existente en la lista de manera eficiente.
+     */
+    public void updateMessage(Mensaje updatedMessage) {
+        if (updatedMessage == null || updatedMessage.getId() == null) return;
+
+        List<ChatItem> currentList = new ArrayList<>(differ.getCurrentList());
+        int indexToUpdate = -1;
+
+        for (int i = 0; i < currentList.size(); i++) {
+            ChatItem item = currentList.get(i);
+            if (item instanceof Mensaje) {
+                if (Objects.equals(((Mensaje) item).getId(), updatedMessage.getId())) {
+                    indexToUpdate = i;
+                    break;
+                }
+            }
+        }
+
+        if (indexToUpdate != -1) {
+            currentList.set(indexToUpdate, updatedMessage);
+            differ.submitList(currentList);
+        }
+    }
+    
+    /**
      * Agrega un mensaje al final de la lista, insertando separador de fecha si es necesario.
      */
     public void agregarMensaje(Mensaje mensaje) {

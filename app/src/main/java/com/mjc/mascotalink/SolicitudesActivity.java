@@ -240,8 +240,10 @@ public class SolicitudesActivity extends AppCompatActivity {
 
                     if (mascotaDoc != null && mascotaDoc.exists()) {
                         solicitud.setMascotaRaza(mascotaDoc.getString("raza"));
+                        solicitud.setMascotaNombre(mascotaDoc.getString("nombre"));
                     } else {
                         solicitud.setMascotaRaza("Mascota");
+                        solicitud.setMascotaNombre("Mascota");
                     }
 
                     nuevasSolicitudes.add(solicitud);
@@ -415,6 +417,7 @@ public class SolicitudesActivity extends AppCompatActivity {
         private String duenoNombre;
         private String duenoFotoUrl;
         private String mascotaRaza;
+        private String mascotaNombre;
 
         public Solicitud() {}
 
@@ -442,5 +445,8 @@ public class SolicitudesActivity extends AppCompatActivity {
 
         public String getMascotaRaza() { return mascotaRaza; }
         public void setMascotaRaza(String mascotaRaza) { this.mascotaRaza = mascotaRaza; }
+
+        public String getMascotaNombre() { return mascotaNombre; }
+        public void setMascotaNombre(String mascotaNombre) { this.mascotaNombre = mascotaNombre; }
     }
 }
