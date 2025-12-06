@@ -329,6 +329,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         mMap = googleMap;
         mMap.getUiSettings().setAllGesturesEnabled(true); // Enable interaction in mini-map
         mMap.getUiSettings().setMapToolbarEnabled(false);
+        mMap.setBuildingsEnabled(true); // Ensure 3D buildings are enabled
 
         // CRITICAL FIX: Setup Touch Listener RECURSIVELY on the Map View hierarchy
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);
@@ -960,7 +961,14 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 700, null);
             }
         } catch (Exception e) {
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaUbicacionConocida, 16f));
+            com.google.android.gms.maps.model.CameraPosition cameraPosition =
+                    new com.google.android.gms.maps.model.CameraPosition.Builder()
+                            .target(ultimaUbicacionConocida)
+                            .zoom(17.5f)
+                            .bearing(0)
+                            .tilt(45)
+                            .build();
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
 
         actualizarEstadoUbicacionDueno(ubicacionesRaw);

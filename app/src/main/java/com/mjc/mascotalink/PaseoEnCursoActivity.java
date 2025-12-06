@@ -1386,6 +1386,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         mMap = googleMap;
         mMap.getUiSettings().setAllGesturesEnabled(true);
         mMap.getUiSettings().setMapToolbarEnabled(false);
+        mMap.setBuildingsEnabled(true); // Ensure 3D buildings are enabled
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);
         if (mapFragment != null && mapFragment.getView() != null) {
@@ -1454,7 +1455,16 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                     .title("Yo")
                     .icon(walkerIcon != null ? walkerIcon : BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                     .anchor(0.5f, 1.0f));
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(nuevaPos, 17f));
+            
+            // Initial move with tilt
+            com.google.android.gms.maps.model.CameraPosition cameraPosition =
+                    new com.google.android.gms.maps.model.CameraPosition.Builder()
+                            .target(nuevaPos)
+                            .zoom(17.5f)
+                            .bearing(0)
+                            .tilt(45)
+                            .build();
+            mMap.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         } else {
             animarMarcador(marcadorActual, nuevaPos);
             if (walkerIcon != null) {
