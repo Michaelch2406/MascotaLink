@@ -2,6 +2,7 @@ package com.mjc.mascotalink;
 
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.PropertyName;
+import com.google.firebase.firestore.GeoPoint; // Added import
 
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
@@ -36,7 +37,7 @@ public class Paseo implements Serializable {
     // Nuevos campos para evitar warnings de Firestore y soportar historial completo
     private long tiempo_total_minutos;
     private List<Map<String, Object>> ubicaciones;
-    private Map<String, Object> ubicacion_actual;
+    private GeoPoint ubicacion_actual; // Changed type
     private Date ultima_actualizacion;
     private String motivo_rechazo;
 
@@ -79,8 +80,8 @@ public class Paseo implements Serializable {
     public void setTiempo_total_minutos(long tiempo_total_minutos) { this.tiempo_total_minutos = tiempo_total_minutos; }
     public List<Map<String, Object>> getUbicaciones() { return ubicaciones; }
     public void setUbicaciones(List<Map<String, Object>> ubicaciones) { this.ubicaciones = ubicaciones; }
-    public Map<String, Object> getUbicacion_actual() { return ubicacion_actual; }
-    public void setUbicacion_actual(Map<String, Object> ubicacion_actual) { this.ubicacion_actual = ubicacion_actual; }
+    public GeoPoint getUbicacion_actual() { return ubicacion_actual; } // Updated getter
+    public void setUbicacion_actual(GeoPoint ubicacion_actual) { this.ubicacion_actual = ubicacion_actual; } // Updated setter
     public Date getUltima_actualizacion() { return ultima_actualizacion; }
     public void setUltima_actualizacion(Date ultima_actualizacion) { this.ultima_actualizacion = ultima_actualizacion; }
     public String getMotivo_rechazo() { return motivo_rechazo; }

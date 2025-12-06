@@ -107,6 +107,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnCancelar;
     private BottomNavigationView bottomNav;
+    private androidx.core.widget.NestedScrollView scrollContainer; // Added for map interaction handling
 
     // Adapters
     private FotosPaseoAdapter fotosAdapter;
@@ -313,10 +314,43 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         mMap = googleMap;
         mMap.getUiSettings().setAllGesturesEnabled(true); // Enable interaction in mini-map
         mMap.getUiSettings().setMapToolbarEnabled(false);
+
+        // CRITICAL FIX: Setup Touch Listener RECURSIVELY on the Map View hierarchy
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);
+        if (mapFragment != null && mapFragment.getView() != null) {
+            setTouchListenerRecursive(mapFragment.getView(), (v, event) -> {
+                int action = event.getAction();
+                switch (action) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                    case android.view.MotionEvent.ACTION_MOVE:
+                        // Disallow parent NestedScrollView to intercept
+                        if (scrollContainer != null) scrollContainer.requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case android.view.MotionEvent.ACTION_UP:
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        // Allow parent NestedScrollView to intercept again
+                        if (scrollContainer != null) scrollContainer.requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false; // IMPORTANT: Return false so the event still reaches the map
+            });
+        }
         
         // Initial empty state or loading
         if (!rutaPaseo.isEmpty()) {
             actualizarMapa(rutaPaseo, null);
+        }
+    }
+
+    // Helper method to recursively set OnTouchListener to all views in a hierarchy
+    private void setTouchListenerRecursive(View view, View.OnTouchListener listener) {
+        if (view == null) return;
+        view.setOnTouchListener(listener);
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup viewGroup = (android.view.ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                setTouchListenerRecursive(viewGroup.getChildAt(i), listener);
+            }
         }
     }
 
@@ -401,6 +435,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         btnCancelar = findViewById(R.id.btn_cancelar_paseo);
         bottomNav = findViewById(R.id.bottom_nav);
         tvUbicacionEstado = findViewById(R.id.tv_ubicacion_estado);
+        scrollContainer = findViewById(R.id.scroll_container); // Initialize scrollContainer
     }
     
     // ... (Rest of setup methods: setupToolbar, setupRecyclerViews, setupButtons, setupBottomNav) ...
