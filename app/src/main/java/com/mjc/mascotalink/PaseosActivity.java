@@ -131,6 +131,25 @@ public class PaseosActivity extends AppCompatActivity {
         com.mjc.mascotalink.util.UnreadBadgeManager.registerNav(bottomNav, this);
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Recargar datos al volver a la actividad para asegurar frescura
+        if (userRole != null) {
+            cargarPaseos(userRole);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Detener listener para ahorrar recursos y datos
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
+        }
+    }
+
     private void initViews() {
         ivBack = findViewById(R.id.btn_back);
         tabLayout = findViewById(R.id.tab_layout);
@@ -161,7 +180,10 @@ public class PaseosActivity extends AppCompatActivity {
                                 setupRecyclerView(userRole);
                                 setupTabLayout(userRole);
                             }
-                            cargarPaseos(userRole);
+                            // Solo cargar si la actividad está visible
+                            if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                                cargarPaseos(userRole);
+                            }
                         } else {
                             handleRoleError();
                         }
