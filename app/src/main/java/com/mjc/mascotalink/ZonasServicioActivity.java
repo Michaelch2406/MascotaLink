@@ -12,6 +12,8 @@ import android.location.Geocoder;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup; // Added this import
+import android.view.MotionEvent; // Added this import
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -25,6 +27,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.NestedScrollView; // Added this import
 
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -89,6 +92,8 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     private FirebaseFirestore db;
     private String currentUserId;
 
+    private NestedScrollView nestedScrollView; // New member variable
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,6 +125,7 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         sliderRadio = findViewById(R.id.slider_radio);
         tvRadio = findViewById(R.id.tv_radio);
         loadingOverlay = findViewById(R.id.loading_overlay);
+        nestedScrollView = findViewById(R.id.nested_scroll_view); // Initialize here
 
         btnAgregarZona.setEnabled(false);
         btnGuardarZonas.setEnabled(false);
@@ -250,6 +256,28 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
+
+        // Apply recursive touch listener to map view
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        if (mapFragment != null && mapFragment.getView() != null) {
+            setTouchListenerRecursive(mapFragment.getView(), (v, event) -> {
+                int action = event.getAction();
+                switch (action) {
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_MOVE:
+                        // Disallow parent NestedScrollView to intercept
+                        if (nestedScrollView != null) nestedScrollView.requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        // Allow parent NestedScrollView to intercept again
+                        if (nestedScrollView != null) nestedScrollView.requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false; // IMPORTANT: Return false so the event still reaches the map
+            });
+        }
+
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(ECUADOR_CENTER, 7));
         mMap.setOnMapClickListener(this::onMapClick);
@@ -586,6 +614,17 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
                 return null;
             }
             return null;
+        }
+    }
+
+    private void setTouchListenerRecursive(View view, View.OnTouchListener listener) {
+        if (view == null) return;
+        view.setOnTouchListener(listener);
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                setTouchListenerRecursive(viewGroup.getChildAt(i), listener);
+            }
         }
     }
 }
