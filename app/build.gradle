@@ -129,6 +129,7 @@ dependencies {
     // ========== LIFECYCLE & VIEWMODEL ==========
     implementation libs.lifecycle.viewmodel
     implementation libs.lifecycle.livedata
+    implementation libs.work.runtime
 
     // ========== DEPENDENCY INJECTION ==========
     implementation libs.hilt.android

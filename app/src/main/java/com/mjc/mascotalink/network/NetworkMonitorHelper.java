@@ -10,6 +10,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.mjc.mascotalink.upload.UploadScheduler;
+
 /**
  * Helper class ROBUSTO para monitorear cambios de red y gestionar reconexiones de WebSocket
  * con retry exponencial, detección de calidad de red, y límites de reintentos.
@@ -200,7 +202,10 @@ public class NetworkMonitorHelper {
                     new Handler(Looper.getMainLooper()).post(() -> callback.onNetworkTypeChanged(type));
                 }
 
-                // Notificar a la actividad
+                                // Reanudar subidas pendientes
+                UploadScheduler.retryPendingUploads(context);
+
+// Notificar a la actividad
                 if (callback != null) {
                     new Handler(Looper.getMainLooper()).post(() -> callback.onNetworkAvailable());
                 }

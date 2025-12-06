@@ -14,6 +14,7 @@ swiperefreshlayout = "1.1.0"
 # Lifecycle & ViewModel
 lifecycle = "2.6.1"
 archCoreTesting = "2.1.0"
+work = "2.9.0"
 
 # Firebase
 firebaseBom = "34.2.0"
@@ -110,6 +111,7 @@ swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefre
 # ========== LIFECYCLE & VIEWMODEL ==========
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle" }
+work-runtime = { group = "androidx.work", name = "work-runtime", version.ref = "work" }
 
 # ========== DEPENDENCY INJECTION ==========
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }

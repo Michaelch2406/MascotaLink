@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.mjc.mascotalink.network.NetworkDetector;
 import com.mjc.mascotalink.network.SocketManager;
+import com.mjc.mascotalink.upload.UploadScheduler;
 
 import dagger.hilt.android.HiltAndroidApp;
 
@@ -99,6 +100,9 @@ public class MyApplication extends Application {
 
         // Inicializar WebSocket
         SocketManager.getInstance(this).connect();
+
+        // Reanudar subidas pendientes al arrancar (WorkManager ya las persistió)
+        UploadScheduler.retryPendingUploads(this);
     }
 
     public static String getCurrentEmulatorHost(Context context) {
