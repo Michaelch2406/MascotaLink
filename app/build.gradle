@@ -40,6 +40,7 @@ android {
         debug {
             debuggable true
             minifyEnabled false
+            shrinkResources false
             applicationVariants.all { variant ->
                 variant.outputs.all { output ->
                     outputFileName = "Walki-debug.apk"
@@ -47,7 +48,9 @@ android {
             }
         }
         release {
-            minifyEnabled false
+            // Optimizaciones de APK: R8 + Resource Shrinking
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             applicationVariants.all { variant ->
                 variant.outputs.all { output ->
