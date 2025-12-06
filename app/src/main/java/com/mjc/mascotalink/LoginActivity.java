@@ -77,12 +77,13 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
+        setContentView(R.layout.activity_login);
+        bindViews();
+
         if (checkForSavedSession()) {
             return;
         }
 
-        setContentView(R.layout.activity_login);
-        bindViews();
         setupEmailField();
         setupPasswordField();
         setupClickListeners();
@@ -110,8 +111,14 @@ public class LoginActivity extends AppCompatActivity {
                 if (mAuth.getCurrentUser() != null) {
                     Log.d(TAG, "Sesión de Firebase activa y guardada encontrada. Redirigiendo...");
                     updateFcmTokenForCurrentUser();
-                    redirigirSegunRol(rol, verificacionEstado);
-                    return true;
+                    if (redirigirSegunRol(rol, verificacionEstado)) {
+                        return true;
+                    } else {
+                        // Usuario está en revisión o rechazado. Limpiar sesión y mostrar login.
+                        limpiarSesion();
+                        mAuth.signOut();
+                        return false;
+                    }
                 } else {
                     Log.d(TAG, "Firebase session is null, attempting re-authentication with saved credentials...");
                     String[] creds = credentialMgr.getCredentials();
@@ -135,40 +142,46 @@ public class LoginActivity extends AppCompatActivity {
                                                                 db.collection("paseadores").document(user.getUid()).get()
                                                                         .addOnSuccessListener(paseadorDoc -> {
                                                                             String reAuthVerificacionEstado = paseadorDoc.getString("verificacion_estado");
-                                                                            redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
+                                                                            if (!redirigirSegunRol(reAuthRol, reAuthVerificacionEstado)) {
+                                                                                handleAsyncLoginFailure();
+                                                                            }
                                                                         }).addOnFailureListener(e -> {
                                                                             Log.e(TAG, "Error re-fetching paseador verification status", e);
-                                                                            redirigirSegunRol(reAuthRol, null);
+                                                                            handleAsyncLoginFailure();
                                                                         });
                                                             } else if ("DUEÑO".equalsIgnoreCase(reAuthRol)) {
                                                                 db.collection("duenos").document(user.getUid()).get()
                                                                         .addOnSuccessListener(duenoDoc -> {
                                                                             String reAuthVerificacionEstado = duenoDoc.getString("verificacion_estado");
-                                                                            redirigirSegunRol(reAuthRol, reAuthVerificacionEstado);
+                                                                            if (!redirigirSegunRol(reAuthRol, reAuthVerificacionEstado)) {
+                                                                                handleAsyncLoginFailure();
+                                                                            }
                                                                         }).addOnFailureListener(e -> {
                                                                             Log.e(TAG, "Error re-fetching dueno verification status", e);
-                                                                            redirigirSegunRol(reAuthRol, null);
+                                                                            handleAsyncLoginFailure();
                                                                         });
                                                             } else {
-                                                                redirigirSegunRol(reAuthRol, null);
+                                                                if (!redirigirSegunRol(reAuthRol, null)) {
+                                                                    handleAsyncLoginFailure();
+                                                                }
                                                             }
                                                         } else {
                                                             Log.w(TAG, "User profile not found after re-authentication. Falling back to normal login.");
-                                                            credentialMgr.clearCredentials();
+                                                            handleAsyncLoginFailure();
                                                             mostrarError("Perfil de usuario no encontrado. Inicia sesión de nuevo.");
                                                         }
                                                     }).addOnFailureListener(e -> {
                                                         Log.e(TAG, "Error re-fetching user role after re-authentication", e);
-                                                        credentialMgr.clearCredentials();
+                                                        handleAsyncLoginFailure();
                                                         mostrarError("Error al cargar perfil. Inicia sesión de nuevo.");
                                                     });
                                         } else {
                                             Log.w(TAG, "Re-authentication successful, but UID mismatch or user null. Clearing credentials.");
-                                            credentialMgr.clearCredentials();
+                                            handleAsyncLoginFailure();
                                         }
                                     } else {
                                         Log.w(TAG, "Re-authentication failed: " + task.getException().getMessage());
-                                        credentialMgr.clearCredentials();
+                                        handleAsyncLoginFailure();
                                         mostrarError("Sesión expirada o credenciales no válidas. Por favor, inicia sesión de nuevo.");
                                     }
                                 });
@@ -185,6 +198,31 @@ public class LoginActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    private void handleAsyncLoginFailure() {
+        limpiarSesion();
+        mAuth.signOut();
+        // Reiniciar actividad para limpiar estado UI y listeners
+        startActivity(new Intent(this, LoginActivity.class));
+        finish();
+    }
+
+    private void limpiarSesion() {
+        if (credentialMgr != null) credentialMgr.clearCredentials();
+        try {
+            EncryptedPreferencesHelper prefs = EncryptedPreferencesHelper.getInstance(this);
+            prefs.remove("remember_device");
+            prefs.remove("recordar_sesion");
+            prefs.remove("user_id");
+            prefs.remove("uid");
+            prefs.remove("rol");
+            prefs.remove("verificacion_estado");
+            prefs.remove("email");
+            prefs.remove("token");
+        } catch (Exception e) {
+            Log.e(TAG, "limpiarSesion: error limpiando prefs", e);
+        }
     }
 
     private void bindViews() {
@@ -334,10 +372,10 @@ public class LoginActivity extends AppCompatActivity {
         redirigirSegunRol(rol, verificacionEstado);
     }
 
-    private void redirigirSegunRol(String rol, String estadoVerificacion) {
+    private boolean redirigirSegunRol(String rol, String estadoVerificacion) {
         if (rol == null) {
             mostrarError("Rol de usuario no válido");
-            return;
+            return false;
         }
 
         Intent intent = null;
@@ -406,7 +444,9 @@ public class LoginActivity extends AppCompatActivity {
         if (intent != null) {
             startActivity(intent);
             finish();
+            return true;
         }
+        return false;
     }
 
     private void guardarPreferenciasLogin(String uid, String rol, String verificacionEstado) {
