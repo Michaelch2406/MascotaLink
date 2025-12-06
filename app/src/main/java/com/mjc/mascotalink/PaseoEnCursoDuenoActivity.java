@@ -307,6 +307,21 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         if (btnAbrirMaps != null) {
             btnAbrirMaps.setOnClickListener(v -> abrirMapaFullscreen());
         }
+
+        View btnMapType = findViewById(R.id.btn_map_type);
+        if (btnMapType != null) {
+            btnMapType.setOnClickListener(v -> toggleMapType());
+        }
+    }
+
+    private void toggleMapType() {
+        if (mMap == null) return;
+        int currentType = mMap.getMapType();
+        if (currentType == GoogleMap.MAP_TYPE_NORMAL) {
+            mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+        } else {
+            mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+        }
     }
 
     @Override
@@ -940,7 +955,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                                 .target(ultimaUbicacionConocida)
                                 .zoom(zoomLevel)
                                 .bearing(0)
-                                .tilt(45)
+                                .tilt(45) // Fixed 3D tilt
                                 .build();
                 mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 700, null);
             }

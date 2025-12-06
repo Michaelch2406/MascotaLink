@@ -299,6 +299,21 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         if (btnAbrirMaps != null) {
             btnAbrirMaps.setOnClickListener(v -> abrirMapaFullscreen());
         }
+
+        View btnMapType = findViewById(R.id.btn_map_type);
+        if (btnMapType != null) {
+            btnMapType.setOnClickListener(v -> toggleMapType());
+        }
+    }
+
+    private void toggleMapType() {
+        if (mMap == null) return;
+        int currentType = mMap.getMapType();
+        if (currentType == GoogleMap.MAP_TYPE_NORMAL) {
+            mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+        } else {
+            mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+        }
     }
 
     private void abrirMapaFullscreen() {
@@ -1445,8 +1460,15 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             if (walkerIcon != null) {
                 marcadorActual.setIcon(walkerIcon);
             }
-            // Mover cámara si se aleja del centro
-            // mMap.animateCamera(CameraUpdateFactory.newLatLng(nuevaPos)); // Optional: Auto-follow
+            // Auto-follow with perspective preference
+            com.google.android.gms.maps.model.CameraPosition cameraPosition =
+                    new com.google.android.gms.maps.model.CameraPosition.Builder()
+                            .target(nuevaPos)
+                            .zoom(17.5f)
+                            .bearing(0)
+                            .tilt(45) // Fixed 3D tilt
+                            .build();
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 700, null);
         }
     }
 
