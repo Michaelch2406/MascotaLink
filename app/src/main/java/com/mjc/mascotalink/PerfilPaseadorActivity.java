@@ -908,6 +908,41 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 || (Math.abs(gp.getLatitude()) < 0.0001 && Math.abs(gp.getLongitude()) < 0.0001);
     }
 
+    private void loadVideoThumbnail(String url, ImageView imageView) {
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+
+        executor.execute(() -> {
+            android.graphics.Bitmap bitmap = null;
+            android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+            try {
+                // Use a map for headers if needed, usually empty for public URLs
+                retriever.setDataSource(url, new HashMap<String, String>());
+                // Extract frame at 1 second (1000000 microseconds)
+                bitmap = retriever.getFrameAtTime(1000000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+            } catch (Exception e) {
+                Log.e(TAG, "Error retrieving video thumbnail", e);
+            } finally {
+                try {
+                    retriever.release();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+
+            final android.graphics.Bitmap finalBitmap = bitmap;
+            handler.post(() -> {
+                if (finalBitmap != null) {
+                    imageView.setImageBitmap(finalBitmap);
+                    imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                } else {
+                    // Fallback or keep placeholder
+                    imageView.setImageResource(R.drawable.galeria_paseos_foto1); 
+                }
+            });
+        });
+    }
+
     private void attachDataListeners() {
         detachDataListeners();
         DocumentReference userDocRef = db.collection("usuarios").document(paseadorId);
@@ -967,8 +1002,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 if (perfil != null) {
                     tvDescripcion.setText((String) perfil.get("motivacion"));
                     videoUrl = MyApplication.getFixedUrl((String) perfil.get("video_presentacion_url"));
-                    if (!isDestroyed() && !isFinishing()) {
-                        Glide.with(this).load(videoUrl).centerCrop().placeholder(R.drawable.galeria_paseos_foto1).into(ivVideoThumbnail);
+                    if (!isDestroyed() && !isFinishing() && videoUrl != null && !videoUrl.isEmpty()) {
+                        // Usar método manual para cargar thumbnail
+                        loadVideoThumbnail(videoUrl, ivVideoThumbnail);
                     }
                     // Experiencia Anos logic removed
                     tvExperienciaDesde.setVisibility(View.GONE);
