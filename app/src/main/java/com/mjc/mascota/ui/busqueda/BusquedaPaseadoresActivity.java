@@ -301,45 +301,72 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void setupMapInteraction() {
-        if (viewMapOverlay == null || contentScrollView == null || mapContainer == null) return;
+        if (viewMapOverlay == null || mapContainer == null) return;
 
-        // 1. Al tocar el overlay (mapa en estado colapsado)
+        // Al tocar el overlay (mapa en estado colapsado), expandir
         viewMapOverlay.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            if (event.getAction() == MotionEvent.ACTION_UP) {
                 if (!isMapExpanded) {
                     expandMap();
                 }
-                // Bloquear scroll del padre para permitir mover el mapa
-                contentScrollView.requestDisallowInterceptTouchEvent(true);
-                // Ocultar overlay para permitir interacción directa con el mapa
-                viewMapOverlay.setVisibility(View.GONE); 
-                return true; // Consumir evento
+                return true;
             }
-            return false;
-        });
-
-        // 2. Al tocar fuera (en el ScrollView) o hacer scroll
-        contentScrollView.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_MOVE) {
-                if (isMapExpanded) {
-                    // Si se toca fuera, colapsar y restaurar overlay
-                    collapseMap();
-                    contentScrollView.requestDisallowInterceptTouchEvent(false);
-                    viewMapOverlay.setVisibility(View.VISIBLE);
-                }
-            }
-            return false; // No consumir, permitir scroll normal
+            return true; // Consumir todos los eventos
         });
     }
 
     private void expandMap() {
         isMapExpanded = true;
         animateMapHeight(MAP_HEIGHT_COLLAPSED_DP, MAP_HEIGHT_EXPANDED_DP);
+
+        // 1. Centrar el mapa en la pantalla
+        if (contentScrollView != null) {
+            contentScrollView.post(() -> {
+                contentScrollView.smoothScrollTo(0, mapContainer.getTop());
+            });
+        }
+        
+        // 2. Deshabilitar SwipeRefresh
+        if (swipeRefreshLayout != null) swipeRefreshLayout.setEnabled(false);
+        
+        // 3. Cambiar FAB a modo "Cerrar"
+        if (fabRefreshMap != null) {
+            fabRefreshMap.setImageResource(R.drawable.ic_close);
+            fabRefreshMap.setOnClickListener(v -> collapseMap());
+        }
+        
+        // 4. Ocultar overlay
+        if (viewMapOverlay != null) viewMapOverlay.setVisibility(View.GONE);
     }
 
     private void collapseMap() {
         isMapExpanded = false;
         animateMapHeight(MAP_HEIGHT_EXPANDED_DP, MAP_HEIGHT_COLLAPSED_DP);
+        
+        // 1. Restaurar scroll del NestedScrollView (no es necesario quitar listener si no se puso)
+        
+        // 2. Habilitar SwipeRefresh
+        if (swipeRefreshLayout != null) swipeRefreshLayout.setEnabled(true);
+        
+        // 3. Restaurar FAB a modo "Ubicación"
+        if (fabRefreshMap != null) {
+            fabRefreshMap.setImageResource(R.drawable.ic_my_location);
+            fabRefreshMap.setOnClickListener(v -> {
+                Toast.makeText(this, "Actualizando mapa...", Toast.LENGTH_SHORT).show();
+                if (mMap != null) {
+                    if (lastKnownLocation != null) {
+                        LatLng myLoc = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+                         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, 13));
+                         cargarPaseadoresCercanos(myLoc, currentSearchRadiusKm);
+                    } else {
+                        startLocationUpdates();
+                    }
+                }
+            });
+        }
+
+        // 4. Mostrar overlay
+        if (viewMapOverlay != null) viewMapOverlay.setVisibility(View.VISIBLE);
     }
 
     private void animateMapHeight(int startDp, int endDp) {
@@ -1022,6 +1049,30 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
+        // CRITICAL FIX: Setup Touch Listener RECURSIVELY on the Map View hierarchy
+        // This ensures we catch touches on the SurfaceView/TextureView itself
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);
+        if (mapFragment != null && mapFragment.getView() != null) {
+            setTouchListenerRecursive(mapFragment.getView(), (v, event) -> {
+                int action = event.getAction();
+                switch (action) {
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_MOVE:
+                        // "Congelar" el scroll padre inmediatamente al detectar intención de interactuar con el mapa
+                        if (contentScrollView != null) contentScrollView.requestDisallowInterceptTouchEvent(true);
+                        if (swipeRefreshLayout != null) swipeRefreshLayout.requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        // Liberar el scroll padre
+                        if (contentScrollView != null) contentScrollView.requestDisallowInterceptTouchEvent(false);
+                        if (swipeRefreshLayout != null) swipeRefreshLayout.requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false; // IMPORTANTE: Devolver false para que el evento llegue al mapa
+            });
+        }
+
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setScrollGesturesEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
@@ -1042,7 +1093,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 // Second click: Navigate to Profile
                 Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
                 intent.putExtra("paseadorId", clickedId);
-                intent.putExtra("viewerRole", "DUE??O");
+                intent.putExtra("viewerRole", "DUEÑO");
                 startActivity(intent);
                 return true;
             } else {
@@ -1053,19 +1104,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(item.getPosition(), 15f));
                 
                 // Re-render to update icons (Normal vs Selected)
-                // We iterate to find the marker and update it specifically if possible, 
-                // but simplest robust way is to re-render or update specific markers.
-                // Since createCompositeBitmap checks 'selectedPaseadorId', we just need to refresh.
                 Marker marker = renderer.getMarker(item);
                 if (marker != null) {
                     marker.showInfoWindow();
-                    // Force icon update
-                    renderer.onBeforeClusterItemRendered(item, new MarkerOptions()); // Trigger icon update logic manually or rely on cluster re-render
-                    // Actually, we need to manually update the icon on the existing marker object
                     renderer.updateMarkerIcon(marker, item);
                 }
                 
-                // Deselect others (reset their icons)
+                // Deselect others
                 for (PaseadorClusterItem otherItem : mClusterManager.getAlgorithm().getItems()) {
                     if (!otherItem.getPaseadorMarker().getPaseadorId().equals(clickedId)) {
                         Marker otherMarker = renderer.getMarker(otherItem);
@@ -1075,7 +1120,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     }
                 }
                 
-                return true; // Consume event (don't do default behavior)
+                return true; // Consume event
             }
         });
 
@@ -1093,16 +1138,15 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             }
         });
 
-        // Configurar el InfoWindowAdapter personalizado (Keep existing logic for InfoWindow click as backup)
+        // Configurar el InfoWindowAdapter personalizado
         PaseadorInfoWindowAdapter infoWindowAdapter = new PaseadorInfoWindowAdapter(BusquedaPaseadoresActivity.this, paseadorId -> {
             Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
             intent.putExtra("paseadorId", paseadorId);
-            intent.putExtra("viewerRole", "DUE??O");
+            intent.putExtra("viewerRole", "DUEÑO");
             startActivity(intent);
         });
         mMap.setInfoWindowAdapter(infoWindowAdapter);
         mMap.setOnInfoWindowClickListener(marker -> {
-            // Delegar el click al listener del adaptador
             if (marker.getTag() instanceof String) {
                 infoWindowAdapter.getListener().onVerPerfilClick((String) marker.getTag());
             }
@@ -1123,11 +1167,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             LatLng center = mMap.getCameraPosition().target;
             float zoom = mMap.getCameraPosition().zoom;
 
-            // Optimization: Reload only if moved > 500m or zoom changed significantly (> 1 level)
             boolean shouldReload = false;
             if (lastLoadedLocation == null) {
                 shouldReload = true;
-            } else {
+            }
+            else {
                 float[] results = new float[1];
                 Location.distanceBetween(lastLoadedLocation.getLatitude(), lastLoadedLocation.getLongitude(),
                         center.latitude, center.longitude, results);
@@ -1137,7 +1181,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             }
 
             if (shouldReload) {
-                // Update optimization variables
                 if (lastLoadedLocation == null) {
                     lastLoadedLocation = new Location("map_center");
                 }
@@ -1152,6 +1195,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 mapDebounceHandler.postDelayed(mapDebounceRunnable, MAP_DEBOUNCE_DELAY_MS);
             }
         });
+    }
+
+    private void setTouchListenerRecursive(View view, View.OnTouchListener listener) {
+        if (view == null) return;
+        view.setOnTouchListener(listener);
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                setTouchListenerRecursive(viewGroup.getChildAt(i), listener);
+            }
+        }
     }
 
     private void checkLocationPermission() {
@@ -1184,7 +1238,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         if (bottomNav == null) {
             return;
         }
-        String roleForNav = userRole != null ? userRole : "DUE??O";
+        String roleForNav = userRole != null ? userRole : "DUEÑO";
         BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, R.id.menu_search);
     }
 

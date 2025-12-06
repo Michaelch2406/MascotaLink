@@ -1186,7 +1186,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         android.widget.RadioGroup rgMotivos = view.findViewById(R.id.rg_motivos);
         com.google.android.material.textfield.TextInputEditText etOtroMotivo = view.findViewById(R.id.et_otro_motivo);
         
-        // Ocultar opci??n de "??xito" para el due??o
+        // Ocultar opci??n de "??xito" para el dueño
         View rbExito = view.findViewById(R.id.rb_finalizar_exito);
         if (rbExito != null) rbExito.setVisibility(View.GONE);
         
