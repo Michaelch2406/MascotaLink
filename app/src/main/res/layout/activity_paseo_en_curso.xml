@@ -194,6 +194,26 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
+            <ProgressBar
+                android:id="@+id/pb_progreso_paseo"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="12dp"
+                android:progress="50"
+                android:progressTint="#12A3ED" />
+
+            <TextView
+                android:id="@+id/tv_distancia"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:text="Distancia: 0.00 km"
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
             <LinearLayout
                 android:id="@+id/layout_timer"
                 android:layout_width="match_parent"
@@ -329,6 +349,46 @@
                 android:visibility="gone"
                 tools:listitem="@layout/item_foto_paseo"
                 tools:visibility="visible" />
+
+            <!-- SECCIÓN 5: MAPA DEL RECORRIDO -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginStart="4dp"
+                style="@style/TextAppearance.Mascota.Label"
+                android:text="Mapa del recorrido" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="300dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="80dp"
+                android:background="@drawable/bg_round_12"
+                android:clipToOutline="true">
+
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/map_fragment"
+                    android:name="com.google.android.gms.maps.SupportMapFragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+                
+                <!-- Botón flotante "Abrir" visual -->
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/btn_abrir_maps"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|start"
+                    android:layout_margin="16dp"
+                    app:fabSize="mini"
+                    app:backgroundTint="@color/white"
+                    app:tint="@color/blue_primary"
+                    android:src="@drawable/ic_google"
+                    android:contentDescription="Abrir en Google Maps"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+            </FrameLayout>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

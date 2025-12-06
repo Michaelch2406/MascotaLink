@@ -75,12 +75,35 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+// Maps & Graphics Imports
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.JointType;
+import com.google.android.gms.maps.model.RoundCap;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
+import android.animation.ValueAnimator;
+import android.view.animation.LinearInterpolator;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.Polyline;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.MotionEvent;
+
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
-public class PaseoEnCursoActivity extends AppCompatActivity {
+public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "PaseoEnCursoActivity";
     private static final int REQUEST_CODE_CAMERA = 2101;
@@ -121,8 +144,19 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
     private MaterialButton btnAdjuntar;
     private BottomNavigationView bottomNav;
     private ProgressBar pbLoading;
+    private ProgressBar pbProgresoPaseo;
+    private TextView tvDistancia; // New: Distance TextView
+    private androidx.core.widget.NestedScrollView scrollContainer; // New: Scroll Container
 
     private FotosPaseoAdapter fotosAdapter;
+
+    // Map Variables
+    private GoogleMap mMap;
+    private Marker marcadorActual;
+    private Marker marcadorInicio;
+    private Polyline polylineRuta;
+    private List<LatLng> rutaPaseo = new ArrayList<>();
+    private double distanciaTotalMetros = 0.0;
 
     private final Handler timerHandler = new Handler(Looper.getMainLooper());
     private Runnable timerRunnable;
@@ -187,6 +221,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         });
 
         initViews();
+        setupMap(); // Initialize Map
         setupToolbar();
         setupRecyclerView();
         setupNotesWatcher();
@@ -240,6 +275,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         tvSegundos = findViewById(R.id.tv_segundos);
         tvEstado = findViewById(R.id.tv_estado);
         tvUbicacionEstado = findViewById(R.id.tv_ubicacion_estado);
+        tvDistancia = findViewById(R.id.tv_distancia); // Initialize
         ivFotoMascota = findViewById(R.id.iv_foto_mascota);
         etNotas = findViewById(R.id.et_notas);
         rvFotos = findViewById(R.id.rv_fotos);
@@ -249,6 +285,37 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         btnAdjuntar = findViewById(R.id.btn_adjuntar_fotos);
         bottomNav = findViewById(R.id.bottom_nav);
         pbLoading = findViewById(R.id.pb_loading);
+        pbProgresoPaseo = findViewById(R.id.pb_progreso_paseo);
+        scrollContainer = findViewById(R.id.scroll_container); // Initialize
+    }
+
+    private void setupMap() {
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map_fragment);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        }
+        View btnAbrirMaps = findViewById(R.id.btn_abrir_maps);
+        if (btnAbrirMaps != null) {
+            btnAbrirMaps.setOnClickListener(v -> abrirMapaFullscreen());
+        }
+    }
+
+    private void abrirMapaFullscreen() {
+        if (lastSentLocation == null) {
+            Toast.makeText(this, "Ubicacion no disponible", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Uri gmmIntentUri = Uri.parse("geo:" + lastSentLocation.getLatitude() + "," + lastSentLocation.getLongitude() + "?q=" + lastSentLocation.getLatitude() + "," + lastSentLocation.getLongitude() + "(Mi Ubicación)");
+        Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+        mapIntent.setPackage("com.google.android.apps.maps");
+        if (mapIntent.resolveActivity(getPackageManager()) != null) {
+            startActivity(mapIntent);
+        } else {
+            Uri browserUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + lastSentLocation.getLatitude() + "," + lastSentLocation.getLongitude());
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, browserUri);
+            startActivity(browserIntent);
+        }
     }
 
     private void setupToolbar() {
@@ -1135,6 +1202,19 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
                         tvMinutos.setText(String.format(Locale.getDefault(), "%02d", minutos));
                         tvSegundos.setText(String.format(Locale.getDefault(), "%02d", segundos));
                         
+                        // Update progress bar
+                        if (duracionMinutos > 0) {
+                            long totalMillis = duracionMinutos * 60 * 1000;
+                            int progress = (int) ((elapsed * 100) / totalMillis);
+                            if (pbProgresoPaseo != null) {
+                                pbProgresoPaseo.setProgress(Math.min(progress, 100));
+                            }
+                        } else {
+                            if (pbProgresoPaseo != null) {
+                                pbProgresoPaseo.setProgress(0);
+                            }
+                        }
+
                         // Logic for button visibility (70% of agreed duration)
                         if (duracionMinutos > 0) {
                              long totalMillis = duracionMinutos * 60 * 1000;
@@ -1286,6 +1366,123 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         stopLocationService();
     }
 
+    @Override
+    public void onMapReady(@NonNull GoogleMap googleMap) {
+        mMap = googleMap;
+        mMap.getUiSettings().setAllGesturesEnabled(true);
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);
+        if (mapFragment != null && mapFragment.getView() != null) {
+            setTouchListenerRecursive(mapFragment.getView(), (v, event) -> {
+                int action = event.getAction();
+                switch (action) {
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_MOVE:
+                        if (scrollContainer != null) scrollContainer.requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (scrollContainer != null) scrollContainer.requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false;
+            });
+        }
+
+        if (!rutaPaseo.isEmpty()) {
+            actualizarMapa(rutaPaseo.get(rutaPaseo.size() - 1));
+        }
+    }
+
+    private void setTouchListenerRecursive(View view, View.OnTouchListener listener) {
+        if (view == null) return;
+        view.setOnTouchListener(listener);
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                setTouchListenerRecursive(viewGroup.getChildAt(i), listener);
+            }
+        }
+    }
+
+    private void actualizarMapa(LatLng nuevaPos) {
+        if (mMap == null || nuevaPos == null) return;
+
+        // Actualizar Polilínea
+        if (polylineRuta == null) {
+            PolylineOptions polylineOptions = new PolylineOptions()
+                    .add(nuevaPos) // Start with current
+                    .width(16f)
+                    .color(ContextCompat.getColor(this, R.color.blue_primary))
+                    .jointType(JointType.ROUND)
+                    .startCap(new RoundCap())
+                    .endCap(new RoundCap())
+                    .geodesic(true);
+            polylineRuta = mMap.addPolyline(polylineOptions);
+        }
+        polylineRuta.setPoints(rutaPaseo);
+
+        // Marcador de Inicio
+        if (marcadorInicio == null && !rutaPaseo.isEmpty()) {
+            marcadorInicio = mMap.addMarker(new MarkerOptions()
+                    .position(rutaPaseo.get(0))
+                    .title("Inicio")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+        }
+
+        // Marcador Actual (Paseador)
+        BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120);
+        if (marcadorActual == null) {
+            marcadorActual = mMap.addMarker(new MarkerOptions()
+                    .position(nuevaPos)
+                    .title("Yo")
+                    .icon(walkerIcon != null ? walkerIcon : BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    .anchor(0.5f, 1.0f));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(nuevaPos, 17f));
+        } else {
+            animarMarcador(marcadorActual, nuevaPos);
+            if (walkerIcon != null) {
+                marcadorActual.setIcon(walkerIcon);
+            }
+            // Mover cámara si se aleja del centro
+            // mMap.animateCamera(CameraUpdateFactory.newLatLng(nuevaPos)); // Optional: Auto-follow
+        }
+    }
+
+    private void animarMarcador(Marker marker, LatLng destino) {
+        if (marker == null || destino == null) return;
+        final LatLng inicio = marker.getPosition();
+        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(700);
+        animator.setInterpolator(new LinearInterpolator());
+        animator.addUpdateListener(animation -> {
+            float t = (float) animation.getAnimatedValue();
+            double lat = inicio.latitude + (destino.latitude - inicio.latitude) * t;
+            double lng = inicio.longitude + (destino.longitude - inicio.longitude) * t;
+            marker.setPosition(new LatLng(lat, lng));
+        });
+        animator.start();
+    }
+
+    private BitmapDescriptor getResizedBitmapDescriptor(int resourceId, int widthPx) {
+        try {
+            Drawable drawable = ContextCompat.getDrawable(this, resourceId);
+            if (drawable == null) return null;
+            int intrinsicWidth = drawable.getIntrinsicWidth();
+            int intrinsicHeight = drawable.getIntrinsicHeight();
+            if (widthPx <= 0 || intrinsicWidth <= 0 || intrinsicHeight <= 0) return null;
+            int heightPx = (int) ((float) widthPx * ((float) intrinsicHeight / (float) intrinsicWidth));
+            drawable.setBounds(0, 0, widthPx, heightPx);
+            Bitmap bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            drawable.draw(canvas);
+            return BitmapDescriptorFactory.fromBitmap(bitmap);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private void procesarUbicacion(android.location.Location location) {
         if (reservaRef == null || location == null) return;
 
@@ -1294,6 +1491,24 @@ public class PaseoEnCursoActivity extends AppCompatActivity {
         
         Log.d(TAG, "📍 Procesando ubicación (UI): " + 
               location.getLatitude() + ", Lng: " + location.getLongitude());
+
+        // Distancia y Ruta
+        if (lastSentLocation != null) {
+            float dist = location.distanceTo(lastSentLocation);
+            if (dist > 5) { // Filtrar ruido mínimo
+                distanciaTotalMetros += dist;
+                if (tvDistancia != null) {
+                    tvDistancia.setText(String.format(Locale.getDefault(), "Distancia: %.2f km", distanciaTotalMetros / 1000));
+                }
+            }
+        }
+        
+        LatLng nuevaLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+        // Solo agregar si se movió o es el primero
+        if (rutaPaseo.isEmpty() || (lastSentLocation != null && location.distanceTo(lastSentLocation) > 2)) {
+             rutaPaseo.add(nuevaLatLng);
+             actualizarMapa(nuevaLatLng);
+        }
 
         boolean isGoodPrecision = accuracy > 0 && accuracy <= 100f;
         boolean isAcceptablePrecision = accuracy > 100f && accuracy <= 500f;
