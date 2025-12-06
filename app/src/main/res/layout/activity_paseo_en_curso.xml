@@ -388,6 +388,21 @@
                     android:clickable="true"
                     android:focusable="true"/>
 
+                <!-- Botón flotante "Tipo Mapa" -->
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/btn_map_type"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="16dp"
+                    app:fabSize="mini"
+                    app:backgroundTint="@color/white"
+                    app:tint="@color/gray_dark"
+                    android:src="@drawable/ic_map"
+                    android:contentDescription="Cambiar tipo de mapa"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
             </FrameLayout>
 
         </LinearLayout>

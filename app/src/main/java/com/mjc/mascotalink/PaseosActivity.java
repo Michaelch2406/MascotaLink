@@ -99,9 +99,6 @@ public class PaseosActivity extends AppCompatActivity {
     }
 
     private void checkActiveWalkAndRedirect(String role) {
-        if (hasCheckedActiveWalk) return;
-        hasCheckedActiveWalk = true;
-
         String fieldToFilter = "PASEADOR".equalsIgnoreCase(role) ? "id_paseador" : "id_dueno";
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
 
@@ -112,10 +109,10 @@ public class PaseosActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
-                        // Si hay un paseo activo, cambiar automáticamente a la pestaña "En Curso" (Índice 2)
+                        // Si hay un paseo activo, priorizar la pestaña "En Curso" (Índice 2)
                         if (tabLayout != null) {
                             TabLayout.Tab tabEnCurso = tabLayout.getTabAt(2);
-                            if (tabEnCurso != null) {
+                            if (tabEnCurso != null && !tabEnCurso.isSelected()) {
                                 tabEnCurso.select();
                             }
                         }
@@ -136,6 +133,9 @@ public class PaseosActivity extends AppCompatActivity {
         super.onStart();
         // Recargar datos al volver a la actividad para asegurar frescura
         if (userRole != null) {
+            // Prioridad: Verificar si hay paseo activo para redirigir
+            checkActiveWalkAndRedirect(userRole);
+            
             cargarPaseos(userRole);
         }
     }
@@ -355,8 +355,6 @@ public class PaseosActivity extends AppCompatActivity {
         }
 
         swipeRefresh.setRefreshing(true);
-        // No limpiamos la lista inmediatamente para evitar parpadeos visuales bruscos
-        // paseosList.clear(); 
 
         String fieldToFilter = "PASEADOR".equalsIgnoreCase(role) ? "id_paseador" : "id_dueno";
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
@@ -383,6 +381,7 @@ public class PaseosActivity extends AppCompatActivity {
             List<Paseo> paseosTemporales = new ArrayList<>();
             List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
 
+            // 1. Carga INMEDIATA de datos básicos (hace que la lista sea responsiva)
             for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                 Paseo paseo = doc.toObject(Paseo.class);
                 if (paseo == null) continue;
@@ -390,8 +389,13 @@ public class PaseosActivity extends AppCompatActivity {
                 String mascotaId = doc.getString("id_mascota");
                 paseo.setIdMascota(mascotaId);
 
+                // Placeholders visuales mientras carga el detalle
+                if (paseo.getPaseadorNombre() == null) paseo.setPaseadorNombre("Cargando...");
+                if (paseo.getMascotaNombre() == null) paseo.setMascotaNombre("...");
+
                 paseosTemporales.add(paseo);
 
+                // Preparar carga de detalles
                 DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
                 String currentMascotaId = paseo.getIdMascota();
@@ -406,46 +410,67 @@ public class PaseosActivity extends AppCompatActivity {
                 }
             }
 
-            // Ordenar preliminarmente (aunque se reordenará después de obtener detalles)
+            // Ordenar preliminarmente y mostrar YA
             java.util.Collections.sort(paseosTemporales, (p1, p2) -> {
                 if (p1.getFecha() == null || p2.getFecha() == null) return 0;
                 return p2.getFecha().compareTo(p1.getFecha());
             });
+            
+            paseosList.clear();
+            paseosList.addAll(paseosTemporales);
+            if (paseosAdapter != null) {
+                paseosAdapter.updateList(paseosList);
+            }
+            // No finalizamos carga (swipeRefresh) todavía, esperamos a los detalles
+            if (paseosList.isEmpty()) {
+                 rvPaseos.setVisibility(View.GONE);
+                 emptyView.setVisibility(View.VISIBLE);
+                 actualizarTextoVacio();
+            } else {
+                 rvPaseos.setVisibility(View.VISIBLE);
+                 emptyView.setVisibility(View.GONE);
+            }
 
+
+            // 2. Carga ASÍNCRONA de detalles (enriquece la lista existente)
             if (tareas.isEmpty()) {
                 finalizarCarga();
                 return;
             }
 
             Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
-                if (isDestroyed() || isFinishing()) return; // Evitar crashes si la actividad ya cerró
+                if (isDestroyed() || isFinishing()) return;
 
                 Date now = new Date();
-                List<Paseo> nuevosPaseos = new ArrayList<>();
+                List<Paseo> nuevosPaseosConDetalles = new ArrayList<>();
+                boolean algunCambioDeEstado = false;
 
-                for (int i = 0; i < paseosTemporales.size(); i++) {
-                    Paseo paseo = paseosTemporales.get(i);
+                // Reconstruimos la lista iterando sobre el snapshot original para mantener el orden e índices
+                List<DocumentSnapshot> docs = querySnapshot.getDocuments();
+                int resultIndex = 0;
 
-                    // Auto-corrección de estado (EN_CURSO)
-                    // Nota: Al hacer update aquí, se disparará el listener de nuevo,
-                    // lo cual es correcto para que el item se mueva de lista automáticamente.
+                for (DocumentSnapshot doc : docs) {
+                    Paseo paseo = doc.toObject(Paseo.class);
+                    if (paseo == null) {
+                        resultIndex += 3;
+                        continue;
+                    }
+                    paseo.setReservaId(doc.getId());
+                    paseo.setIdMascota(doc.getString("id_mascota"));
+
+                    // Auto-corrección de estado
                     if ("CONFIRMADO".equals(paseo.getEstado()) && paseo.getHora_inicio() != null && paseo.getHora_inicio().before(now)) {
-                        // Verificamos si ya hicimos la transición para evitar bucles infinitos de actualizaciones locales
-                        // aunque Firestore maneja esto bien, es buena práctica.
-                        // En este caso, simplemente lanzamos el update. El listener se encargará de refrescar la UI
-                        // cuando el servidor confirme el cambio.
-                        db.collection("reservas").document(paseo.getReservaId())
+                         db.collection("reservas").document(paseo.getReservaId())
                                 .update("estado", "EN_CURSO", 
                                         "hasTransitionedToInCourse", true,
                                         "fecha_inicio_paseo", new com.google.firebase.Timestamp(paseo.getHora_inicio()));
-                        // No lo añadimos a la lista local actual porque ya no pertenece a este estado (si estamos en CONFIRMADO)
-                        // O si estamos en EN_CURSO, aparecerá en la siguiente actualización del listener.
-                        continue; 
+                        // NO hacemos continue, lo mostramos igual para evitar huecos hasta que se refresque
+                        algunCambioDeEstado = true;
                     }
 
-                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(i * 3);
-                    DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(i * 3 + 1);
-                    DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(i * 3 + 2);
+                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(resultIndex++);
+                    DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(resultIndex++);
+                    DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(resultIndex++);
 
                     if (paseadorDoc != null && paseadorDoc.exists()) {
                         paseo.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
@@ -460,24 +485,27 @@ public class PaseosActivity extends AppCompatActivity {
                     } else {
                         paseo.setMascotaNombre("Mascota no encontrada");
                     }
-                    nuevosPaseos.add(paseo);
+                    nuevosPaseosConDetalles.add(paseo);
                 }
 
-                java.util.Collections.sort(nuevosPaseos, (p1, p2) -> {
+                java.util.Collections.sort(nuevosPaseosConDetalles, (p1, p2) -> {
                     if (p1.getFecha() == null || p2.getFecha() == null) return 0;
                     return p2.getFecha().compareTo(p1.getFecha());
                 });
 
                 paseosList.clear();
-                paseosList.addAll(nuevosPaseos);
+                paseosList.addAll(nuevosPaseosConDetalles);
 
                 if (paseosAdapter != null) {
                     paseosAdapter.updateList(paseosList);
                 }
                 finalizarCarga();
+                
+                // Si hubo cambios de estado automáticos, refrescamos tabs si es necesario o dejamos que el listener actúe
+                
             }).addOnFailureListener(ex -> {
                Log.e(TAG, "Error cargando detalles relacionados", ex);
-               finalizarCarga();
+               finalizarCarga(); // Finalizar spinner incluso si fallan los detalles
             });
         });
     }
