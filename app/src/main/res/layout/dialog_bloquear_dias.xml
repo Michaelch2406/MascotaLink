@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Título -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/bloqueo_title"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/gray_dark"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Navegación del calendario -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnMesAnterior"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:text="◄"
+                android:textSize="18sp"
+                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+
+            <TextView
+                android:id="@+id/tvMesActual"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Diciembre 2025"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:textColor="@color/gray_dark"/>
+
+            <Button
+                android:id="@+id/btnMesSiguiente"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:text="►"
+                android:textSize="18sp"
+                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+        </LinearLayout>
+
+        <!-- Calendario -->
+        <GridView
+            android:id="@+id/gridCalendario"
+            android:layout_width="match_parent"
+            android:layout_height="280dp"
+            android:numColumns="7"
+            android:horizontalSpacing="4dp"
+            android:verticalSpacing="4dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Selecciona múltiples fechas tocando los días"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Razón del bloqueo -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/bloqueo_razon"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="8dp"/>
+
+        <EditText
+            android:id="@+id/etRazon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/bloqueo_razon_hint"
+            android:inputType="text"
+            android:maxLines="1"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Tipo de bloqueo -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/bloqueo_tipo"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="8dp"/>
+
+        <RadioGroup
+            android:id="@+id/rgTipoBloqueo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <RadioButton
+                android:id="@+id/rbDiaCompleto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/bloqueo_tipo_dia_completo"
+                android:buttonTint="@color/checkbox_blue"/>
+
+            <RadioButton
+                android:id="@+id/rbManana"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/bloqueo_tipo_manana"
+                android:buttonTint="@color/checkbox_blue"/>
+
+            <RadioButton
+                android:id="@+id/rbTarde"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/bloqueo_tipo_tarde"
+                android:buttonTint="@color/checkbox_blue"/>
+        </RadioGroup>
+
+        <!-- Repetición -->
+        <CheckBox
+            android:id="@+id/cbRepetir"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/bloqueo_repetir"
+            android:buttonTint="@color/checkbox_blue"
+            android:layout_marginBottom="8dp"/>
+
+        <RadioGroup
+            android:id="@+id/rgFrecuencia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="32dp"
+            android:paddingEnd="0dp"
+            android:layout_marginBottom="24dp"
+            android:visibility="gone">
+
+            <RadioButton
+                android:id="@+id/rbSemanal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/bloqueo_frecuencia_semanal"
+                android:buttonTint="@color/checkbox_blue"/>
+
+            <RadioButton
+                android:id="@+id/rbMensual"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/bloqueo_frecuencia_mensual"
+                android:buttonTint="@color/checkbox_blue"/>
+        </RadioGroup>
+
+        <!-- Botones de acción -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/btnCancelar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/disponibilidad_cancelar"
+                android:textColor="@color/text_secondary"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+
+            <Button
+                android:id="@+id/btnBloquear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/bloqueo_confirmar"
+                android:backgroundTint="@color/error_red"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

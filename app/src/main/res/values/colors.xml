@@ -53,4 +53,14 @@
     <color name="red_100">#FFEBEE</color>
     <color name="orange_100">#FFF3E0</color>
     <color name="gray_100">#F3F4F6</color>
+
+    <!-- Calendario Disponibilidad Colors -->
+    <color name="calendario_disponible">#C8E6C9</color> <!-- Verde claro -->
+    <color name="calendario_bloqueado">#FFCDD2</color> <!-- Rojo claro -->
+    <color name="calendario_sin_configurar">#EEEEEE</color> <!-- Gris -->
+    <color name="calendario_parcial">#FFF9C4</color> <!-- Amarillo -->
+    <color name="calendario_hoy_border">#1976D2</color> <!-- Azul -->
+    <color name="calendario_seleccionado">#BBDEFB</color> <!-- Azul claro -->
+    <color name="calendario_pasado">#F5F5F5</color> <!-- Gris muy claro -->
+    <color name="calendario_text_disabled">#BDBDBD</color> <!-- Gris texto -->
 </resources>

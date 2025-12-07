@@ -109,6 +109,7 @@ public class HorarioSelectorAdapter extends RecyclerView.Adapter<HorarioSelector
         private int minutos; // 0
         private boolean disponible;
         private String disponibilidadEstado; // "DISPONIBLE", "LIMITADO", "NO_DISPONIBLE"
+        private String razonNoDisponible; // Razón por la que no está disponible
 
         public Horario() {}
 
@@ -134,5 +135,8 @@ public class HorarioSelectorAdapter extends RecyclerView.Adapter<HorarioSelector
 
         public String getDisponibilidadEstado() { return disponibilidadEstado; }
         public void setDisponibilidadEstado(String estado) { this.disponibilidadEstado = estado; }
+
+        public String getRazonNoDisponible() { return razonNoDisponible; }
+        public void setRazonNoDisponible(String razonNoDisponible) { this.razonNoDisponible = razonNoDisponible; }
     }
 }

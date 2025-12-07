@@ -128,6 +128,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private List<Circle> mapCircles = new ArrayList<>();
     private View btnNotificaciones, btnMetodosPago, btnPrivacidad, btnCentroAyuda, btnTerminos, btnMisPaseos;
     private androidx.appcompat.widget.SwitchCompat switchNotificaciones;
+    private androidx.appcompat.widget.SwitchCompat switchAceptaSolicitudes;
+    private View bannerNoAceptando;
     private String metodoPagoId;
     private View skeletonLayout;
     private NestedScrollView scrollViewContent;
@@ -282,10 +284,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         rvGalleryPreview.setAdapter(galleryPreviewAdapter);
         
         llEmptyReviews = findViewById(R.id.ll_empty_reviews);
+        bannerNoAceptando = findViewById(R.id.banner_no_aceptando);
 
         btnMisPaseos = findViewById(R.id.btn_mis_paseos);
         btnNotificaciones = findViewById(R.id.btn_notificaciones);
         switchNotificaciones = findViewById(R.id.switch_notificaciones);
+        switchAceptaSolicitudes = findViewById(R.id.switch_acepta_solicitudes);
         btnMetodosPago = findViewById(R.id.btn_metodos_pago);
         btnPrivacidad = findViewById(R.id.btn_privacidad);
         btnCentroAyuda = findViewById(R.id.btn_centro_ayuda);
@@ -464,6 +468,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             }
         });
 
+        // Configurar switch de aceptar solicitudes
+        switchAceptaSolicitudes.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (buttonView.isPressed()) { // Solo si el cambio fue por el usuario
+                actualizarAceptaSolicitudes(isChecked);
+            }
+        });
+
         btnMetodosPago.setOnClickListener(v -> {
              Intent intent = new Intent(PerfilPaseadorActivity.this, MetodoPagoActivity.class);
              if (metodoPagoId != null && !metodoPagoId.isEmpty()) {
@@ -502,6 +513,83 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             clipboard.setPrimaryClip(clip);
             Toast.makeText(this, label + " copiado al portapapeles", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void cargarAceptaSolicitudes() {
+        if (currentUserId == null || switchAceptaSolicitudes == null) return;
+
+        db.collection("usuarios").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists() && switchAceptaSolicitudes != null) {
+                        Boolean aceptaSolicitudes = documentSnapshot.getBoolean("acepta_solicitudes");
+                        // Por defecto es true si no existe el campo
+                        boolean acepta = aceptaSolicitudes == null || aceptaSolicitudes;
+                        switchAceptaSolicitudes.setChecked(acepta);
+                        actualizarVisibilidadBanner(acepta);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar acepta_solicitudes", e);
+                    // Por defecto activado
+                    if (switchAceptaSolicitudes != null) {
+                        switchAceptaSolicitudes.setChecked(true);
+                    }
+                    actualizarVisibilidadBanner(true);
+                });
+    }
+
+    private void actualizarAceptaSolicitudes(boolean acepta) {
+        if (currentUserId == null || switchAceptaSolicitudes == null) return;
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("acepta_solicitudes", acepta);
+
+        db.collection("usuarios").document(currentUserId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    String mensaje = acepta ?
+                            "Ahora aceptas nuevas solicitudes" :
+                            "Pausado: No aceptarás nuevas solicitudes";
+                    Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+                    actualizarVisibilidadBanner(acepta);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al actualizar acepta_solicitudes", e);
+                    Toast.makeText(this, "Error al actualizar configuración", Toast.LENGTH_SHORT).show();
+                    // Revertir el switch
+                    if (switchAceptaSolicitudes != null) {
+                        switchAceptaSolicitudes.setChecked(!acepta);
+                    }
+                });
+    }
+
+    private void actualizarVisibilidadBanner(boolean aceptaSolicitudes) {
+        if (bannerNoAceptando != null) {
+            // Mostrar banner solo cuando NO acepta solicitudes
+            bannerNoAceptando.setVisibility(aceptaSolicitudes ? View.GONE : View.VISIBLE);
+        }
+    }
+
+    private void cargarEstadoAceptaSolicitudesParaVisitante() {
+        if (paseadorId == null) return;
+
+        db.collection("usuarios").document(paseadorId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Boolean aceptaSolicitudes = documentSnapshot.getBoolean("acepta_solicitudes");
+                        // Por defecto es true si no existe el campo
+                        boolean acepta = aceptaSolicitudes == null || aceptaSolicitudes;
+                        actualizarVisibilidadBanner(acepta);
+                    } else {
+                        // Por defecto ocultar el banner
+                        actualizarVisibilidadBanner(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar acepta_solicitudes del paseador", e);
+                    // Por defecto ocultar el banner
+                    actualizarVisibilidadBanner(true);
+                });
     }
 
     private void setupAuthListener() {
@@ -1061,6 +1149,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         cargarDisponibilidad(paseadorId);
         cargarZonasServicio(paseadorId);
         cargarMetodoPagoPredeterminado(currentUserId != null ? currentUserId : paseadorId);
+
+        // Cargar switch de aceptar solicitudes (solo para perfil propio)
+        if (isOwnProfile) {
+            cargarAceptaSolicitudes();
+        } else {
+            // Si estamos viendo el perfil de otro paseador, verificar si acepta solicitudes
+            // para mostrar el banner de advertencia
+            cargarEstadoAceptaSolicitudesParaVisitante();
+        }
 
         // Setup presence listeners if viewing someone else's profile
         if (!isOwnProfile && paseadorId != null) {

@@ -234,6 +234,47 @@
                 </LinearLayout>
             </RelativeLayout>
 
+            <!-- Banner: No Aceptando Solicitudes -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/banner_no_aceptando"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#FFF3CD"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#FFE69C"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="12dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_dialog_info"
+                        app:tint="#856404" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/banner_no_aceptando"
+                        android:textColor="#856404"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Stats Grid -->
             <GridLayout
                 android:layout_width="match_parent"
@@ -778,6 +819,33 @@
                             android:textColor="@color/gray_dark"
                             app:drawableStartCompat="@drawable/ic_walk"
                             app:drawableTint="@color/gray_dark" />
+
+                        <LinearLayout
+                            android:id="@+id/container_aceptar_solicitudes"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="?attr/selectableItemBackground"
+                            android:paddingVertical="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:drawablePadding="12dp"
+                                android:text="@string/switch_aceptar_solicitudes"
+                                android:textColor="@color/gray_dark"
+                                app:drawableStartCompat="@drawable/ic_check_circle"
+                                app:drawableTint="@color/gray_dark" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switch_acepta_solicitudes"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+
+                        </LinearLayout>
 
                         <LinearLayout
                             android:id="@+id/btn_notificaciones"

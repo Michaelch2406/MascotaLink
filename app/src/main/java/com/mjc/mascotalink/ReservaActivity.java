@@ -29,6 +29,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.utils.DisponibilidadHelper;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.text.SimpleDateFormat;
@@ -48,6 +49,7 @@ public class ReservaActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String currentUserId;
     private com.mjc.mascotalink.network.NetworkMonitorHelper networkMonitor;
+    private DisponibilidadHelper disponibilidadHelper;
 
     // Views
     private ImageView ivBack;
@@ -104,6 +106,7 @@ public class ReservaActivity extends AppCompatActivity {
         // cierra la actividad para prevenir operaciones inválidas.
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        disponibilidadHelper = new DisponibilidadHelper();
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(this, "Error: Sesión de usuario no válida.", Toast.LENGTH_LONG).show();
@@ -246,12 +249,19 @@ public class ReservaActivity extends AppCompatActivity {
                 tipoReserva = "PUNTUAL";
                 cargarVistaMensual();
             }
-            
+
             if (calendarioContainer != null) {
                 calendarioContainer.setVisibility(View.VISIBLE);
             }
 
+            // Resetear selección de fecha y horario al cambiar de modo para evitar inconsistencias
+            fechaSeleccionada = null;
+            horarioSeleccionado = null;
+            tvFechaSeleccionada.setVisibility(View.GONE);
+            llDisponibilidad.setVisibility(View.GONE);
+
             actualizarTextoDuracion();
+            verificarCamposCompletos();
             // --- FIX FIN ---
         });
 
@@ -503,6 +513,7 @@ public class ReservaActivity extends AppCompatActivity {
 
     private void cargarHorariosDisponibles() {
         if (paseadorId == null || fechaSeleccionada == null) return;
+        if (horarioList == null || horarioList.isEmpty()) return;
 
         Calendar today = Calendar.getInstance();
         Calendar selectedCal = Calendar.getInstance();
@@ -511,19 +522,72 @@ public class ReservaActivity extends AppCompatActivity {
         boolean isToday = selectedCal.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
                 selectedCal.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR);
 
+        // Validar disponibilidad para cada horario usando DisponibilidadHelper
         for (HorarioSelectorAdapter.Horario horario : horarioList) {
+            if (horario == null) continue;
+            // Primero verificar si es hora pasada
             if (isToday && (horario.getHora() < today.get(Calendar.HOUR_OF_DAY) ||
                     (horario.getHora() == today.get(Calendar.HOUR_OF_DAY) &&
                             horario.getMinutos() <= today.get(Calendar.MINUTE)))) {
                 horario.setDisponible(false);
+                horario.setDisponibilidadEstado("NO_DISPONIBLE");
+                continue;
+            }
+
+            // Validar disponibilidad del paseador
+            if (duracionMinutos > 0) {
+                validarDisponibilidadHorario(horario);
             } else {
+                // Si no hay duración seleccionada, marcar como disponible por defecto
                 horario.setDisponible(true);
+                horario.setDisponibilidadEstado("DISPONIBLE");
             }
         }
 
         if (horarioAdapter != null) {
             horarioAdapter.notifyDataSetChanged();
         }
+    }
+
+    private void validarDisponibilidadHorario(HorarioSelectorAdapter.Horario horario) {
+        if (horario == null || fechaSeleccionada == null || paseadorId == null) return;
+
+        // Calcular hora de inicio y fin
+        String horaInicio = String.format(Locale.US, "%02d:%02d", horario.getHora(), horario.getMinutos());
+
+        // Calcular hora de fin basada en la duración
+        Calendar calFin = Calendar.getInstance();
+        calFin.setTime(fechaSeleccionada);
+        calFin.set(Calendar.HOUR_OF_DAY, horario.getHora());
+        calFin.set(Calendar.MINUTE, horario.getMinutos());
+        calFin.add(Calendar.MINUTE, duracionMinutos);
+
+        String horaFin = String.format(Locale.US, "%02d:%02d",
+            calFin.get(Calendar.HOUR_OF_DAY),
+            calFin.get(Calendar.MINUTE));
+
+        // Validar con DisponibilidadHelper
+        disponibilidadHelper.esPaseadorDisponible(paseadorId, fechaSeleccionada, horaInicio, horaFin)
+            .addOnSuccessListener(resultado -> {
+                if (resultado.disponible) {
+                    horario.setDisponible(true);
+                    horario.setDisponibilidadEstado("DISPONIBLE");
+                } else {
+                    horario.setDisponible(false);
+                    horario.setDisponibilidadEstado("NO_DISPONIBLE");
+                    horario.setRazonNoDisponible(resultado.razon);
+                }
+
+                if (horarioAdapter != null) {
+                    horarioAdapter.notifyDataSetChanged();
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error validando disponibilidad para horario: " + horaInicio, e);
+                // En caso de error, marcar como disponible para no bloquear la UI
+                horario.setDisponible(true);
+                horario.setDisponibilidadEstado("DISPONIBLE");
+            });
     }
 
     private String formatearHora(int hora, int minuto) {
@@ -536,15 +600,20 @@ public class ReservaActivity extends AppCompatActivity {
         llDisponibilidad.setVisibility(View.VISIBLE);
         switch (horario.getDisponibilidadEstado()) {
             case "DISPONIBLE":
-                tvDisponibilidad.setText("✓ Disponible");
+                tvDisponibilidad.setText("✓ Paseador disponible en este horario");
                 tvDisponibilidad.setTextColor(getResources().getColor(R.color.green_success));
                 break;
             case "LIMITADO":
-                tvDisponibilidad.setText("⚠ Limitado");
+                tvDisponibilidad.setText("⚠ Disponibilidad limitada");
                 tvDisponibilidad.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
                 break;
             case "NO_DISPONIBLE":
-                tvDisponibilidad.setText("No disponible");
+                String razon = horario.getRazonNoDisponible();
+                String mensaje = "✗ Paseador no disponible en este horario";
+                if (razon != null && !razon.isEmpty()) {
+                    mensaje = "✗ " + razon;
+                }
+                tvDisponibilidad.setText(mensaje);
                 tvDisponibilidad.setTextColor(getResources().getColor(R.color.red_error));
                 break;
         }
@@ -608,6 +677,10 @@ public class ReservaActivity extends AppCompatActivity {
         botonSeleccionado.setSelected(true);
         botonSeleccionado.setTextColor(getResources().getColor(android.R.color.white));
         actualizarResumenCosto();
+
+        // Re-validar disponibilidad de horarios con la nueva duración
+        cargarHorariosDisponibles();
+
         verificarCamposCompletos();
     }
 
@@ -648,6 +721,10 @@ public class ReservaActivity extends AppCompatActivity {
             btnPersonalizado.setSelected(true);
             btnPersonalizado.setTextColor(getResources().getColor(android.R.color.white));
             actualizarResumenCosto();
+
+            // Re-validar disponibilidad de horarios con la nueva duración
+            cargarHorariosDisponibles();
+
             verificarCamposCompletos();
             dialog.dismiss();
         });
@@ -700,7 +777,8 @@ public class ReservaActivity extends AppCompatActivity {
         boolean todosCompletos = mascotaSeleccionada != null &&
                 fechaSeleccionada != null &&
                 horarioSeleccionado != null &&
-                duracionMinutos > 0;
+                duracionMinutos > 0 &&
+                horarioSeleccionado.isDisponible(); // Verificar que el horario esté disponible
         btnConfirmarReserva.setEnabled(todosCompletos);
     }
 

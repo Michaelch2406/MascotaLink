@@ -162,4 +162,81 @@
     <string name="message_sent">Enviado</string>
     <string name="message_delivered">Entregado</string>
     <string name="message_read">Leído</string>
+
+    <!-- Disponibilidad -->
+    <string name="disponibilidad_title">Mi Disponibilidad</string>
+    <string name="disponibilidad_subtitle">Configura tus horarios de trabajo</string>
+    <string name="disponibilidad_horario_estandar">Horario Estándar</string>
+    <string name="disponibilidad_bloquear_dias">Bloquear Días</string>
+    <string name="disponibilidad_horarios_especiales">Horarios Específicos</string>
+    <string name="disponibilidad_configurar">Configurar</string>
+    <string name="disponibilidad_editar">Editar</string>
+    <string name="disponibilidad_agregar">Agregar</string>
+    <string name="disponibilidad_guardar">Guardar</string>
+    <string name="disponibilidad_cancelar">Cancelar</string>
+
+    <!-- Horario por Defecto -->
+    <string name="horario_default_title">Configurar Horario Por Defecto</string>
+    <string name="horario_default_dias">Días de la semana</string>
+    <string name="horario_default_hora_inicio">Hora de inicio</string>
+    <string name="horario_default_hora_fin">Hora de fin</string>
+    <string name="horario_default_validacion_diferencia">La diferencia mínima debe ser de 1 hora</string>
+    <string name="horario_default_validacion_horario">La hora de fin debe ser mayor que la hora de inicio</string>
+    <string name="horario_default_validacion_nocturno">No se permiten horarios después de las 11:00 PM</string>
+    <string name="horario_default_validacion_dia">Debe seleccionar al menos un día</string>
+    <string name="horario_default_ejemplo">Lun-Vie: %1$s - %2$s</string>
+
+    <!-- Bloquear Días -->
+    <string name="bloqueo_title">Bloquear Días Específicos</string>
+    <string name="bloqueo_seleccionar_fechas">Seleccionar fechas</string>
+    <string name="bloqueo_razon">Razón del bloqueo (opcional)</string>
+    <string name="bloqueo_razon_hint">Vacaciones, Compromiso personal, etc.</string>
+    <string name="bloqueo_tipo">Tipo de bloqueo</string>
+    <string name="bloqueo_tipo_dia_completo">Todo el día</string>
+    <string name="bloqueo_tipo_manana">Solo mañana (antes de 12:00 PM)</string>
+    <string name="bloqueo_tipo_tarde">Solo tarde (después de 12:00 PM)</string>
+    <string name="bloqueo_repetir">Repetir este bloqueo</string>
+    <string name="bloqueo_frecuencia_semanal">Cada semana</string>
+    <string name="bloqueo_frecuencia_mensual">Cada mes</string>
+    <string name="bloqueo_confirmar">Bloquear Fechas</string>
+    <string name="bloqueo_confirmacion">%1$d días bloqueados exitosamente</string>
+
+    <!-- Horario Especial -->
+    <string name="horario_especial_title">Horario Especial para Día Específico</string>
+    <string name="horario_especial_fecha">Fecha seleccionada</string>
+    <string name="horario_especial_solo_este_dia">Usar este horario solo para este día</string>
+    <string name="horario_especial_guardar">Guardar Horario Especial</string>
+    <string name="horario_especial_nota">Nota (opcional)</string>
+    <string name="horario_especial_nota_hint">Solo tarde este día, etc.</string>
+
+    <!-- Validación Disponibilidad -->
+    <string name="validacion_disponible">Paseador disponible en este horario</string>
+    <string name="validacion_no_disponible">Paseador no disponible en este horario</string>
+    <string name="validacion_pausado">Paseador pausó servicios temporalmente</string>
+    <string name="validacion_dia_bloqueado">Día bloqueado</string>
+    <string name="validacion_fuera_horario">Fuera de horario de trabajo (%1$s - %2$s)</string>
+    <string name="validacion_no_trabaja_dia">No trabaja los %1$s</string>
+    <string name="validacion_ver_disponibilidad">Ver Disponibilidad del Paseador</string>
+    <string name="validacion_horarios_alternativos">Horarios disponibles para esta fecha:</string>
+
+    <!-- Switch Global -->
+    <string name="switch_aceptar_solicitudes">Aceptar nuevas solicitudes</string>
+    <string name="switch_aceptar_desc">Desactiva temporalmente si no puedes tomar reservas</string>
+    <string name="banner_no_aceptando">No aceptando reservas temporalmente</string>
+
+    <!-- Vista Pública Disponibilidad -->
+    <string name="disponibilidad_publica_title">Disponibilidad</string>
+    <string name="disponibilidad_horario_habitual">Horario habitual</string>
+    <string name="disponibilidad_proximos_bloqueados">Próximos días bloqueados</string>
+    <string name="disponibilidad_no_bloqueados">No disponible: %1$s</string>
+    <string name="disponibilidad_solicitar_paseo">Solicitar Paseo</string>
+
+    <!-- Días de la semana (cortos para calendario) -->
+    <string name="dia_lunes_corto">L</string>
+    <string name="dia_martes_corto">M</string>
+    <string name="dia_miercoles_corto">X</string>
+    <string name="dia_jueves_corto">J</string>
+    <string name="dia_viernes_corto">V</string>
+    <string name="dia_sabado_corto">S</string>
+    <string name="dia_domingo_corto">D</string>
 </resources>

@@ -8,7 +8,9 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CalendarioAdapter extends BaseAdapter {
 
@@ -17,6 +19,12 @@ public class CalendarioAdapter extends BaseAdapter {
     private Calendar currentMonth;
     private int selectedPosition = -1;
     private OnDateSelectedListener listener;
+
+    // Para DisponibilidadActivity
+    private Set<Date> diasBloqueados = new HashSet<>();
+    private Set<Date> diasParciales = new HashSet<>();
+    private Set<Date> fechasSeleccionadas = new HashSet<>();
+    private boolean seleccionMultiple = false;
 
     public interface OnDateSelectedListener {
         void onDateSelected(Date date, int position);
@@ -74,13 +82,27 @@ public class CalendarioAdapter extends BaseAdapter {
             today.set(Calendar.MILLISECOND, 0);
 
             boolean isPast = date.before(today.getTime());
+            Date normalizedDate = normalizarFecha(date);
+            boolean isBloqueado = diasBloqueados.contains(normalizedDate);
+            boolean isParcial = diasParciales.contains(normalizedDate);
+            boolean isSeleccionado = seleccionMultiple ? fechasSeleccionadas.contains(normalizedDate) : (selectedPosition == position);
 
             if (isPast) {
                 // Día pasado: gris opaco, deshabilitado
                 tvDia.setTextColor(context.getResources().getColor(R.color.gray_disabled));
                 tvDia.setBackgroundResource(android.R.color.transparent);
                 tvDia.setEnabled(false);
-            } else if (selectedPosition == position) {
+            } else if (isBloqueado) {
+                // Día bloqueado: fondo rojo claro
+                tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_bloqueado));
+                tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
+                tvDia.setEnabled(true);
+            } else if (isParcial) {
+                // Día parcial: fondo amarillo
+                tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_parcial));
+                tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
+                tvDia.setEnabled(true);
+            } else if (isSeleccionado) {
                 // Día seleccionado: fondo azul, texto blanco
                 tvDia.setBackgroundResource(R.drawable.bg_calendario_seleccionado);
                 tvDia.setTextColor(context.getResources().getColor(android.R.color.white));
@@ -96,8 +118,21 @@ public class CalendarioAdapter extends BaseAdapter {
         // Click listener
         tvDia.setOnClickListener(v -> {
             if (date != null && tvDia.isEnabled()) {
-                selectedPosition = position;
-                notifyDataSetChanged(); // Forzar redibujado de toda la grilla
+                if (seleccionMultiple) {
+                    // Modo selección múltiple
+                    Date normalizedDate = normalizarFecha(date);
+                    if (fechasSeleccionadas.contains(normalizedDate)) {
+                        fechasSeleccionadas.remove(normalizedDate);
+                    } else {
+                        fechasSeleccionadas.add(normalizedDate);
+                    }
+                    notifyDataSetChanged();
+                } else {
+                    // Modo selección simple
+                    selectedPosition = position;
+                    notifyDataSetChanged();
+                }
+
                 if (listener != null) {
                     listener.onDateSelected(date, position);
                 }
@@ -105,6 +140,17 @@ public class CalendarioAdapter extends BaseAdapter {
         });
 
         return convertView;
+    }
+
+    private Date normalizarFecha(Date fecha) {
+        if (fecha == null) return null;
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(fecha);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
     }
 
     public void setSelectedPosition(int position) {
@@ -121,5 +167,41 @@ public class CalendarioAdapter extends BaseAdapter {
 
     public int getSelectedPosition() {
         return selectedPosition;
+    }
+
+    // Métodos para DisponibilidadActivity
+    public void setDiasBloqueados(Set<Date> diasBloqueados) {
+        this.diasBloqueados = diasBloqueados != null ? diasBloqueados : new HashSet<>();
+        notifyDataSetChanged();
+    }
+
+    public void setDiasParciales(Set<Date> diasParciales) {
+        this.diasParciales = diasParciales != null ? diasParciales : new HashSet<>();
+        notifyDataSetChanged();
+    }
+
+    public Date getFecha(int position) {
+        if (position >= 0 && position < dates.size()) {
+            return dates.get(position);
+        }
+        return null;
+    }
+
+    // Métodos para DialogBloquearDiasFragment
+    public void setSeleccionMultiple(boolean seleccionMultiple) {
+        this.seleccionMultiple = seleccionMultiple;
+        if (!seleccionMultiple) {
+            fechasSeleccionadas.clear();
+        }
+        notifyDataSetChanged();
+    }
+
+    public void setFechasSeleccionadas(Set<Date> fechasSeleccionadas) {
+        this.fechasSeleccionadas = fechasSeleccionadas != null ? fechasSeleccionadas : new HashSet<>();
+        notifyDataSetChanged();
+    }
+
+    public Set<Date> getFechasSeleccionadas() {
+        return new HashSet<>(fechasSeleccionadas);
     }
 }
