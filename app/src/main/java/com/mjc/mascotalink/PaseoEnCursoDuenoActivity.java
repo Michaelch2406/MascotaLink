@@ -133,6 +133,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private Polyline polylineRuta;
     private long lastWalkerMovementTime = System.currentTimeMillis(); // Rastrear inactividad del paseador
 
+    // ===== FALLBACK WEBSOCKET → FIRESTORE =====
+    private long lastWebSocketUpdate = System.currentTimeMillis();
+    private static final long WEBSOCKET_TIMEOUT_MS = 30000; // 30 segundos sin updates
+    private Handler fallbackHandler = new Handler(Looper.getMainLooper());
+    private Runnable fallbackRunnable;
+
     // Cache
 
 
@@ -294,6 +300,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         // Luego verificar permisos y sincronizar con Firestore
         verificarPermisosYEscuchar();
+
+        // ===== INICIAR FALLBACK HANDLER =====
+        startFallbackCheck();
     }
 
     private void setupMap() {
@@ -419,6 +428,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         stopTimer();
 
+        // ===== DETENER FALLBACK HANDLER =====
+        if (fallbackHandler != null && fallbackRunnable != null) {
+            fallbackHandler.removeCallbacks(fallbackRunnable);
+        }
+
         // Limpiar listeners de WebSocket
         socketManager.off("walker_location");
         socketManager.off("joined_paseo");
@@ -522,6 +536,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
                     Log.d(TAG, "📍 Ubicación en tiempo real: " + latitud + ", " + longitud);
 
+                    // ===== MARCAR RECEPCIÓN DE UPDATE VÍA WEBSOCKET =====
+                    lastWebSocketUpdate = System.currentTimeMillis();
+
                     // Actualizar mapa en el hilo principal
                     runOnUiThread(() -> {
                         LatLng nuevaUbicacion = new LatLng(latitud, longitud);
@@ -611,7 +628,111 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         }
     }
 
+    /**
+     * Inicia el verificador de fallback que comprueba si WebSocket deja de enviar datos
+     * y automáticamente cambia a cargar desde Firestore
+     */
+    private void startFallbackCheck() {
+        fallbackRunnable = new Runnable() {
+            @Override
+            public void run() {
+                long timeSinceLastUpdate = System.currentTimeMillis() - lastWebSocketUpdate;
 
+                if (timeSinceLastUpdate > WEBSOCKET_TIMEOUT_MS) {
+                    Log.w(TAG, "⚠️ WebSocket sin actualizaciones por " + (timeSinceLastUpdate / 1000) + "s - Activando fallback a Firestore");
+
+                    // Actualizar UI para indicar que estamos usando datos retrasados
+                    runOnUiThread(() -> {
+                        if (tvUbicacionEstado != null) {
+                            tvUbicacionEstado.setText("⚠️ Datos retrasados - Cargando desde servidor...");
+                            tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.orange));
+                        }
+                    });
+
+                    // Cargar ubicaciones desde Firestore
+                    loadUbicacionesFromFirestore();
+                }
+
+                // Repetir cada 10 segundos
+                fallbackHandler.postDelayed(this, 10000);
+            }
+        };
+
+        // Iniciar después de 10 segundos
+        fallbackHandler.postDelayed(fallbackRunnable, 10000);
+    }
+
+    /**
+     * Carga las ubicaciones desde Firestore como fallback cuando WebSocket falla
+     */
+    private void loadUbicacionesFromFirestore() {
+        if (reservaRef == null) return;
+
+        reservaRef.get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        Object ubicacionesObj = snapshot.get("ubicaciones");
+                        if (ubicacionesObj instanceof List) {
+                            List<?> ubicacionesList = (List<?>) ubicacionesObj;
+
+                            List<LatLng> ubicacionesNuevas = new ArrayList<>();
+                            for (Object ubicObj : ubicacionesList) {
+                                if (ubicObj instanceof Map) {
+                                    Map<?, ?> ubicMap = (Map<?, ?>) ubicObj;
+                                    Object latObj = ubicMap.get("lat");
+                                    Object lngObj = ubicMap.get("lng");
+
+                                    if (latObj instanceof Number && lngObj instanceof Number) {
+                                        double lat = ((Number) latObj).doubleValue();
+                                        double lng = ((Number) lngObj).doubleValue();
+                                        ubicacionesNuevas.add(new LatLng(lat, lng));
+                                    }
+                                }
+                            }
+
+                            // Solo actualizar si hay nuevas ubicaciones
+                            if (!ubicacionesNuevas.isEmpty()) {
+                                runOnUiThread(() -> {
+                                    rutaPaseo.clear();
+                                    rutaPaseo.addAll(ubicacionesNuevas);
+
+                                    if (mMap != null && !rutaPaseo.isEmpty()) {
+                                        // Actualizar polyline
+                                        if (polylineRuta != null) {
+                                            polylineRuta.setPoints(rutaPaseo);
+                                        }
+
+                                        // Actualizar marcador en última ubicación
+                                        LatLng ultimaPos = rutaPaseo.get(rutaPaseo.size() - 1);
+                                        if (marcadorActual != null) {
+                                            marcadorActual.setPosition(ultimaPos);
+                                        } else {
+                                            BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120);
+                                            marcadorActual = mMap.addMarker(new MarkerOptions()
+                                                    .position(ultimaPos)
+                                                    .title("Paseador")
+                                                    .icon(walkerIcon != null ? walkerIcon : BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                                                    .anchor(0.5f, 1.0f));
+                                        }
+
+                                        // Centrar cámara
+                                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaPos, 17f), 500, null);
+
+                                        // Actualizar estado
+                                        if (tvUbicacionEstado != null) {
+                                            tvUbicacionEstado.setText("Ubicación actualizada desde servidor (" + rutaPaseo.size() + " puntos)");
+                                            tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
+                                        }
+                                    }
+
+                                    Log.d(TAG, "✅ Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
+                                });
+                            }
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "❌ Error cargando ubicaciones desde Firestore", e));
+    }
 
     private void verificarPermisosYEscuchar() {
         mostrarLoading(true);

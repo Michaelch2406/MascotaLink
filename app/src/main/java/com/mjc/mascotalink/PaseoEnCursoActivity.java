@@ -604,6 +604,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                 cargarDatosPaseador(paseadorRef);
             }
         }
+
+        // ===== CARGAR DISTANCIA GUARDADA =====
+        cargarDistanciaGuardada(snapshot);
+
+        // ===== CARGAR RECORRIDO GUARDADO (UBICACIONES) =====
+        cargarRecorridoGuardado(snapshot);
     }
 
     private void cargarDatosMascota(String mascotaId) {
@@ -703,6 +709,75 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                     // Ya no mostramos el nombre del paseador aquí, preferimos el dueño
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error cargando paseo", e));
+    }
+
+    /**
+     * Carga la distancia guardada desde Firestore
+     * Esto permite continuar desde donde quedó si se cerró la app
+     */
+    private void cargarDistanciaGuardada(@NonNull DocumentSnapshot snapshot) {
+        Object distanciaObj = snapshot.get("distancia_acumulada_metros");
+        if (distanciaObj instanceof Number) {
+            distanciaTotalMetros = ((Number) distanciaObj).doubleValue();
+            if (tvDistancia != null) {
+                tvDistancia.setText(String.format(Locale.getDefault(), "Distancia: %.2f km", distanciaTotalMetros / 1000));
+            }
+            Log.d(TAG, "📏 Distancia cargada desde Firestore: " + String.format("%.2f", distanciaTotalMetros / 1000) + " km");
+        } else {
+            // Si no existe, inicializar en 0
+            distanciaTotalMetros = 0.0;
+        }
+    }
+
+    /**
+     * Carga el recorrido guardado (polyline) desde Firestore
+     * Esto permite mostrar el recorrido completo al reabrir la app
+     */
+    private void cargarRecorridoGuardado(@NonNull DocumentSnapshot snapshot) {
+        Object ubicacionesObj = snapshot.get("ubicaciones");
+        if (ubicacionesObj instanceof List) {
+            List<?> ubicacionesList = (List<?>) ubicacionesObj;
+
+            // Limpiar recorrido actual
+            rutaPaseo.clear();
+
+            // Reconstruir polyline desde ubicaciones guardadas
+            for (Object ubicObj : ubicacionesList) {
+                if (ubicObj instanceof Map) {
+                    Map<?, ?> ubicMap = (Map<?, ?>) ubicObj;
+                    Object latObj = ubicMap.get("lat");
+                    Object lngObj = ubicMap.get("lng");
+
+                    if (latObj instanceof Number && lngObj instanceof Number) {
+                        double lat = ((Number) latObj).doubleValue();
+                        double lng = ((Number) lngObj).doubleValue();
+                        rutaPaseo.add(new LatLng(lat, lng));
+                    }
+                }
+            }
+
+            Log.d(TAG, "📍 Recorrido cargado: " + rutaPaseo.size() + " puntos");
+
+            // Actualizar mapa si ya está listo
+            if (mMap != null && !rutaPaseo.isEmpty()) {
+                // Redibujar polyline completa
+                if (polylineRuta != null) {
+                    polylineRuta.setPoints(rutaPaseo);
+                }
+
+                // Marcar inicio
+                if (marcadorInicio == null) {
+                    marcadorInicio = mMap.addMarker(new MarkerOptions()
+                            .position(rutaPaseo.get(0))
+                            .title("Inicio")
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                }
+
+                // Centrar en última ubicación
+                LatLng ultimaUbicacion = rutaPaseo.get(rutaPaseo.size() - 1);
+                actualizarMapa(ultimaUbicacion);
+            }
+        }
     }
 
     private void actualizarFechaHora(@Nullable Date inicio) {

@@ -103,6 +103,21 @@ public class LocationService extends Service {
     private static final int LOW_BATTERY_THRESHOLD = 20; // 20%
     private BroadcastReceiver batteryReceiver;
 
+    // ===== NUEVAS VARIABLES PARA PERSISTENCIA DE DISTANCIA =====
+    private double distanciaAcumuladaMetros = 0.0;
+    private long lastDistanceSaveTime = 0;
+    private static final long DISTANCE_SAVE_INTERVAL_MS = 30000; // 30 segundos
+
+    // Validación de GPS
+    private static final float MAX_ACCURACY_METERS = 500f; // Rechazar si accuracy > 500m
+    private static final float MAX_JUMP_METERS = 100f; // Rechazar saltos > 100m
+    private static final long MIN_TIME_BETWEEN_JUMPS_MS = 2000; // en < 2 segundos
+
+    // Subcollection migration
+    private int ubicacionesCount = 0;
+    private static final int MAX_UBICACIONES_IN_ARRAY = 500; // Migrar a subcollection después de 500
+    private boolean usandoSubcollection = false;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -175,7 +190,10 @@ public class LocationService extends Service {
         startForeground(NOTIFICATION_ID, getNotification(),
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ? ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION : 0);
 
-        // 2. Unirse al room del Socket
+        // 2. Cargar distancia acumulada existente (si se está reanudando)
+        cargarDistanciaInicial();
+
+        // 3. Unirse al room del Socket
         if (socketManager.isConnected()) {
             socketManager.joinPaseo(currentReservaId);
         } else {
@@ -185,8 +203,37 @@ public class LocationService extends Service {
             // Idealmente, SocketManager debería tener una cola de "rooms pending join".
         }
 
-        // 3. Solicitar actualizaciones de ubicación
+        // 4. Solicitar actualizaciones de ubicación
         requestLocationUpdates();
+    }
+
+    /**
+     * Carga la distancia acumulada desde Firestore al iniciar el servicio
+     * Esto permite reanudar el tracking si la app se cerró
+     */
+    private void cargarDistanciaInicial() {
+        db.collection("reservas").document(currentReservaId).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        Object distanciaObj = snapshot.get("distancia_acumulada_metros");
+                        if (distanciaObj instanceof Number) {
+                            distanciaAcumuladaMetros = ((Number) distanciaObj).doubleValue();
+                            Log.d(TAG, "📏 Distancia inicial cargada: " + String.format("%.2f", distanciaAcumuladaMetros / 1000) + " km");
+                        }
+
+                        // Cargar contador de ubicaciones para saber si usar subcollection
+                        Object ubicacionesObj = snapshot.get("ubicaciones");
+                        if (ubicacionesObj instanceof List) {
+                            ubicacionesCount = ((List<?>) ubicacionesObj).size();
+                            Log.d(TAG, "📍 Ubicaciones existentes: " + ubicacionesCount);
+                            if (ubicacionesCount > MAX_UBICACIONES_IN_ARRAY) {
+                                usandoSubcollection = true;
+                                Log.d(TAG, "🔄 Usando subcollection desde el inicio");
+                            }
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> Log.w(TAG, "Error cargando distancia inicial", e));
     }
 
     private void requestLocationUpdates() {
@@ -215,13 +262,18 @@ public class LocationService extends Service {
     }
 
     /**
-     * Construye un LocationRequest optimizado basado en batería y movimiento
+     * Construye un LocationRequest optimizado basado en batería, movimiento y precisión GPS
      */
     private LocationRequest buildOptimalLocationRequest() {
         long interval;
         long minInterval;
         float minDistance;
         int priority;
+
+        // Verificar precisión de última ubicación
+        float lastAccuracy = lastLocation != null && lastLocation.hasAccuracy() ?
+                             lastLocation.getAccuracy() : 50f;
+        boolean precisionBaja = lastAccuracy > 100f;
 
         if (isLowBattery) {
             // Modo ahorro de batería: menos frecuente, menos precisión
@@ -230,6 +282,13 @@ public class LocationService extends Service {
             minDistance = 20; // 20 metros
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
             Log.d(TAG, "GPS en modo AHORRO DE BATERÍA");
+        } else if (precisionBaja) {
+            // Si tenemos baja precisión, reducir frecuencia para ahorrar batería
+            interval = 12000; // 12 segundos
+            minInterval = 8000; // 8 segundos
+            minDistance = 15; // 15 metros
+            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
+            Log.d(TAG, "GPS en modo PRECISIÓN BAJA (ahorrando batería, accuracy: " + (int)lastAccuracy + "m)");
         } else if (currentSpeed < SPEED_THRESHOLD_MPS) {
             // Usuario casi detenido: reducir frecuencia
             interval = 10000; // 10 segundos
@@ -284,10 +343,22 @@ public class LocationService extends Service {
         float accuracy = location.getAccuracy();
         long now = System.currentTimeMillis();
 
-        // Calcular velocidad y distancia desde última ubicación
+        // ===== VALIDACIÓN 1: Rechazar GPS con precisión muy mala =====
+        if (accuracy > MAX_ACCURACY_METERS) {
+            Log.w(TAG, "⚠️ Ubicación rechazada: precisión muy baja (" + (int)accuracy + "m > " + (int)MAX_ACCURACY_METERS + "m)");
+            return;
+        }
+
+        // ===== VALIDACIÓN 2: Detectar saltos anormales (GPS falso o cambio de red) =====
         if (lastLocation != null) {
             float distance = lastLocation.distanceTo(location);
             long timeDelta = location.getTime() - lastLocation.getTime();
+
+            // Detectar saltos > 100m en < 2 segundos
+            if (distance > MAX_JUMP_METERS && timeDelta < MIN_TIME_BETWEEN_JUMPS_MS) {
+                Log.w(TAG, "⚠️ Ubicación rechazada: salto anormal de " + (int)distance + "m en " + timeDelta + "ms");
+                return;
+            }
 
             if (timeDelta > 0) {
                 currentSpeed = distance / (timeDelta / 1000f); // m/s
@@ -297,6 +368,12 @@ public class LocationService extends Service {
             if (distance < STATIONARY_THRESHOLD_METERS && accuracy > 20) {
                 Log.v(TAG, "Ubicación filtrada: muy cercana y baja precisión");
                 return;
+            }
+
+            // ===== CALCULAR DISTANCIA ACUMULADA =====
+            if (distance > 5) { // Solo contar movimientos > 5m para evitar ruido
+                distanciaAcumuladaMetros += distance;
+                Log.v(TAG, "📏 Distancia acumulada: " + String.format("%.2f", distanciaAcumuladaMetros / 1000) + " km");
             }
         }
 
@@ -317,9 +394,21 @@ public class LocationService extends Service {
         // 3. Agregar a batch para historial (OPTIMIZACIÓN: no guardar individualmente)
         addLocationToBatch(location);
 
+        // ===== 4. GUARDAR DISTANCIA ACUMULADA CADA 30s =====
+        if (now - lastDistanceSaveTime > DISTANCE_SAVE_INTERVAL_MS) {
+            guardarDistanciaAcumulada();
+            lastDistanceSaveTime = now;
+        }
+
         // Ajustar GPS si cambió la velocidad significativamente
         if (Math.abs(currentSpeed - SPEED_THRESHOLD_MPS) < 0.5f) {
             // Cerca del umbral, podría necesitar ajuste
+            adjustLocationUpdates();
+        }
+
+        // ===== OPTIMIZACIÓN ADICIONAL: Ajustar GPS según precisión =====
+        // Si tenemos mala precisión repetidamente, reducir frecuencia
+        if (accuracy > 100f) {
             adjustLocationUpdates();
         }
     }
@@ -364,7 +453,7 @@ public class LocationService extends Service {
 
     /**
      * Envía batch de ubicaciones a Firestore
-     * Usa update único en vez de múltiples arrayUnion
+     * Usa subcollection si hay > 500 puntos para evitar límite de 1MB
      */
     private void sendLocationBatch() {
         if (locationBatch.isEmpty()) return;
@@ -373,22 +462,71 @@ public class LocationService extends Service {
         locationBatch.clear();
         lastBatchSendTime = System.currentTimeMillis();
 
-        // Usar WriteBatch para operaciones atómicas (más eficiente)
         DocumentReference reservaRef = db.collection("reservas").document(currentReservaId);
 
-        // IMPORTANTE: Firestore tiene límite de 1MB por documento
-        // Si el array crece mucho, usar sub-colección en producción
-        reservaRef.update("ubicaciones", FieldValue.arrayUnion(batchToSend.toArray()))
+        // ===== MIGRACIÓN A SUBCOLLECTION SI ES NECESARIO =====
+        if (usandoSubcollection || ubicacionesCount > MAX_UBICACIONES_IN_ARRAY) {
+            if (!usandoSubcollection) {
+                Log.d(TAG, "🔄 Migrando a subcollection: se alcanzaron " + ubicacionesCount + " ubicaciones");
+                usandoSubcollection = true;
+            }
+            // Guardar en subcollection
+            guardarEnSubcollection(batchToSend);
+        } else {
+            // Guardar en array principal (método original)
+            reservaRef.update("ubicaciones", FieldValue.arrayUnion(batchToSend.toArray()))
+                    .addOnSuccessListener(aVoid -> {
+                        ubicacionesCount += batchToSend.size();
+                        Log.d(TAG, "✅ Batch enviado: " + batchToSend.size() + " ubicaciones (total: " + ubicacionesCount + ")");
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.w(TAG, "Error guardando batch, reintentando individuales", e);
+                        // Fallback: guardar individualmente
+                        for (Map<String, Object> punto : batchToSend) {
+                            reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto))
+                                    .addOnSuccessListener(v -> ubicacionesCount++);
+                        }
+                    });
+        }
+    }
+
+    /**
+     * Guarda ubicaciones en subcollection para evitar límite de 1MB
+     */
+    private void guardarEnSubcollection(List<Map<String, Object>> ubicaciones) {
+        DocumentReference reservaRef = db.collection("reservas").document(currentReservaId);
+
+        WriteBatch batch = db.batch();
+        for (Map<String, Object> punto : ubicaciones) {
+            // Usar timestamp como ID del documento
+            String docId = String.valueOf(System.currentTimeMillis()) + "_" + Math.random();
+            DocumentReference ubicacionRef = reservaRef.collection("ubicaciones_historico").document(docId);
+            batch.set(ubicacionRef, punto);
+        }
+
+        batch.commit()
+                .addOnSuccessListener(aVoid -> {
+                    ubicacionesCount += ubicaciones.size();
+                    Log.d(TAG, "✅ Batch guardado en subcollection: " + ubicaciones.size() + " puntos (total: " + ubicacionesCount + ")");
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "❌ Error guardando en subcollection", e));
+    }
+
+    /**
+     * Guarda la distancia acumulada en Firestore cada 30s
+     */
+    private void guardarDistanciaAcumulada() {
+        DocumentReference reservaRef = db.collection("reservas").document(currentReservaId);
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("distancia_acumulada_metros", distanciaAcumuladaMetros);
+        updates.put("distancia_km", Math.round(distanciaAcumuladaMetros / 10.0) / 100.0); // Redondear a 2 decimales
+
+        reservaRef.update(updates)
                 .addOnSuccessListener(aVoid ->
-                    Log.d(TAG, "✅ Batch enviado: " + batchToSend.size() + " ubicaciones")
+                    Log.v(TAG, "✅ Distancia guardada: " + String.format("%.2f", distanciaAcumuladaMetros / 1000) + " km")
                 )
-                .addOnFailureListener(e -> {
-                    Log.w(TAG, "Error guardando batch, reintentando individuales", e);
-                    // Fallback: guardar individualmente
-                    for (Map<String, Object> punto : batchToSend) {
-                        reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto));
-                    }
-                });
+                .addOnFailureListener(e -> Log.w(TAG, "Error guardando distancia", e));
     }
 
     private void stopTracking() {
@@ -396,6 +534,9 @@ public class LocationService extends Service {
 
         // Enviar batch final antes de detener
         sendLocationBatch();
+
+        // ===== GUARDAR DISTANCIA FINAL =====
+        guardarDistanciaAcumulada();
 
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
