@@ -245,7 +245,16 @@ public class DialogHorarioEspecialFragment extends DialogFragment {
                 dismiss();
             })
             .addOnFailureListener(e -> {
-                Toast.makeText(requireContext(), "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                String mensajeError = "Error al guardar";
+
+                // Detectar si es un problema de permisos
+                if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
+                    mensajeError = "Permiso denegado. Verifica las reglas de Firestore.";
+                } else if (e.getMessage() != null) {
+                    mensajeError = "Error: " + e.getMessage();
+                }
+
+                Toast.makeText(requireContext(), mensajeError, Toast.LENGTH_LONG).show();
             });
     }
 

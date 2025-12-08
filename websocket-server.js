@@ -419,7 +419,20 @@ io.on('connection', (socket) => {
 
   socket.on('update_location', async (data) => {
     try {
-      const { paseoId, latitud, longitud, accuracy } = data;
+      // ===== SOPORTE DE COMPRESIÓN: Soportar formatos comprimido y normal =====
+      // Cliente envía formato comprimido: {"p": "id", "lat": ..., "lng": ..., "ts": ..., "acc": ...}
+      // Servidor soporta ambos para retrocompatibilidad
+      const paseoId = data.p || data.paseoId;  // "p" es comprimido, "paseoId" es normal
+      const latitud = data.lat || data.latitud;
+      const longitud = data.lng || data.longitud;
+      const accuracy = data.acc || data.accuracy;
+      const timestamp = data.ts || Date.now();
+
+      // Validar que paseoId existe y no está vacío
+      if (!paseoId) {
+        console.error('❌ Error: paseoId vacío o undefined', { p: data.p, paseoId: data.paseoId });
+        return socket.emit('error', { message: 'paseoId inválido o vacío' });
+      }
 
       const paseoDoc = await db.collection('reservas').doc(paseoId).get();
       if (!paseoDoc.exists) {
@@ -436,7 +449,7 @@ io.on('connection', (socket) => {
         latitud,
         longitud,
         accuracy,
-        timestamp: Date.now(),
+        timestamp: timestamp,
       });
 
       const lastSave = socket.lastLocationSave || 0;

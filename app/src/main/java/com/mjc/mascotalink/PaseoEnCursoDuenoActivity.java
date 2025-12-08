@@ -407,6 +407,19 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             startTimer();
         }
 
+        // ===== WEBSOCKET CONDICIONAL: Indicar que dueño está viendo mapa =====
+        // Esto permite al paseador ahorrar batería (no enviar WebSocket si nadie está viendo)
+        if (idReserva != null) {
+            db.collection("reservas").document(idReserva)
+                    .update("dueno_viendo_mapa", true)
+                    .addOnSuccessListener(aVoid ->
+                        Log.d(TAG, "✅ Dueño viendo mapa - WebSocket activo en paseador")
+                    )
+                    .addOnFailureListener(e ->
+                        Log.w(TAG, "Error actualizando dueno_viendo_mapa", e)
+                    );
+        }
+
         // Reconectar al paseo para recibir ubicación en tiempo real
         if (idReserva != null && socketManager.isConnected()) {
             socketManager.joinPaseo(idReserva);
@@ -417,6 +430,19 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     protected void onPause() {
         super.onPause();
         stopTimer();
+
+        // ===== WEBSOCKET CONDICIONAL: Indicar que dueño ya NO está viendo =====
+        // El paseador puede dejar de enviar WebSocket para ahorrar batería
+        if (idReserva != null) {
+            db.collection("reservas").document(idReserva)
+                    .update("dueno_viendo_mapa", false)
+                    .addOnSuccessListener(aVoid ->
+                        Log.d(TAG, "⏸️ Dueño dejó de ver - WebSocket puede pausarse")
+                    )
+                    .addOnFailureListener(e ->
+                        Log.w(TAG, "Error actualizando dueno_viendo_mapa", e)
+                    );
+        }
     }
 
     @Override
@@ -529,10 +555,13 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             if (args.length > 0) {
                 try {
                     JSONObject data = (JSONObject) args[0];
-                    double latitud = data.getDouble("latitud");
-                    double longitud = data.getDouble("longitud");
-                    double accuracy = data.optDouble("accuracy", 0);
-                    long timestamp = data.optLong("timestamp", System.currentTimeMillis());
+
+                    // SOPORTE DE COMPRESIÓN: Leer formato comprimido o normal (retrocompatibilidad)
+                    double latitud = data.has("lat") ? data.getDouble("lat") : data.getDouble("latitud");
+                    double longitud = data.has("lng") ? data.getDouble("lng") : data.getDouble("longitud");
+                    double accuracy = data.has("acc") ? data.optDouble("acc", 0) : data.optDouble("accuracy", 0);
+                    long timestamp = data.has("ts") ? data.optLong("ts", System.currentTimeMillis()) :
+                                    data.optLong("timestamp", System.currentTimeMillis());
 
                     Log.d(TAG, "📍 Ubicación en tiempo real: " + latitud + ", " + longitud);
 
@@ -645,7 +674,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     runOnUiThread(() -> {
                         if (tvUbicacionEstado != null) {
                             tvUbicacionEstado.setText("⚠️ Datos retrasados - Cargando desde servidor...");
-                            tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.orange));
+                            tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
                         }
                     });
 

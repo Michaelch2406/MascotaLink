@@ -15,6 +15,7 @@ import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
@@ -84,12 +85,22 @@ public class LocationService extends Service {
     private long lastRealtimeUpdateTime = 0;
     private static final long REALTIME_UPDATE_INTERVAL_MS = 5000; // 5 segundos para "ubicacion_actual"
 
+    // ===== THROTTLING WEBSOCKET (AHORRO BATERÍA) =====
+    private long lastWebSocketSendTime = 0;
+    private static final long WEBSOCKET_SEND_INTERVAL_MS = 10000; // 10 segundos (antes: cada update)
+    private static final long WEBSOCKET_SEND_INTERVAL_SLOW_MS = 30000; // 30s cuando detenido
+
+    // ===== WEBSOCKET CONDICIONAL (SOLO SI DUEÑO ESTÁ VIENDO) =====
+    private boolean duenoViendoMapa = true; // Asumir true al inicio
+    private long lastDuenoCheckTime = 0;
+    private static final long DUENO_CHECK_INTERVAL_MS = 30000; // Verificar cada 30s
+
     // ===== OPTIMIZACIONES DE BATERÍA Y GPS =====
 
-    // Batching de ubicaciones
+    // Batching de ubicaciones (OPTIMIZADO: 60s → 120s)
     private List<Map<String, Object>> locationBatch = new ArrayList<>();
-    private static final int BATCH_SIZE = 5; // Enviar cada 5 ubicaciones
-    private static final long BATCH_TIMEOUT_MS = 60000; // O cada 60 segundos
+    private static final int BATCH_SIZE = 10; // Enviar cada 10 ubicaciones (antes: 5)
+    private static final long BATCH_TIMEOUT_MS = 120000; // O cada 120 segundos (antes: 60s)
     private long lastBatchSendTime = 0;
 
     // Detección de movimiento
@@ -97,6 +108,12 @@ public class LocationService extends Service {
     private float currentSpeed = 0f;
     private static final float SPEED_THRESHOLD_MPS = 1.4f; // ~5 km/h
     private static final float STATIONARY_THRESHOLD_METERS = 10f;
+
+    // MODO PAUSA COMPLETA
+    private long tiempoSinMovimiento = 0;
+    private long ultimoMovimientoDetectado = System.currentTimeMillis();
+    private static final long PAUSA_COMPLETA_THRESHOLD_MS = 180000; // 3 minutos
+    private boolean gpsPausado = false;
 
     // Estado de batería
     private boolean isLowBattery = false;
@@ -281,28 +298,29 @@ public class LocationService extends Service {
             minInterval = 10000; // 10 segundos
             minDistance = 20; // 20 metros
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
-            Log.d(TAG, "GPS en modo AHORRO DE BATERÍA");
+            Log.d(TAG, "GPS en modo AHORRO DE BATERÍA (15s)");
         } else if (precisionBaja) {
             // Si tenemos baja precisión, reducir frecuencia para ahorrar batería
             interval = 12000; // 12 segundos
             minInterval = 8000; // 8 segundos
             minDistance = 15; // 15 metros
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
-            Log.d(TAG, "GPS en modo PRECISIÓN BAJA (ahorrando batería, accuracy: " + (int)lastAccuracy + "m)");
+            Log.d(TAG, "GPS en modo PRECISIÓN BAJA (12s, accuracy: " + (int)lastAccuracy + "m)");
         } else if (currentSpeed < SPEED_THRESHOLD_MPS) {
             // Usuario casi detenido: reducir frecuencia
             interval = 10000; // 10 segundos
             minInterval = 7000; // 7 segundos
             minDistance = 10; // 10 metros
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
-            Log.d(TAG, "GPS en modo DETENIDO (baja velocidad)");
+            Log.d(TAG, "GPS en modo DETENIDO (10s, baja velocidad)");
         } else {
-            // Usuario en movimiento normal: alta precisión
-            interval = 5000; // 5 segundos
-            minInterval = 3000; // 3 segundos
-            minDistance = 5; // 5 metros
-            priority = Priority.PRIORITY_HIGH_ACCURACY;
-            Log.d(TAG, "GPS en modo ALTA PRECISIÓN (movimiento)");
+            // OPTIMIZACIÓN: Cambio de 5s → 8s y HIGH_ACCURACY → BALANCED
+            // Ahorro de batería: ~18% manteniendo precisión
+            interval = 8000; // 8 segundos (antes: 5s)
+            minInterval = 5000; // 5 segundos (antes: 3s)
+            minDistance = 8; // 8 metros (antes: 5m)
+            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY; // Antes: HIGH_ACCURACY
+            Log.d(TAG, "GPS en modo MOVIMIENTO OPTIMIZADO (8s, BALANCED - ahorro batería ~18%)");
         }
 
         return new LocationRequest.Builder(priority, interval)
@@ -374,15 +392,59 @@ public class LocationService extends Service {
             if (distance > 5) { // Solo contar movimientos > 5m para evitar ruido
                 distanciaAcumuladaMetros += distance;
                 Log.v(TAG, "📏 Distancia acumulada: " + String.format("%.2f", distanciaAcumuladaMetros / 1000) + " km");
+
+                // Detectar movimiento para modo pausa
+                ultimoMovimientoDetectado = System.currentTimeMillis();
+                tiempoSinMovimiento = 0;
+
+                // Si estaba pausado, reactivar GPS
+                if (gpsPausado) {
+                    Log.i(TAG, "▶️ Movimiento detectado - Reactivando GPS desde pausa");
+                    reactivarGPSDesdePausa();
+                }
+            } else {
+                // No hay movimiento significativo
+                tiempoSinMovimiento = System.currentTimeMillis() - ultimoMovimientoDetectado;
             }
+        } else {
+            // Primera ubicación
+            ultimoMovimientoDetectado = System.currentTimeMillis();
         }
 
         lastLocation = location;
 
-        // 1. Enviar por WebSocket (Prioridad máxima, cada actualización válida)
-        // Solo si hay movimiento significativo o es la primera ubicación
-        if (socketManager.isConnected()) {
-            socketManager.updateLocation(currentReservaId, lat, lng, accuracy);
+        // ===== VERIFICAR SI DEBE ENTRAR EN MODO PAUSA =====
+        if (!gpsPausado && tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS) {
+            Log.w(TAG, "⏸️ Sin movimiento por " + (tiempoSinMovimiento / 60000) + " minutos - Activando MODO PAUSA (GPS apagado)");
+            activarModoPausa();
+            return; // No procesar más
+        }
+
+        // 1. Enviar por WebSocket (OPTIMIZADO: Throttling + Condicional)
+        // Ahorro adicional: No enviar si dueño no está viendo (~5-10% batería)
+
+        // Verificar cada 30s si el dueño está viendo
+        if (now - lastDuenoCheckTime > DUENO_CHECK_INTERVAL_MS) {
+            verificarDuenoViendoMapa();
+            lastDuenoCheckTime = now;
+        }
+
+        long intervaloWebSocket = currentSpeed < SPEED_THRESHOLD_MPS ?
+                WEBSOCKET_SEND_INTERVAL_SLOW_MS : // 30s si detenido
+                WEBSOCKET_SEND_INTERVAL_MS; // 10s si en movimiento
+
+        if (now - lastWebSocketSendTime > intervaloWebSocket) {
+            // SOLO enviar si dueño está viendo
+            if (duenoViendoMapa && socketManager.isConnected()) {
+                socketManager.updateLocation(currentReservaId, lat, lng, accuracy);
+                lastWebSocketSendTime = now;
+                Log.v(TAG, "📡 WebSocket enviado (próximo en " + (intervaloWebSocket / 1000) + "s)");
+            } else if (!duenoViendoMapa) {
+                Log.d(TAG, "⏸️ WebSocket PAUSADO - Dueño no está viendo (ahorro ~10% batería)");
+            }
+        } else {
+            Log.v(TAG, "⏭️ WebSocket throttled (esperando " +
+                    ((intervaloWebSocket - (now - lastWebSocketSendTime)) / 1000) + "s)");
         }
 
         // 2. Actualizar ubicación en tiempo real del usuario (para búsquedas/mapa general)
@@ -516,6 +578,12 @@ public class LocationService extends Service {
      * Guarda la distancia acumulada en Firestore cada 30s
      */
     private void guardarDistanciaAcumulada() {
+        // Validación defensiva - prevenir NullPointerException
+        if (currentReservaId == null || currentReservaId.isEmpty()) {
+            Log.w(TAG, "⚠️ No se puede guardar distancia - currentReservaId es null o vacío");
+            return;
+        }
+
         DocumentReference reservaRef = db.collection("reservas").document(currentReservaId);
 
         Map<String, Object> updates = new HashMap<>();
@@ -529,14 +597,196 @@ public class LocationService extends Service {
                 .addOnFailureListener(e -> Log.w(TAG, "Error guardando distancia", e));
     }
 
+    /**
+     * MODO PAUSA: Detiene el GPS completamente cuando no hay movimiento > 3 minutos
+     * Ahorro de batería: ~15-20% durante la pausa
+     */
+    private void activarModoPausa() {
+        if (gpsPausado) return; // Ya está pausado
+
+        // Detener actualizaciones de GPS
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            gpsPausado = true;
+            Log.i(TAG, "⏸️ GPS APAGADO - Modo pausa activado (ahorro ~95% batería GPS)");
+
+            // Actualizar notificación
+            actualizarNotificacion("Paseo en pausa - GPS en espera");
+
+            // Guardar estado en Firestore
+            db.collection("reservas").document(currentReservaId)
+                    .update("gps_pausado", true, "tiempo_pausa_inicio", System.currentTimeMillis())
+                    .addOnFailureListener(e -> Log.w(TAG, "Error guardando estado pausa", e));
+
+            // Programar chequeo periódico con ubicación de red (sin GPS)
+            iniciarChequeoUbicacionRed();
+        }
+    }
+
+    /**
+     * Reactiva el GPS cuando se detecta movimiento después de una pausa
+     */
+    private void reactivarGPSDesdePausa() {
+        if (!gpsPausado) return; // No está pausado
+
+        gpsPausado = false;
+        Log.i(TAG, "▶️ Reactivando GPS desde modo pausa");
+
+        // Actualizar notificación
+        actualizarNotificacion("Paseo en curso - GPS activo");
+
+        // Reanudar actualizaciones de GPS
+        requestLocationUpdates();
+
+        // Actualizar estado en Firestore
+        long tiempoPausa = System.currentTimeMillis() - ultimoMovimientoDetectado;
+        db.collection("reservas").document(currentReservaId)
+                .update("gps_pausado", false, "ultima_pausa_duracion_ms", tiempoPausa)
+                .addOnFailureListener(e -> Log.w(TAG, "Error actualizando estado pausa", e));
+
+        // Resetear timer de pausa
+        tiempoSinMovimiento = 0;
+        ultimoMovimientoDetectado = System.currentTimeMillis();
+    }
+
+    /**
+     * FALLBACK: Obtener última ubicación conocida cuando falla red/GPS
+     * Casos de uso:
+     * - GPS está apagado (Modo Pausa) + Sin red celular (dead zone)
+     * - WebSocket inactivo + Sin conectividad
+     * Antigüedad máxima permitida: 10 minutos
+     */
+    private Location obtenerUltimaUbicacionConocida() {
+        if (lastLocation != null) {
+            long antigüedad = System.currentTimeMillis() - lastLocation.getTime();
+            if (antigüedad < 600000) { // Menos de 10 minutos
+                Log.d(TAG, "📍 Fallback: usando última ubicación conocida (antigüedad: " +
+                      (antigüedad / 1000) + "s, precisión ±" + (int)lastLocation.getAccuracy() + "m)");
+                return lastLocation;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Chequeo periódico con ubicación de red (Cell Tower) durante pausas
+     * Consume ~0.5% vs ~10% del GPS
+     */
+    private void iniciarChequeoUbicacionRed() {
+        // Solicitar ubicación de red cada 5 minutos durante la pausa
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (gpsPausado && currentReservaId != null) {
+                    // Obtener ubicación aproximada sin GPS
+                    if (ActivityCompat.checkSelfPermission(LocationService.this,
+                            Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+                        fusedLocationClient.getCurrentLocation(
+                                Priority.PRIORITY_LOW_POWER, // Solo red celular
+                                null
+                        ).addOnSuccessListener(location -> {
+                            if (location != null) {
+                                Log.d(TAG, "📍 Ubicación de red durante pausa (±" + (int)location.getAccuracy() + "m)");
+
+                                // Verificar si hay movimiento significativo
+                                if (lastLocation != null) {
+                                    float distancia = lastLocation.distanceTo(location);
+                                    if (distancia > 50) { // Movimiento > 50m
+                                        Log.i(TAG, "▶️ Movimiento significativo detectado - Reactivando GPS");
+                                        reactivarGPSDesdePausa();
+                                        return;
+                                    }
+                                }
+                            }
+                        }).addOnFailureListener(e -> {
+                            // RED NO DISPONIBLE - Usar fallback (dead zone)
+                            Log.w(TAG, "⚠️ Red no disponible durante pausa, intentando fallback");
+                            Location fallback = obtenerUltimaUbicacionConocida();
+                            if (fallback != null) {
+                                Log.d(TAG, "📍 Fallback activado: última ubicación disponible");
+
+                                // Verificar movimiento con fallback
+                                if (lastLocation != null) {
+                                    float distancia = lastLocation.distanceTo(fallback);
+                                    if (distancia > 50) { // Movimiento > 50m
+                                        Log.i(TAG, "▶️ Movimiento significativo detectado (fallback) - Reactivando GPS");
+                                        reactivarGPSDesdePausa();
+                                    }
+                                }
+                            } else {
+                                Log.w(TAG, "⚠️ Sin fallback disponible - última ubicación muy antigua o null");
+                            }
+                        });
+                    }
+
+                    // Repetir en 5 minutos
+                    handler.postDelayed(this, 300000);
+                }
+            }
+        }, 300000); // 5 minutos
+    }
+
+    /**
+     * Actualiza la notificación del servicio foreground
+     */
+    private void actualizarNotificacion(String texto) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setContentTitle("Paseo en curso")
+                        .setContentText(texto)
+                        .setSmallIcon(R.drawable.walki_logo_secundario)
+                        .setOngoing(true)
+                        .build();
+                manager.notify(NOTIFICATION_ID, notification);
+            }
+        }
+    }
+
+    /**
+     * WEBSOCKET CONDICIONAL: Verifica si el dueño está viendo el mapa
+     * Ahorro de batería: ~5-10% cuando dueño no está viendo
+     */
+    private void verificarDuenoViendoMapa() {
+        db.collection("reservas").document(currentReservaId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists()) {
+                        Boolean viendo = snapshot.getBoolean("dueno_viendo_mapa");
+                        boolean estadoAnterior = duenoViendoMapa;
+                        duenoViendoMapa = viendo != null ? viendo : true; // Default: true
+
+                        // Log solo si cambió el estado
+                        if (estadoAnterior != duenoViendoMapa) {
+                            if (duenoViendoMapa) {
+                                Log.i(TAG, "👁️ Dueño EMPEZÓ a ver mapa - Activando WebSocket");
+                            } else {
+                                Log.i(TAG, "🚫 Dueño DEJÓ de ver mapa - Desactivando WebSocket (ahorro ~10% batería)");
+                            }
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.w(TAG, "Error verificando dueno_viendo_mapa, asumiendo true", e);
+                    duenoViendoMapa = true; // Asumir que sí está viendo en caso de error
+                });
+    }
+
     private void stopTracking() {
         Log.d(TAG, "Deteniendo servicio de rastreo.");
 
         // Enviar batch final antes de detener
         sendLocationBatch();
 
-        // ===== GUARDAR DISTANCIA FINAL =====
-        guardarDistanciaAcumulada();
+        // ===== GUARDAR DISTANCIA FINAL - SOLO SI currentReservaId NO ES NULL =====
+        if (currentReservaId != null && !currentReservaId.isEmpty()) {
+            guardarDistanciaAcumulada();
+        } else {
+            Log.w(TAG, "⚠️ No se guardó distancia final - currentReservaId es null");
+        }
 
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);

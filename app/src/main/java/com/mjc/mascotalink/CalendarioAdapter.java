@@ -204,4 +204,8 @@ public class CalendarioAdapter extends BaseAdapter {
     public Set<Date> getFechasSeleccionadas() {
         return new HashSet<>(fechasSeleccionadas);
     }
+
+    public void setListener(OnDateSelectedListener listener) {
+        this.listener = listener;
+    }
 }

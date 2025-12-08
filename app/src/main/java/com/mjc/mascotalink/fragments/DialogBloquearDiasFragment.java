@@ -164,9 +164,13 @@ public class DialogBloquearDiasFragment extends DialogFragment {
         // Generar lista de fechas para el calendario
         List<Date> fechasDelMes = generarFechasDelMes(mesActual);
 
-        // Configurar adapter del calendario
+        // Crear un listener dummy para el constructor
         calendarioAdapter = new CalendarioAdapter(requireContext(), fechasDelMes, mesActual, (date, position) -> {
-            // Callback cuando se selecciona una fecha
+            // Este callback se ejecutará cuando el usuario haga click
+        });
+
+        // Configurar el listener real después de crear el adapter
+        calendarioAdapter.setListener((date, position) -> {
             if (date != null && !esFechaPasada(date)) {
                 Date fechaNormalizada = normalizarFecha(date);
                 if (fechasSeleccionadas.contains(fechaNormalizada)) {
@@ -177,9 +181,9 @@ public class DialogBloquearDiasFragment extends DialogFragment {
                 calendarioAdapter.setFechasSeleccionadas(fechasSeleccionadas);
             }
         });
+
         calendarioAdapter.setSeleccionMultiple(true);
         calendarioAdapter.setFechasSeleccionadas(fechasSeleccionadas);
-
         gridCalendario.setAdapter(calendarioAdapter);
     }
 
@@ -277,8 +281,16 @@ public class DialogBloquearDiasFragment extends DialogFragment {
                     // Éxito
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(requireContext(), "Error al bloquear: " + e.getMessage(),
-                        Toast.LENGTH_SHORT).show();
+                    String mensajeError = "Error al bloquear";
+
+                    // Detectar si es un problema de permisos
+                    if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
+                        mensajeError = "Permiso denegado. Verifica las reglas de Firestore.";
+                    } else if (e.getMessage() != null) {
+                        mensajeError = "Error: " + e.getMessage();
+                    }
+
+                    Toast.makeText(requireContext(), mensajeError, Toast.LENGTH_LONG).show();
                 });
 
             contador++;
