@@ -230,6 +230,22 @@ public class DialogHorarioEspecialFragment extends DialogFragment {
         horarioEspecial.setHora_inicio(horaInicio);
         horarioEspecial.setHora_fin(horaFin);
         horarioEspecial.setNota(nota.isEmpty() ? "Horario especial" : nota);
+
+        // Calcular y guardar descripción y duración
+        horarioEspecial.setDescripcion(horarioEspecial.getDescripcion());
+
+        // Calcular duración en minutos
+        try {
+            String[] inicioPartes = horaInicio.split(":");
+            String[] finPartes = horaFin.split(":");
+            int minutosInicio = Integer.parseInt(inicioPartes[0]) * 60 + Integer.parseInt(inicioPartes[1]);
+            int minutosFin = Integer.parseInt(finPartes[0]) * 60 + Integer.parseInt(finPartes[1]);
+            int duracion = minutosFin - minutosInicio;
+            horarioEspecial.setDuracionMinutos(duracion);
+        } catch (Exception e) {
+            horarioEspecial.setDuracionMinutos(0);
+        }
+
         horarioEspecial.setActivo(true);
 
         // Guardar en Firestore

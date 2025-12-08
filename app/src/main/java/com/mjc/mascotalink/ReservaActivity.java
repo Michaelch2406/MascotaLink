@@ -28,6 +28,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.utils.DisponibilidadHelper;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
@@ -50,6 +51,7 @@ public class ReservaActivity extends AppCompatActivity {
     private String currentUserId;
     private com.mjc.mascotalink.network.NetworkMonitorHelper networkMonitor;
     private DisponibilidadHelper disponibilidadHelper;
+    private List<ListenerRegistration> realtimeListeners = new ArrayList<>();
 
     // Views
     private ImageView ivBack;
@@ -496,6 +498,9 @@ public class ReservaActivity extends AppCompatActivity {
             verificarCamposCompletos();
         });
         rvHorarios.setAdapter(horarioAdapter);
+
+        // Configurar listeners en tiempo real para detectar cambios en disponibilidad
+        setupRealtimeListeners();
     }
 
     private void generarHorariosBase() {
@@ -1042,6 +1047,107 @@ public class ReservaActivity extends AppCompatActivity {
         if (networkMonitor != null) {
             networkMonitor.unregister();
         }
+        // Dejar de escuchar cambios en tiempo real
+        removeRealtimeListeners();
+    }
+
+    private void setupRealtimeListeners() {
+        if (paseadorId == null) return;
+
+        // Listener 1: Escuchar cambios en acepta_solicitudes del paseador
+        ListenerRegistration aceptaSolicitudesListener = db.collection("usuarios")
+                .document(paseadorId)
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Error listening to acepta_solicitudes", e);
+                        return;
+                    }
+
+                    if (snapshot != null && snapshot.exists()) {
+                        Boolean aceptaSolicitudes = snapshot.getBoolean("acepta_solicitudes");
+                        boolean acepta = aceptaSolicitudes == null || aceptaSolicitudes;
+
+                        if (!acepta) {
+                            // El paseador ya no acepta solicitudes
+                            Toast.makeText(ReservaActivity.this,
+                                    "El paseador ha pausado la aceptación de solicitudes",
+                                    Toast.LENGTH_SHORT).show();
+                            btnConfirmarReserva.setEnabled(false);
+                        } else {
+                            // El paseador vuelve a aceptar solicitudes
+                            if (fechaSeleccionada != null && horarioSeleccionado != null) {
+                                cargarHorariosDisponibles();
+                                verificarCamposCompletos();
+                            }
+                        }
+                    }
+                });
+        realtimeListeners.add(aceptaSolicitudesListener);
+
+        // Listener 2: Escuchar cambios en bloqueos del paseador
+        ListenerRegistration bloqueosListener = db.collection("paseadores")
+                .document(paseadorId)
+                .collection("disponibilidad")
+                .document("bloqueos")
+                .collection("items")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Error listening to bloqueos", e);
+                        return;
+                    }
+
+                    // Si hay cambios en bloqueos, recalcular horarios disponibles
+                    if (fechaSeleccionada != null && snapshot != null) {
+                        cargarHorariosDisponibles();
+                    }
+                });
+        realtimeListeners.add(bloqueosListener);
+
+        // Listener 3: Escuchar cambios en horarios especiales del paseador
+        ListenerRegistration horariosEspecialesListener = db.collection("paseadores")
+                .document(paseadorId)
+                .collection("disponibilidad")
+                .document("horarios_especiales")
+                .collection("items")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Error listening to horarios_especiales", e);
+                        return;
+                    }
+
+                    // Si hay cambios en horarios especiales, recalcular horarios disponibles
+                    if (fechaSeleccionada != null && snapshot != null) {
+                        cargarHorariosDisponibles();
+                    }
+                });
+        realtimeListeners.add(horariosEspecialesListener);
+
+        // Listener 4: Escuchar cambios en horario por defecto
+        ListenerRegistration horarioDefaultListener = db.collection("paseadores")
+                .document(paseadorId)
+                .collection("disponibilidad")
+                .document("horario_default")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Error listening to horario_default", e);
+                        return;
+                    }
+
+                    // Si hay cambios en horario por defecto, recalcular horarios disponibles
+                    if (fechaSeleccionada != null && snapshot != null) {
+                        cargarHorariosDisponibles();
+                    }
+                });
+        realtimeListeners.add(horarioDefaultListener);
+    }
+
+    private void removeRealtimeListeners() {
+        for (ListenerRegistration listener : realtimeListeners) {
+            if (listener != null) {
+                listener.remove();
+            }
+        }
+        realtimeListeners.clear();
     }
 
     // Clase para espaciado horizontal consistente entre items del RecyclerView

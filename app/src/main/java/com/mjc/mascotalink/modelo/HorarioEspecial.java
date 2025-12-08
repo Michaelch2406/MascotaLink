@@ -19,6 +19,8 @@ public class HorarioEspecial {
     private String hora_inicio; // Formato "HH:mm"
     private String hora_fin; // Formato "HH:mm"
     private String nota; // "Solo tarde este día", etc.
+    private String descripcion; // Persisted for display (puede ser null, se calcula en getDescripcion())
+    private int duracionMinutos; // Persisted for performance (puede ser 0, se calcula en getDuracionMinutos())
 
     @ServerTimestamp
     private Date fecha_creacion;
@@ -88,6 +90,22 @@ public class HorarioEspecial {
         this.nota = nota;
     }
 
+    public String getDescripcionPersistida() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+
+    public int getDuracionMinutosPersistida() {
+        return duracionMinutos;
+    }
+
+    public void setDuracionMinutos(int duracionMinutos) {
+        this.duracionMinutos = duracionMinutos;
+    }
+
     public Date getFecha_creacion() {
         return fecha_creacion;
     }
@@ -124,19 +142,34 @@ public class HorarioEspecial {
 
     /**
      * Obtiene una descripción legible del horario especial
+     * Primero intenta obtener la persisted, si no existe la calcula dinámicamente
      */
     public String getDescripcion() {
+        // Si hay descripción persistida, usarla
+        if (descripcion != null && !descripcion.isEmpty()) {
+            return descripcion;
+        }
+
+        // Si hay nota, usarla
         if (nota != null && !nota.isEmpty()) {
             return nota;
         }
 
+        // Calcular dinámicamente
         return String.format("Horario especial: %s - %s", hora_inicio, hora_fin);
     }
 
     /**
      * Calcula la duración del horario en minutos
+     * Primero intenta obtener la persistida, si no existe la calcula dinámicamente
      */
     public int getDuracionMinutos() {
+        // Si hay duración persistida y es > 0, usarla
+        if (duracionMinutos > 0) {
+            return duracionMinutos;
+        }
+
+        // Calcular dinámicamente
         if (hora_inicio == null || hora_fin == null) return 0;
 
         try {

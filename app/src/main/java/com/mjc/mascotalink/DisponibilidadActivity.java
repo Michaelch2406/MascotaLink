@@ -16,6 +16,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascotalink.adapters.ConfiguracionesAdapter;
 import com.mjc.mascotalink.fragments.DialogBloquearDiasFragment;
 import com.mjc.mascotalink.fragments.DialogHorarioDefaultFragment;
@@ -63,6 +64,7 @@ public class DisponibilidadActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private String currentUserId;
+    private List<ListenerRegistration> realtimeListeners = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -242,6 +244,9 @@ public class DisponibilidadActivity extends AppCompatActivity {
 
         // Cargar disponibilidad del mes actual en calendario
         cargarDisponibilidadDelMes();
+
+        // Configurar listeners en tiempo real para detectar cambios
+        setupRealtimeListeners();
     }
 
     private void cargarHorarioDefault() {
@@ -454,5 +459,78 @@ public class DisponibilidadActivity extends AppCompatActivity {
 
         SimpleDateFormat sdf = new SimpleDateFormat("EEE d 'de' MMM", new Locale("es", "ES"));
         return sdf.format(fecha);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        removeRealtimeListeners();
+    }
+
+    private void setupRealtimeListeners() {
+        if (currentUserId == null) return;
+
+        // Listener 1: Escuchar cambios en bloqueos del paseador
+        ListenerRegistration bloqueosListener = db.collection("paseadores")
+                .document(currentUserId)
+                .collection("disponibilidad")
+                .document("bloqueos")
+                .collection("items")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        return;
+                    }
+
+                    // Si hay cambios en bloqueos, recalcular disponibilidad del mes
+                    if (snapshot != null) {
+                        cargarDisponibilidadDelMes();
+                    }
+                });
+        realtimeListeners.add(bloqueosListener);
+
+        // Listener 2: Escuchar cambios en horarios especiales del paseador
+        ListenerRegistration horariosEspecialesListener = db.collection("paseadores")
+                .document(currentUserId)
+                .collection("disponibilidad")
+                .document("horarios_especiales")
+                .collection("items")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        return;
+                    }
+
+                    // Si hay cambios en horarios especiales, recalcular disponibilidad del mes
+                    if (snapshot != null) {
+                        cargarDisponibilidadDelMes();
+                    }
+                });
+        realtimeListeners.add(horariosEspecialesListener);
+
+        // Listener 3: Escuchar cambios en horario por defecto
+        ListenerRegistration horarioDefaultListener = db.collection("paseadores")
+                .document(currentUserId)
+                .collection("disponibilidad")
+                .document("horario_default")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        return;
+                    }
+
+                    // Si hay cambios en horario por defecto, actualizar descripción
+                    if (snapshot != null) {
+                        cargarHorarioDefault();
+                        cargarDisponibilidadDelMes();
+                    }
+                });
+        realtimeListeners.add(horarioDefaultListener);
+    }
+
+    private void removeRealtimeListeners() {
+        for (ListenerRegistration listener : realtimeListeners) {
+            if (listener != null) {
+                listener.remove();
+            }
+        }
+        realtimeListeners.clear();
     }
 }
