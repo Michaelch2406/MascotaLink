@@ -1,5 +1,6 @@
 package com.mjc.mascotalink;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.GridView;
@@ -171,17 +172,115 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void mostrarDetalleDelDia(Date fecha) {
-        if (currentUserId == null) {
+        if (currentUserId == null || fecha == null) {
             Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
             return;
         }
-        // Mostrar diálogo con opciones para el día seleccionado
-        DialogHorarioEspecialFragment dialog = DialogHorarioEspecialFragment.newInstance(currentUserId, fecha);
-        dialog.setOnHorarioEspecialGuardadoListener(() -> {
-            cargarDatosDisponibilidad();
-            Toast.makeText(this, "Horario especial guardado", Toast.LENGTH_SHORT).show();
+
+        // Normalizar fecha para comparación
+        Date fechaNormalizada = normalizarFecha(fecha);
+
+        // Determinar estado del día
+        String estadoDia;
+        int colorEstado;
+        if (diasBloqueados.contains(fechaNormalizada)) {
+            estadoDia = "Bloqueado (día completo)";
+            colorEstado = getResources().getColor(R.color.calendario_bloqueado);
+        } else if (diasParciales.contains(fechaNormalizada)) {
+            estadoDia = "Bloqueado parcialmente";
+            colorEstado = getResources().getColor(R.color.calendario_parcial);
+        } else {
+            estadoDia = "Disponible";
+            colorEstado = getResources().getColor(R.color.calendario_disponible);
+        }
+
+        // Crear diálogo con opciones
+        String fechaFormateada = formatearFecha(fecha);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Gestionar " + fechaFormateada);
+
+        // Crear vista personalizada para mostrar el estado
+        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
+        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        layout.setPadding(50, 20, 50, 20);
+
+        TextView tvEstado = new TextView(this);
+        tvEstado.setText("Estado: " + estadoDia);
+        tvEstado.setTextSize(16);
+        tvEstado.setTextColor(colorEstado);
+        tvEstado.setPadding(0, 0, 0, 20);
+        layout.addView(tvEstado);
+
+        builder.setView(layout);
+
+        // Opciones
+        String[] opciones = {
+            "Configurar horario especial",
+            "Bloquear día completo",
+            "Bloquear solo mañana",
+            "Bloquear solo tarde",
+            "Ver configuraciones activas"
+        };
+
+        builder.setItems(opciones, (dialog, which) -> {
+            switch (which) {
+                case 0: // Horario especial
+                    DialogHorarioEspecialFragment horarioDialog =
+                        DialogHorarioEspecialFragment.newInstance(currentUserId, fecha);
+                    horarioDialog.setOnHorarioEspecialGuardadoListener(() -> {
+                        cargarDatosDisponibilidad();
+                        Toast.makeText(this, "Horario especial guardado", Toast.LENGTH_SHORT).show();
+                    });
+                    horarioDialog.show(getSupportFragmentManager(), "horario_especial");
+                    break;
+
+                case 1: // Bloquear día completo
+                    bloquearDiaRapido(fecha, Bloqueo.TIPO_DIA_COMPLETO);
+                    break;
+
+                case 2: // Bloquear mañana
+                    bloquearDiaRapido(fecha, Bloqueo.TIPO_MANANA);
+                    break;
+
+                case 3: // Bloquear tarde
+                    bloquearDiaRapido(fecha, Bloqueo.TIPO_TARDE);
+                    break;
+
+                case 4: // Ver configuraciones
+                    // Scroll a la lista de configuraciones
+                    rvConfiguracionesActivas.smoothScrollToPosition(0);
+                    break;
+            }
         });
-        dialog.show(getSupportFragmentManager(), "horario_especial");
+
+        builder.setNegativeButton("Cancelar", null);
+        builder.show();
+    }
+
+    private void bloquearDiaRapido(Date fecha, String tipo) {
+        if (fecha == null || currentUserId == null) return;
+
+        Bloqueo bloqueo = new Bloqueo();
+        bloqueo.setFecha(new Timestamp(fecha));
+        bloqueo.setTipo(tipo);
+        bloqueo.setRazon("Bloqueado desde calendario");
+        bloqueo.setRepetir(false);
+        bloqueo.setActivo(true);
+
+        db.collection("paseadores").document(currentUserId)
+            .collection("disponibilidad").document("bloqueos")
+            .collection("items")
+            .add(bloqueo)
+            .addOnSuccessListener(documentReference -> {
+                String mensaje = tipo.equals(Bloqueo.TIPO_DIA_COMPLETO)
+                    ? "Día bloqueado completamente"
+                    : "Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
+                Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+                cargarDatosDisponibilidad();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Error al bloquear: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
     }
 
     private void setupTarjetasAccion() {

@@ -92,6 +92,11 @@ public class CalendarioAdapter extends BaseAdapter {
                 tvDia.setTextColor(context.getResources().getColor(R.color.gray_disabled));
                 tvDia.setBackgroundResource(android.R.color.transparent);
                 tvDia.setEnabled(false);
+            } else if (isSeleccionado) {
+                // Día seleccionado: fondo azul, texto blanco (tiene prioridad visual)
+                tvDia.setBackgroundResource(R.drawable.bg_calendario_seleccionado);
+                tvDia.setTextColor(context.getResources().getColor(android.R.color.white));
+                tvDia.setEnabled(true);
             } else if (isBloqueado) {
                 // Día bloqueado: fondo rojo claro
                 tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_bloqueado));
@@ -102,14 +107,9 @@ public class CalendarioAdapter extends BaseAdapter {
                 tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_parcial));
                 tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
                 tvDia.setEnabled(true);
-            } else if (isSeleccionado) {
-                // Día seleccionado: fondo azul, texto blanco
-                tvDia.setBackgroundResource(R.drawable.bg_calendario_seleccionado);
-                tvDia.setTextColor(context.getResources().getColor(android.R.color.white));
-                tvDia.setEnabled(true);
             } else {
-                // Día disponible: fondo transparente, texto negro
-                tvDia.setBackgroundResource(android.R.color.transparent);
+                // Día disponible: fondo verde claro, texto negro
+                tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_disponible));
                 tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
                 tvDia.setEnabled(true);
             }
