@@ -50,7 +50,8 @@ service cloud.firestore {
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['perfil_ref', 'verificacion_estado', 'verificacion_fecha'])) &&
         (resource.data.rol == 'PASEADOR'
           ? request.resource.data.get('verificacion_estado', '') == resource.data.get('verificacion_estado', '')
-          : true);
+          : true)
+        || (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acepta_solicitudes']));
 
       allow delete: if isOwner(userId);
 
@@ -83,7 +84,35 @@ service cloud.firestore {
         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verificacion_estado', 'verificacion_fecha', 'verificacion_notas'])))
         || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['calificacion_promedio', 'total_resenas']));
 
+      // Estructura ANTIGUA: documentos directos en disponibilidad (para usuarios con datos antiguos)
+      // Matchea cualquier documento que NO sea uno de los documentos especiales
       match /disponibilidad/{diaId} {
+        allow read: if isAuthenticated() && diaId != 'horario_default' && diaId != 'bloqueos' && diaId != 'horarios_especiales';
+        allow write: if isOwner(paseadorId) && diaId != 'horario_default' && diaId != 'bloqueos' && diaId != 'horarios_especiales';
+      }
+
+      // Estructura NUEVA: documento para horario por defecto
+      match /disponibilidad/horario_default {
+        allow read: if isAuthenticated();
+        allow write: if isOwner(paseadorId);
+      }
+
+      // Estructura NUEVA: subcollección de bloqueos
+      match /disponibilidad/bloqueos {
+        allow read: if isAuthenticated();
+      }
+
+      match /disponibilidad/bloqueos/items/{bloqueId} {
+        allow read: if isAuthenticated();
+        allow write: if isOwner(paseadorId);
+      }
+
+      // Estructura NUEVA: subcollección de horarios especiales
+      match /disponibilidad/horarios_especiales {
+        allow read: if isAuthenticated();
+      }
+
+      match /disponibilidad/horarios_especiales/items/{horarioId} {
         allow read: if isAuthenticated();
         allow write: if isOwner(paseadorId);
       }
