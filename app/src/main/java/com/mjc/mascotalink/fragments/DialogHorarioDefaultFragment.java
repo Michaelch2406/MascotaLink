@@ -34,7 +34,7 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
     private CheckBox cbLunes, cbMartes, cbMiercoles, cbJueves, cbViernes, cbSabado, cbDomingo;
     private TextView tvHoraInicio, tvHoraFin;
     private Button btnGuardar, btnCancelar;
-    private Button btnSeleccionarTodos, btnDeseleccionarTodos;
+    private TextView btnSeleccionarTodos, btnDeseleccionarTodos;
 
     private String horaInicio = "09:00";
     private String horaFin = "18:00";

@@ -1318,20 +1318,61 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
     private void cargarDisponibilidad(String paseadorId) {
         if (disponibilidadListener != null) disponibilidadListener.remove();
-        disponibilidadListener = db.collection("paseadores").document(paseadorId).collection("disponibilidad")
-                .limit(1).addSnapshotListener((querySnapshot, e) -> {
-                    if (e != null || querySnapshot == null || querySnapshot.isEmpty()) {
+
+        // Intentar cargar primero el horario estándar estructurado
+        disponibilidadListener = db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("horario_default")
+                .addSnapshotListener((doc, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Error escuchando horario_default", e);
                         tvDisponibilidad.setText("No especificada");
                         return;
                     }
-                    DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
-                    List<String> dias = (List<String>) doc.get("dias");
-                    String horaInicio = doc.getString("hora_inicio");
-                    String horaFin = doc.getString("hora_fin");
-                    if (dias != null && !dias.isEmpty() && horaInicio != null && horaFin != null) {
-                        tvDisponibilidad.setText(String.format("%s: %s - %s", android.text.TextUtils.join(", ", dias), horaInicio, horaFin));
+
+                    if (doc != null && doc.exists()) {
+                        // Lógica para nuevo formato (Mapas por día)
+                        List<String> diasActivos = new ArrayList<>();
+                        String horaInicio = null;
+                        String horaFin = null;
+                        String[] diasKeys = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"};
+                        String[] diasLabels = {"Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"};
+
+                        for (int i = 0; i < diasKeys.length; i++) {
+                            Map<String, Object> diaData = (Map<String, Object>) doc.get(diasKeys[i]);
+                            if (diaData != null && Boolean.TRUE.equals(diaData.get("disponible"))) {
+                                diasActivos.add(diasLabels[i]);
+                                if (horaInicio == null) {
+                                    horaInicio = (String) diaData.get("hora_inicio");
+                                    horaFin = (String) diaData.get("hora_fin");
+                                }
+                            }
+                        }
+
+                        if (!diasActivos.isEmpty()) {
+                            tvDisponibilidad.setText(String.format("%s: %s - %s", android.text.TextUtils.join(", ", diasActivos), horaInicio, horaFin));
+                        } else {
+                            tvDisponibilidad.setText("No disponible temporalmente");
+                        }
                     } else {
-                        tvDisponibilidad.setText("No especificada");
+                        // Fallback: Buscar formato antiguo (lista 'dias') en cualquier documento
+                        db.collection("paseadores").document(paseadorId).collection("disponibilidad")
+                            .limit(1).get()
+                            .addOnSuccessListener(querySnapshot -> {
+                                if (!querySnapshot.isEmpty()) {
+                                    DocumentSnapshot fallbackDoc = querySnapshot.getDocuments().get(0);
+                                    List<String> dias = (List<String>) fallbackDoc.get("dias");
+                                    String hInicio = fallbackDoc.getString("hora_inicio");
+                                    String hFin = fallbackDoc.getString("hora_fin");
+                                    
+                                    if (dias != null && !dias.isEmpty() && hInicio != null && hFin != null) {
+                                        tvDisponibilidad.setText(String.format("%s: %s - %s", android.text.TextUtils.join(", ", dias), hInicio, hFin));
+                                    } else {
+                                         tvDisponibilidad.setText("No especificada");
+                                    }
+                                } else {
+                                    tvDisponibilidad.setText("No especificada");
+                                }
+                            });
                     }
                 });
     }
