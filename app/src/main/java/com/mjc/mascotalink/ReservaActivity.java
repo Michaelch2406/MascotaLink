@@ -38,9 +38,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class ReservaActivity extends AppCompatActivity {
 
@@ -415,6 +417,9 @@ public class ReservaActivity extends AppCompatActivity {
         } else {
             calendarioAdapter.updateDates(datesList, (Calendar) cal.clone());
         }
+
+        // Cargar estados de disponibilidad
+        cargarEstadosDisponibilidadDelMes();
     }
 
     /**
@@ -472,6 +477,79 @@ public class ReservaActivity extends AppCompatActivity {
         } else {
             calendarioAdapter.updateDates(datesList, currentMonth);
         }
+
+        // Cargar estados de disponibilidad del mes
+        cargarEstadosDisponibilidadDelMes();
+    }
+
+    private void cargarEstadosDisponibilidadDelMes() {
+        if (paseadorId == null) return;
+
+        Set<Date> diasBloqueados = new HashSet<>();
+        Set<Date> diasParciales = new HashSet<>();
+
+        // Calcular rango del mes actual
+        Calendar inicioMes = (Calendar) currentMonth.clone();
+        inicioMes.set(Calendar.DAY_OF_MONTH, 1);
+        inicioMes.set(Calendar.HOUR_OF_DAY, 0);
+        inicioMes.set(Calendar.MINUTE, 0);
+        inicioMes.set(Calendar.SECOND, 0);
+
+        Calendar finMes = (Calendar) currentMonth.clone();
+        finMes.set(Calendar.DAY_OF_MONTH, currentMonth.getActualMaximum(Calendar.DAY_OF_MONTH));
+        finMes.set(Calendar.HOUR_OF_DAY, 23);
+        finMes.set(Calendar.MINUTE, 59);
+        finMes.set(Calendar.SECOND, 59);
+
+        Timestamp inicioRango = new Timestamp(inicioMes.getTime());
+        Timestamp finRango = new Timestamp(finMes.getTime());
+
+        // Cargar bloqueos del mes
+        db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("bloqueos")
+                .collection("items")
+                .whereGreaterThanOrEqualTo("fecha", inicioRango)
+                .whereLessThanOrEqualTo("fecha", finRango)
+                .whereEqualTo("activo", true)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                        com.mjc.mascotalink.modelo.Bloqueo bloqueo =
+                            doc.toObject(com.mjc.mascotalink.modelo.Bloqueo.class);
+                        if (bloqueo != null && bloqueo.getFecha() != null && bloqueo.getTipo() != null) {
+                            Date fecha = bloqueo.getFecha().toDate();
+                            Date fechaNormalizada = normalizarFecha(fecha);
+                            if (fechaNormalizada != null) {
+                                if (com.mjc.mascotalink.modelo.Bloqueo.TIPO_DIA_COMPLETO.equals(bloqueo.getTipo())) {
+                                    diasBloqueados.add(fechaNormalizada);
+                                } else {
+                                    diasParciales.add(fechaNormalizada);
+                                }
+                            }
+                        }
+                    }
+
+                    // Actualizar calendario con estados
+                    if (calendarioAdapter != null) {
+                        calendarioAdapter.setDiasBloqueados(diasBloqueados);
+                        calendarioAdapter.setDiasParciales(diasParciales);
+                        calendarioAdapter.notifyDataSetChanged();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando bloqueos del mes", e);
+                });
+    }
+
+    private Date normalizarFecha(Date fecha) {
+        if (fecha == null) return null;
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(fecha);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
     }
 
     private void cambiarMes(int offset) {
@@ -543,9 +621,9 @@ public class ReservaActivity extends AppCompatActivity {
             if (duracionMinutos > 0) {
                 validarDisponibilidadHorario(horario);
             } else {
-                // Si no hay duración seleccionada, marcar como disponible por defecto
+                // Si no hay duración seleccionada, marcar como pendiente de validación
                 horario.setDisponible(true);
-                horario.setDisponibilidadEstado("DISPONIBLE");
+                horario.setDisponibilidadEstado("PENDIENTE");
             }
         }
 
@@ -620,6 +698,11 @@ public class ReservaActivity extends AppCompatActivity {
                 }
                 tvDisponibilidad.setText(mensaje);
                 tvDisponibilidad.setTextColor(getResources().getColor(R.color.red_error));
+                break;
+            case "PENDIENTE":
+            default:
+                tvDisponibilidad.setText("ℹ️ Selecciona una duración para verificar disponibilidad");
+                tvDisponibilidad.setTextColor(getResources().getColor(R.color.text_secondary));
                 break;
         }
     }

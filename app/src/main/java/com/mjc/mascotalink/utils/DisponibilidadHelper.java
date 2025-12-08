@@ -397,4 +397,108 @@ public class DisponibilidadHelper {
         // Similar a HorarioSelectorAdapter pero validando disponibilidad
         return Tasks.forResult(null);
     }
+
+    /**
+     * Obtiene el estado general de un día completo (para mostrar en calendario)
+     * No valida una hora específica, sino el estado general del día
+     *
+     * @param paseadorId ID del paseador
+     * @param fecha Fecha a consultar
+     * @return Task con resultado: "disponible", "bloqueado", "parcial", "especial", "no_trabaja"
+     */
+    public Task<String> obtenerEstadoDia(String paseadorId, Date fecha) {
+        // PASO 1: Verificar switch global
+        return db.collection("usuarios").document(paseadorId)
+                .get()
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful() || task.getResult() == null || !task.getResult().exists()) {
+                        return Tasks.forResult("no_disponible");
+                    }
+
+                    DocumentSnapshot usuario = task.getResult();
+                    Boolean aceptaSolicitudes = usuario.getBoolean("acepta_solicitudes");
+                    if (aceptaSolicitudes != null && !aceptaSolicitudes) {
+                        return Tasks.forResult("no_disponible");
+                    }
+
+                    // PASO 2 y 3: Verificar bloqueos
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(fecha);
+                    cal.set(Calendar.HOUR_OF_DAY, 0);
+                    cal.set(Calendar.MINUTE, 0);
+                    cal.set(Calendar.SECOND, 0);
+                    cal.set(Calendar.MILLISECOND, 0);
+                    Timestamp inicioDia = new Timestamp(cal.getTime());
+
+                    cal.set(Calendar.HOUR_OF_DAY, 23);
+                    cal.set(Calendar.MINUTE, 59);
+                    cal.set(Calendar.SECOND, 59);
+                    Timestamp finDia = new Timestamp(cal.getTime());
+
+                    return db.collection("paseadores").document(paseadorId)
+                            .collection("disponibilidad").document("bloqueos")
+                            .collection("items")
+                            .whereGreaterThanOrEqualTo("fecha", inicioDia)
+                            .whereLessThanOrEqualTo("fecha", finDia)
+                            .whereEqualTo("activo", true)
+                            .get()
+                            .continueWithTask(bloqueosTask -> {
+                                if (bloqueosTask.isSuccessful() && bloqueosTask.getResult() != null) {
+                                    for (DocumentSnapshot doc : bloqueosTask.getResult().getDocuments()) {
+                                        Bloqueo bloqueo = doc.toObject(Bloqueo.class);
+                                        if (bloqueo != null) {
+                                            if (Bloqueo.TIPO_DIA_COMPLETO.equals(bloqueo.getTipo())) {
+                                                return Tasks.forResult("bloqueado");
+                                            } else {
+                                                return Tasks.forResult("parcial");
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // PASO 4: Verificar horarios especiales
+                                return db.collection("paseadores").document(paseadorId)
+                                        .collection("disponibilidad").document("horarios_especiales")
+                                        .collection("items")
+                                        .whereGreaterThanOrEqualTo("fecha", inicioDia)
+                                        .whereLessThanOrEqualTo("fecha", finDia)
+                                        .whereEqualTo("activo", true)
+                                        .get()
+                                        .continueWithTask(especialesTask -> {
+                                            if (especialesTask.isSuccessful() &&
+                                                especialesTask.getResult() != null &&
+                                                !especialesTask.getResult().isEmpty()) {
+                                                return Tasks.forResult("especial");
+                                            }
+
+                                            // PASO 5: Verificar horario default
+                                            return db.collection("paseadores").document(paseadorId)
+                                                    .collection("disponibilidad").document("horario_default")
+                                                    .get()
+                                                    .continueWith(defaultTask -> {
+                                                        if (!defaultTask.isSuccessful() ||
+                                                            defaultTask.getResult() == null ||
+                                                            !defaultTask.getResult().exists()) {
+                                                            return "no_trabaja";
+                                                        }
+
+                                                        DocumentSnapshot doc = defaultTask.getResult();
+                                                        String diaSemana = obtenerDiaSemana(fecha);
+                                                        Map<String, Object> diaData = (Map<String, Object>) doc.get(diaSemana);
+
+                                                        if (diaData == null) {
+                                                            return "no_trabaja";
+                                                        }
+
+                                                        Boolean disponible = (Boolean) diaData.get("disponible");
+                                                        if (disponible == null || !disponible) {
+                                                            return "no_trabaja";
+                                                        }
+
+                                                        return "disponible";
+                                                    });
+                                        });
+                            });
+                });
+    }
 }

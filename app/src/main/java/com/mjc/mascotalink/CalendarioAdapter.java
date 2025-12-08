@@ -118,9 +118,27 @@ public class CalendarioAdapter extends BaseAdapter {
         // Click listener
         tvDia.setOnClickListener(v -> {
             if (date != null && tvDia.isEnabled()) {
+                Date normalizedDate = normalizarFecha(date);
+                boolean esBloqueado = diasBloqueados.contains(normalizedDate);
+                boolean esParcial = diasParciales.contains(normalizedDate);
+
+                // Si el día está bloqueado completamente, mostrar mensaje y no permitir selección
+                if (esBloqueado && !seleccionMultiple) {
+                    android.widget.Toast.makeText(context,
+                        "Día no disponible - El paseador bloqueó este día completo",
+                        android.widget.Toast.LENGTH_SHORT).show();
+                    return; // No ejecutar el callback
+                }
+
+                // Si el día está parcialmente bloqueado, mostrar advertencia pero permitir selección
+                if (esParcial && !seleccionMultiple) {
+                    android.widget.Toast.makeText(context,
+                        "⚠️ Disponibilidad limitada - Solo algunas horas disponibles",
+                        android.widget.Toast.LENGTH_SHORT).show();
+                }
+
                 if (seleccionMultiple) {
                     // Modo selección múltiple
-                    Date normalizedDate = normalizarFecha(date);
                     if (fechasSeleccionadas.contains(normalizedDate)) {
                         fechasSeleccionadas.remove(normalizedDate);
                     } else {
