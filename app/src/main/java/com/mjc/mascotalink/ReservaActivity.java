@@ -485,9 +485,57 @@ public class ReservaActivity extends AppCompatActivity {
     private void cargarEstadosDisponibilidadDelMes() {
         if (paseadorId == null) return;
 
+        Set<Date> diasDisponibles = new HashSet<>();
         Set<Date> diasBloqueados = new HashSet<>();
         Set<Date> diasParciales = new HashSet<>();
 
+        // PASO 1: Cargar horario por defecto primero
+        db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("horario_default")
+                .get()
+                .addOnSuccessListener(horarioDoc -> {
+                    // Marcar días disponibles según horario estándar
+                    if (horarioDoc.exists()) {
+                        marcarDiasDisponiblesSegunHorario(horarioDoc, diasDisponibles);
+                    }
+
+                    // PASO 2: Cargar bloqueos del mes
+                    cargarBloqueosDelMesReserva(diasDisponibles, diasBloqueados, diasParciales);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando horario default", e);
+                    // Si falla, al menos intentar cargar bloqueos
+                    cargarBloqueosDelMesReserva(diasDisponibles, diasBloqueados, diasParciales);
+                });
+    }
+
+    private void marcarDiasDisponiblesSegunHorario(DocumentSnapshot horarioDoc, Set<Date> diasDisponibles) {
+        // Obtener configuración de días de la semana
+        java.util.Map<Integer, Boolean> diasLaborales = new java.util.HashMap<>();
+        diasLaborales.put(Calendar.MONDAY, horarioDoc.get("lunes.disponible") != null && (Boolean) horarioDoc.get("lunes.disponible"));
+        diasLaborales.put(Calendar.TUESDAY, horarioDoc.get("martes.disponible") != null && (Boolean) horarioDoc.get("martes.disponible"));
+        diasLaborales.put(Calendar.WEDNESDAY, horarioDoc.get("miercoles.disponible") != null && (Boolean) horarioDoc.get("miercoles.disponible"));
+        diasLaborales.put(Calendar.THURSDAY, horarioDoc.get("jueves.disponible") != null && (Boolean) horarioDoc.get("jueves.disponible"));
+        diasLaborales.put(Calendar.FRIDAY, horarioDoc.get("viernes.disponible") != null && (Boolean) horarioDoc.get("viernes.disponible"));
+        diasLaborales.put(Calendar.SATURDAY, horarioDoc.get("sabado.disponible") != null && (Boolean) horarioDoc.get("sabado.disponible"));
+        diasLaborales.put(Calendar.SUNDAY, horarioDoc.get("domingo.disponible") != null && (Boolean) horarioDoc.get("domingo.disponible"));
+
+        // Marcar cada día del mes según configuración
+        Calendar cal = (Calendar) currentMonth.clone();
+        int diasDelMes = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        for (int dia = 1; dia <= diasDelMes; dia++) {
+            cal.set(Calendar.DAY_OF_MONTH, dia);
+            int diaSemana = cal.get(Calendar.DAY_OF_WEEK);
+            Boolean estaDisponible = diasLaborales.get(diaSemana);
+
+            if (estaDisponible != null && estaDisponible) {
+                diasDisponibles.add(normalizarFecha(cal.getTime()));
+            }
+        }
+    }
+
+    private void cargarBloqueosDelMesReserva(Set<Date> diasDisponibles, Set<Date> diasBloqueados, Set<Date> diasParciales) {
         // Calcular rango del mes actual
         Calendar inicioMes = (Calendar) currentMonth.clone();
         inicioMes.set(Calendar.DAY_OF_MONTH, 1);
@@ -522,6 +570,7 @@ public class ReservaActivity extends AppCompatActivity {
                             if (fechaNormalizada != null) {
                                 if (com.mjc.mascotalink.modelo.Bloqueo.TIPO_DIA_COMPLETO.equals(bloqueo.getTipo())) {
                                     diasBloqueados.add(fechaNormalizada);
+                                    diasDisponibles.remove(fechaNormalizada); // Quitar de disponibles
                                 } else {
                                     diasParciales.add(fechaNormalizada);
                                 }
@@ -531,6 +580,7 @@ public class ReservaActivity extends AppCompatActivity {
 
                     // Actualizar calendario con estados
                     if (calendarioAdapter != null) {
+                        calendarioAdapter.setDiasDisponibles(diasDisponibles);
                         calendarioAdapter.setDiasBloqueados(diasBloqueados);
                         calendarioAdapter.setDiasParciales(diasParciales);
                         calendarioAdapter.notifyDataSetChanged();

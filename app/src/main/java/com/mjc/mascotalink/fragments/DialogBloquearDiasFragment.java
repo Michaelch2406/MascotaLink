@@ -183,8 +183,65 @@ public class DialogBloquearDiasFragment extends DialogFragment {
         });
 
         calendarioAdapter.setSeleccionMultiple(true);
+        calendarioAdapter.setEsVistaPaseador(true); // Es vista de paseador
         calendarioAdapter.setFechasSeleccionadas(fechasSeleccionadas);
         gridCalendario.setAdapter(calendarioAdapter);
+
+        // Cargar bloqueos existentes del mes para mostrar en calendario
+        cargarBloqueosDelMes();
+    }
+
+    private void cargarBloqueosDelMes() {
+        if (paseadorId == null) return;
+
+        // Calcular rango del mes
+        Calendar inicioMes = (Calendar) mesActual.clone();
+        inicioMes.set(Calendar.DAY_OF_MONTH, 1);
+        inicioMes.set(Calendar.HOUR_OF_DAY, 0);
+        inicioMes.set(Calendar.MINUTE, 0);
+        inicioMes.set(Calendar.SECOND, 0);
+        Timestamp inicioRango = new Timestamp(inicioMes.getTime());
+
+        Calendar finMes = (Calendar) mesActual.clone();
+        finMes.set(Calendar.DAY_OF_MONTH, mesActual.getActualMaximum(Calendar.DAY_OF_MONTH));
+        finMes.set(Calendar.HOUR_OF_DAY, 23);
+        finMes.set(Calendar.MINUTE, 59);
+        finMes.set(Calendar.SECOND, 59);
+        Timestamp finRango = new Timestamp(finMes.getTime());
+
+        Set<Date> bloqueadosCompletos = new HashSet<>();
+        Set<Date> bloqueadosParciales = new HashSet<>();
+
+        db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("bloqueos")
+                .collection("items")
+                .whereGreaterThanOrEqualTo("fecha", inicioRango)
+                .whereLessThanOrEqualTo("fecha", finRango)
+                .whereEqualTo("activo", true)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                        Bloqueo bloqueo = doc.toObject(Bloqueo.class);
+                        if (bloqueo != null && bloqueo.getFecha() != null && bloqueo.getTipo() != null) {
+                            Date fechaNormalizada = normalizarFecha(bloqueo.getFecha().toDate());
+                            if (Bloqueo.TIPO_DIA_COMPLETO.equals(bloqueo.getTipo())) {
+                                bloqueadosCompletos.add(fechaNormalizada);
+                            } else {
+                                bloqueadosParciales.add(fechaNormalizada);
+                            }
+                        }
+                    }
+
+                    // Actualizar adapter con bloqueos existentes
+                    if (calendarioAdapter != null) {
+                        calendarioAdapter.setDiasBloqueados(bloqueadosCompletos);
+                        calendarioAdapter.setDiasParciales(bloqueadosParciales);
+                        calendarioAdapter.notifyDataSetChanged();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("DialogBloquearDias", "Error cargando bloqueos", e);
+                });
     }
 
     private List<Date> generarFechasDelMes(Calendar mes) {

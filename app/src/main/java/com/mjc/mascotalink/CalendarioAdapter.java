@@ -21,10 +21,12 @@ public class CalendarioAdapter extends BaseAdapter {
     private OnDateSelectedListener listener;
 
     // Para DisponibilidadActivity
+    private Set<Date> diasDisponibles = new HashSet<>();
     private Set<Date> diasBloqueados = new HashSet<>();
     private Set<Date> diasParciales = new HashSet<>();
     private Set<Date> fechasSeleccionadas = new HashSet<>();
     private boolean seleccionMultiple = false;
+    private boolean esVistaPaseador = false; // true = DisponibilidadActivity, false = ReservaActivity
 
     public interface OnDateSelectedListener {
         void onDateSelected(Date date, int position);
@@ -85,6 +87,7 @@ public class CalendarioAdapter extends BaseAdapter {
             Date normalizedDate = normalizarFecha(date);
             boolean isBloqueado = diasBloqueados.contains(normalizedDate);
             boolean isParcial = diasParciales.contains(normalizedDate);
+            boolean isDisponible = diasDisponibles.contains(normalizedDate);
             boolean isSeleccionado = seleccionMultiple ? fechasSeleccionadas.contains(normalizedDate) : (selectedPosition == position);
 
             if (isPast) {
@@ -107,11 +110,19 @@ public class CalendarioAdapter extends BaseAdapter {
                 tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_parcial));
                 tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
                 tvDia.setEnabled(true);
-            } else {
+            } else if (isDisponible || diasDisponibles.isEmpty() || seleccionMultiple) {
                 // Día disponible: fondo verde claro, texto negro
+                // Si diasDisponibles está vacío, mostrar todos como disponibles (backward compatibility)
+                // Si es selección múltiple (DialogBloquearDias), permitir seleccionar cualquier día futuro
                 tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_disponible));
                 tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
                 tvDia.setEnabled(true);
+            } else {
+                // Día NO trabajado (no está en horario estándar): gris claro
+                // SOLO en ReservaActivity (selección simple)
+                tvDia.setTextColor(context.getResources().getColor(R.color.gray_disabled));
+                tvDia.setBackgroundResource(android.R.color.transparent);
+                tvDia.setEnabled(false);
             }
         }
 
@@ -122,16 +133,16 @@ public class CalendarioAdapter extends BaseAdapter {
                 boolean esBloqueado = diasBloqueados.contains(normalizedDate);
                 boolean esParcial = diasParciales.contains(normalizedDate);
 
-                // Si el día está bloqueado completamente, mostrar mensaje y no permitir selección
-                if (esBloqueado && !seleccionMultiple) {
+                // Si el día está bloqueado completamente Y es vista de CLIENTE (no paseador)
+                if (esBloqueado && !seleccionMultiple && !esVistaPaseador) {
                     android.widget.Toast.makeText(context,
                         "Día no disponible - El paseador bloqueó este día completo",
                         android.widget.Toast.LENGTH_SHORT).show();
                     return; // No ejecutar el callback
                 }
 
-                // Si el día está parcialmente bloqueado, mostrar advertencia pero permitir selección
-                if (esParcial && !seleccionMultiple) {
+                // Si el día está parcialmente bloqueado Y es vista de CLIENTE
+                if (esParcial && !seleccionMultiple && !esVistaPaseador) {
                     android.widget.Toast.makeText(context,
                         "⚠️ Disponibilidad limitada - Solo algunas horas disponibles",
                         android.widget.Toast.LENGTH_SHORT).show();
@@ -188,6 +199,11 @@ public class CalendarioAdapter extends BaseAdapter {
     }
 
     // Métodos para DisponibilidadActivity
+    public void setDiasDisponibles(Set<Date> diasDisponibles) {
+        this.diasDisponibles = diasDisponibles != null ? diasDisponibles : new HashSet<>();
+        notifyDataSetChanged();
+    }
+
     public void setDiasBloqueados(Set<Date> diasBloqueados) {
         this.diasBloqueados = diasBloqueados != null ? diasBloqueados : new HashSet<>();
         notifyDataSetChanged();
@@ -225,5 +241,9 @@ public class CalendarioAdapter extends BaseAdapter {
 
     public void setListener(OnDateSelectedListener listener) {
         this.listener = listener;
+    }
+
+    public void setEsVistaPaseador(boolean esVistaPaseador) {
+        this.esVistaPaseador = esVistaPaseador;
     }
 }
