@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     id 'com.google.gms.google-services'
     alias(libs.plugins.hilt.android)
+    id "org.sonarqube" version "7.0.1.6134"
 }
 
 android {
