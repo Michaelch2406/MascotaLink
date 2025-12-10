@@ -371,6 +371,8 @@ public class LoginActivity extends AppCompatActivity {
                 Log.e(TAG, "handleSessionAndRedirect: error limpiando prefs cifradas", e);
             }
         }
+        // Guardar el rol en SharedPreferences para que la navegación funcione correctamente
+        com.mjc.mascotalink.util.BottomNavManager.saveUserRole(this, rol);
         redirigirSegunRol(rol, verificacionEstado);
     }
 

@@ -447,6 +447,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             } catch (Exception e) {
                 Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
             }
+            // Limpiar el rol guardado para evitar conflictos al cambiar de usuario
+            com.mjc.mascotalink.util.BottomNavManager.clearUserRole(PerfilPaseadorActivity.this);
             // Desconectar WebSocket antes de cerrar sesión
             com.mjc.mascotalink.network.SocketManager.getInstance(PerfilPaseadorActivity.this).disconnect();
             mAuth.signOut();

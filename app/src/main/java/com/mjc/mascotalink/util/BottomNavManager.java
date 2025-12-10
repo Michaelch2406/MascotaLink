@@ -35,6 +35,11 @@ public class BottomNavManager {
         return prefs.getString(KEY_USER_ROLE, null);
     }
 
+    public static void clearUserRole(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().remove(KEY_USER_ROLE).apply();
+    }
+
     public static void setupBottomNav(Activity activity, BottomNavigationView navView, String role, int selectedItemId) {
         if (activity == null || navView == null) {
             return;
