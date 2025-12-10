@@ -239,4 +239,26 @@
     <string name="dia_viernes_corto">V</string>
     <string name="dia_sabado_corto">S</string>
     <string name="dia_domingo_corto">D</string>
+
+    <!-- Home Fragment - General -->
+    <string name="home_greeting">¡Hola!</string>
+    <string name="home_retry_action">Reintentar</string>
+
+    <!-- Home Fragment - Dueño -->
+    <string name="home_dueno_estado_actual">Estado Actual</string>
+    <string name="home_dueno_paseo_activo_titulo">¡Paseo en Curso!</string>
+    <string name="home_dueno_paseo_activo_desc">Tu mascota está paseando ahora mismo.</string>
+    <string name="home_dueno_paseo_activo_btn">Ver Mapa en Vivo</string>
+    <string name="home_dueno_sin_paseo_titulo">Sin paseos activos</string>
+    <string name="home_dueno_sin_paseo_desc">¿Tu mascota quiere salir? Encuentra un paseador cerca de ti.</string>
+    <string name="home_dueno_sin_paseo_btn">Buscar Paseador</string>
+
+    <!-- Home Fragment - Paseador -->
+    <string name="home_paseador_estado_servicio">Estado del Servicio</string>
+    <string name="home_paseador_paseo_activo_titulo">Paseo Activo</string>
+    <string name="home_paseador_paseo_activo_desc">Tienes un servicio en curso. ¡No olvides registrar eventos!</string>
+    <string name="home_paseador_paseo_activo_btn">Ir al Paseo</string>
+    <string name="home_paseador_disponible_titulo">Disponible</string>
+    <string name="home_paseador_disponible_desc">No tienes paseos activos. Revisa tus solicitudes pendientes.</string>
+    <string name="home_paseador_disponible_btn">Ver Solicitudes</string>
 </resources>

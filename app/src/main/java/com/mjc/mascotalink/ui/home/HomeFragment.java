@@ -10,14 +10,17 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.mjc.mascotalink.MyApplication;
@@ -40,6 +43,7 @@ public class HomeFragment extends Fragment {
     private String userRole;
     private FrameLayout container;
     private ProgressBar pbLoading;
+    private SwipeRefreshLayout swipeRefresh;
 
     @Nullable
     @Override
@@ -50,31 +54,66 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        
+
         container = view.findViewById(R.id.home_container);
         pbLoading = view.findViewById(R.id.pb_loading_home);
-        
+        swipeRefresh = view.findViewById(R.id.swipe_refresh_home);
+
         viewModel = new ViewModelProvider(this).get(HomeViewModel.class);
-        
+
+        // Setup SwipeRefreshLayout
+        swipeRefresh.setOnRefreshListener(this::refreshData);
+        swipeRefresh.setColorSchemeResources(R.color.blue_primary);
+
+        // Observe loading state
+        viewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
+            if (isLoading != null) {
+                if (isLoading) {
+                    pbLoading.setVisibility(View.VISIBLE);
+                } else {
+                    pbLoading.setVisibility(View.GONE);
+                    swipeRefresh.setRefreshing(false);
+                }
+            }
+        });
+
+        // Observe errors
+        viewModel.getError().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                Snackbar.make(view, error, Snackbar.LENGTH_LONG)
+                    .setAction(R.string.home_retry_action, v -> refreshData())
+                    .show();
+                viewModel.clearError();
+            }
+        });
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             userId = user.getUid();
-            // Get role from cache or fetch
             userRole = BottomNavManager.getUserRole(requireContext());
-            
-            viewModel.loadUserData(userId);
-            viewModel.listenToActiveReservation(userId, userRole != null ? userRole : "DUEÑO");
-            
-            if ("PASEADOR".equals(userRole)) {
-                viewModel.loadWalkerStats(userId);
-            }
-            
+
+            loadData();
             setupRoleBasedUI(userRole);
         }
     }
 
+    private void loadData() {
+        viewModel.loadUserData(userId);
+        viewModel.listenToActiveReservation(userId, userRole != null ? userRole : "DUEÑO");
+
+        if ("PASEADOR".equals(userRole)) {
+            viewModel.loadWalkerStats(userId);
+        }
+    }
+
+    private void refreshData() {
+        if (userId != null) {
+            viewModel.setLoading(true);
+            loadData();
+        }
+    }
+
     private void setupRoleBasedUI(String role) {
-        pbLoading.setVisibility(View.GONE);
         LayoutInflater inflater = LayoutInflater.from(getContext());
         View contentView;
 
@@ -86,14 +125,14 @@ public class HomeFragment extends Fragment {
             contentView = inflater.inflate(R.layout.layout_home_dueno, container, false);
             setupDuenoUI(contentView);
         }
-        
+
         container.addView(contentView);
     }
 
     private void setupDuenoUI(View view) {
         TextView tvNombre = view.findViewById(R.id.tv_nombre_usuario);
         ImageView ivPerfil = view.findViewById(R.id.iv_perfil_icon);
-        
+
         // Bind Profile Data
         viewModel.getUserProfile().observe(getViewLifecycleOwner(), data -> {
             if (data != null) {
@@ -133,12 +172,12 @@ public class HomeFragment extends Fragment {
 
         if (reservation != null) {
             // Active Walk Found!
-            header.setBackgroundResource(R.drawable.bg_gradient_green_card); 
-            titulo.setText("¡Paseo en Curso!");
-            desc.setText("Tu mascota está paseando ahora mismo.");
-            btn.setText("Ver Mapa en Vivo");
+            header.setBackgroundResource(R.drawable.bg_gradient_green_card);
+            titulo.setText(R.string.home_dueno_paseo_activo_titulo);
+            desc.setText(R.string.home_dueno_paseo_activo_desc);
+            btn.setText(R.string.home_dueno_paseo_activo_btn);
             icon.setImageResource(R.drawable.ic_walk);
-            
+
             String resId = (String) reservation.get("id_documento");
             btn.setOnClickListener(v -> {
                 Intent intent = new Intent(getContext(), PaseoEnCursoDuenoActivity.class);
@@ -148,11 +187,11 @@ public class HomeFragment extends Fragment {
         } else {
             // No active walk
             header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
-            titulo.setText("Sin paseos activos");
-            desc.setText("¿Tu mascota quiere salir? Encuentra un paseador cerca de ti.");
-            btn.setText("Buscar Paseador");
+            titulo.setText(R.string.home_dueno_sin_paseo_titulo);
+            desc.setText(R.string.home_dueno_sin_paseo_desc);
+            btn.setText(R.string.home_dueno_sin_paseo_btn);
             icon.setImageResource(R.drawable.ic_search);
-            
+
             btn.setOnClickListener(v -> startActivity(new Intent(getContext(), BusquedaPaseadoresActivity.class)));
         }
     }
@@ -172,13 +211,13 @@ public class HomeFragment extends Fragment {
                 if (foto != null) Glide.with(this).load(MyApplication.getFixedUrl(foto)).into(ivPerfil);
             }
         });
-        
+
         // Bind Stats
         viewModel.getWalkerStats().observe(getViewLifecycleOwner(), data -> {
             if (data != null) {
                 Long total = (Long) data.get("num_servicios_completados");
                 Double score = (Double) data.get("calificacion_promedio");
-                
+
                 if (total != null) tvTotalPaseos.setText(String.valueOf(total));
                 if (score != null) tvCalificacion.setText(String.format("%.1f", score));
             }
@@ -198,10 +237,10 @@ public class HomeFragment extends Fragment {
 
         if (reservation != null) {
             header.setBackgroundResource(R.drawable.bg_gradient_green_card);
-            titulo.setText("Paseo Activo");
-            desc.setText("Tienes un servicio en curso. ¡No olvides registrar eventos!");
-            btn.setText("Ir al Paseo");
-            
+            titulo.setText(R.string.home_paseador_paseo_activo_titulo);
+            desc.setText(R.string.home_paseador_paseo_activo_desc);
+            btn.setText(R.string.home_paseador_paseo_activo_btn);
+
             String resId = (String) reservation.get("id_documento");
             btn.setOnClickListener(v -> {
                 Intent intent = new Intent(getContext(), PaseoEnCursoActivity.class);
@@ -210,10 +249,10 @@ public class HomeFragment extends Fragment {
             });
         } else {
             header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
-            titulo.setText("Disponible");
-            desc.setText("No tienes paseos activos. Revisa tus solicitudes pendientes.");
-            btn.setText("Ver Solicitudes");
-            
+            titulo.setText(R.string.home_paseador_disponible_titulo);
+            desc.setText(R.string.home_paseador_disponible_desc);
+            btn.setText(R.string.home_paseador_disponible_btn);
+
             btn.setOnClickListener(v -> startActivity(new Intent(getContext(), SolicitudesActivity.class)));
         }
     }

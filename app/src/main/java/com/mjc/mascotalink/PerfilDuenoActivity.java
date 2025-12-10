@@ -25,6 +25,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.Task;
@@ -88,6 +89,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private ImageView btnCopyEmail, btnCopyTelefono;
     private View skeletonLayout;
     private NestedScrollView scrollViewContent;
+    private SwipeRefreshLayout swipeRefresh;
     private BottomNavigationView bottomNav;
 
     // Mascotas
@@ -228,6 +230,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         
         skeletonLayout = findViewById(R.id.skeleton_layout);
         scrollViewContent = findViewById(R.id.scroll_view_content);
+        swipeRefresh = findViewById(R.id.swipe_refresh_perfil);
         bottomNav = findViewById(R.id.bottom_nav);
     }
 
@@ -277,6 +280,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnPrivacidad.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, PoliticaPrivacidadActivity.class)));
         btnCentroAyuda.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, CentroAyudaActivity.class)));
         btnTerminos.setOnClickListener(v -> startActivity(new Intent(PerfilDuenoActivity.this, TerminosCondicionesActivity.class)));
+
+        // Setup SwipeRefreshLayout
+        swipeRefresh.setOnRefreshListener(this::refreshProfileData);
+        swipeRefresh.setColorSchemeResources(R.color.blue_primary);
 
         btnCerrarSesion.setOnClickListener(v -> {
             detachDataListeners();
@@ -385,6 +392,14 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(this, db, currentUserId, duenoId);
         });
 
+    }
+
+    private void refreshProfileData() {
+        // Reload profile data
+        attachDataListeners();
+        cargarMascotas();
+        cargarMasResenas(4);
+        // Refresh indicator will stop automatically when showContent() is called
     }
 
     private void fetchCurrentUserRoleAndSetupUI() {
@@ -753,6 +768,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             isContentVisible = true;
             skeletonLayout.setVisibility(View.GONE);
             scrollViewContent.setVisibility(View.VISIBLE);
+        }
+        // Stop refresh indicator when content is loaded
+        if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
+            swipeRefresh.setRefreshing(false);
         }
     }
     

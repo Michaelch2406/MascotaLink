@@ -103,12 +103,17 @@
             android:backgroundTint="@color/skeleton_color_light" />
     </LinearLayout>
 
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/scroll_view_content"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh_perfil"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scroll_view_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -720,6 +725,8 @@
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav"

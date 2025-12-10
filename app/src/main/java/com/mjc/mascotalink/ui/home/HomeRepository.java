@@ -11,6 +11,11 @@ import java.util.Map;
 public class HomeRepository {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private static final String TAG = "HomeRepository";
+    private final MutableLiveData<String> lastError = new MutableLiveData<>();
+
+    public LiveData<String> getLastError() {
+        return lastError;
+    }
 
     public LiveData<Map<String, Object>> getUserProfile(String userId) {
         MutableLiveData<Map<String, Object>> data = new MutableLiveData<>();
@@ -18,7 +23,15 @@ public class HomeRepository {
             .addOnSuccessListener(snapshot -> {
                 if (snapshot.exists()) {
                     data.setValue(snapshot.getData());
+                } else {
+                    Log.w(TAG, "getUserProfile: User document does not exist");
+                    data.setValue(null);
                 }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "getUserProfile: Error loading user profile", e);
+                lastError.setValue("Error al cargar perfil: " + e.getMessage());
+                data.setValue(null);
             });
         return data;
     }
@@ -29,7 +42,23 @@ public class HomeRepository {
             .addOnSuccessListener(snapshot -> {
                 if (snapshot.exists()) {
                     data.setValue(snapshot.getData());
+                } else {
+                    Log.w(TAG, "getWalkerStats: Walker document does not exist");
+                    // Set default stats
+                    Map<String, Object> defaultStats = new HashMap<>();
+                    defaultStats.put("num_servicios_completados", 0L);
+                    defaultStats.put("calificacion_promedio", 0.0);
+                    data.setValue(defaultStats);
                 }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "getWalkerStats: Error loading walker stats", e);
+                lastError.setValue("Error al cargar estadísticas: " + e.getMessage());
+                // Set default stats on error
+                Map<String, Object> defaultStats = new HashMap<>();
+                defaultStats.put("num_servicios_completados", 0L);
+                defaultStats.put("calificacion_promedio", 0.0);
+                data.setValue(defaultStats);
             });
         return data;
     }
@@ -46,6 +75,7 @@ public class HomeRepository {
             .addSnapshotListener((snapshots, e) -> {
                 if (e != null) {
                     Log.e(TAG, "Error listening active reservation", e);
+                    lastError.setValue("Error al verificar paseos activos: " + e.getMessage());
                     return;
                 }
                 if (snapshots != null && !snapshots.isEmpty()) {

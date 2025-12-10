@@ -175,6 +175,12 @@ public class NetworkDetector {
         } else if (localIp.startsWith("10.10.0.")) {
             Log.i(TAG, "✅ [PRIORIDAD 3] Subred Trabajo (10.10.0.x) detectada. Usando: 10.10.0.142");
             return "10.10.0.142";
+        } else if (localIp.startsWith("10.0.2.")) {
+            Log.i(TAG, "✅ [PRIORIDAD 3] Emulador Android Estándar (10.0.2.x) detectado. Usando: 10.0.2.2");
+            return "10.0.2.2";
+        } else if (localIp.startsWith("10.106.12.")) {
+            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Hotspot Detectada (10.106.12.x). Usando: 10.106.12.132");
+            return "10.106.12.132";
         }
         return null;
     }
@@ -197,6 +203,7 @@ public class NetworkDetector {
             subnet + "1",     // Gateway típico
             subnet + "147",   // Tu IP común
             subnet + "100",   // IP común
+            subnet + "132",   // IP Laptop (Hotspot actual)
             subnet + "142",   // Tu IP de trabajo
             subnet + "2",     // Segundo gateway común
             subnet + "254"    // Último host común

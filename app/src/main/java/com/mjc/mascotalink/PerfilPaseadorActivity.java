@@ -31,6 +31,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -133,6 +134,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private String metodoPagoId;
     private View skeletonLayout;
     private NestedScrollView scrollViewContent;
+    private SwipeRefreshLayout swipeRefresh;
     private boolean isContentVisible = false;
     private String paseadorId;
     private String currentUserId;
@@ -304,6 +306,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         ivEditDisponibilidad = findViewById(R.id.iv_edit_disponibilidad);
         skeletonLayout = findViewById(R.id.skeleton_layout);
         scrollViewContent = findViewById(R.id.scroll_view_content);
+        swipeRefresh = findViewById(R.id.swipe_refresh_perfil);
         recyclerViewResenas = findViewById(R.id.recycler_view_resenas);
         btnVerMasResenas = findViewById(R.id.btn_ver_mas_resenas);
         bottomNav = findViewById(R.id.bottom_nav);
@@ -344,6 +347,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     private void setupListeners() {
+        // Setup SwipeRefreshLayout
+        swipeRefresh.setOnRefreshListener(this::refreshProfileData);
+        swipeRefresh.setColorSchemeResources(R.color.blue_primary);
+
         ivEditPerfil.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilPaseadorActivity.this, EditarPerfilPaseadorActivity.class);
             intent.putExtra("paseadorId", paseadorId);
@@ -1039,6 +1046,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         });
     }
 
+    private void refreshProfileData() {
+        // Reload profile data
+        attachDataListeners();
+        cargarMasResenas(4);
+        // Refresh indicator will stop automatically when showContent() is called
+    }
+
     private void attachDataListeners() {
         detachDataListeners();
         DocumentReference userDocRef = db.collection("usuarios").document(paseadorId);
@@ -1315,6 +1329,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             isContentVisible = true;
             skeletonLayout.setVisibility(View.GONE);
             scrollViewContent.setVisibility(View.VISIBLE);
+        }
+        // Stop refresh indicator when content is loaded
+        if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
+            swipeRefresh.setRefreshing(false);
         }
     }
 
