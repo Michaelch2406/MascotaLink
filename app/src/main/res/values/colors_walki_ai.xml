@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Walki AI Recommendation - Color Palette
+    Colores extraídos del diseño HTML
+-->
+<resources>
+    <!-- Primary Colors -->
+    <color name="walki_primary">#4747FF</color>
+    <color name="walki_ai_purple">#6B46FF</color>
+    <color name="walki_ai_purple_light">#8E72FF</color>
+
+    <!-- Success & Status Colors -->
+    <color name="walki_success_green">#00C853</color>
+    <color name="walki_success_green_bg">#E8F5E9</color>
+    <color name="walki_gold">#FFB300</color>
+
+    <!-- Background Colors -->
+    <color name="walki_background_light">#F5F5F8</color>
+    <color name="walki_background_card_start">#EFF4FF</color>
+    <color name="walki_background_card_end">#FFFFFF</color>
+
+    <!-- Text Colors -->
+    <color name="walki_text_primary">#1E293B</color>
+    <color name="walki_text_secondary">#64748B</color>
+    <color name="walki_text_tertiary">#94A3B8</color>
+    <color name="walki_text_dark">#334155</color>
+
+    <!-- Border Colors -->
+    <color name="walki_border_light">#E2E8F0</color>
+    <color name="walki_border_slate">#CBD5E1</color>
+
+    <!-- Specialty Badge -->
+    <color name="walki_specialty_bg">#EFF6FF</color>
+
+    <!-- Card Backgrounds -->
+    <color name="walki_card_white">#FFFFFF</color>
+    <color name="walki_card_overlay">#F8F9FA</color>
+</resources>

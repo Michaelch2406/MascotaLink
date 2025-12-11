@@ -1,0 +1,671 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Walki - AI Recommendation Card
+    Convertido desde code1.html
+    Item para mostrar la recomendación de IA de un paseador
+-->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#F5F5F8">
+
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="32dp"
+    android:paddingTop="16dp">
+
+    <!-- ============================================ -->
+    <!-- HEADLINE: "Tu Mejor Coincidencia" -->
+    <!-- ============================================ -->
+
+    <TextView
+        android:id="@+id/tvHeadlineTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Tu Mejor Coincidencia"
+        android:textSize="24sp"
+        android:textColor="#1E293B"
+        android:fontFamily="sans-serif-medium"
+        android:textAlignment="center"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:ignore="HardcodedText" />
+
+    <TextView
+        android:id="@+id/tvHeadlineSubtitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Basado en el perfil de tu mascota"
+        android:textSize="14sp"
+        android:textColor="#64748B"
+        android:textAlignment="center"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/tvHeadlineTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:ignore="HardcodedText" />
+
+    <!-- ============================================ -->
+    <!-- MAIN CARD: AI Recommendation Card -->
+    <!-- ============================================ -->
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardMainRecommendation"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        app:cardCornerRadius="32dp"
+        app:cardElevation="12dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:layout_constraintTop_toBottomOf="@id/tvHeadlineSubtitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="20dp"
+            android:background="@drawable/bg_gradient_card">
+
+            <!-- ============================================ -->
+            <!-- HEADER BADGES SECTION -->
+            <!-- ============================================ -->
+
+            <!-- AI Chip: "Recomendado por IA" -->
+            <LinearLayout
+                android:id="@+id/llAiChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:background="@drawable/bg_ai_chip_gradient"
+                android:elevation="4dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent">
+
+                <ImageView
+                    android:id="@+id/ivAiIcon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_auto_awesome"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="AI Icon" />
+
+                <TextView
+                    android:id="@+id/tvAiChipText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="RECOMENDADO POR IA"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.05"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+
+            <!-- Match Score: "95 Match" -->
+            <LinearLayout
+                android:id="@+id/llMatchScore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:background="@drawable/bg_match_score"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <ImageView
+                    android:id="@+id/ivPercentIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_percent"
+                    android:tint="#00C853"
+                    android:contentDescription="Percent Icon" />
+
+                <TextView
+                    android:id="@+id/tvMatchScore"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="95 Match"
+                    android:textSize="14sp"
+                    android:textColor="#00C853"
+                    android:fontFamily="sans-serif-medium"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+
+            <!-- ============================================ -->
+            <!-- PROFILE IMAGE & STATUS SECTION -->
+            <!-- ============================================ -->
+
+            <!-- Profile Container with Gold Border -->
+            <FrameLayout
+                android:id="@+id/flProfileContainer"
+                android:layout_width="110dp"
+                android:layout_height="110dp"
+                android:layout_marginTop="32dp"
+                app:layout_constraintTop_toBottomOf="@id/llAiChip"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <!-- Dashed Border Effect -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_dashed_border_gold" />
+
+                <!-- Profile Image with Gold Border -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="90dp"
+                    android:layout_height="90dp"
+                    android:layout_gravity="center"
+                    app:cardCornerRadius="45dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#FFFFFF">
+
+                    <ImageView
+                        android:id="@+id/ivProfilePhoto"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/placeholder_walker"
+                        android:contentDescription="Foto del paseador" />
+                </androidx.cardview.widget.CardView>
+
+                <!-- Verified Badge (top right) -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="top|end"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="#4747FF">
+
+                    <ImageView
+                        android:id="@+id/ivVerifiedBadge"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_verified"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Verificado" />
+                </androidx.cardview.widget.CardView>
+
+                <!-- Availability Dot (bottom right) -->
+                <FrameLayout
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginBottom="4dp">
+
+                    <View
+                        android:id="@+id/vAvailabilityDot"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_availability_dot" />
+                </FrameLayout>
+            </FrameLayout>
+
+            <!-- ============================================ -->
+            <!-- BASIC INFO SECTION -->
+            <!-- ============================================ -->
+
+            <!-- Walker Name -->
+            <TextView
+                android:id="@+id/tvWalkerName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Camila Rodriguez"
+                android:textSize="20sp"
+                android:textColor="#1E293B"
+                android:fontFamily="sans-serif-medium"
+                android:textAlignment="center"
+                android:gravity="center"
+                app:layout_constraintTop_toBottomOf="@id/flProfileContainer"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:ignore="HardcodedText" />
+
+            <!-- Location & Experience -->
+            <LinearLayout
+                android:id="@+id/llLocationExperience"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                app:layout_constraintTop_toBottomOf="@id/tvWalkerName"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <ImageView
+                    android:id="@+id/ivLocationIcon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_location_on"
+                    android:tint="#64748B"
+                    android:contentDescription="Location" />
+
+                <TextView
+                    android:id="@+id/tvLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Palermo"
+                    android:textSize="14sp"
+                    android:textColor="#64748B"
+                    android:fontFamily="sans-serif"
+                    tools:ignore="HardcodedText" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="•"
+                    android:textSize="14sp"
+                    android:textColor="#64748B" />
+
+                <TextView
+                    android:id="@+id/tvExperience"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="5 años exp."
+                    android:textSize="14sp"
+                    android:textColor="#64748B"
+                    android:fontFamily="sans-serif"
+                    tools:ignore="HardcodedText" />
+            </LinearLayout>
+
+            <!-- Specialty Badge -->
+            <TextView
+                android:id="@+id/tvSpecialty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:text="Especialista en Perros Grandes"
+                android:textSize="12sp"
+                android:textColor="#4747FF"
+                android:fontFamily="sans-serif-medium"
+                android:background="@drawable/bg_specialty_badge"
+                app:layout_constraintTop_toBottomOf="@id/llLocationExperience"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:ignore="HardcodedText" />
+
+            <!-- ============================================ -->
+            <!-- METRICS GRID: Rating & Price -->
+            <!-- ============================================ -->
+
+            <!-- Rating Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardRating"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:layout_constraintTop_toBottomOf="@id/tvSpecialty"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/cardPrice"
+                app:layout_constraintHorizontal_weight="1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_star"
+                            android:tint="#FFB300"
+                            android:contentDescription="Star" />
+
+                        <TextView
+                            android:id="@+id/tvRating"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="4.9"
+                            android:textSize="18sp"
+                            android:textColor="#1E293B"
+                            android:fontFamily="sans-serif-medium"
+                            tools:ignore="HardcodedText" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvReviewCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="120 Reseñas"
+                        android:textSize="12sp"
+                        android:textColor="#94A3B8"
+                        tools:ignore="HardcodedText" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Price Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardPrice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:layout_constraintTop_toBottomOf="@id/tvSpecialty"
+                app:layout_constraintStart_toEndOf="@id/cardRating"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_weight="1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:baselineAligned="false">
+
+                        <TextView
+                            android:id="@+id/tvPrice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="$15"
+                            android:textSize="18sp"
+                            android:textColor="#00C853"
+                            android:fontFamily="sans-serif-medium"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="2dp"
+                            android:text="/ h"
+                            android:textSize="14sp"
+                            android:textColor="#94A3B8"
+                            tools:ignore="HardcodedText" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Tarifa base"
+                        android:textSize="12sp"
+                        android:textColor="#94A3B8"
+                        tools:ignore="HardcodedText" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============================================ -->
+            <!-- AI REASONING SECTION -->
+            <!-- ============================================ -->
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardAiReasoning"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#F8F9FA"
+                app:layout_constraintTop_toBottomOf="@id/cardRating"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_psychology"
+                            android:tint="#6B46FF"
+                            android:contentDescription="Psychology Icon" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="¿POR QUÉ ESTA RECOMENDACIÓN?"
+                            android:textSize="12sp"
+                            android:textColor="#6B46FF"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.05"
+                            tools:ignore="HardcodedText" />
+                    </LinearLayout>
+
+                    <!-- Tags Container -->
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupReasons"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:chipSpacing="8dp"
+                        app:singleLine="false">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipReason1"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🎯 Especialista en tu raza"
+                            android:textSize="12sp"
+                            android:textColor="#334155"
+                            app:chipBackgroundColor="#FFFFFF"
+                            app:chipStrokeColor="#E2E8F0"
+                            app:chipStrokeWidth="1dp"
+                            app:chipCornerRadius="8dp"
+                            tools:ignore="HardcodedText" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipReason2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📍 Cerca de casa"
+                            android:textSize="12sp"
+                            android:textColor="#334155"
+                            app:chipBackgroundColor="#FFFFFF"
+                            app:chipStrokeColor="#E2E8F0"
+                            app:chipStrokeWidth="1dp"
+                            app:chipCornerRadius="8dp"
+                            tools:ignore="HardcodedText" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipReason3"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⏱️ Horario compatible"
+                            android:textSize="12sp"
+                            android:textColor="#334155"
+                            app:chipBackgroundColor="#FFFFFF"
+                            app:chipStrokeColor="#E2E8F0"
+                            app:chipStrokeWidth="1dp"
+                            app:chipCornerRadius="8dp"
+                            tools:ignore="HardcodedText" />
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============================================ -->
+            <!-- ACTION BUTTONS SECTION -->
+            <!-- ============================================ -->
+
+            <LinearLayout
+                android:id="@+id/llActionButtons"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                app:layout_constraintTop_toBottomOf="@id/cardAiReasoning"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/vBottomGradient">
+
+                <!-- Main CTA Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnViewProfile"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Ver Perfil Completo"
+                    android:textSize="14sp"
+                    android:textColor="#FFFFFF"
+                    android:fontFamily="sans-serif-medium"
+                    android:backgroundTint="#4747FF"
+                    app:icon="@drawable/ic_arrow_forward"
+                    app:iconGravity="end"
+                    app:iconTint="#FFFFFF"
+                    app:cornerRadius="24dp"
+                    app:elevation="8dp"
+                    android:layout_marginEnd="12dp"
+                    tools:ignore="HardcodedText" />
+
+                <!-- Favorite Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFavorite"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    app:icon="@drawable/ic_favorite"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="#64748B"
+                    app:cornerRadius="24dp"
+                    app:strokeColor="#E2E8F0"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="#FFFFFF"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="Favorito" />
+
+                <!-- Share Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnShare"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    app:icon="@drawable/ic_share"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="#64748B"
+                    app:cornerRadius="24dp"
+                    app:strokeColor="#E2E8F0"
+                    app:strokeWidth="1dp"
+                    app:backgroundTint="#FFFFFF"
+                    android:contentDescription="Compartir" />
+            </LinearLayout>
+
+            <!-- ============================================ -->
+            <!-- DECORATIVE BOTTOM GRADIENT -->
+            <!-- ============================================ -->
+
+            <View
+                android:id="@+id/vBottomGradient"
+                android:layout_width="0dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/bg_bottom_gradient"
+                app:layout_constraintTop_toBottomOf="@id/llActionButtons"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- ============================================ -->
+    <!-- HINT TEXT BELOW CARD -->
+    <!-- ============================================ -->
+
+    <LinearLayout
+        android:id="@+id/llHintText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toBottomOf="@id/cardMainRecommendation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_info"
+            android:tint="#94A3B8"
+            android:contentDescription="Info" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="Desliza para ver más opciones"
+            android:textSize="12sp"
+            android:textColor="#94A3B8"
+            tools:ignore="HardcodedText" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>

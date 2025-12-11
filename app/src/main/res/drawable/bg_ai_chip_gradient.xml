@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gradient background for AI chip (shimmer effect) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="0"
+        android:startColor="#6B46FF"
+        android:centerColor="#8E72FF"
+        android:endColor="#6B46FF"
+        android:type="linear" />
+    <corners android:radius="9999dp" />
+</shape>
