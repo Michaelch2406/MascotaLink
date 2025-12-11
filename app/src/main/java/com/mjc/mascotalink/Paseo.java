@@ -11,7 +11,6 @@ import java.util.Date;
 import java.util.Locale;
 
 import java.util.List;
-import java.util.Map;
 
 public class Paseo implements Serializable {
     private String reservaId;
@@ -36,10 +35,15 @@ public class Paseo implements Serializable {
 
     // Nuevos campos para evitar warnings de Firestore y soportar historial completo
     private long tiempo_total_minutos;
-    private List<Map<String, Object>> ubicaciones;
+    // Acepta GeoPoint o Map para evitar errores de deserialización mezclada en Firestore
+    private List<Object> ubicaciones;
     private GeoPoint ubicacion_actual; // Changed type
     private Date ultima_actualizacion;
     private String motivo_rechazo;
+    // Campos adicionales que llegan en reservas completadas
+    private Double distancia_acumulada_metros;
+    private Double distancia_km;
+    private Boolean dueno_viendo_mapa;
 
     public Paseo() {}
 
@@ -78,14 +82,20 @@ public class Paseo implements Serializable {
     // Getters y Setters para nuevos campos
     public long getTiempo_total_minutos() { return tiempo_total_minutos; }
     public void setTiempo_total_minutos(long tiempo_total_minutos) { this.tiempo_total_minutos = tiempo_total_minutos; }
-    public List<Map<String, Object>> getUbicaciones() { return ubicaciones; }
-    public void setUbicaciones(List<Map<String, Object>> ubicaciones) { this.ubicaciones = ubicaciones; }
+    public List<Object> getUbicaciones() { return ubicaciones; }
+    public void setUbicaciones(List<Object> ubicaciones) { this.ubicaciones = ubicaciones; }
     public GeoPoint getUbicacion_actual() { return ubicacion_actual; } // Updated getter
     public void setUbicacion_actual(GeoPoint ubicacion_actual) { this.ubicacion_actual = ubicacion_actual; } // Updated setter
     public Date getUltima_actualizacion() { return ultima_actualizacion; }
     public void setUltima_actualizacion(Date ultima_actualizacion) { this.ultima_actualizacion = ultima_actualizacion; }
     public String getMotivo_rechazo() { return motivo_rechazo; }
     public void setMotivo_rechazo(String motivo_rechazo) { this.motivo_rechazo = motivo_rechazo; }
+    public Double getDistancia_acumulada_metros() { return distancia_acumulada_metros; }
+    public void setDistancia_acumulada_metros(Double distancia_acumulada_metros) { this.distancia_acumulada_metros = distancia_acumulada_metros; }
+    public Double getDistancia_km() { return distancia_km; }
+    public void setDistancia_km(Double distancia_km) { this.distancia_km = distancia_km; }
+    public Boolean getDueno_viendo_mapa() { return dueno_viendo_mapa; }
+    public void setDueno_viendo_mapa(Boolean dueno_viendo_mapa) { this.dueno_viendo_mapa = dueno_viendo_mapa; }
     
     @PropertyName("id_mascota") public String getIdMascota() { return idMascota; }
     @PropertyName("id_mascota") public void setIdMascota(String id) { this.idMascota = id; }

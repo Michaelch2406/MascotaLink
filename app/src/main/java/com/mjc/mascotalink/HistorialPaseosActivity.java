@@ -95,6 +95,10 @@ public class HistorialPaseosActivity extends AppCompatActivity {
         tabLayout.addTab(tabLayout.newTab().setText("Completados"));
         tabLayout.addTab(tabLayout.newTab().setText("Cancelados"));
         tabLayout.addTab(tabLayout.newTab().setText("Rechazados"));
+        com.google.android.material.tabs.TabLayout.Tab firstTab = tabLayout.getTabAt(0);
+        if (firstTab != null) {
+            firstTab.select(); // Asegura selección inicial y disparo de filtro
+        }
     }
 
     private void setupListeners() {
@@ -119,6 +123,8 @@ public class HistorialPaseosActivity extends AppCompatActivity {
             @Override
             public void onTabReselected(com.google.android.material.tabs.TabLayout.Tab tab) {}
         });
+        // Aplicar filtro inicial
+        filtrarListaLocalmente();
     }
 
     private void abrirDetallePaseo(Paseo paseo) {
@@ -202,42 +208,43 @@ public class HistorialPaseosActivity extends AppCompatActivity {
             }
 
             Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
-                if (isDestroyed() || isFinishing()) return;
+                runOnUiThread(() -> {
+                    if (isDestroyed() || isFinishing()) return;
 
-                for (int i = 0; i < paseosTemp.size(); i++) {
-                    Paseo p = paseosTemp.get(i);
-                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(i * 3);
-                    DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(i * 3 + 1);
-                    DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(i * 3 + 2);
+                    for (int i = 0; i < paseosTemp.size(); i++) {
+                        Paseo p = paseosTemp.get(i);
+                        DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(i * 3);
+                        DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(i * 3 + 1);
+                        DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(i * 3 + 2);
 
-                    if (paseadorDoc != null && paseadorDoc.exists()) {
-                        p.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
-                        p.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                        if (paseadorDoc != null && paseadorDoc.exists()) {
+                            p.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
+                            p.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                        }
+                        if (duenoDoc != null && duenoDoc.exists()) {
+                            p.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                        }
+                        if (mascotaDoc != null && mascotaDoc.exists()) {
+                            p.setMascotaNombre(mascotaDoc.getString("nombre"));
+                            p.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                        }
                     }
-                    if (duenoDoc != null && duenoDoc.exists()) {
-                        p.setDuenoNombre(duenoDoc.getString("nombre_display"));
-                    }
-                    if (mascotaDoc != null && mascotaDoc.exists()) {
-                        p.setMascotaNombre(mascotaDoc.getString("nombre"));
-                        p.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
-                    }
-                }
-                
-                // Ordenar en cliente por fecha descendente
-                Collections.sort(paseosTemp, (p1, p2) -> {
-                    Date d1 = p1.getFecha();
-                    Date d2 = p2.getFecha();
-                    if (d1 == null) return 1;
-                    if (d2 == null) return -1;
-                    return d2.compareTo(d1);
+                    
+                    // Ordenar en cliente por fecha descendente
+                    Collections.sort(paseosTemp, (p1, p2) -> {
+                        Date d1 = p1.getFecha();
+                        Date d2 = p2.getFecha();
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+                        return d2.compareTo(d1);
+                    });
+                    
+                    // Actualizar lista maestra y filtrar
+                    listaPaseos.clear();
+                    listaPaseos.addAll(paseosTemp);
+                    filtrarListaLocalmente();
+                    swipeRefresh.setRefreshing(false);
                 });
-                
-                // Actualizar lista maestra y filtrar
-                listaPaseos.clear();
-                listaPaseos.addAll(paseosTemp);
-                filtrarListaLocalmente(); 
-                swipeRefresh.setRefreshing(false);
-                
             }).addOnFailureListener(ex -> {
                 Log.e(TAG, "Error cargando detalles relacionados", ex);
                 swipeRefresh.setRefreshing(false);
@@ -255,7 +262,7 @@ public class HistorialPaseosActivity extends AppCompatActivity {
     }
     
     private void filtrarListaLocalmente() {
-        if (filtroEstado.equals("TODOS")) {
+        if ("TODOS".equalsIgnoreCase(filtroEstado)) {
             // IMPORTANTE: Pasar una COPIA de la lista para que DiffUtil detecte el cambio.
             // Si pasamos la misma referencia (listaPaseos), AsyncListDiffer ignora la actualización.
             actualizarAdapter(new ArrayList<>(listaPaseos));

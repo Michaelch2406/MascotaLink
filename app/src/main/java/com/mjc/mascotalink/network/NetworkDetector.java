@@ -178,6 +178,9 @@ public class NetworkDetector {
         } else if (localIp.startsWith("10.0.2.")) {
             Log.i(TAG, "✅ [PRIORIDAD 3] Emulador Android Estándar (10.0.2.x) detectado. Usando: 10.0.2.2");
             return "10.0.2.2";
+        } else if (localIp.startsWith("10.0.3.")) {
+            Log.i(TAG, "✅ [PRIORIDAD 3] Emulador Genymotion (10.0.3.x) detectado. Usando: 10.0.3.2");
+            return "10.0.3.2";
         } else if (localIp.startsWith("10.106.12.")) {
             Log.i(TAG, "✅ [PRIORIDAD 3] Subred Hotspot Detectada (10.106.12.x). Usando: 10.106.12.132");
             return "10.106.12.132";

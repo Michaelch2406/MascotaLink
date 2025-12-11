@@ -1,6 +1,6 @@
 [versions]
 # Build & Plugins
-agp = "8.13.1"
+agp = "8.13.2"
 hilt = "2.51.1"
 
 # AndroidX Core
