@@ -142,7 +142,10 @@ dependencies {
     // ========== COMPOSE (solo para icons) ==========
     implementation libs.compose.material.icons
 
-    // ========== TESTING ==========
+    // Google AI (Gemini)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Testing
     testImplementation libs.junit
     testImplementation libs.mockito
     testImplementation libs.arch.core.testing

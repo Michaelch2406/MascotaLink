@@ -26,6 +26,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RatingBar;
 import android.widget.Spinner;
@@ -82,6 +83,8 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.mjc.mascotalink.modelo.Bloqueo;
+import com.mjc.mascotalink.modelo.HorarioEspecial;
 import com.mjc.mascota.modelo.Filtros;
 import com.mjc.mascota.modelo.PaseadorResultado;
 import com.mjc.mascotalink.MyApplication;
@@ -171,6 +174,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private boolean isMapExpanded = false;
     private com.google.android.material.floatingactionbutton.FloatingActionButton fabRefreshMap;
 
+    // Recomendación de IA
+    private LinearLayout btnBuscarConIA;
+    private RecomendacionIAHelper recomendacionIAHelper;
+
     // Handler y Runnable para la actualización periódica del mapa
     private final Handler periodicRefreshHandler = new Handler(Looper.getMainLooper());
     private Runnable periodicRefreshRunnable;
@@ -224,7 +231,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         mapContainer = findViewById(R.id.map_container);
         viewMapOverlay = findViewById(R.id.view_map_overlay);
         fabRefreshMap = findViewById(R.id.fab_refresh_map);
-        
+
         fabRefreshMap.setOnClickListener(v -> {
             Toast.makeText(this, "Actualizando mapa...", Toast.LENGTH_SHORT).show();
             if (mMap != null) {
@@ -232,6 +239,29 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 cargarPaseadoresCercanos(center, currentSearchRadiusKm);
             } else {
                 startLocationUpdates(); // Try to get location if map not ready or location lost
+            }
+        });
+
+        // Botón de Búsqueda con IA
+        btnBuscarConIA = findViewById(R.id.btn_buscar_con_ia);
+        recomendacionIAHelper = new RecomendacionIAHelper(this);
+
+        btnBuscarConIA.setOnClickListener(v -> {
+            Log.d(TAG, "Botón Buscar con IA presionado");
+            recomendacionIAHelper.show();
+        });
+
+        recomendacionIAHelper.setOnRecommendationListener(new RecomendacionIAHelper.OnRecommendationListener() {
+            @Override
+            public void onSuccess(Map<String, Object> paseador) {
+                Log.d(TAG, "Recomendación recibida: " + paseador.get("nombre"));
+                Toast.makeText(BusquedaPaseadoresActivity.this,
+                    "✨ Encontramos tu match perfecto", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Error en recomendación: " + error);
             }
         });
 
@@ -1543,13 +1573,18 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         }
 
                         double calificacion = paseadorDoc.getDouble("calificacion_promedio") != null ? paseadorDoc.getDouble("calificacion_promedio") : 0.0;
-                        
-                        // Chain 1: Check Availability (Schedule)
+
+                        Boolean aceptaSolicitudes = userDoc.getBoolean("acepta_solicitudes");
+                        boolean enPaseo = userDoc.getBoolean("en_paseo") != null && userDoc.getBoolean("en_paseo");
+                        if (aceptaSolicitudes != null && !aceptaSolicitudes) {
+                            Log.d(TAG, "Paseador " + userId + " pausó servicios (acepta_solicitudes=false)");
+                            boolean disponible = false;
+                            return Tasks.forResult(new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm, enPaseo));
+                        }
+
+                        // Chain 1: Check Availability (Schedule + bloqueos + especiales)
                         return verificarDisponibilidadActual(userId).continueWithTask(task2 -> {
                             boolean disponible = !task2.isSuccessful() || task2.getResult(); // Si falla o no hay datos, considerar disponible
-                            
-                            // Chain 2: Busy status (omit reservation query to evitar PERMISSION_DENIED; default false)
-                            boolean enPaseo = userDoc.getBoolean("en_paseo") != null && userDoc.getBoolean("en_paseo");
                             Log.d(TAG, "Paseador " + userId + " - Disponible (schedule): " + disponible + ", En Paseo: " + enPaseo); // DEBUG LOG
                             return Tasks.forResult(new PaseadorMarker(userId, nombre, ubicacionPaseador, calificacion, fotoUrl, disponible, distanciaKm, enPaseo));
                         });
@@ -1578,12 +1613,12 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         return null;
     }
     /**
-     * Verifica si el paseador est?? disponible en el d??a y hora actual
-     * Compatible con estructura Firebase:
-     * - dia_semana: "Lunes", "Martes", etc.
-     * - hora_inicio: "08:00"
-     * - hora_fin: "17:00"
-     * - activo: true/false
+     * Verifica si el paseador está disponible en el día y hora actual.
+     * Soporta dos esquemas:
+     * 1) NUEVO (DisponibilidadActivity): documento `disponibilidad/horario_default`
+     *    con mapas por día (lunes..domingo) {disponible, hora_inicio, hora_fin}.
+     * 2) LEGACY/REGISTRO: documentos en `disponibilidad` con campos
+     *    {dias: [..], hora_inicio, hora_fin, activo?}.
      */
     private Task<Boolean> verificarDisponibilidadActual(String paseadorId) {
         Calendar calendar = Calendar.getInstance();
@@ -1592,95 +1627,161 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         int currentMinute = calendar.get(Calendar.MINUTE);
 
         String diaActual;
+        String diaActualAlt = null; // Variante sin/con acento para datos legacy
+        String diaKey; // clave en horario_default (lowercase, sin acentos)
         switch (dayOfWeek) {
             case Calendar.MONDAY:
                 diaActual = "Lunes";
+                diaKey = "lunes";
                 break;
             case Calendar.TUESDAY:
                 diaActual = "Martes";
+                diaKey = "martes";
                 break;
             case Calendar.WEDNESDAY:
-                diaActual = "Mi??rcoles";
+                diaActual = "Miércoles";
+                diaActualAlt = "Miercoles";
+                diaKey = "miercoles";
                 break;
             case Calendar.THURSDAY:
                 diaActual = "Jueves";
+                diaKey = "jueves";
                 break;
             case Calendar.FRIDAY:
                 diaActual = "Viernes";
+                diaKey = "viernes";
                 break;
             case Calendar.SATURDAY:
-                diaActual = "S??bado";
+                diaActual = "Sábado";
+                diaActualAlt = "Sabado";
+                diaKey = "sabado";
                 break;
             case Calendar.SUNDAY:
                 diaActual = "Domingo";
+                diaKey = "domingo";
                 break;
             default:
-                Log.e(TAG, "D??a de la semana inv??lido: " + dayOfWeek);
+                Log.e(TAG, "Día de la semana inválido: " + dayOfWeek);
                 return Tasks.forResult(false);
         }
 
         Log.d(TAG, String.format("Verificando disponibilidad para %s a las %02d:%02d",
                 diaActual, currentHour, currentMinute));
 
-        // Nuevo esquema: documentos con campos {activo: bool, dias: [array], hora_inicio, hora_fin}
-        return FirebaseFirestore.getInstance()
-                .collection("paseadores").document(paseadorId)
-                .collection("disponibilidad")
-                .whereEqualTo("activo", true)
-                .whereArrayContains("dias", diaActual)
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        final String finalDiaActual = diaActual;
+        final String finalDiaActualAlt = diaActualAlt;
+
+        // 1) Intentar esquema NUEVO: horario_default
+        return db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("horario_default")
                 .get()
-                .continueWith(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.e(TAG, "Error consultando disponibilidad", task.getException());
-                        return true; // No bloquear si hay error
-                    }
+                .continueWithTask(task -> {
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot horarioDefaultDoc = task.getResult();
+                        if (horarioDefaultDoc != null && horarioDefaultDoc.exists()) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> diaData = (Map<String, Object>) horarioDefaultDoc.get(diaKey);
 
-                    QuerySnapshot querySnapshot = task.getResult();
-                    if (querySnapshot == null || querySnapshot.isEmpty()) {
-                        Log.d(TAG, "No hay disponibilidad configurada para " + diaActual + ". Se considera disponible.");
-                        return true; // No ocultar por falta de configuraci??n
-                    }
-
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        String horaInicio = doc.getString("hora_inicio"); // "08:00"
-                        String horaFin = doc.getString("hora_fin");       // "17:00"
-
-                        if (horaInicio == null || horaFin == null) {
-                            Log.w(TAG, "Documento sin hora_inicio o hora_fin: " + doc.getId());
-                            continue;
-                        }
-
-                        try {
-                            String[] inicioSplit = horaInicio.split(":");
-                            String[] finSplit = horaFin.split(":");
-
-                            int horaInicioParsed = Integer.parseInt(inicioSplit[0]);
-                            int minutoInicioParsed = inicioSplit.length > 1 ? Integer.parseInt(inicioSplit[1]) : 0;
-
-                            int horaFinParsed = Integer.parseInt(finSplit[0]);
-                            int minutoFinParsed = finSplit.length > 1 ? Integer.parseInt(finSplit[1]) : 0;
-
-                            int minutosActuales = currentHour * 60 + currentMinute;
-                            int minutosInicio = horaInicioParsed * 60 + minutoInicioParsed;
-                            int minutosFin = horaFinParsed * 60 + minutoFinParsed;
-
-                            boolean disponible = minutosActuales >= minutosInicio && minutosActuales < minutosFin;
-
-                            if (disponible) {
-                                Log.d(TAG, String.format("Paseador disponible: %s-%s (actual: %02d:%02d)",
-                                        horaInicio, horaFin, currentHour, currentMinute));
-                                return true; // Est?? disponible en esta franja
+                            if (diaData == null) {
+                                Log.d(TAG, "Horario default sin datos para " + finalDiaActual + ". No disponible.");
+                                return Tasks.forResult(false);
                             }
 
-                        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
-                            Log.e(TAG, "Error parseando horarios: " + horaInicio + " - " + horaFin, e);
-                            continue;
+                            Boolean disponibleDia = (Boolean) diaData.get("disponible");
+                            if (disponibleDia == null || !disponibleDia) {
+                                Log.d(TAG, "Horario default indica no disponible para " + finalDiaActual + ".");
+                                return Tasks.forResult(false);
+                            }
+
+                            String horaInicioDefault = (String) diaData.get("hora_inicio");
+                            String horaFinDefault = (String) diaData.get("hora_fin");
+                            if (horaInicioDefault == null || horaFinDefault == null) {
+                                Log.w(TAG, "Horario default incompleto para " + finalDiaActual + ".");
+                                return Tasks.forResult(false);
+                            }
+
+                            boolean disponible = estaHoraEnRango(horaInicioDefault, horaFinDefault, currentHour, currentMinute);
+                            if (disponible) {
+                                Log.d(TAG, String.format("Paseador disponible (horario_default): %s-%s (actual: %02d:%02d)",
+                                        horaInicioDefault, horaFinDefault, currentHour, currentMinute));
+                            } else {
+                                Log.d(TAG, "Paseador no disponible según horario_default");
+                            }
+                            return Tasks.forResult(disponible);
                         }
                     }
 
-                    Log.d(TAG, "Paseador no disponible en este horario");
-                    return false; // No est?? disponible en las franjas configuradas
+                    // 2) Fallback LEGACY/REGISTRO: documentos con dias + hora_inicio/hora_fin (+activo opcional)
+                    Query legacyQuery = db.collection("paseadores").document(paseadorId)
+                            .collection("disponibilidad");
+                    if (finalDiaActualAlt != null) {
+                        legacyQuery = legacyQuery.whereArrayContainsAny("dias", Arrays.asList(finalDiaActual, finalDiaActualAlt));
+                    } else {
+                        legacyQuery = legacyQuery.whereArrayContains("dias", finalDiaActual);
+                    }
+
+                    return legacyQuery.get().continueWith(legacyTask -> {
+                        if (!legacyTask.isSuccessful()) {
+                            Log.e(TAG, "Error consultando disponibilidad", legacyTask.getException());
+                            return true; // No bloquear si hay error
+                        }
+
+                        QuerySnapshot querySnapshot = legacyTask.getResult();
+                        if (querySnapshot == null || querySnapshot.isEmpty()) {
+                            Log.d(TAG, "No hay disponibilidad configurada para " + finalDiaActual + ". Se considera disponible.");
+                            return true; // No ocultar por falta de configuración
+                        }
+
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            Boolean activo = doc.getBoolean("activo");
+                            if (activo != null && !activo) {
+                                continue;
+                            }
+
+                            String horaInicio = doc.getString("hora_inicio"); // "08:00"
+                            String horaFin = doc.getString("hora_fin");       // "17:00"
+
+                            if (horaInicio == null || horaFin == null) {
+                                Log.w(TAG, "Documento sin hora_inicio o hora_fin: " + doc.getId());
+                                continue;
+                            }
+
+                            if (estaHoraEnRango(horaInicio, horaFin, currentHour, currentMinute)) {
+                                Log.d(TAG, String.format("Paseador disponible (legacy): %s-%s (actual: %02d:%02d)",
+                                        horaInicio, horaFin, currentHour, currentMinute));
+                                return true;
+                            }
+                        }
+
+                        Log.d(TAG, "Paseador no disponible en este horario");
+                        return false;
+                    });
                 });
+    }
+
+    private boolean estaHoraEnRango(String horaInicio, String horaFin, int currentHour, int currentMinute) {
+        if (horaInicio == null || horaFin == null) return false;
+        try {
+            String[] inicioSplit = horaInicio.split(":");
+            String[] finSplit = horaFin.split(":");
+
+            int horaInicioParsed = Integer.parseInt(inicioSplit[0]);
+            int minutoInicioParsed = inicioSplit.length > 1 ? Integer.parseInt(inicioSplit[1]) : 0;
+
+            int horaFinParsed = Integer.parseInt(finSplit[0]);
+            int minutoFinParsed = finSplit.length > 1 ? Integer.parseInt(finSplit[1]) : 0;
+
+            int minutosActuales = currentHour * 60 + currentMinute;
+            int minutosInicio = horaInicioParsed * 60 + minutoInicioParsed;
+            int minutosFin = horaFinParsed * 60 + minutoFinParsed;
+
+            return minutosActuales >= minutosInicio && minutosActuales < minutosFin;
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            Log.e(TAG, "Error parseando horarios: " + horaInicio + " - " + horaFin, e);
+            return false;
+        }
     }
 
     private static final int MARKER_IMAGE_SIZE = 120;

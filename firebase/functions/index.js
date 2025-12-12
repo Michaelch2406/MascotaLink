@@ -1,13 +1,267 @@
 const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest } = require("firebase-functions/v2/https");
+const { onCall } = require("firebase-functions/v2/https"); // Import onCall for callable functions
+const { defineString } = require("firebase-functions/params"); // Nuevo: sistema de parámetros
 const admin = require("firebase-admin");
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-admin.initializeApp();
+// Import the Google Generative AI client library
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// Define Gemini API Key usando el nuevo sistema de parámetros (reemplaza functions.config())
+// Este parámetro se define en Firebase usando: firebase functions:secrets:set GEMINI_API_KEY
+const geminiApiKey = defineString("GEMINI_API_KEY");
+
+// Inicializar Gemini AI con el nuevo sistema
+let genAI = null;
+let model = null;
+
+// La inicialización real ocurre cuando se ejecuta la función
+// porque geminiApiKey.value() solo está disponible en runtime
+function initializeGemini() {
+  if (genAI) return; // Ya inicializado
+
+  const apiKey = geminiApiKey.value();
+
+  if (!apiKey) {
+    console.error("GEMINI_API_KEY is not set. Gemini AI features will be disabled.");
+    return;
+  }
+
+  genAI = new GoogleGenerativeAI(apiKey);
+  model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  console.log("✅ Gemini AI initialized successfully");
+}
+
+admin.initializeApp();
 const db = admin.firestore();
+
 const getIdValue = (value) => (value && typeof value === "object" && value.id ? value.id : value);
+
+/**
+ * Calculates distance between two geographical points using the Haversine formula.
+ * @param {number} lat1 Latitude of point 1
+ * @param {number} lon1 Longitude of point 1
+ * @param {number} lat2 Latitude of point 2
+ * @param {number} lon2 Longitude of point 2
+ * @returns {number} Distance in kilometers
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of Earth in kilometers
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c; // Distance in km
+  return distance;
+}
+
+/**
+ * Cloud Function to recommend walkers based on user and pet criteria using Gemini AI.
+ * This is a callable function, invoked directly from the Android app.
+ */
+exports.recomendarPaseadores = onCall(async (request) => {
+  // Inicializar Gemini AI si aún no está inicializado
+  initializeGemini();
+
+  if (!model) {
+    console.error("Gemini AI model is not initialized. Check GEMINI_API_KEY.");
+    return { error: "Gemini AI no está disponible. Contacta al soporte." };
+  }
+
+  const { userData, petData, userLocation } = request.data;
+  const userId = request.auth?.uid;
+
+  if (!userId) {
+    throw new functions.https.HttpsError('unauthenticated', 'El usuario no está autenticado.');
+  }
+
+  if (!userData || !petData || !userLocation) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Faltan datos de usuario, mascota o ubicación.'
+    );
+  }
+
+  console.log(`Recomendación para usuario ${userId}, mascota ${petData.nombre}`);
+
+  const userLat = userLocation.latitude;
+  const userLng = userLocation.longitude;
+  const radiusKm = 10; // Search within 10 km radius
+
+  let potentialWalkers = [];
+
+  try {
+    // 1. Fetch potential walkers from paseadores_search collection
+    // This collection is denormalized and contains searchable walker data.
+    const searchSnapshot = await db.collection("paseadores_search")
+      .where("activo", "==", true)
+      .where("verificacion_estado", "==", "verificado") // Only recommend verified walkers
+      .get();
+
+    const walkerIds = [];
+    const walkerDataMap = {}; // To store full walker data
+
+    for (const doc of searchSnapshot.docs) {
+      const walkerSearchData = doc.data();
+      const walkerId = doc.id;
+      walkerIds.push(walkerId);
+      walkerDataMap[walkerId] = walkerSearchData;
+    }
+
+    if (walkerIds.length === 0) {
+      return { recommendations: [], message: "No se encontraron paseadores activos y verificados." };
+    }
+
+    // 2. Fetch full paseador profile data and user display name for prompt
+    const fullWalkerPromises = walkerIds.map(id => db.collection("paseadores").doc(id).get());
+    const userDisplayPromises = walkerIds.map(id => db.collection("usuarios").doc(id).get());
+
+    const [fullWalkerDocs, userDisplayDocs] = await Promise.all([
+      Promise.all(fullWalkerPromises),
+      Promise.all(userDisplayPromises)
+    ]);
+
+    const paseadoresForAI = [];
+
+    for (let i = 0; i < walkerIds.length; i++) {
+      const walkerId = walkerIds[i];
+      const searchData = walkerDataMap[walkerId];
+      const fullWalkerData = fullWalkerDocs[i].exists ? fullWalkerDocs[i].data() : {};
+      const userDisplayData = userDisplayDocs[i].exists ? userDisplayDocs[i].data() : {};
+
+      const walkerLocation = fullWalkerData.ubicacion_principal?.geopoint;
+
+      // Filter by distance if location is available
+      if (walkerLocation && walkerLocation.latitude && walkerLocation.longitude) {
+        const distance = calculateDistance(userLat, userLng, walkerLocation.latitude, walkerLocation.longitude);
+        if (distance <= radiusKm) {
+          paseadoresForAI.push({
+            id: walkerId,
+            nombre: userDisplayData.nombre_display || `Paseador ${walkerId.substring(0, 5)}`,
+            calificacion_promedio: searchData.calificacion_promedio || 0,
+            num_servicios_completados: searchData.num_servicios_completados || 0,
+            precio_hora: searchData.precio_hora || 0,
+            tipos_perro_aceptados: searchData.tipos_perro_aceptados || [],
+            anos_experiencia: searchData.anos_experiencia || 0,
+            verificacion_estado: searchData.verificacion_estado || "pendiente",
+            distancia_km: parseFloat(distance.toFixed(2)),
+            // Add other relevant fields for AI reasoning
+            motivacion: fullWalkerData.motivacion || "",
+            experiencia_general: fullWalkerData.experiencia_general || "",
+          });
+        }
+      }
+    }
+
+    if (paseadoresForAI.length === 0) {
+      return { recommendations: [], message: "No se encontraron paseadores aptos cerca de tu ubicación." };
+    }
+
+    // Sort by distance as a primary filter for AI
+    paseadoresForAI.sort((a, b) => a.distancia_km - b.distancia_km);
+
+    // OPTIMIZACIÓN: Limitar a máximo 10 candidatos para reducir tokens y costo
+    const candidatosParaIA = paseadoresForAI.slice(0, 10);
+
+    console.log(`Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
+
+    // Construct the prompt for Gemini AI
+    const prompt = `Actúa como un asistente de inteligencia artificial experto en recomendaciones de paseadores de perros para la aplicación Walki.
+    Tu objetivo es recomendar MÁXIMO 2 paseadores (1 o 2, no más) de una lista, basándote en un perfil de mascota y las preferencias del dueño.
+    Prioriza la calidad de la recomendación, la adecuación al perro, la experiencia, la reputación (calificación, servicios completados) y la distancia.
+    El formato de salida debe ser un JSON.
+
+    Aquí está el perfil del dueño:
+    ${JSON.stringify(userData, null, 2)}
+
+    Aquí está el perfil de la mascota a pasear:
+    ${JSON.stringify(petData, null, 2)}
+
+    Aquí hay una lista de paseadores disponibles (ya filtrados por distancia y calificación, ordenados por cercanía):
+    ${JSON.stringify(candidatosParaIA, null, 2)}
+
+    Considera especialmente:
+    - Compatibilidad del "tipo_mascota" de la mascota con "tipos_perro_aceptados" del paseador.
+    - Calificación promedio y número de servicios completados para la confiabilidad.
+    - La motivación y experiencia_general del paseador para entender su enfoque.
+    - El precio por hora en relación con la experiencia y calificación.
+    - La distancia ya ha sido calculada y es un factor importante.
+
+    Devuelve un array JSON de MÁXIMO 2 objetos (puede ser 1 si solo hay un excelente match, o 2 si hay dos buenos matches). Cada objeto debe tener: 'id' del paseador, 'nombre', 'razon_ia' (string conciso en español explicando por qué se recomienda) y 'match_score' (número entero del 0-100).
+    IMPORTANTE: Solo recomienda si el match_score es 75 o superior. Si no hay buenos matches, devuelve array vacío.
+    Ejemplo de salida:
+    [
+      {
+        "id": "paseador123",
+        "nombre": "Juan Pérez",
+        "razon_ia": "Experto en Golden Retrievers con 5 años de experiencia, excelente calificación y muy cerca de tu ubicación.",
+        "match_score": 95
+      },
+      {
+        "id": "paseador456",
+        "nombre": "Ana Gómez",
+        "razon_ia": "Especialista en perros grandes y enérgicos, precio competitivo y disponibilidad inmediata.",
+        "match_score": 88
+      }
+    ]
+    `;
+
+    console.log("Enviando prompt a Gemini AI...");
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    console.log("Respuesta de Gemini AI (raw):", text);
+
+    let recommendations = [];
+    try {
+      // Clean up the text to ensure it's valid JSON
+      const cleanText = text.replace(/```json\n|```/g, '').trim();
+      recommendations = JSON.parse(cleanText);
+    } catch (e) {
+      console.error("Error parsing Gemini AI response as JSON:", e);
+      console.error("Attempting to extract JSON from raw text...");
+      // Fallback for when Gemini might wrap JSON in markdown or add extra text
+      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+      if (jsonMatch && jsonMatch[1]) {
+        try {
+          recommendations = JSON.parse(jsonMatch[1]);
+        } catch (e2) {
+          console.error("Second attempt to parse JSON failed:", e2);
+          throw new functions.https.HttpsError('internal', 'La IA no pudo generar una respuesta válida.');
+        }
+      } else {
+        throw new functions.https.HttpsError('internal', 'La IA no pudo generar una respuesta válida.');
+      }
+    }
+
+    if (!Array.isArray(recommendations)) {
+      console.error("Gemini AI response is not an array:", recommendations);
+      throw new functions.https.HttpsError('internal', 'La IA no devolvió un formato de recomendaciones válido.');
+    }
+
+    // Ensure match_score is a number
+    recommendations.forEach(rec => {
+      if (typeof rec.match_score !== 'number') {
+        rec.match_score = parseInt(rec.match_score) || 0; // Default to 0 if parsing fails
+      }
+    });
+
+    console.log("Recomendaciones de Gemini AI:", recommendations);
+
+    return { recommendations: recommendations, message: "Recomendaciones generadas exitosamente." };
+
+  } catch (error) {
+    console.error("Error al recomendar paseadores:", error);
+    throw new functions.https.HttpsError('internal', 'Error al procesar la recomendación.', error.message);
+  }
+});
+
 
 /**
  * Sincroniza los datos de un paseador en una colección de búsqueda denormalizada.

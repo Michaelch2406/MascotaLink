@@ -87,8 +87,15 @@ service cloud.firestore {
       // Estructura ANTIGUA: documentos directos en disponibilidad (para usuarios con datos antiguos)
       // Matchea cualquier documento que NO sea uno de los documentos especiales
       match /disponibilidad/{diaId} {
-        allow read: if isAuthenticated() && diaId != 'horario_default' && diaId != 'bloqueos' && diaId != 'horarios_especiales';
-        allow write: if isOwner(paseadorId) && diaId != 'horario_default' && diaId != 'bloqueos' && diaId != 'horarios_especiales';
+        // Permitir lectura de cualquier documento de disponibilidad para soportar
+        // queries en la app (legacy y nuevas). Los documentos especiales ya tienen
+        // reglas de escritura separadas.
+        allow read: if isAuthenticated();
+        allow write: if isOwner(paseadorId) &&
+          diaId != 'horario_default' &&
+          diaId != 'bloqueos' &&
+          diaId != 'horarios_especiales' &&
+          (request.resource.data.get('dias', null) == null || request.resource.data.dias is list);
       }
 
       // Estructura NUEVA: documento para horario por defecto

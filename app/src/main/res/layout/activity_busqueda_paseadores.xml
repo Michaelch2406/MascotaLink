@@ -99,6 +99,45 @@
                     android:orientation="vertical"
                     android:paddingBottom="24dp">
 
+                    <!-- Botón: Buscar con IA -->
+                    <LinearLayout
+                        android:id="@+id/btn_buscar_con_ia"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="20dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="24dp"
+                        android:background="@drawable/bg_ai_button_gradient"
+                        android:elevation="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_auto_awesome"
+                            android:contentDescription="IA Icon"
+                            app:tint="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="Recomendación con IA 🤖"
+                            android:textSize="15sp"
+                            android:textColor="#FFFFFF"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.02" />
+                    </LinearLayout>
+
                     <!-- Populares -->
                     <TextView
                         android:layout_width="wrap_content"

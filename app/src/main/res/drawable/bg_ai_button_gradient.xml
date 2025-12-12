@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gradiente para botón "Buscar con IA" - mismo estilo que chip de IA -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="45"
+        android:startColor="#6B46FF"
+        android:centerColor="#7D5CFF"
+        android:endColor="#8E72FF"
+        android:type="linear" />
+    <corners android:radius="16dp" />
+</shape>

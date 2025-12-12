@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    BottomSheet para mostrar recomendación de IA
+    Colores consistentes con item_paseador_recomendacion_ia.xml
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:id="@+id/bottom_sheet_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_bottom_sheet_ia"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+        app:behavior_peekHeight="0dp"
+        app:behavior_hideable="true"
+        app:behavior_skipCollapsed="false">
+
+        <!-- Handle para indicar que es deslizable -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_bottom_sheet_handle"/>
+
+        <!-- ============================================ -->
+        <!-- ESTADO DE LOADING -->
+        <!-- ============================================ -->
+        <LinearLayout
+            android:id="@+id/loading_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="visible">
+
+            <!-- Animación de búsqueda -->
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progress_indicator"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:indeterminate="true"
+                app:indicatorColor="#6B46FF"
+                app:trackColor="#E8E8FF"
+                app:trackThickness="4dp"
+                app:indicatorSize="60dp"/>
+
+            <!-- Texto animado -->
+            <TextView
+                android:id="@+id/tv_loading_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="🤖 Buscando tu match perfecto..."
+                android:textSize="16sp"
+                android:textColor="#1E293B"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"/>
+
+            <TextView
+                android:id="@+id/tv_loading_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Analizando paseadores con IA"
+                android:textSize="14sp"
+                android:textColor="#64748B"
+                android:gravity="center"/>
+        </LinearLayout>
+
+        <!-- ============================================ -->
+        <!-- CONTENEDOR DE RECOMENDACIÓN -->
+        <!-- ============================================ -->
+        <FrameLayout
+            android:id="@+id/recommendation_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+
+            <!-- Aquí se inflará dinámicamente item_paseador_recomendacion_ia.xml -->
+            <!-- O se puede incluir directamente: -->
+            <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxHeight="600dp">
+
+                <LinearLayout
+                    android:id="@+id/recommendation_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"/>
+
+            </androidx.core.widget.NestedScrollView>
+
+        </FrameLayout>
+
+        <!-- ============================================ -->
+        <!-- ESTADO DE ERROR (opcional) -->
+        <!-- ============================================ -->
+        <LinearLayout
+            android:id="@+id/error_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="😕"
+                android:textSize="48sp"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No encontramos recomendaciones"
+                android:textSize="16sp"
+                android:textColor="#1E293B"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Intenta actualizar tu perfil o buscar manualmente"
+                android:textSize="14sp"
+                android:textColor="#64748B"
+                android:gravity="center"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_retry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Reintentar"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#4747FF"
+                app:cornerRadius="24dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -3,19 +3,15 @@
     Walki - AI Recommendation Card
     Convertido desde code1.html
     Item para mostrar la recomendación de IA de un paseador
+    NOTA: Este item es para usar en RecyclerView, NO tiene ScrollView propio
 -->
-<ScrollView
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="#F5F5F8">
-
-<androidx.constraintlayout.widget.ConstraintLayout
-    android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="#F5F5F8"
     android:paddingStart="16dp"
     android:paddingEnd="16dp"
     android:paddingBottom="32dp"
@@ -188,7 +184,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/placeholder_walker"
+                        android:src="@drawable/ic_user_placeholder"
                         android:contentDescription="Foto del paseador" />
                 </androidx.cardview.widget.CardView>
 
@@ -207,8 +203,8 @@
                         android:layout_height="16dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_verified"
-                        android:tint="#FFFFFF"
-                        android:contentDescription="Verificado" />
+                        android:contentDescription="Verificado"
+                        app:tint="#FFFFFF" />
                 </androidx.cardview.widget.CardView>
 
                 <!-- Availability Dot (bottom right) -->
@@ -667,5 +663,3 @@
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
-</ScrollView>
