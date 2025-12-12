@@ -60,6 +60,33 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
+// 🆕 MEJORA #6: Cache de recomendaciones en memoria
+// Evita llamar a Gemini múltiples veces para el mismo usuario en poco tiempo
+const recommendationCache = new Map(); // userId -> { recommendations, timestamp, petId }
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos en milisegundos
+
+/**
+ * Limpia entradas expiradas del cache (ejecuta cada 10 minutos)
+ */
+function cleanExpiredCache() {
+  const now = Date.now();
+  let cleaned = 0;
+
+  for (const [userId, data] of recommendationCache.entries()) {
+    if (now - data.timestamp > CACHE_TTL) {
+      recommendationCache.delete(userId);
+      cleaned++;
+    }
+  }
+
+  if (cleaned > 0) {
+    console.log(`🧹 Cache limpiado: ${cleaned} entradas expiradas eliminadas`);
+  }
+}
+
+// Ejecutar limpieza cada 10 minutos
+setInterval(cleanExpiredCache, 10 * 60 * 1000);
+
 /**
  * Cloud Function to recommend walkers based on user and pet criteria using Gemini AI.
  * This is a callable function, invoked directly from the Android app.
@@ -87,7 +114,73 @@ exports.recomendarPaseadores = onCall(async (request) => {
     );
   }
 
-  console.log(`Recomendación para usuario ${userId}, mascota ${petData.nombre}`);
+  // 🆕 MEJORA #3: Validar campos mínimos requeridos
+  // Verificar que los objetos tengan los campos críticos para la IA
+  const requiredPetFields = {
+    nombre: 'Nombre de mascota',
+    tipo_mascota: 'Tamaño de mascota (Pequeño/Mediano/Grande)'
+  };
+
+  const requiredUserFields = {
+    nombre_display: 'Nombre del dueño'
+  };
+
+  const requiredLocationFields = {
+    latitude: 'Latitud de ubicación',
+    longitude: 'Longitud de ubicación'
+  };
+
+  // Validar petData
+  for (const [field, label] of Object.entries(requiredPetFields)) {
+    if (!petData[field]) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        `Falta información de tu mascota: ${label}. Por favor completa el perfil de tu mascota.`
+      );
+    }
+  }
+
+  // Validar userData
+  for (const [field, label] of Object.entries(requiredUserFields)) {
+    if (!userData[field]) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        `Falta información de tu perfil: ${label}. Por favor completa tu perfil.`
+      );
+    }
+  }
+
+  // Validar userLocation
+  for (const [field, label] of Object.entries(requiredLocationFields)) {
+    if (userLocation[field] === undefined || userLocation[field] === null) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        `Falta ${label}. Por favor activa los permisos de ubicación.`
+      );
+    }
+  }
+
+  console.log(`✅ Validación exitosa - Recomendación para usuario ${userId}, mascota ${petData.nombre} (${petData.tipo_mascota})`);
+
+  // 🆕 MEJORA #6: Verificar cache antes de llamar a Gemini
+  const cacheKey = userId;
+  const petId = petData.id || petData.nombre; // Identificador de mascota
+  const cached = recommendationCache.get(cacheKey);
+
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    // Verificar que sea para la misma mascota
+    if (cached.petId === petId) {
+      console.log(`💾 Retornando recomendaciones desde cache (${Math.floor((CACHE_TTL - (Date.now() - cached.timestamp)) / 1000)}s restantes)`);
+      return {
+        recommendations: cached.recommendations,
+        message: "Recomendaciones obtenidas (cache)",
+        cached: true
+      };
+    } else {
+      console.log(`🔄 Cache invalidado: cambió la mascota (${cached.petId} → ${petId})`);
+      recommendationCache.delete(cacheKey);
+    }
+  }
 
   const userLat = userLocation.latitude;
   const userLng = userLocation.longitude;
@@ -165,12 +258,43 @@ exports.recomendarPaseadores = onCall(async (request) => {
       return { recommendations: [], message: "No se encontraron paseadores aptos cerca de tu ubicación." };
     }
 
-    // Sort by distance as a primary filter for AI
-    paseadoresForAI.sort((a, b) => a.distancia_km - b.distancia_km);
+    // 🆕 MEJORA #4: Pre-scoring híbrido (distancia + calificación + experiencia)
+    // En lugar de solo ordenar por distancia, calculamos un score que combina múltiples factores
+    console.log(`Calculando pre-score para ${paseadoresForAI.length} candidatos...`);
 
-    // OPTIMIZACIÓN: Limitar a máximo 10 candidatos para reducir tokens y costo
-    const candidatosParaIA = paseadoresForAI.slice(0, 10);
+    paseadoresForAI.forEach(paseador => {
+      // Componentes del score (0-100):
+      const scoreDistancia = Math.max(0, 100 - (paseador.distancia_km * 10)); // 10km = 0 pts, 0km = 100 pts
+      const scoreCalificacion = (paseador.calificacion_promedio / 5) * 100; // 5 estrellas = 100 pts
+      const scoreExperiencia = Math.min(100, paseador.anos_experiencia * 20); // 5+ años = 100 pts
+      const scoreServicios = Math.min(100, paseador.num_servicios_completados * 2); // 50+ servicios = 100 pts
 
+      // Ponderación: Calificación (35%) + Distancia (30%) + Servicios (20%) + Experiencia (15%)
+      paseador.pre_score =
+        (scoreCalificacion * 0.35) +
+        (scoreDistancia * 0.30) +
+        (scoreServicios * 0.20) +
+        (scoreExperiencia * 0.15);
+
+      // Bonus: Si tiene reseñas positivas recientes, +5 puntos
+      if (paseador.top_resenas && paseador.top_resenas.length > 0) {
+        const promedioResenas = paseador.top_resenas.reduce((sum, r) => sum + r.calificacion, 0) / paseador.top_resenas.length;
+        if (promedioResenas >= 4.5) {
+          paseador.pre_score += 5;
+        }
+      }
+    });
+
+    // Ordenar por pre_score descendente (mejores primero)
+    paseadoresForAI.sort((a, b) => b.pre_score - a.pre_score);
+
+    // OPTIMIZACIÓN: Limitar a máximo 15 candidatos (aumentado de 10 para mejor diversidad)
+    const candidatosParaIA = paseadoresForAI.slice(0, 15);
+
+    console.log(`✅ Top 3 candidatos por pre-score:`);
+    candidatosParaIA.slice(0, 3).forEach((p, i) => {
+      console.log(`  ${i+1}. ${p.nombre} - Score: ${p.pre_score.toFixed(1)} (${p.calificacion_promedio}⭐, ${p.distancia_km}km, ${p.anos_experiencia}años exp)`);
+    });
     console.log(`Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
 
     // Construct the prompt for Gemini AI
@@ -300,6 +424,14 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
     });
 
     console.log("Recomendaciones de Gemini AI:", recommendations);
+
+    // 🆕 MEJORA #6: Guardar en cache antes de retornar
+    recommendationCache.set(cacheKey, {
+      recommendations: recommendations,
+      timestamp: Date.now(),
+      petId: petId
+    });
+    console.log(`💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
 
     return { recommendations: recommendations, message: "Recomendaciones generadas exitosamente." };
 
