@@ -132,7 +132,6 @@ exports.recomendarPaseadores = onCall(async (request) => {
       const walkerId = walkerIds[i];
       const searchData = walkerDataMap[walkerId];
       const fullWalkerData = fullWalkerDocs[i].exists ? fullWalkerDocs[i].data() : {};
-      const userDisplayData = userDisplayDocs[i].exists ? userDisplayDocs[i].data() : {};
 
       const walkerLocation = fullWalkerData.ubicacion_principal?.geopoint;
 
@@ -142,7 +141,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
         if (distance <= radiusKm) {
           paseadoresForAI.push({
             id: walkerId,
-            nombre: userDisplayData.nombre_display || `Paseador ${walkerId.substring(0, 5)}`,
+            nombre: searchData.nombre_display || `Paseador ${walkerId.substring(0, 5)}`,
             calificacion_promedio: searchData.calificacion_promedio || 0,
             num_servicios_completados: searchData.num_servicios_completados || 0,
             precio_hora: searchData.precio_hora || 0,
@@ -150,9 +149,13 @@ exports.recomendarPaseadores = onCall(async (request) => {
             anos_experiencia: searchData.anos_experiencia || 0,
             verificacion_estado: searchData.verificacion_estado || "pendiente",
             distancia_km: parseFloat(distance.toFixed(2)),
-            // Add other relevant fields for AI reasoning
-            motivacion: fullWalkerData.motivacion || "",
-            experiencia_general: fullWalkerData.experiencia_general || "",
+
+            // 🆕 Campos denormalizados desde paseadores_search (ya no necesitamos consultar /paseadores/)
+            motivacion: searchData.motivacion || "",
+            top_resenas: searchData.top_resenas || [],
+            zonas_principales: searchData.zonas_principales || [],
+            disponibilidad_general: searchData.disponibilidad_general || "No especificada",
+            // ❌ ELIMINADO: experiencia_general (redundante con anos_experiencia)
           });
         }
       }
@@ -171,46 +174,89 @@ exports.recomendarPaseadores = onCall(async (request) => {
     console.log(`Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
 
     // Construct the prompt for Gemini AI
-    const prompt = `Actúa como un asistente de inteligencia artificial experto en recomendaciones de paseadores de perros para la aplicación Walki.
-    Tu objetivo es recomendar MÁXIMO 2 paseadores (1 o 2, no más) de una lista, basándote en un perfil de mascota y las preferencias del dueño.
-    Prioriza la calidad de la recomendación, la adecuación al perro, la experiencia, la reputación (calificación, servicios completados) y la distancia.
-    El formato de salida debe ser un JSON.
+    const prompt = `Eres un asistente experto en matching de paseadores de perros para la app Walki.
 
-    Aquí está el perfil del dueño:
-    ${JSON.stringify(userData, null, 2)}
+**ESQUEMA DE DATOS:**
 
-    Aquí está el perfil de la mascota a pasear:
-    ${JSON.stringify(petData, null, 2)}
+Mascota (petData):
+- nombre: string
+- tipo_mascota: "Pequeños" | "Medianos" | "Grandes" | "Gigantes"
+- raza: string (opcional)
+- edad_meses: number
+- temperamento: string (opcional)
 
-    Aquí hay una lista de paseadores disponibles (ya filtrados por distancia y calificación, ordenados por cercanía):
-    ${JSON.stringify(candidatosParaIA, null, 2)}
+Paseador (candidatos):
+- id: string
+- nombre: string
+- calificacion_promedio: 0-5 (float) - promedio de todas las reseñas
+- num_servicios_completados: number - total de paseos realizados
+- precio_hora: number (USD)
+- anos_experiencia: number - años trabajando con perros
+- tipos_perro_aceptados: ["Pequeños", "Medianos", "Grandes"] - DEBE coincidir con tipo_mascota
+- distancia_km: number - distancia ya calculada (máx 10km)
+- verificacion_estado: "verificado" | "pendiente"
+- motivacion: string - por qué es paseador
+- top_resenas: [{texto: string, calificacion: number}] - últimas 3 reseñas reales
+- zonas_principales: [string] - zonas de cobertura
+- disponibilidad_general: string - resumen de horarios
 
-    Considera especialmente:
-    - Compatibilidad del "tipo_mascota" de la mascota con "tipos_perro_aceptados" del paseador.
-    - Calificación promedio y número de servicios completados para la confiabilidad.
-    - La motivación y experiencia_general del paseador para entender su enfoque.
-    - El precio por hora en relación con la experiencia y calificación.
-    - La distancia ya ha sido calculada y es un factor importante.
+**CRITERIOS DE MATCH (ponderación):**
 
-    Devuelve un array JSON de MÁXIMO 2 objetos (puede ser 1 si solo hay un excelente match, o 2 si hay dos buenos matches). Cada objeto debe tener:
-    - 'id': id del paseador.
-    - 'nombre': nombre del paseador.
-    - 'razon_ia': string conciso en español explicando por qué se recomienda (una frase).
-    - 'match_score': número entero del 0-100.
-    - 'tags': un array de exactamente 3 strings CORTOS (máximo 2-3 palabras cada uno) destacando los puntos fuertes (ej: "📍 Muy cerca", "💰 Buen precio", "🐕 Experto en raza", "⭐ Top rated").
+1. **Compatibilidad de tamaño (40% del score)**:
+   - El tipo_mascota DEBE estar en tipos_perro_aceptados
+   - Si NO coincide → match_score = 0 (NO recomendar NUNCA)
 
-    IMPORTANTE: Solo recomienda si el match_score es 75 o superior. Si no hay buenos matches, devuelve array vacío.
-    Ejemplo de salida:
-    [
-      {
-        "id": "paseador123",
-        "nombre": "Juan Pérez",
-        "razon_ia": "Experto en Golden Retrievers con 5 años de experiencia, excelente calificación y muy cerca de tu ubicación.",
-        "match_score": 95,
-        "tags": ["📍 A 1.2 km", "🐕 Experto en raza", "⭐ 5.0 Estrellas"]
-      }
-    ]
-    `;
+2. **Reputación (25%)**:
+   - calificacion_promedio >= 4.5 es excelente
+   - num_servicios_completados >= 20 es confiable
+   - Combinar: paseador 5.0★ con 100 servicios > 4.8★ con 10 servicios
+   - Leer top_resenas para validar calidad
+
+3. **Distancia (20%)**:
+   - < 2 km = excelente (+20 puntos)
+   - 2-5 km = bueno (+15 puntos)
+   - 5-10 km = aceptable (+10 puntos)
+
+4. **Experiencia (10%)**:
+   - anos_experiencia >= 3 es ideal
+   - anos_experiencia >= 1 es aceptable
+
+5. **Precio (5%)**:
+   - Relación calidad-precio (no solo el más barato)
+   - Precio bajo + poca experiencia = red flag
+   - Precio alto + alta calificación = justificado
+
+**REGLAS ESTRICTAS:**
+- NUNCA recomendar si tipo_mascota NO está en tipos_perro_aceptados
+- NUNCA recomendar si match_score < 75
+- NUNCA recomendar si verificacion_estado != "verificado"
+- MÁXIMO 2 recomendaciones (preferiblemente 1 si es match excelente)
+- Si hay empate en score, priorizar menor distancia
+- Usa top_resenas para fundamentar la recomendación
+
+**DATOS DEL USUARIO:**
+Dueño: ${JSON.stringify(userData, null, 2)}
+
+Mascota: ${JSON.stringify(petData, null, 2)}
+
+**CANDIDATOS (ya filtrados y ordenados por cercanía):**
+${JSON.stringify(candidatosParaIA, null, 2)}
+
+**FORMATO DE SALIDA (JSON puro sin markdown):**
+[
+  {
+    "id": "walker_id",
+    "nombre": "Nombre",
+    "razon_ia": "Una frase concisa explicando el match (máx 100 caracteres)",
+    "match_score": 85,
+    "tags": ["📍 A 2.5 km", "⭐ 4.9/5 (50 paseos)", "🐕 Acepta ${tipo_mascota}"]
+  }
+]
+
+**IMPORTANTE:**
+- Devuelve SOLO el array JSON, sin texto adicional ni bloques de código markdown
+- Si no hay buenos matches (score >= 75), devuelve array vacío: []
+- Los tags deben ser MUY concisos (máx 3 palabras cada uno)`;
 
     console.log("Enviando prompt a Gemini AI...");
     const result = await model.generateContent(prompt);
@@ -297,6 +343,7 @@ async function sincronizarPaseador(docId) {
 
     const paseadorData = paseadorDoc.data();
 
+    // Calcular años de experiencia desde experiencia_general (MANTENER en /paseadores/)
     let anosExperiencia = 0;
     if (paseadorData.experiencia_general && typeof paseadorData.experiencia_general === 'string') {
       const match = paseadorData.experiencia_general.match(/\d+/);
@@ -305,17 +352,117 @@ async function sincronizarPaseador(docId) {
       }
     }
 
+    // 🆕 DENORMALIZACIÓN: Obtener top 3 reseñas recientes
+    let topResenas = [];
+    try {
+      const resenasSnapshot = await db.collection("resenas_paseadores")
+        .where("paseadorId", "==", docId) // ✅ CORREGIDO: paseadorId (camelCase)
+        .orderBy("timestamp", "desc") // ✅ CORREGIDO: timestamp (no fecha_creacion)
+        .limit(3)
+        .get();
+
+      topResenas = resenasSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          texto: data.comentario || "",
+          calificacion: data.calificacion || 0
+        };
+      });
+
+      if (topResenas.length > 0) {
+        console.log(`✅ ${topResenas.length} reseñas encontradas para ${docId}`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Error obteniendo reseñas para ${docId}: ${error.message}`);
+      console.log(`   Posible causa: Falta índice en Firestore para (paseadorId, timestamp)`);
+    }
+
+    // 🆕 DENORMALIZACIÓN: Obtener zonas de servicio principales
+    let zonasPrincipales = [];
+    try {
+      const zonasSnapshot = await paseadorRef
+        .collection("zonas_servicio")
+        .limit(5)
+        .get();
+
+      zonasPrincipales = zonasSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return data.nombre || data.zona || doc.id;
+      });
+    } catch (error) {
+      console.log(`No se pudieron obtener zonas para ${docId}:`, error.message);
+    }
+
+    // 🆕 DENORMALIZACIÓN: Disponibilidad general simplificada
+    let disponibilidadGeneral = "No especificada";
+    let diasDisponibles = [];
+
+    try {
+      // 1. Verificar horario_default (estructura principal)
+      const disponibilidadDoc = await paseadorRef
+        .collection("disponibilidad")
+        .doc("horario_default")
+        .get();
+
+      if (disponibilidadDoc.exists) {
+        const horario = disponibilidadDoc.data();
+        const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+        diasDisponibles = diasSemana.filter(dia => {
+          const diaData = horario[dia];
+          return diaData && diaData.disponible === true;
+        });
+
+        if (diasDisponibles.length > 0) {
+          // Resumen más detallado para la IA
+          const horaEjemplo = horario[diasDisponibles[0]]?.hora_inicio || "";
+          disponibilidadGeneral = `${diasDisponibles.length} días/semana desde ${horaEjemplo}`;
+          console.log(`✅ Disponibilidad: ${disponibilidadGeneral} (${diasDisponibles.join(", ")})`);
+        } else {
+          console.log(`ℹ️ horario_default existe pero sin días disponibles`);
+        }
+      } else {
+        console.log(`ℹ️ Sin horario_default para ${docId}`);
+
+        // 2. Fallback: Buscar formato antiguo (documentos con IDs aleatorios)
+        const disponibilidadSnapshot = await paseadorRef
+          .collection("disponibilidad")
+          .where("activo", "==", true)
+          .limit(1)
+          .get();
+
+        if (!disponibilidadSnapshot.empty) {
+          const docAntiguo = disponibilidadSnapshot.docs[0].data();
+          if (docAntiguo.dias && Array.isArray(docAntiguo.dias)) {
+            disponibilidadGeneral = `${docAntiguo.dias.length} días/semana (formato antiguo)`;
+            console.log(`✅ Disponibilidad antigua: ${disponibilidadGeneral}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.log(`⚠️ Error obteniendo disponibilidad para ${docId}: ${error.message}`);
+    }
+
+    // Construir objeto denormalizado para paseadores_search
     const searchData = {
+      // Campos básicos (ya existían)
       nombre_display: userData.nombre_display || null,
       nombre_lowercase: (userData.nombre_display || "").toLowerCase(),
       foto_perfil: userData.foto_perfil || null,
+      foto_url: userData.foto_perfil || null, // Alias para el adapter Android
       activo: userData.activo || false,
       calificacion_promedio: paseadorData.calificacion_promedio || 0,
       num_servicios_completados: paseadorData.num_servicios_completados || 0,
       precio_hora: paseadorData.precio_hora || 0,
       tipos_perro_aceptados: paseadorData.manejo_perros?.tamanos || [],
-      anos_experiencia: anosExperiencia,
+      anos_experiencia: anosExperiencia, // Calculado, NO duplicar experiencia_general
       verificacion_estado: paseadorData.verificacion_estado || "pendiente",
+
+      // 🆕 Campos adicionales denormalizados para IA
+      motivacion: paseadorData.perfil_profesional?.motivacion || "", // ✅ CORREGIDO: Ruta anidada
+      top_resenas: topResenas, // Array de {texto, calificacion}
+      zonas_principales: zonasPrincipales, // Array de strings
+      disponibilidad_general: disponibilidadGeneral, // String resumido
     };
 
     console.log(`Actualizando documento de búsqueda para el paseador: ${docId}`);
@@ -1347,6 +1494,61 @@ exports.onReservaStatusChange = onDocumentUpdated("reservas/{reservaId}", async 
     } catch (error) {
         console.error(`Error actualizando estado de paseador ${paseadorId}:`, error);
     }
+});
+
+// --- 🆕 FUNCIÓN DE MIGRACIÓN: Actualizar paseadores_search con campos denormalizados ---
+// Ejecutar UNA VEZ después de desplegar para actualizar paseadores existentes
+// URL: https://southamerica-east1-{PROJECT_ID}.cloudfunctions.net/migrarPaseadoresSearch
+exports.migrarPaseadoresSearch = onRequest(async (req, res) => {
+  try {
+    console.log("Iniciando migración de paseadores_search con campos denormalizados...");
+
+    // Obtener todos los usuarios con rol PASEADOR
+    const usuariosSnapshot = await db.collection("usuarios")
+      .where("rol", "==", "PASEADOR")
+      .get();
+
+    if (usuariosSnapshot.empty) {
+      res.status(200).send({ success: true, message: "No hay paseadores para migrar", total: 0 });
+      return;
+    }
+
+    const paseadorIds = usuariosSnapshot.docs.map(doc => doc.id);
+    console.log(`Encontrados ${paseadorIds.length} paseadores para migrar`);
+
+    let migrados = 0;
+    let errores = 0;
+
+    // Procesar en lotes de 10 para no sobrecargar
+    for (const paseadorId of paseadorIds) {
+      try {
+        await sincronizarPaseador(paseadorId);
+        migrados++;
+        console.log(`✅ Migrado ${paseadorId} (${migrados}/${paseadorIds.length})`);
+      } catch (error) {
+        errores++;
+        console.error(`❌ Error migrando ${paseadorId}:`, error.message);
+      }
+
+      // Pausa de 100ms entre cada paseador para no saturar Firestore
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    const resultado = {
+      success: true,
+      message: "Migración completada",
+      total: paseadorIds.length,
+      migrados: migrados,
+      errores: errores
+    };
+
+    console.log("Migración finalizada:", resultado);
+    res.status(200).send(resultado);
+
+  } catch (error) {
+    console.error("Error en migración:", error);
+    res.status(500).send({ success: false, error: error.message });
+  }
 });
 
 // --- FUNCIÓN DE MANTENIMIENTO (Ejecutar una vez y borrar si se desea) ---
