@@ -192,7 +192,13 @@ exports.recomendarPaseadores = onCall(async (request) => {
     - El precio por hora en relación con la experiencia y calificación.
     - La distancia ya ha sido calculada y es un factor importante.
 
-    Devuelve un array JSON de MÁXIMO 2 objetos (puede ser 1 si solo hay un excelente match, o 2 si hay dos buenos matches). Cada objeto debe tener: 'id' del paseador, 'nombre', 'razon_ia' (string conciso en español explicando por qué se recomienda) y 'match_score' (número entero del 0-100).
+    Devuelve un array JSON de MÁXIMO 2 objetos (puede ser 1 si solo hay un excelente match, o 2 si hay dos buenos matches). Cada objeto debe tener:
+    - 'id': id del paseador.
+    - 'nombre': nombre del paseador.
+    - 'razon_ia': string conciso en español explicando por qué se recomienda (una frase).
+    - 'match_score': número entero del 0-100.
+    - 'tags': un array de exactamente 3 strings CORTOS (máximo 2-3 palabras cada uno) destacando los puntos fuertes (ej: "📍 Muy cerca", "💰 Buen precio", "🐕 Experto en raza", "⭐ Top rated").
+
     IMPORTANTE: Solo recomienda si el match_score es 75 o superior. Si no hay buenos matches, devuelve array vacío.
     Ejemplo de salida:
     [
@@ -200,13 +206,8 @@ exports.recomendarPaseadores = onCall(async (request) => {
         "id": "paseador123",
         "nombre": "Juan Pérez",
         "razon_ia": "Experto en Golden Retrievers con 5 años de experiencia, excelente calificación y muy cerca de tu ubicación.",
-        "match_score": 95
-      },
-      {
-        "id": "paseador456",
-        "nombre": "Ana Gómez",
-        "razon_ia": "Especialista en perros grandes y enérgicos, precio competitivo y disponibilidad inmediata.",
-        "match_score": 88
+        "match_score": 95,
+        "tags": ["📍 A 1.2 km", "🐕 Experto en raza", "⭐ 5.0 Estrellas"]
       }
     ]
     `;

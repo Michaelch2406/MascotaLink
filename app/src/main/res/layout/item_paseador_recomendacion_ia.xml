@@ -99,8 +99,8 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_auto_awesome"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="AI Icon" />
+                    android:contentDescription="AI Icon"
+                    app:tint="#FFFFFF" />
 
                 <TextView
                     android:id="@+id/tvAiChipText"
@@ -135,8 +135,8 @@
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:src="@drawable/ic_percent"
-                    android:tint="#00C853"
-                    android:contentDescription="Percent Icon" />
+                    android:contentDescription="Percent Icon"
+                    app:tint="#00C853" />
 
                 <TextView
                     android:id="@+id/tvMatchScore"
@@ -261,8 +261,8 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_location_on"
-                    android:tint="#64748B"
-                    android:contentDescription="Location" />
+                    android:contentDescription="Location"
+                    app:tint="#64748B" />
 
                 <TextView
                     android:id="@+id/tvLocation"
@@ -351,8 +351,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_star"
-                            android:tint="#FFB300"
-                            android:contentDescription="Star" />
+                            android:contentDescription="Star"
+                            app:tint="#FFB300" />
 
                         <TextView
                             android:id="@+id/tvRating"
@@ -472,8 +472,8 @@
                             android:layout_width="14dp"
                             android:layout_height="14dp"
                             android:src="@drawable/ic_psychology"
-                            android:tint="#6B46FF"
-                            android:contentDescription="Psychology Icon" />
+                            android:contentDescription="Psychology Icon"
+                            app:tint="#6B46FF" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -649,8 +649,8 @@
             android:layout_width="14dp"
             android:layout_height="14dp"
             android:src="@drawable/ic_info"
-            android:tint="#94A3B8"
-            android:contentDescription="Info" />
+            android:contentDescription="Info"
+            app:tint="#94A3B8" />
 
         <TextView
             android:layout_width="wrap_content"

@@ -195,6 +195,8 @@ public class RecomendacionIAHelper {
 
         // Razones de IA
         chipGroupReasons.removeAllViews();
+        
+        // Add main reason
         String razonIA = (String) recommendation.get("razon_ia");
         if (razonIA != null && !razonIA.isEmpty()) {
             Chip chip = new Chip(activity);
@@ -206,6 +208,22 @@ public class RecomendacionIAHelper {
             chip.setChipStrokeColorResource(R.color.walki_ai_purple_light);
             chip.setChipStrokeWidth(3f); // 1dp aprox
             chipGroupReasons.addView(chip);
+        }
+
+        // Add dynamic tags from AI
+        List<String> tags = (List<String>) recommendation.get("tags");
+        if (tags != null && !tags.isEmpty()) {
+            for (String tag : tags) {
+                Chip chip = new Chip(activity);
+                chip.setText(tag); // No emoji prefix for these tags
+                chip.setClickable(false);
+                chip.setCheckable(false);
+                chip.setTextColor(activity.getResources().getColor(R.color.walki_ai_purple));
+                chip.setChipBackgroundColorResource(R.color.white);
+                chip.setChipStrokeColorResource(R.color.walki_ai_purple_light);
+                chip.setChipStrokeWidth(3f);
+                chipGroupReasons.addView(chip);
+            }
         }
 
         // Verified Badge
@@ -223,6 +241,30 @@ public class RecomendacionIAHelper {
         MaterialButton btnShare = itemView.findViewById(R.id.btnShare);
 
         String paseadorId = (String) recommendation.get("id");
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        // 1. Configurar estado inicial de favorito
+        if (currentUser != null) {
+            FirebaseFirestore.getInstance()
+                    .collection("usuarios")
+                    .document(currentUser.getUid())
+                    .collection("favoritos")
+                    .document(paseadorId)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            // Está en favoritos: ícono relleno rojo
+                            btnFavorite.setIconResource(R.drawable.ic_corazon_lleno);
+                            btnFavorite.setIconTintResource(R.color.red_error);
+                            btnFavorite.setTag("is_fav");
+                        } else {
+                            // No está en favoritos: ícono borde gris
+                            btnFavorite.setIconResource(R.drawable.ic_favorite);
+                            btnFavorite.setIconTintResource(R.color.grey_600);
+                            btnFavorite.setTag("not_fav");
+                        }
+                    });
+        }
 
         btnViewProfile.setOnClickListener(v -> {
             Log.d(TAG, "Ver perfil: " + paseadorId);
@@ -235,13 +277,55 @@ public class RecomendacionIAHelper {
         });
 
         btnFavorite.setOnClickListener(v -> {
-            // TODO: Agregar a favoritos
-            Log.d(TAG, "Favorito: " + paseadorId);
+            if (currentUser == null) return;
+            
+            boolean isFav = "is_fav".equals(btnFavorite.getTag());
+            com.google.firebase.firestore.DocumentReference favRef = FirebaseFirestore.getInstance()
+                    .collection("usuarios")
+                    .document(currentUser.getUid())
+                    .collection("favoritos")
+                    .document(paseadorId);
+
+            if (isFav) {
+                // Quitar de favoritos
+                favRef.delete()
+                        .addOnSuccessListener(aVoid -> {
+                            btnFavorite.setIconResource(R.drawable.ic_favorite);
+                            btnFavorite.setIconTintResource(R.color.grey_600);
+                            btnFavorite.setTag("not_fav");
+                        });
+            } else {
+                // Agregar a favoritos (guardar datos básicos para listado rápido)
+                Map<String, Object> favData = new HashMap<>();
+                favData.put("id", paseadorId);
+                favData.put("nombre", paseadorData.get("nombre"));
+                favData.put("foto_url", paseadorData.get("foto_url"));
+                favData.put("calificacion", paseadorData.get("calificacion_promedio"));
+                favData.put("timestamp", com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+                favRef.set(favData)
+                        .addOnSuccessListener(aVoid -> {
+                            btnFavorite.setIconResource(R.drawable.ic_corazon_lleno);
+                            btnFavorite.setIconTintResource(R.color.red_error);
+                            btnFavorite.setTag("is_fav");
+                        });
+            }
         });
 
         btnShare.setOnClickListener(v -> {
-            // TODO: Compartir
-            Log.d(TAG, "Compartir: " + paseadorId);
+            String shareText = "¡Mira este paseador que encontré en Walki!\n\n" +
+                    "Nombre: " + recommendation.get("nombre") + "\n" +
+                    "Calificación: " + String.format(Locale.getDefault(), "%.1f", getDoubleValue(paseadorData.get("calificacion_promedio"))) + " ⭐\n" +
+                    "Razón IA: " + recommendation.get("razon_ia") + "\n\n" +
+                    "Descarga la app aquí: https://walki.app"; // Link ficticio o real
+
+            android.content.Intent sendIntent = new android.content.Intent();
+            sendIntent.setAction(android.content.Intent.ACTION_SEND);
+            sendIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareText);
+            sendIntent.setType("text/plain");
+
+            android.content.Intent shareIntent = android.content.Intent.createChooser(sendIntent, "Compartir paseador via");
+            activity.startActivity(shareIntent);
         });
     }
 
@@ -265,9 +349,8 @@ public class RecomendacionIAHelper {
 
                     Map<String, Object> userData = userDoc.getData();
 
-                    // Obtener mascota
-                    db.collection("mascotas")
-                            .whereEqualTo("usuario_id", userId)
+                    // Obtener mascota (CORREGIDO: Subcolección duenos/{uid}/mascotas)
+                    db.collection("duenos").document(userId).collection("mascotas")
                             .limit(1)
                             .get()
                             .addOnSuccessListener(petSnapshot -> {
@@ -293,8 +376,8 @@ public class RecomendacionIAHelper {
                                     }
                                 }
 
-                                // Llamar Cloud Function
-                                llamarCloudFunction(userData, petData, userLocation);
+                                // Llamar Cloud Function con datos sanitizados
+                                llamarCloudFunction(sanitizeData(userData), sanitizeData(petData), userLocation);
                             })
                             .addOnFailureListener(e -> {
                                 Log.e(TAG, "Error obteniendo mascota", e);
@@ -305,6 +388,38 @@ public class RecomendacionIAHelper {
                     Log.e(TAG, "Error obteniendo usuario", e);
                     showError("Error al obtener tu perfil");
                 });
+    }
+
+    /**
+     * Limpia los datos de Firestore para que sean serializables a JSON (elimina Timestamps).
+     */
+    private Map<String, Object> sanitizeData(Map<String, Object> data) {
+        Map<String, Object> cleanData = new HashMap<>();
+        if (data == null) return cleanData;
+
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof com.google.firebase.Timestamp) {
+                // Convertir Timestamp a milisegundos (Long) que es serializable
+                cleanData.put(entry.getKey(), ((com.google.firebase.Timestamp) value).toDate().getTime());
+            } else if (value instanceof GeoPoint) {
+                // Convertir GeoPoint a mapa simple
+                Map<String, Double> loc = new HashMap<>();
+                loc.put("lat", ((GeoPoint) value).getLatitude());
+                loc.put("lng", ((GeoPoint) value).getLongitude());
+                cleanData.put(entry.getKey(), loc);
+            } else if (value instanceof com.google.firebase.firestore.DocumentReference) {
+                // Convertir DocumentReference a String (path)
+                cleanData.put(entry.getKey(), ((com.google.firebase.firestore.DocumentReference) value).getPath());
+            } else if (value instanceof Map) {
+                // Recursividad para mapas anidados
+                cleanData.put(entry.getKey(), sanitizeData((Map<String, Object>) value));
+            } else {
+                // Copiar otros valores tal cual (String, Number, Boolean, List, null)
+                cleanData.put(entry.getKey(), value);
+            }
+        }
+        return cleanData;
     }
 
     private void llamarCloudFunction(Map<String, Object> userData,

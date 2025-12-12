@@ -79,6 +79,13 @@ public class MyApplication extends Application {
             Log.w(TAG, "FirebaseStorage emulador ya está configurado.");
         }
 
+        try {
+            com.google.firebase.functions.FirebaseFunctions.getInstance().useEmulator(emulatorHost, 5001);
+            Log.d(TAG, "Functions emulador conectado a " + emulatorHost + ":5001");
+        } catch (IllegalStateException e) {
+            Log.w(TAG, "Functions emulador ya está configurado.");
+        }
+
         // Inicializa Google Places SDK
         try {
             ApplicationInfo app = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
