@@ -437,7 +437,33 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
 
   } catch (error) {
     console.error("Error al recomendar paseadores:", error);
-    throw new functions.https.HttpsError('internal', 'Error al procesar la recomendación.', error.message);
+
+    // 🆕 MEJORA #7: Mensajes de error específicos según el tipo de error
+    let userMessage = 'Error al procesar la recomendación.';
+    let errorCode = 'internal';
+
+    // Detectar tipo de error y dar mensaje específico
+    if (error.message?.includes('API key') || error.message?.includes('GEMINI_API_KEY')) {
+      userMessage = 'El servicio de recomendaciones IA no está disponible temporalmente. Intenta más tarde.';
+      errorCode = 'unavailable';
+    } else if (error.message?.includes('quota') || error.message?.includes('limit')) {
+      userMessage = 'Hemos alcanzado el límite de recomendaciones por hoy. Intenta mañana o usa la búsqueda manual.';
+      errorCode = 'resource-exhausted';
+    } else if (error.message?.includes('parse') || error.message?.includes('JSON')) {
+      userMessage = 'La IA devolvió una respuesta inválida. Por favor intenta de nuevo.';
+      errorCode = 'internal';
+    } else if (error.message?.includes('index') || error.message?.includes('Index')) {
+      userMessage = 'La base de datos necesita configuración adicional. Contacta al soporte.';
+      errorCode = 'failed-precondition';
+    } else if (error.message?.includes('permission') || error.message?.includes('denied')) {
+      userMessage = 'No tienes permiso para acceder a este servicio. Verifica tu cuenta.';
+      errorCode = 'permission-denied';
+    } else if (error.message?.includes('network') || error.message?.includes('timeout')) {
+      userMessage = 'Problema de conexión. Verifica tu internet e intenta nuevamente.';
+      errorCode = 'unavailable';
+    }
+
+    throw new functions.https.HttpsError(errorCode, userMessage, error.message);
   }
 });
 

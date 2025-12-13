@@ -89,6 +89,10 @@ public class RecomendacionIAHelper {
     public void show() {
         showLoading();
         bottomSheetDialog.show();
+
+        // 🆕 MEJORA #8: Registrar solicitud de recomendación
+        registrarEventoTelemetria("solicitud", null, null, null);
+
         buscarRecomendaciones();
     }
 
@@ -108,6 +112,9 @@ public class RecomendacionIAHelper {
         loadingContainer.setVisibility(View.GONE);
         recommendationContainer.setVisibility(View.GONE);
         errorContainer.setVisibility(View.VISIBLE);
+
+        // 🆕 MEJORA #8: Registrar error
+        registrarEventoTelemetria("error", null, null, message);
 
         if (listener != null) {
             listener.onError(message);
@@ -268,8 +275,12 @@ public class RecomendacionIAHelper {
 
         btnViewProfile.setOnClickListener(v -> {
             Log.d(TAG, "Ver perfil: " + paseadorId);
+
+            // 🆕 MEJORA #8: Registrar que vio el perfil
+            registrarEventoTelemetria("ver_perfil", paseadorId, matchScore, null);
+
             bottomSheetDialog.dismiss();
-            
+
             // Navegar al perfil del paseador
             android.content.Intent intent = new android.content.Intent(activity, com.mjc.mascotalink.PerfilPaseadorActivity.class);
             intent.putExtra("paseador_id", paseadorId);
@@ -308,11 +319,16 @@ public class RecomendacionIAHelper {
                             btnFavorite.setIconResource(R.drawable.ic_corazon_lleno);
                             btnFavorite.setIconTintResource(R.color.red_error);
                             btnFavorite.setTag("is_fav");
+
+                            // 🆕 MEJORA #8: Registrar que agregó a favoritos
+                            registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
                         });
             }
         });
 
         btnShare.setOnClickListener(v -> {
+            // 🆕 MEJORA #8: Registrar que compartió
+            registrarEventoTelemetria("compartir", paseadorId, matchScore, null);
             String shareText = "¡Mira este paseador que encontré en Walki!\n\n" +
                     "Nombre: " + recommendation.get("nombre") + "\n" +
                     "Calificación: " + String.format(Locale.getDefault(), "%.1f", getDoubleValue(paseadorData.get("calificacion_promedio"))) + " ⭐\n" +
@@ -349,9 +365,8 @@ public class RecomendacionIAHelper {
 
                     Map<String, Object> userData = userDoc.getData();
 
-                    // Obtener mascota (CORREGIDO: Subcolección duenos/{uid}/mascotas)
+                    // 🆕 MEJORA #5: Verificar si tiene múltiples mascotas
                     db.collection("duenos").document(userId).collection("mascotas")
-                            .limit(1)
                             .get()
                             .addOnSuccessListener(petSnapshot -> {
                                 if (petSnapshot.isEmpty()) {
@@ -359,25 +374,15 @@ public class RecomendacionIAHelper {
                                     return;
                                 }
 
-                                Map<String, Object> petData = petSnapshot.getDocuments().get(0).getData();
+                                List<com.google.firebase.firestore.DocumentSnapshot> mascotas = petSnapshot.getDocuments();
 
-                                // Obtener ubicación
-                                Map<String, Object> userLocation = new HashMap<>();
-                                Object ubicacionObj = userData.get("ubicacion_principal");
-
-                                if (ubicacionObj instanceof Map) {
-                                    Map<String, Object> ubicacion = (Map<String, Object>) ubicacionObj;
-                                    Object geopointObj = ubicacion.get("geopoint");
-
-                                    if (geopointObj instanceof GeoPoint) {
-                                        GeoPoint geoPoint = (GeoPoint) geopointObj;
-                                        userLocation.put("latitude", geoPoint.getLatitude());
-                                        userLocation.put("longitude", geoPoint.getLongitude());
-                                    }
+                                if (mascotas.size() == 1) {
+                                    // Una sola mascota: usar directamente
+                                    procesarRecomendacionConMascota(mascotas.get(0).getData(), userData);
+                                } else {
+                                    // Múltiples mascotas: mostrar selector
+                                    mostrarSelectorMascota(mascotas, userData);
                                 }
-
-                                // Llamar Cloud Function con datos sanitizados
-                                llamarCloudFunction(sanitizeData(userData), sanitizeData(petData), userLocation);
                             })
                             .addOnFailureListener(e -> {
                                 Log.e(TAG, "Error obteniendo mascota", e);
@@ -481,6 +486,14 @@ public class RecomendacionIAHelper {
                                     }
                                 }
 
+                                // 🆕 MEJORA #8: Registrar recomendaciones exitosas
+                                if (!recommendations.isEmpty()) {
+                                    Map<String, Object> firstRec = recommendations.get(0);
+                                    String paseadorId = (String) firstRec.get("id");
+                                    Integer matchScore = getIntValue(firstRec.get("match_score"));
+                                    registrarEventoTelemetria("exito", paseadorId, matchScore, null);
+                                }
+
                                 if (listener != null && !recommendations.isEmpty()) {
                                     listener.onSuccess(recommendations.get(0));
                                 }
@@ -516,5 +529,91 @@ public class RecomendacionIAHelper {
             return ((Integer) obj).doubleValue();
         }
         return 0.0;
+    }
+
+    /**
+     * 🆕 MEJORA #8: Registra evento de telemetría para medir efectividad de IA
+     */
+    private void registrarEventoTelemetria(String evento, String paseadorId, Integer matchScore, String errorMsg) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+
+        Map<String, Object> telemetria = new HashMap<>();
+        telemetria.put("userId", currentUser.getUid());
+        telemetria.put("timestamp", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        telemetria.put("evento", evento); // "solicitud", "exito", "ver_perfil", "favorito", "compartir", "error", "ignorado"
+
+        if (paseadorId != null) {
+            telemetria.put("paseadorId", paseadorId);
+        }
+        if (matchScore != null) {
+            telemetria.put("matchScore", matchScore);
+        }
+        if (errorMsg != null) {
+            telemetria.put("errorMsg", errorMsg);
+        }
+
+        FirebaseFirestore.getInstance()
+                .collection("recomendaciones_ia_logs")
+                .add(telemetria)
+                .addOnSuccessListener(doc -> Log.d(TAG, "📊 Telemetría: " + evento))
+                .addOnFailureListener(e -> Log.e(TAG, "Error guardando telemetría", e));
+    }
+
+    /**
+     * 🆕 MEJORA #5: Procesa recomendación con una mascota específica
+     * Extrae la lógica común para evitar duplicación de código
+     */
+    private void procesarRecomendacionConMascota(Map<String, Object> petData, Map<String, Object> userData) {
+        // Obtener ubicación del usuario
+        Map<String, Object> userLocation = new HashMap<>();
+        Object ubicacionObj = userData.get("ubicacion_principal");
+
+        if (ubicacionObj instanceof Map) {
+            Map<String, Object> ubicacion = (Map<String, Object>) ubicacionObj;
+            Object geopointObj = ubicacion.get("geopoint");
+
+            if (geopointObj instanceof GeoPoint) {
+                GeoPoint geoPoint = (GeoPoint) geopointObj;
+                userLocation.put("latitude", geoPoint.getLatitude());
+                userLocation.put("longitude", geoPoint.getLongitude());
+            }
+        }
+
+        // Llamar Cloud Function con datos sanitizados
+        llamarCloudFunction(sanitizeData(userData), sanitizeData(petData), userLocation);
+    }
+
+    /**
+     * 🆕 MEJORA #5: Muestra selector de mascotas cuando el usuario tiene múltiples
+     */
+    private void mostrarSelectorMascota(List<com.google.firebase.firestore.DocumentSnapshot> mascotas,
+                                        Map<String, Object> userData) {
+        // Preparar nombres de mascotas para el selector
+        String[] nombresMascotas = new String[mascotas.size()];
+        for (int i = 0; i < mascotas.size(); i++) {
+            Map<String, Object> mascota = mascotas.get(i).getData();
+            String nombre = (String) mascota.get("nombre");
+            String tipo = (String) mascota.get("tipo_mascota");
+            nombresMascotas[i] = nombre + " (" + (tipo != null ? tipo : "Mascota") + ")";
+        }
+
+        // Crear AlertDialog con selector
+        new android.app.AlertDialog.Builder(activity)
+                .setTitle("Selecciona tu mascota")
+                .setItems(nombresMascotas, (dialog, which) -> {
+                    // Usuario seleccionó una mascota
+                    Map<String, Object> mascotaSeleccionada = mascotas.get(which).getData();
+                    Log.d(TAG, "Mascota seleccionada: " + mascotaSeleccionada.get("nombre"));
+
+                    // Procesar con la mascota seleccionada
+                    procesarRecomendacionConMascota(mascotaSeleccionada, userData);
+                })
+                .setNegativeButton("Cancelar", (dialog, which) -> {
+                    dialog.dismiss();
+                    bottomSheetDialog.dismiss();
+                })
+                .setCancelable(true)
+                .show();
     }
 }
