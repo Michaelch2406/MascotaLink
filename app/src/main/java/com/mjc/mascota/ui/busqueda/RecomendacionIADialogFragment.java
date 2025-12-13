@@ -2,8 +2,11 @@ package com.mjc.mascota.ui.busqueda;
 
 import android.app.Dialog;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -15,9 +18,11 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.DialogFragment;
 
 import com.bumptech.glide.Glide;
@@ -36,6 +41,9 @@ import com.google.firebase.functions.FirebaseFunctions;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -80,9 +88,13 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     // Data
     private String paseadorId;
     private int matchScore;
+    private boolean isFavorite = false;
 
     // Location
     private FusedLocationProviderClient fusedLocationClient;
+
+    // Card view para compartir como imagen
+    private View cardMainRecommendation;
 
     @NonNull
     @Override
@@ -137,6 +149,9 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         layoutContent = view.findViewById(R.id.layoutContent);
         layoutError = view.findViewById(R.id.layoutError);
         btnClose = view.findViewById(R.id.btnClose);
+
+        // Card principal para compartir como imagen
+        cardMainRecommendation = view.findViewById(R.id.cardMainRecommendation);
 
         // Content views (del item incluido)
         ivProfilePhoto = view.findViewById(R.id.ivProfilePhoto);
@@ -446,10 +461,51 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         String nombre = (String) recommendation.get("nombre");
         tvWalkerName.setText(nombre != null ? nombre : "Paseador");
 
-        // Ubicación
-        String ubicacion = (String) paseadorData.get("ubicacion_texto");
+        // Ubicación (intentar de varias fuentes)
+        String ubicacion = null;
+
+        // Intento 1: zonas_principales (primera zona)
+        List<String> zonasPrincipales = (List<String>) paseadorData.get("zonas_principales");
+        if (zonasPrincipales != null && !zonasPrincipales.isEmpty()) {
+            ubicacion = zonasPrincipales.get(0);
+        }
+
+        // Intento 2: extraer de los tags de distancia
+        if (ubicacion == null && tags != null && !tags.isEmpty()) {
+            for (String tag : tags) {
+                if (tag.contains("km")) {
+                    ubicacion = tag; // ej: "📍 2.5km"
+                    break;
+                }
+            }
+        }
+
         if (tvLocation != null) {
-            tvLocation.setText(ubicacion != null ? ubicacion : "No especificada");
+            tvLocation.setText(ubicacion != null ? ubicacion : "Ubicación no especificada");
+
+            // Adaptar diseño según longitud de ubicación
+            View llLocationExperience = getView().findViewById(R.id.llLocationExperience);
+            if (llLocationExperience instanceof LinearLayout) {
+                LinearLayout layout = (LinearLayout) llLocationExperience;
+
+                // Si la ubicación es larga (>20 caracteres), cambiar a vertical
+                if (ubicacion != null && ubicacion.length() > 20) {
+                    layout.setOrientation(LinearLayout.VERTICAL);
+                    layout.setGravity(android.view.Gravity.CENTER);
+
+                    // Ajustar márgenes para diseño vertical
+                    if (tvExperience != null) {
+                        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) tvExperience.getLayoutParams();
+                        params.setMarginStart(0);
+                        params.topMargin = 4; // 4dp de separación
+                        tvExperience.setLayoutParams(params);
+                    }
+                } else {
+                    // Mantener horizontal para ubicaciones cortas
+                    layout.setOrientation(LinearLayout.HORIZONTAL);
+                    layout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                }
+            }
         }
 
         // Experiencia
@@ -477,9 +533,9 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         int servicios = getIntValue(paseadorData.get("num_servicios_completados"));
         tvReviewCount.setText("(" + servicios + " reseñas)");
 
-        // Precio
+        // Precio (solo el valor, el "/h" está en un TextView separado en el XML)
         double precio = getDoubleValue(paseadorData.get("precio_hora"));
-        tvPrice.setText(String.format(Locale.getDefault(), "$%.0f/h", precio));
+        tvPrice.setText(String.format(Locale.getDefault(), "$%.1f", precio));
 
         // Razón de IA (explicación detallada de Gemini)
         String razonIA = (String) recommendation.get("razon_ia");
@@ -503,9 +559,16 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                     .into(ivProfilePhoto);
         }
 
-        // Badge verificado
+        // Badge verificado (verificar si es "APROBADO" - el valor en mayúscula que viene de la BD)
         String verificacionEstado = (String) paseadorData.get("verificacion_estado");
-        ivVerifiedBadge.setVisibility("verificado".equals(verificacionEstado) ? View.VISIBLE : View.GONE);
+        if (ivVerifiedBadge != null) {
+            boolean esVerificado = "APROBADO".equalsIgnoreCase(verificacionEstado);
+            ivVerifiedBadge.setVisibility(esVerificado ? View.VISIBLE : View.GONE);
+            // También controlar la visibilidad del CardView padre si tiene visibilidad propia
+            if (ivVerifiedBadge.getParent() instanceof View) {
+                ((View) ivVerifiedBadge.getParent()).setVisibility(esVerificado ? View.VISIBLE : View.GONE);
+            }
+        }
 
         // Tags/razones (ya obtenidos al inicio del método)
         chipGroupReasons.removeAllViews();
@@ -525,9 +588,22 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     private void setupActionButtons(String paseadorId, Map<String, Object> paseadorData) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
+        // Verificar si ya está en favoritos y actualizar icono
+        if (currentUser != null) {
+            FirebaseFirestore.getInstance()
+                    .collection("usuarios")
+                    .document(currentUser.getUid())
+                    .collection("favoritos")
+                    .document(paseadorId)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        isFavorite = doc.exists();
+                        updateFavoriteIcon();
+                    });
+        }
+
         // Ver Perfil
         btnViewProfile.setOnClickListener(v -> {
-            // 🆕 MEJORA #8: Telemetría
             registrarEventoTelemetria("ver_perfil", paseadorId, matchScore, null);
 
             dismiss();
@@ -536,52 +612,173 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             startActivity(intent);
         });
 
-        // Favorito
+        // Favorito - Toggle (agregar o quitar)
         btnFavorite.setOnClickListener(v -> {
             if (currentUser == null) return;
 
-            Map<String, Object> favData = new HashMap<>();
-            favData.put("id", paseadorId);
-            favData.put("nombre", paseadorData.get("nombre"));
-            favData.put("foto_url", paseadorData.get("foto_url"));
-            favData.put("calificacion", paseadorData.get("calificacion_promedio"));
-            favData.put("timestamp", FieldValue.serverTimestamp());
+            if (isFavorite) {
+                // Quitar de favoritos
+                FirebaseFirestore.getInstance()
+                        .collection("usuarios")
+                        .document(currentUser.getUid())
+                        .collection("favoritos")
+                        .document(paseadorId)
+                        .delete()
+                        .addOnSuccessListener(aVoid -> {
+                            isFavorite = false;
+                            updateFavoriteIcon();
+                            Toast.makeText(requireContext(), "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
+                            registrarEventoTelemetria("quitar_favorito", paseadorId, matchScore, null);
+                        });
+            } else {
+                // Agregar a favoritos
+                Map<String, Object> favData = new HashMap<>();
+                favData.put("id", paseadorId);
+                favData.put("nombre", paseadorData.get("nombre"));
+                favData.put("foto_url", paseadorData.get("foto_url"));
+                favData.put("calificacion", paseadorData.get("calificacion_promedio"));
+                favData.put("timestamp", FieldValue.serverTimestamp());
 
-            FirebaseFirestore.getInstance()
-                    .collection("usuarios")
-                    .document(currentUser.getUid())
-                    .collection("favoritos")
-                    .document(paseadorId)
-                    .set(favData)
-                    .addOnSuccessListener(aVoid -> {
-                        // 🆕 MEJORA #8: Telemetría
-                        registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
-                    });
+                FirebaseFirestore.getInstance()
+                        .collection("usuarios")
+                        .document(currentUser.getUid())
+                        .collection("favoritos")
+                        .document(paseadorId)
+                        .set(favData)
+                        .addOnSuccessListener(aVoid -> {
+                            isFavorite = true;
+                            updateFavoriteIcon();
+                            Toast.makeText(requireContext(), "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                            registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
+                        });
+            }
         });
 
-        // Compartir
+        // Compartir - Capturar y compartir como imagen
         btnShare.setOnClickListener(v -> {
-            // 🆕 MEJORA #8: Telemetría
             registrarEventoTelemetria("compartir", paseadorId, matchScore, null);
-
-            String shareText = "¡Mira este paseador que encontré en Walki!\n\n" +
-                    "Nombre: " + paseadorData.get("nombre") + "\n" +
-                    "Calificación: " + String.format(Locale.getDefault(), "%.1f", getDoubleValue(paseadorData.get("calificacion_promedio"))) + " ⭐\n\n" +
-                    "Descarga la app: https://walki.app";
-
-            Intent sendIntent = new Intent();
-            sendIntent.setAction(Intent.ACTION_SEND);
-            sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-            sendIntent.setType("text/plain");
-
-            Intent shareIntent = Intent.createChooser(sendIntent, "Compartir paseador");
-            startActivity(shareIntent);
+            compartirComoImagen();
         });
 
-        // 🆕 MEJORA A: No me interesa
+        // No me interesa
         btnNotInterested.setOnClickListener(v -> {
             mostrarDialogNoMeInteresa(paseadorId);
         });
+    }
+
+    /**
+     * Actualiza el icono del botón de favoritos según el estado
+     */
+    private void updateFavoriteIcon() {
+        if (btnFavorite != null) {
+            if (isFavorite) {
+                // Corazón lleno en rojo
+                btnFavorite.setIconResource(R.drawable.ic_favorite_filled);
+                btnFavorite.setIconTint(null); // Usar el color del drawable (rojo)
+            } else {
+                // Corazón vacío en gris
+                btnFavorite.setIconResource(R.drawable.ic_favorite);
+                btnFavorite.setIconTint(android.content.res.ColorStateList.valueOf(0xFF64748B)); // Gris
+            }
+        }
+    }
+
+    /**
+     * Captura el CardView como imagen y la comparte
+     */
+    private void compartirComoImagen() {
+        if (cardMainRecommendation == null) {
+            Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "cardMainRecommendation es null");
+            return;
+        }
+
+        // Verificar que el view esté visible y tenga dimensiones
+        if (cardMainRecommendation.getVisibility() != View.VISIBLE) {
+            Toast.makeText(requireContext(), "El contenido no está visible", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "cardMainRecommendation no está visible");
+            return;
+        }
+
+        if (cardMainRecommendation.getWidth() == 0 || cardMainRecommendation.getHeight() == 0) {
+            Toast.makeText(requireContext(), "Error: el contenido no tiene dimensiones", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "cardMainRecommendation no tiene dimensiones: " + cardMainRecommendation.getWidth() + "x" + cardMainRecommendation.getHeight());
+            return;
+        }
+
+        try {
+            Log.d(TAG, "Capturando imagen del CardView: " + cardMainRecommendation.getWidth() + "x" + cardMainRecommendation.getHeight());
+
+            // Capturar el CardView como Bitmap
+            Bitmap bitmap = capturarViewComoBitmap(cardMainRecommendation);
+
+            Log.d(TAG, "Bitmap capturado correctamente: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+
+            // Guardar el bitmap temporalmente
+            File cachePath = new File(requireContext().getCacheDir(), "images");
+            cachePath.mkdirs();
+            File imageFile = new File(cachePath, "recomendacion_ia_" + System.currentTimeMillis() + ".png");
+
+            Log.d(TAG, "Guardando imagen en: " + imageFile.getAbsolutePath());
+
+            FileOutputStream stream = new FileOutputStream(imageFile);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            stream.close();
+
+            Log.d(TAG, "Imagen guardada correctamente. Tamaño: " + imageFile.length() + " bytes");
+
+            // Obtener URI usando FileProvider
+            String authority = requireContext().getPackageName() + ".provider";
+            Log.d(TAG, "Usando authority: " + authority);
+
+            Uri imageUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    authority,
+                    imageFile
+            );
+
+            Log.d(TAG, "URI generado: " + imageUri.toString());
+
+            // Compartir la imagen
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("image/png");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
+            shareIntent.putExtra(Intent.EXTRA_TEXT, "🤖 ¡La IA de Walki me recomendó este paseador perfecto para mi perro!\n\nDescarga la app: https://walki.app");
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            Log.d(TAG, "Abriendo selector de compartir...");
+            startActivity(Intent.createChooser(shareIntent, "Compartir recomendación"));
+
+            Toast.makeText(requireContext(), "Imagen capturada correctamente", Toast.LENGTH_SHORT).show();
+
+        } catch (IOException e) {
+            Log.e(TAG, "Error al compartir imagen", e);
+            Toast.makeText(requireContext(), "Error al compartir imagen", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Captura un View como Bitmap con fondo blanco y mejor calidad
+     */
+    private Bitmap capturarViewComoBitmap(View view) {
+        // Asegurar que el view esté completamente medido y dibujado
+        view.measure(
+                View.MeasureSpec.makeMeasureSpec(view.getWidth(), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(view.getHeight(), View.MeasureSpec.EXACTLY)
+        );
+        view.layout(view.getLeft(), view.getTop(), view.getRight(), view.getBottom());
+
+        // Crear bitmap con calidad alta
+        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+
+        // Dibujar fondo blanco para evitar transparencias
+        canvas.drawColor(android.graphics.Color.WHITE);
+
+        // Dibujar el view
+        view.draw(canvas);
+
+        return bitmap;
     }
 
     /**

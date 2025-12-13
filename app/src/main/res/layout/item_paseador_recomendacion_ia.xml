@@ -26,6 +26,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
         android:text="Tu Mejor Coincidencia"
         android:textSize="24sp"
         android:textColor="#1E293B"
@@ -34,7 +35,7 @@
         android:gravity="center"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnClose"
         tools:ignore="HardcodedText" />
 
     <TextView
@@ -572,13 +573,16 @@
                     android:layout_height="48dp"
                     android:layout_weight="1"
                     android:text="Ver Perfil Completo"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:textColor="#FFFFFF"
                     android:fontFamily="sans-serif-medium"
                     android:backgroundTint="#4747FF"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp"
                     app:icon="@drawable/ic_arrow_forward"
                     app:iconGravity="end"
                     app:iconTint="#FFFFFF"
+                    app:iconSize="18dp"
                     app:cornerRadius="24dp"
                     app:elevation="8dp"
                     android:layout_marginEnd="12dp"
@@ -663,6 +667,22 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
+
+    <!-- ============================================ -->
+    <!-- CLOSE BUTTON (X) - Next to title -->
+    <!-- ============================================ -->
+
+    <ImageButton
+        android:id="@+id/btnClose"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:tint="#64748B"
+        android:contentDescription="Cerrar"
+        app:layout_constraintTop_toTopOf="@id/tvHeadlineTitle"
+        app:layout_constraintBottom_toBottomOf="@id/tvHeadlineTitle"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- ============================================ -->
     <!-- HINT TEXT BELOW CARD -->

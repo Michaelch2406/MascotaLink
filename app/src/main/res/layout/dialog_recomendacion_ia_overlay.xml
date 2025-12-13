@@ -29,23 +29,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Botón cerrar en la esquina superior derecha -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <ImageButton
-                    android:id="@+id/btnClose"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_gravity="end"
-                    android:layout_margin="8dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@android:drawable/ic_menu_close_clear_cancel"
-                    android:tint="#64748B"
-                    android:contentDescription="Cerrar" />
-            </FrameLayout>
-
             <!-- ScrollView para el contenido -->
             <ScrollView
                 android:layout_width="match_parent"
