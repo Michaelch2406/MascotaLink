@@ -771,6 +771,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             View llHintText = rootView.findViewById(R.id.llHintText);
             View tvHeadlineTitle = rootView.findViewById(R.id.tvHeadlineTitle);
             View tvHeadlineSubtitle = rootView.findViewById(R.id.tvHeadlineSubtitle);
+            View btnClose = rootView.findViewById(R.id.btnClose);
 
             // Guardar visibilidad original
             int logoVis = ivWalkiLogo != null ? ivWalkiLogo.getVisibility() : View.GONE;
@@ -781,6 +782,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             int hintVis = llHintText != null ? llHintText.getVisibility() : View.GONE;
             int titleVis = tvHeadlineTitle != null ? tvHeadlineTitle.getVisibility() : View.GONE;
             int subtitleVis = tvHeadlineSubtitle != null ? tvHeadlineSubtitle.getVisibility() : View.GONE;
+            int closeVis = btnClose != null ? btnClose.getVisibility() : View.GONE;
 
             // MOSTRAR logo, OCULTAR elementos no deseados
             if (ivWalkiLogo != null) ivWalkiLogo.setVisibility(View.VISIBLE);
@@ -791,6 +793,15 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             if (llHintText != null) llHintText.setVisibility(View.GONE);
             if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(View.GONE);
             if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(View.GONE);
+            if (btnClose != null) btnClose.setVisibility(View.GONE);
+
+            // Cambiar constraint del card para que esté debajo del logo cuando se comparte
+            if (cardMainRecommendation != null && ivWalkiLogo != null) {
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                    (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
+                params.topToBottom = R.id.ivWalkiLogoShare;
+                cardMainRecommendation.setLayoutParams(params);
+            }
 
             // Forzar re-layout y esperar a que se complete
             rootView.requestLayout();
@@ -812,6 +823,15 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                     if (llHintText != null) llHintText.setVisibility(hintVis);
                     if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(titleVis);
                     if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(subtitleVis);
+                    if (btnClose != null) btnClose.setVisibility(closeVis);
+
+                    // Restaurar constraint original del card
+                    if (cardMainRecommendation != null) {
+                        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                            (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
+                        params.topToBottom = R.id.tvHeadlineSubtitle;
+                        cardMainRecommendation.setLayoutParams(params);
+                    }
 
                     // Continuar con guardar y compartir
                     guardarYCompartirImagen(bitmap);
@@ -829,6 +849,15 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                     if (llHintText != null) llHintText.setVisibility(hintVis);
                     if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(titleVis);
                     if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(subtitleVis);
+                    if (btnClose != null) btnClose.setVisibility(closeVis);
+
+                    // Restaurar constraint original del card
+                    if (cardMainRecommendation != null) {
+                        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                            (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
+                        params.topToBottom = R.id.tvHeadlineSubtitle;
+                        cardMainRecommendation.setLayoutParams(params);
+                    }
                 }
             });
 
