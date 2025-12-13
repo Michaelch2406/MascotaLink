@@ -485,25 +485,44 @@ public class RecomendacionIADialogFragment extends DialogFragment {
 
             // Adaptar diseño según longitud de ubicación
             View llLocationExperience = getView().findViewById(R.id.llLocationExperience);
-            if (llLocationExperience instanceof LinearLayout) {
-                LinearLayout layout = (LinearLayout) llLocationExperience;
+            View llExperience = getView().findViewById(R.id.llExperience);
+            View tvSeparator = getView().findViewById(R.id.tvLocationSeparator);
 
-                // Si la ubicación es larga (>20 caracteres), cambiar a vertical
-                if (ubicacion != null && ubicacion.length() > 20) {
-                    layout.setOrientation(LinearLayout.VERTICAL);
-                    layout.setGravity(android.view.Gravity.CENTER);
+            if (llLocationExperience instanceof LinearLayout && llExperience != null) {
+                LinearLayout layoutPadre = (LinearLayout) llLocationExperience;
 
-                    // Ajustar márgenes para diseño vertical
-                    if (tvExperience != null) {
-                        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) tvExperience.getLayoutParams();
-                        params.setMarginStart(0);
-                        params.topMargin = 4; // 4dp de separación
-                        tvExperience.setLayoutParams(params);
+                // Si la ubicación es CORTA (<=20 caracteres), usar modo horizontal (1 línea)
+                if (ubicacion != null && ubicacion.length() <= 20) {
+                    layoutPadre.setOrientation(LinearLayout.HORIZONTAL);
+                    layoutPadre.setGravity(android.view.Gravity.CENTER_VERTICAL);
+
+                    // Mostrar separador "•"
+                    if (tvSeparator != null) {
+                        tvSeparator.setVisibility(View.VISIBLE);
+                    }
+
+                    // Quitar margen top de experiencia (están en la misma línea)
+                    if (llExperience.getLayoutParams() instanceof LinearLayout.LayoutParams) {
+                        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) llExperience.getLayoutParams();
+                        params.topMargin = 0;
+                        llExperience.setLayoutParams(params);
                     }
                 } else {
-                    // Mantener horizontal para ubicaciones cortas
-                    layout.setOrientation(LinearLayout.HORIZONTAL);
-                    layout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                    // Si la ubicación es LARGA (>20 caracteres), usar modo vertical (2 líneas)
+                    layoutPadre.setOrientation(LinearLayout.VERTICAL);
+                    layoutPadre.setGravity(android.view.Gravity.CENTER);
+
+                    // Ocultar separador "•"
+                    if (tvSeparator != null) {
+                        tvSeparator.setVisibility(View.GONE);
+                    }
+
+                    // Agregar margen top de experiencia (en línea separada)
+                    if (llExperience.getLayoutParams() instanceof LinearLayout.LayoutParams) {
+                        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) llExperience.getLayoutParams();
+                        params.topMargin = (int) (4 * getResources().getDisplayMetrics().density); // 4dp
+                        llExperience.setLayoutParams(params);
+                    }
                 }
             }
         }
@@ -514,12 +533,45 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             tvExperience.setText(experiencia + " años exp.");
         }
 
-        // Especialidad (de los tags de la recomendación o del perfil)
-        if (tvSpecialty != null && tags != null && !tags.isEmpty()) {
-            tvSpecialty.setText(tags.get(0)); // Primer tag como especialidad
-        } else if (tvSpecialty != null) {
-            String tipoMascota = (String) paseadorData.get("especialidad_tipo_mascota");
-            tvSpecialty.setText(tipoMascota != null ? "Especialista en " + tipoMascota : "Paseador Profesional");
+        // Especialidad (buscar tag apropiado o usar tipos_perro_aceptados)
+        if (tvSpecialty != null) {
+            String especialidad = null;
+
+            // Intento 1: Buscar en los tags uno que sea sobre tipo de perro
+            if (tags != null && !tags.isEmpty()) {
+                for (String tag : tags) {
+                    // Validar que el tag no sea null antes de usar contains
+                    if (tag != null && (tag.contains("Acepta") || tag.contains("🐕") ||
+                        tag.contains("Grande") || tag.contains("Mediano") || tag.contains("Pequeño") ||
+                        tag.contains("Especialista") || tag.contains("perro"))) {
+                        especialidad = tag;
+                        break;
+                    }
+                }
+            }
+
+            // Intento 2: Usar tipos_perro_aceptados del paseador
+            if (especialidad == null) {
+                List<String> tiposAceptados = (List<String>) paseadorData.get("tipos_perro_aceptados");
+                if (tiposAceptados != null && !tiposAceptados.isEmpty()) {
+                    String primerTipo = tiposAceptados.get(0);
+                    // Validar que no sea null ni vacío
+                    if (primerTipo != null && !primerTipo.isEmpty()) {
+                        especialidad = "Especialista en " + primerTipo;
+                    }
+                }
+            }
+
+            // Intento 3: Usar especialidad_tipo_mascota si existe
+            if (especialidad == null) {
+                String tipoMascota = (String) paseadorData.get("especialidad_tipo_mascota");
+                if (tipoMascota != null && !tipoMascota.isEmpty()) {
+                    especialidad = "Especialista en " + tipoMascota;
+                }
+            }
+
+            // Default: Paseador Profesional
+            tvSpecialty.setText(especialidad != null ? especialidad : "Paseador Profesional");
         }
 
         // Match Score
@@ -687,9 +739,10 @@ public class RecomendacionIADialogFragment extends DialogFragment {
      * Captura el CardView como imagen y la comparte
      */
     private void compartirComoImagen() {
-        if (cardMainRecommendation == null) {
+        View rootView = getView();
+        if (rootView == null || cardMainRecommendation == null) {
             Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "cardMainRecommendation es null");
+            Log.e(TAG, "rootView o cardMainRecommendation es null");
             return;
         }
 
@@ -707,12 +760,89 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         }
 
         try {
-            Log.d(TAG, "Capturando imagen del CardView: " + cardMainRecommendation.getWidth() + "x" + cardMainRecommendation.getHeight());
+            Log.d(TAG, "Preparando captura para compartir...");
 
-            // Capturar el CardView como Bitmap
-            Bitmap bitmap = capturarViewComoBitmap(cardMainRecommendation);
+            // Obtener referencias a los elementos
+            View ivWalkiLogo = rootView.findViewById(R.id.ivWalkiLogoShare);
+            View cardAiReasoning = rootView.findViewById(R.id.cardAiReasoning);
+            View llActionButtons = rootView.findViewById(R.id.llActionButtons);
+            View btnNoMeInteresa = rootView.findViewById(R.id.btnNoMeInteresa);
+            View vBottomGradient = rootView.findViewById(R.id.vBottomGradient);
+            View llHintText = rootView.findViewById(R.id.llHintText);
+            View tvHeadlineTitle = rootView.findViewById(R.id.tvHeadlineTitle);
+            View tvHeadlineSubtitle = rootView.findViewById(R.id.tvHeadlineSubtitle);
 
-            Log.d(TAG, "Bitmap capturado correctamente: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+            // Guardar visibilidad original
+            int logoVis = ivWalkiLogo != null ? ivWalkiLogo.getVisibility() : View.GONE;
+            int aiReasoningVis = cardAiReasoning != null ? cardAiReasoning.getVisibility() : View.GONE;
+            int actionButtonsVis = llActionButtons != null ? llActionButtons.getVisibility() : View.GONE;
+            int noInterestedVis = btnNoMeInteresa != null ? btnNoMeInteresa.getVisibility() : View.GONE;
+            int gradientVis = vBottomGradient != null ? vBottomGradient.getVisibility() : View.GONE;
+            int hintVis = llHintText != null ? llHintText.getVisibility() : View.GONE;
+            int titleVis = tvHeadlineTitle != null ? tvHeadlineTitle.getVisibility() : View.GONE;
+            int subtitleVis = tvHeadlineSubtitle != null ? tvHeadlineSubtitle.getVisibility() : View.GONE;
+
+            // MOSTRAR logo, OCULTAR elementos no deseados
+            if (ivWalkiLogo != null) ivWalkiLogo.setVisibility(View.VISIBLE);
+            if (cardAiReasoning != null) cardAiReasoning.setVisibility(View.GONE);
+            if (llActionButtons != null) llActionButtons.setVisibility(View.GONE);
+            if (btnNoMeInteresa != null) btnNoMeInteresa.setVisibility(View.GONE);
+            if (vBottomGradient != null) vBottomGradient.setVisibility(View.GONE);
+            if (llHintText != null) llHintText.setVisibility(View.GONE);
+            if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(View.GONE);
+            if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(View.GONE);
+
+            // Forzar re-layout y esperar a que se complete
+            rootView.requestLayout();
+            rootView.post(() -> {
+                try {
+                    Log.d(TAG, "Capturando layout completo con logo...");
+
+                    // Capturar todo el layout raíz (incluye logo + card)
+                    Bitmap bitmap = capturarViewComoBitmap(rootView);
+
+                    Log.d(TAG, "Bitmap capturado correctamente: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+
+                    // Restaurar visibilidad original
+                    if (ivWalkiLogo != null) ivWalkiLogo.setVisibility(logoVis);
+                    if (cardAiReasoning != null) cardAiReasoning.setVisibility(aiReasoningVis);
+                    if (llActionButtons != null) llActionButtons.setVisibility(actionButtonsVis);
+                    if (btnNoMeInteresa != null) btnNoMeInteresa.setVisibility(noInterestedVis);
+                    if (vBottomGradient != null) vBottomGradient.setVisibility(gradientVis);
+                    if (llHintText != null) llHintText.setVisibility(hintVis);
+                    if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(titleVis);
+                    if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(subtitleVis);
+
+                    // Continuar con guardar y compartir
+                    guardarYCompartirImagen(bitmap);
+
+                } catch (Exception e) {
+                    Log.e(TAG, "Error al capturar imagen", e);
+                    Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
+
+                    // Restaurar visibilidad en caso de error
+                    if (ivWalkiLogo != null) ivWalkiLogo.setVisibility(logoVis);
+                    if (cardAiReasoning != null) cardAiReasoning.setVisibility(aiReasoningVis);
+                    if (llActionButtons != null) llActionButtons.setVisibility(actionButtonsVis);
+                    if (btnNoMeInteresa != null) btnNoMeInteresa.setVisibility(noInterestedVis);
+                    if (vBottomGradient != null) vBottomGradient.setVisibility(gradientVis);
+                    if (llHintText != null) llHintText.setVisibility(hintVis);
+                    if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(titleVis);
+                    if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(subtitleVis);
+                }
+            });
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error al preparar captura", e);
+            Toast.makeText(requireContext(), "Error al compartir imagen", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Guarda el bitmap y lo comparte
+     */
+    private void guardarYCompartirImagen(Bitmap bitmap) {
+        try {
 
             // Guardar el bitmap temporalmente
             File cachePath = new File(requireContext().getCacheDir(), "images");
