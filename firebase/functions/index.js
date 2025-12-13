@@ -30,8 +30,8 @@ function initializeGemini() {
   }
 
   genAI = new GoogleGenerativeAI(apiKey);
-  model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-  console.log("✅ Gemini AI initialized successfully with model: gemini-2.5-flash");
+  model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  console.log("✅ Gemini AI initialized successfully with model: gemini-2.5-flash-lite");
 }
 
 admin.initializeApp();
@@ -512,9 +512,9 @@ Paseador (candidatos):
 
 2. **Reputación (25%)**:
    - calificacion_promedio >= 4.5 es excelente
-   - num_servicios_completados >= 20 es confiable
-   - Combinar: paseador 5.0★ con 100 servicios > 4.8★ con 10 servicios
-   - Leer top_resenas para validar calidad
+   - num_servicios_completados >= 10 es confiable
+   - Combinar: paseador 5.0★ con 20 servicios > 4.8★ con 5 servicios
+   - Leer top_resenas para validar calidad real
 
 3. **Distancia (20%)**:
    - < 2 km = excelente (+20 puntos)
@@ -532,8 +532,8 @@ Paseador (candidatos):
 
 **REGLAS ESTRICTAS:**
 - NUNCA recomendar si tamano NO está en tipos_perro_aceptados
-- NUNCA recomendar si match_score < 75
-- NUNCA recomendar si verificacion_estado != "verificado"
+- NUNCA recomendar si match_score < 50
+- NUNCA recomendar si verificacion_estado != "verificado" y != "APROBADO"
 - MÁXIMO 2 recomendaciones (preferiblemente 1 si es match excelente)
 - Si hay empate en score, priorizar menor distancia
 - Usa top_resenas para fundamentar la recomendación
@@ -559,7 +559,7 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
 
 **IMPORTANTE:**
 - Devuelve SOLO el array JSON, sin texto adicional ni bloques de código markdown
-- Si no hay buenos matches (score >= 75), devuelve array vacío: []
+- Si no hay buenos matches (score >= 50), devuelve array vacío: []
 - Los tags deben ser MUY concisos (máx 3 palabras cada uno)`;
 
     console.log(`🔍 DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
