@@ -10,16 +10,16 @@
     android:background="#99000000"
     android:clickable="true"
     android:focusable="true"
-    android:padding="16dp">
+    android:padding="8dp">
 
-    <!-- Card contenedor centrada -->
+    <!-- Card contenedor centrada - Ancho completo -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardMain"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="0dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="24dp"
         android:backgroundTint="@android:color/white">

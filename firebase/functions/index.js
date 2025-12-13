@@ -63,7 +63,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 // 🆕 MEJORA #6: Cache de recomendaciones en memoria
 // Evita llamar a Gemini múltiples veces para el mismo usuario en poco tiempo
 const recommendationCache = new Map(); // userId -> { recommendations, timestamp, petId }
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos en milisegundos
+const CACHE_TTL = 15 * 60 * 1000; // 🔥 OPTIMIZADO: 15 minutos (antes 5) para ahorrar créditos
 
 /**
  * Limpia entradas expiradas del cache (ejecuta cada 10 minutos)
@@ -467,14 +467,99 @@ exports.recomendarPaseadores = onCall(async (request) => {
     // Ordenar por pre_score descendente (mejores primero)
     paseadoresForAI.sort((a, b) => b.pre_score - a.pre_score);
 
-    // OPTIMIZACIÓN: Limitar a máximo 15 candidatos (aumentado de 10 para mejor diversidad)
-    const candidatosParaIA = paseadoresForAI.slice(0, 15);
+    // 🔥 OPTIMIZACIÓN: Pre-filtrar por compatibilidad de tamaño ANTES de enviar a Gemini
+    const tamanoMascota = petData.tamano; // "Pequeño", "Mediano", "Grande", "Gigante"
+    const candidatosCompatibles = paseadoresForAI.filter(paseador => {
+      const aceptaTamano = paseador.tipos_perro_aceptados.some(tipo =>
+        tipo.toLowerCase().includes(tamanoMascota.toLowerCase().replace('s', '')) // "Grandes" includes "Grande"
+      );
+      if (!aceptaTamano) {
+        console.log(`  🚫 Filtrado: ${paseador.nombre} no acepta perros ${tamanoMascota}`);
+      }
+      return aceptaTamano;
+    });
+
+    console.log(`🔍 DEBUG: Candidatos compatibles con ${tamanoMascota}: ${candidatosCompatibles.length} de ${paseadoresForAI.length}`);
+
+    // Si no hay candidatos compatibles, devolver mensaje específico
+    if (candidatosCompatibles.length === 0) {
+      console.log(`⚠️ No hay paseadores que acepten perros ${tamanoMascota}`);
+      return {
+        recommendations: [],
+        message: `No encontramos paseadores que acepten perros de tamaño ${tamanoMascota} en tu área. Intenta expandir tu búsqueda.`
+      };
+    }
+
+    // 🔥 OPTIMIZACIÓN: Limitar a máximo 8 candidatos (reducido para ahorrar tokens/créditos)
+    const candidatosParaIA = candidatosCompatibles.slice(0, 8);
 
     console.log(`🔍 DEBUG: ✅ Top 3 candidatos por pre-score:`);
     candidatosParaIA.slice(0, 3).forEach((p, i) => {
       console.log(`  ${i+1}. ${p.nombre} - Score: ${p.pre_score.toFixed(1)} (${p.calificacion_promedio}⭐, ${p.distancia_km}km, ${p.anos_experiencia}años exp)`);
     });
     console.log(`🔍 DEBUG: Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
+
+    // 🔥 OPTIMIZACIÓN: Skip Gemini en casos obvios para ahorrar créditos
+    // Caso 1: Solo hay 1 candidato con score decente (>= 60)
+    if (candidatosParaIA.length === 1 && candidatosParaIA[0].pre_score >= 60) {
+      const candidato = candidatosParaIA[0];
+      console.log(`⚡ SKIP GEMINI: Solo 1 candidato con buen score (${candidato.pre_score.toFixed(1)}) - devolviéndolo directo`);
+
+      const directRecommendation = {
+        id: candidato.id,
+        nombre: candidato.nombre,
+        razon_ia: "Mejor opción disponible en tu área",
+        match_score: Math.round(candidato.pre_score),
+        tags: [
+          `📍 ${candidato.distancia_km}km`,
+          `⭐ ${candidato.calificacion_promedio.toFixed(1)}/5`,
+          `🐕 ${candidato.num_servicios_completados} paseos`
+        ]
+      };
+
+      // Guardar en cache
+      recommendationCache.set(cacheKey, {
+        recommendations: [directRecommendation],
+        timestamp: Date.now(),
+        petId: petId
+      });
+
+      return {
+        recommendations: [directRecommendation],
+        message: "Recomendación generada exitosamente."
+      };
+    }
+
+    // Caso 2: Todos los candidatos tienen score muy bajo (< 40)
+    if (candidatosParaIA.every(p => p.pre_score < 40)) {
+      console.log(`⚡ SKIP GEMINI: Todos los candidatos tienen score < 40 - usando solo fallback`);
+
+      const mejorCandidato = candidatosParaIA[0];
+      const fallbackRecommendation = {
+        id: mejorCandidato.id,
+        nombre: mejorCandidato.nombre,
+        razon_ia: "Mejor opción disponible (match limitado)",
+        match_score: Math.round(mejorCandidato.pre_score),
+        tags: [
+          `📍 ${mejorCandidato.distancia_km}km`,
+          `⭐ ${mejorCandidato.calificacion_promedio.toFixed(1)}/5`,
+          `🐕 ${mejorCandidato.num_servicios_completados} paseos`
+        ],
+        is_fallback: true
+      };
+
+      // Guardar en cache
+      recommendationCache.set(cacheKey, {
+        recommendations: [fallbackRecommendation],
+        timestamp: Date.now(),
+        petId: petId
+      });
+
+      return {
+        recommendations: [fallbackRecommendation],
+        message: "Mostrando la mejor opción disponible (match limitado)"
+      };
+    }
 
     // Construct the prompt for Gemini AI
     console.log(`🔍 DEBUG: Construyendo prompt para Gemini AI...`);
@@ -607,6 +692,36 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
 
     console.log(`🔍 DEBUG: Recomendaciones parseadas de Gemini AI:`, JSON.stringify(recommendations, null, 2));
 
+    // 🆕 OPTIMIZACIÓN: Si Gemini no devuelve matches, usar fallback con el mejor candidato
+    if (!recommendations || recommendations.length === 0) {
+      console.log(`⚠️ Gemini no devolvió matches. Activando fallback con mejor candidato disponible...`);
+
+      // Tomar el mejor candidato por pre_score
+      const mejorCandidato = candidatosParaIA[0]; // Ya está ordenado por pre_score descendente
+
+      if (mejorCandidato) {
+        // Crear recomendación fallback
+        const fallbackRecommendation = {
+          id: mejorCandidato.id,
+          nombre: mejorCandidato.nombre,
+          razon_ia: "Mejor opción disponible en tu área",
+          match_score: Math.round(mejorCandidato.pre_score), // Usar el pre_score como match_score
+          tags: [
+            `📍 ${mejorCandidato.distancia_km}km`,
+            `⭐ ${mejorCandidato.calificacion_promedio.toFixed(1)}/5`,
+            `🐕 ${mejorCandidato.num_servicios_completados} paseos`
+          ],
+          is_fallback: true // Marcar como fallback
+        };
+
+        recommendations = [fallbackRecommendation];
+        console.log(`✅ Fallback activado: ${mejorCandidato.nombre} (score: ${mejorCandidato.pre_score.toFixed(1)})`);
+      } else {
+        console.log(`⚠️ No hay candidatos disponibles para fallback`);
+        return { recommendations: [], message: "No se encontraron paseadores aptos cerca de tu ubicación." };
+      }
+    }
+
     // 🆕 MEJORA #6: Guardar en cache antes de retornar
     recommendationCache.set(cacheKey, {
       recommendations: recommendations,
@@ -616,7 +731,12 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
     console.log(`🔍 DEBUG: 💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
 
     console.log(`🔍 DEBUG: ✅✅✅ FUNCIÓN COMPLETADA EXITOSAMENTE - Retornando ${recommendations.length} recomendaciones`);
-    return { recommendations: recommendations, message: "Recomendaciones generadas exitosamente." };
+    return {
+      recommendations: recommendations,
+      message: recommendations[0]?.is_fallback
+        ? "Mostrando la mejor opción disponible en tu área"
+        : "Recomendaciones generadas exitosamente."
+    };
 
   } catch (error) {
     console.error("🔴 ERROR CAPTURADO en bloque try-catch:", error);
