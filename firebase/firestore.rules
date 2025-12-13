@@ -248,6 +248,14 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // recomendaciones_ia_logs collection (telemetría de IA)
+    match /recomendaciones_ia_logs/{logId} {
+      allow read: if false; // Solo para admins/analytics
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Logs son inmutables
+    }
+
     match /mascotas/{mascotaId} {
       allow read: if isAuthenticated();
     }

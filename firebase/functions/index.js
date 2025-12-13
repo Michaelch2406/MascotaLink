@@ -1,6 +1,6 @@
 const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onCall } = require("firebase-functions/v2/https"); // Import onCall for callable functions
 const { defineString } = require("firebase-functions/params"); // Nuevo: sistema de parámetros
 const admin = require("firebase-admin");
@@ -30,8 +30,8 @@ function initializeGemini() {
   }
 
   genAI = new GoogleGenerativeAI(apiKey);
-  model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  console.log("✅ Gemini AI initialized successfully");
+  model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  console.log("✅ Gemini AI initialized successfully with model: gemini-2.5-flash");
 }
 
 admin.initializeApp();
@@ -92,8 +92,11 @@ setInterval(cleanExpiredCache, 10 * 60 * 1000);
  * This is a callable function, invoked directly from the Android app.
  */
 exports.recomendarPaseadores = onCall(async (request) => {
+  console.log(`🔍 DEBUG: Función recomendarPaseadores invocada`);
+
   // Inicializar Gemini AI si aún no está inicializado
   initializeGemini();
+  console.log(`🔍 DEBUG: Gemini inicializado. Model existe: ${model ? 'YES' : 'NO'}`);
 
   if (!model) {
     console.error("Gemini AI model is not initialized. Check GEMINI_API_KEY.");
@@ -102,13 +105,14 @@ exports.recomendarPaseadores = onCall(async (request) => {
 
   const { userData, petData, userLocation } = request.data;
   const userId = request.auth?.uid;
+  console.log(`🔍 DEBUG: User ID: ${userId}, Datos recibidos: userData=${!!userData}, petData=${!!petData}, userLocation=${!!userLocation}`);
 
   if (!userId) {
-    throw new functions.https.HttpsError('unauthenticated', 'El usuario no está autenticado.');
+    throw new HttpsError('unauthenticated', 'El usuario no está autenticado.');
   }
 
   if (!userData || !petData || !userLocation) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'invalid-argument',
       'Faltan datos de usuario, mascota o ubicación.'
     );
@@ -118,7 +122,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
   // Verificar que los objetos tengan los campos críticos para la IA
   const requiredPetFields = {
     nombre: 'Nombre de mascota',
-    tipo_mascota: 'Tamaño de mascota (Pequeño/Mediano/Grande)'
+    tamano: 'Tamaño de mascota (Pequeño/Mediano/Grande)'
   };
 
   const requiredUserFields = {
@@ -133,7 +137,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
   // Validar petData
   for (const [field, label] of Object.entries(requiredPetFields)) {
     if (!petData[field]) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         `Falta información de tu mascota: ${label}. Por favor completa el perfil de tu mascota.`
       );
@@ -143,7 +147,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
   // Validar userData
   for (const [field, label] of Object.entries(requiredUserFields)) {
     if (!userData[field]) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         `Falta información de tu perfil: ${label}. Por favor completa tu perfil.`
       );
@@ -153,19 +157,22 @@ exports.recomendarPaseadores = onCall(async (request) => {
   // Validar userLocation
   for (const [field, label] of Object.entries(requiredLocationFields)) {
     if (userLocation[field] === undefined || userLocation[field] === null) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         `Falta ${label}. Por favor activa los permisos de ubicación.`
       );
     }
   }
 
-  console.log(`✅ Validación exitosa - Recomendación para usuario ${userId}, mascota ${petData.nombre} (${petData.tipo_mascota})`);
+  console.log(`✅ Validación exitosa - Recomendación para usuario ${userId}, mascota ${petData.nombre} (${petData.tamano})`);
+  console.log(`🔍 DEBUG: Iniciando lógica de recomendación...`);
 
   // 🆕 MEJORA #6: Verificar cache antes de llamar a Gemini
+  console.log(`🔍 DEBUG: Verificando cache...`);
   const cacheKey = userId;
   const petId = petData.id || petData.nombre; // Identificador de mascota
   const cached = recommendationCache.get(cacheKey);
+  console.log(`🔍 DEBUG: Cache key: ${cacheKey}, Pet ID: ${petId}, Cache hit: ${cached ? 'YES' : 'NO'}`);
 
   if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
     // Verificar que sea para la misma mascota
@@ -182,19 +189,26 @@ exports.recomendarPaseadores = onCall(async (request) => {
     }
   }
 
+  console.log(`🔍 DEBUG: Cache no encontrado, continuando con búsqueda...`);
+
   const userLat = userLocation.latitude;
   const userLng = userLocation.longitude;
   const radiusKm = 10; // Search within 10 km radius
+  console.log(`🔍 DEBUG: Ubicación usuario: ${userLat}, ${userLng} - Radio: ${radiusKm}km`);
 
   let potentialWalkers = [];
 
+  console.log(`🔍 DEBUG: Iniciando bloque try para búsqueda de paseadores...`);
   try {
+    console.log(`🔍 DEBUG: Ejecutando query a paseadores_search...`);
     // 1. Fetch potential walkers from paseadores_search collection
     // This collection is denormalized and contains searchable walker data.
     const searchSnapshot = await db.collection("paseadores_search")
       .where("activo", "==", true)
-      .where("verificacion_estado", "==", "verificado") // Only recommend verified walkers
+      // Buscar tanto "APROBADO" como "aprobado" (hay inconsistencia en la BD)
       .get();
+
+    console.log(`🔍 DEBUG: Query completada. Documentos encontrados: ${searchSnapshot.size}`);
 
     const walkerIds = [];
     const walkerDataMap = {}; // To store full walker data
@@ -202,36 +216,82 @@ exports.recomendarPaseadores = onCall(async (request) => {
     for (const doc of searchSnapshot.docs) {
       const walkerSearchData = doc.data();
       const walkerId = doc.id;
-      walkerIds.push(walkerId);
-      walkerDataMap[walkerId] = walkerSearchData;
+      const verificacionEstado = walkerSearchData.verificacion_estado || "";
+
+      // Filtrar solo paseadores verificados/aprobados (case-insensitive)
+      const estadoLower = verificacionEstado.toLowerCase();
+      if (estadoLower === "aprobado" || estadoLower === "verificado") {
+        walkerIds.push(walkerId);
+        walkerDataMap[walkerId] = walkerSearchData;
+      } else {
+        console.log(`  ⏭️ Saltando paseador ${walkerId}: verificacion_estado = "${verificacionEstado}"`);
+      }
     }
 
+    console.log(`🔍 DEBUG: Total de IDs de paseadores verificados/aprobados: ${walkerIds.length}`);
+
     if (walkerIds.length === 0) {
+      console.log(`⚠️ No se encontraron paseadores activos y verificados`);
       return { recommendations: [], message: "No se encontraron paseadores activos y verificados." };
     }
+
+    console.log(`🔍 DEBUG: Obteniendo datos completos de ${walkerIds.length} paseadores...`);
+    console.log(`🔍 DEBUG: IDs a consultar: ${walkerIds.join(', ')}`);
 
     // 2. Fetch full paseador profile data and user display name for prompt
     const fullWalkerPromises = walkerIds.map(id => db.collection("paseadores").doc(id).get());
     const userDisplayPromises = walkerIds.map(id => db.collection("usuarios").doc(id).get());
+
+    console.log(`🔍 DEBUG: Ejecutando queries paralelas a paseadores y usuarios...`);
 
     const [fullWalkerDocs, userDisplayDocs] = await Promise.all([
       Promise.all(fullWalkerPromises),
       Promise.all(userDisplayPromises)
     ]);
 
+    console.log(`🔍 DEBUG: Queries completadas. fullWalkerDocs: ${fullWalkerDocs.length}, userDisplayDocs: ${userDisplayDocs.length}`);
+
     const paseadoresForAI = [];
+
+    console.log(`🔍 DEBUG: Procesando ${walkerIds.length} paseadores y calculando distancias...`);
 
     for (let i = 0; i < walkerIds.length; i++) {
       const walkerId = walkerIds[i];
       const searchData = walkerDataMap[walkerId];
       const fullWalkerData = fullWalkerDocs[i].exists ? fullWalkerDocs[i].data() : {};
+      const userData = userDisplayDocs[i].exists ? userDisplayDocs[i].data() : {};
 
-      const walkerLocation = fullWalkerData.ubicacion_principal?.geopoint;
+      console.log(`  🔍 Procesando paseador ${i + 1}/${walkerIds.length}: ${walkerId}`);
+
+      // Buscar ubicación en varios lugares posibles
+      let walkerLocation = null;
+
+      // Intento 1: ubicacion_actual en usuarios (campo principal)
+      if (userData.ubicacion_actual) {
+        walkerLocation = userData.ubicacion_actual;
+        console.log(`    📍 Ubicación encontrada en usuarios.ubicacion_actual`);
+      }
+      // Intento 2: ubicacion_principal.geopoint en paseadores
+      else if (fullWalkerData.ubicacion_principal?.geopoint) {
+        walkerLocation = fullWalkerData.ubicacion_principal.geopoint;
+        console.log(`    📍 Ubicación encontrada en paseadores.ubicacion_principal.geopoint`);
+      }
+      // Intento 3: ubicacion directa en usuarios
+      else if (userData.ubicacion) {
+        walkerLocation = userData.ubicacion;
+        console.log(`    📍 Ubicación encontrada en usuarios.ubicacion`);
+      }
+
+      if (!walkerLocation || !walkerLocation.latitude || !walkerLocation.longitude) {
+        console.log(`    ⚠️ Sin ubicación válida en ningún campo, saltando`);
+        continue;
+      }
 
       // Filter by distance if location is available
-      if (walkerLocation && walkerLocation.latitude && walkerLocation.longitude) {
-        const distance = calculateDistance(userLat, userLng, walkerLocation.latitude, walkerLocation.longitude);
-        if (distance <= radiusKm) {
+      const distance = calculateDistance(userLat, userLng, walkerLocation.latitude, walkerLocation.longitude);
+      console.log(`    📍 Distancia: ${distance.toFixed(2)}km (radio máx: ${radiusKm}km)`);
+
+      if (distance <= radiusKm) {
           paseadoresForAI.push({
             id: walkerId,
             nombre: searchData.nombre_display || `Paseador ${walkerId.substring(0, 5)}`,
@@ -250,17 +310,22 @@ exports.recomendarPaseadores = onCall(async (request) => {
             disponibilidad_general: searchData.disponibilidad_general || "No especificada",
             // ❌ ELIMINADO: experiencia_general (redundante con anos_experiencia)
           });
+          console.log(`    ✅ Agregado a lista de candidatos`);
+        } else {
+          console.log(`    ❌ Fuera de rango (>${radiusKm}km)`);
         }
-      }
     }
 
+    console.log(`🔍 DEBUG: Total de paseadores dentro del radio: ${paseadoresForAI.length}`);
+
     if (paseadoresForAI.length === 0) {
+      console.log(`⚠️ No se encontraron paseadores cerca de la ubicación`);
       return { recommendations: [], message: "No se encontraron paseadores aptos cerca de tu ubicación." };
     }
 
     // 🆕 MEJORA #4: Pre-scoring híbrido (distancia + calificación + experiencia)
     // En lugar de solo ordenar por distancia, calculamos un score que combina múltiples factores
-    console.log(`Calculando pre-score para ${paseadoresForAI.length} candidatos...`);
+    console.log(`🔍 DEBUG: Calculando pre-score para ${paseadoresForAI.length} candidatos...`);
 
     paseadoresForAI.forEach(paseador => {
       // Componentes del score (0-100):
@@ -285,26 +350,141 @@ exports.recomendarPaseadores = onCall(async (request) => {
       }
     });
 
+    console.log(`🔍 DEBUG: Pre-scoring completado`);
+
+    // 🆕 MEJORA C: Personalización basada en historial del usuario
+    // Consultar reservas anteriores para identificar preferencias
+    console.log("🔍 DEBUG: 🎯 Analizando historial de usuario para personalización...");
+
+    try {
+      const userId = request.auth.uid;
+      console.log(`🔍 DEBUG: Consultando historial de reservas para usuario ${userId}...`);
+      const historialSnapshot = await db.collection("reservas")
+        .where("dueno_id", "==", userId)
+        .where("estado", "==", "completada")
+        .orderBy("fecha_creacion", "desc")
+        .limit(10) // Últimas 10 reservas completadas
+        .get();
+
+      if (!historialSnapshot.empty) {
+        // Extraer paseadores con los que tuvo buena experiencia
+        const paseadoresPrevios = new Set();
+        const caracteristicasPreferidas = {
+          experienciaPromedio: 0,
+          precioPromedio: 0,
+          distanciaPromedio: 0,
+          count: 0
+        };
+
+        for (const reservaDoc of historialSnapshot.docs) {
+          const reserva = reservaDoc.data();
+          const paseadorId = reserva.paseador_id;
+
+          // Agregar a la lista de paseadores previos
+          paseadoresPrevios.add(paseadorId);
+
+          // Acumular características para calcular promedios
+          const paseador = paseadoresForAI.find(p => p.id === paseadorId);
+          if (paseador) {
+            caracteristicasPreferidas.experienciaPromedio += paseador.anos_experiencia || 0;
+            caracteristicasPreferidas.precioPromedio += paseador.precio_hora || 0;
+            caracteristicasPreferidas.distanciaPromedio += paseador.distancia_km || 0;
+            caracteristicasPreferidas.count++;
+          }
+        }
+
+        // Calcular promedios
+        if (caracteristicasPreferidas.count > 0) {
+          caracteristicasPreferidas.experienciaPromedio /= caracteristicasPreferidas.count;
+          caracteristicasPreferidas.precioPromedio /= caracteristicasPreferidas.count;
+          caracteristicasPreferidas.distanciaPromedio /= caracteristicasPreferidas.count;
+        }
+
+        console.log(`  📊 Historial: ${paseadoresPrevios.size} paseadores únicos, ${caracteristicasPreferidas.count} reservas analizadas`);
+        console.log(`  📈 Preferencias detectadas: ${caracteristicasPreferidas.experienciaPromedio.toFixed(1)} años exp, $${caracteristicasPreferidas.precioPromedio.toFixed(0)}/h, ${caracteristicasPreferidas.distanciaPromedio.toFixed(1)}km`);
+
+        // Aplicar boosts al pre_score
+        paseadoresForAI.forEach(paseador => {
+          let personalBoost = 0;
+
+          // 🎯 BOOST 1: Ha usado este paseador antes (+15 puntos)
+          if (paseadoresPrevios.has(paseador.id)) {
+            personalBoost += 15;
+            console.log(`  ✨ Boost historial: +15 pts para ${paseador.nombre} (ya lo usó antes)`);
+          }
+
+          // 🎯 BOOST 2: Experiencia similar a sus preferencias (+10 puntos máx)
+          if (caracteristicasPreferidas.count > 0) {
+            const diffExperiencia = Math.abs(paseador.anos_experiencia - caracteristicasPreferidas.experienciaPromedio);
+            if (diffExperiencia <= 2) { // Si está dentro de ±2 años
+              const boostExp = Math.max(0, 10 - (diffExperiencia * 3));
+              personalBoost += boostExp;
+            }
+
+            // 🎯 BOOST 3: Precio similar a sus preferencias (+10 puntos máx)
+            const diffPrecio = Math.abs(paseador.precio_hora - caracteristicasPreferidas.precioPromedio);
+            const porcPrecio = diffPrecio / caracteristicasPreferidas.precioPromedio;
+            if (porcPrecio <= 0.3) { // Si está dentro de ±30%
+              const boostPrecio = Math.max(0, 10 - (porcPrecio * 30));
+              personalBoost += boostPrecio;
+            }
+
+            // 🎯 BOOST 4: Distancia similar a sus preferencias (+5 puntos máx)
+            const diffDistancia = Math.abs(paseador.distancia_km - caracteristicasPreferidas.distanciaPromedio);
+            if (diffDistancia <= 2) { // Si está dentro de ±2 km
+              const boostDist = Math.max(0, 5 - (diffDistancia * 2));
+              personalBoost += boostDist;
+            }
+          }
+
+          // Aplicar boost total
+          if (personalBoost > 0) {
+            paseador.pre_score += personalBoost;
+            paseador.personal_boost = personalBoost; // Para debugging
+          }
+        });
+
+        // Log de top candidatos después de personalización
+        const topPersonalizados = [...paseadoresForAI]
+          .filter(p => p.personal_boost)
+          .sort((a, b) => b.personal_boost - a.personal_boost)
+          .slice(0, 3);
+
+        if (topPersonalizados.length > 0) {
+          console.log(`  🏆 Top 3 con mayor boost personal:`);
+          topPersonalizados.forEach((p, i) => {
+            console.log(`    ${i+1}. ${p.nombre} - Boost: +${p.personal_boost.toFixed(1)} pts`);
+          });
+        }
+      } else {
+        console.log("  ℹ️ Usuario nuevo - no hay historial para personalizar");
+      }
+    } catch (error) {
+      console.error("⚠️ Error en personalización (continuando sin ella):", error.message);
+      // No fallar la función, solo log del error
+    }
+
     // Ordenar por pre_score descendente (mejores primero)
     paseadoresForAI.sort((a, b) => b.pre_score - a.pre_score);
 
     // OPTIMIZACIÓN: Limitar a máximo 15 candidatos (aumentado de 10 para mejor diversidad)
     const candidatosParaIA = paseadoresForAI.slice(0, 15);
 
-    console.log(`✅ Top 3 candidatos por pre-score:`);
+    console.log(`🔍 DEBUG: ✅ Top 3 candidatos por pre-score:`);
     candidatosParaIA.slice(0, 3).forEach((p, i) => {
       console.log(`  ${i+1}. ${p.nombre} - Score: ${p.pre_score.toFixed(1)} (${p.calificacion_promedio}⭐, ${p.distancia_km}km, ${p.anos_experiencia}años exp)`);
     });
-    console.log(`Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
+    console.log(`🔍 DEBUG: Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
 
     // Construct the prompt for Gemini AI
+    console.log(`🔍 DEBUG: Construyendo prompt para Gemini AI...`);
     const prompt = `Eres un asistente experto en matching de paseadores de perros para la app Walki.
 
 **ESQUEMA DE DATOS:**
 
 Mascota (petData):
 - nombre: string
-- tipo_mascota: "Pequeños" | "Medianos" | "Grandes" | "Gigantes"
+- tamano: "Pequeños" | "Medianos" | "Grandes" | "Gigantes"
 - raza: string (opcional)
 - edad_meses: number
 - temperamento: string (opcional)
@@ -316,7 +496,7 @@ Paseador (candidatos):
 - num_servicios_completados: number - total de paseos realizados
 - precio_hora: number (USD)
 - anos_experiencia: number - años trabajando con perros
-- tipos_perro_aceptados: ["Pequeños", "Medianos", "Grandes"] - DEBE coincidir con tipo_mascota
+- tipos_perro_aceptados: ["Pequeños", "Medianos", "Grandes"] - DEBE coincidir con tamano
 - distancia_km: number - distancia ya calculada (máx 10km)
 - verificacion_estado: "verificado" | "pendiente"
 - motivacion: string - por qué es paseador
@@ -327,7 +507,7 @@ Paseador (candidatos):
 **CRITERIOS DE MATCH (ponderación):**
 
 1. **Compatibilidad de tamaño (40% del score)**:
-   - El tipo_mascota DEBE estar en tipos_perro_aceptados
+   - El tamano DEBE estar en tipos_perro_aceptados
    - Si NO coincide → match_score = 0 (NO recomendar NUNCA)
 
 2. **Reputación (25%)**:
@@ -351,7 +531,7 @@ Paseador (candidatos):
    - Precio alto + alta calificación = justificado
 
 **REGLAS ESTRICTAS:**
-- NUNCA recomendar si tipo_mascota NO está en tipos_perro_aceptados
+- NUNCA recomendar si tamano NO está en tipos_perro_aceptados
 - NUNCA recomendar si match_score < 75
 - NUNCA recomendar si verificacion_estado != "verificado"
 - MÁXIMO 2 recomendaciones (preferiblemente 1 si es match excelente)
@@ -373,7 +553,7 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
     "nombre": "Nombre",
     "razon_ia": "Una frase concisa explicando el match (máx 100 caracteres)",
     "match_score": 85,
-    "tags": ["📍 A 2.5 km", "⭐ 4.9/5 (50 paseos)", "🐕 Acepta ${tipo_mascota}"]
+    "tags": ["📍 A 2.5 km", "⭐ 4.9/5 (50 paseos)", "🐕 Acepta ${petData.tamano}"]
   }
 ]
 
@@ -382,12 +562,14 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
 - Si no hay buenos matches (score >= 75), devuelve array vacío: []
 - Los tags deben ser MUY concisos (máx 3 palabras cada uno)`;
 
-    console.log("Enviando prompt a Gemini AI...");
+    console.log(`🔍 DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
     const result = await model.generateContent(prompt);
+    console.log(`🔍 DEBUG: ✅ Respuesta de Gemini recibida`);
+
     const response = result.response;
     const text = response.text();
 
-    console.log("Respuesta de Gemini AI (raw):", text);
+    console.log(`🔍 DEBUG: Respuesta de Gemini AI (raw, primeros 500 chars): ${text.substring(0, 500)}`);
 
     let recommendations = [];
     try {
@@ -404,16 +586,16 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
           recommendations = JSON.parse(jsonMatch[1]);
         } catch (e2) {
           console.error("Second attempt to parse JSON failed:", e2);
-          throw new functions.https.HttpsError('internal', 'La IA no pudo generar una respuesta válida.');
+          throw new HttpsError('internal', 'La IA no pudo generar una respuesta válida.');
         }
       } else {
-        throw new functions.https.HttpsError('internal', 'La IA no pudo generar una respuesta válida.');
+        throw new HttpsError('internal', 'La IA no pudo generar una respuesta válida.');
       }
     }
 
     if (!Array.isArray(recommendations)) {
       console.error("Gemini AI response is not an array:", recommendations);
-      throw new functions.https.HttpsError('internal', 'La IA no devolvió un formato de recomendaciones válido.');
+      throw new HttpsError('internal', 'La IA no devolvió un formato de recomendaciones válido.');
     }
 
     // Ensure match_score is a number
@@ -423,7 +605,7 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
       }
     });
 
-    console.log("Recomendaciones de Gemini AI:", recommendations);
+    console.log(`🔍 DEBUG: Recomendaciones parseadas de Gemini AI:`, JSON.stringify(recommendations, null, 2));
 
     // 🆕 MEJORA #6: Guardar en cache antes de retornar
     recommendationCache.set(cacheKey, {
@@ -431,12 +613,16 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
       timestamp: Date.now(),
       petId: petId
     });
-    console.log(`💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
+    console.log(`🔍 DEBUG: 💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
 
+    console.log(`🔍 DEBUG: ✅✅✅ FUNCIÓN COMPLETADA EXITOSAMENTE - Retornando ${recommendations.length} recomendaciones`);
     return { recommendations: recommendations, message: "Recomendaciones generadas exitosamente." };
 
   } catch (error) {
-    console.error("Error al recomendar paseadores:", error);
+    console.error("🔴 ERROR CAPTURADO en bloque try-catch:", error);
+    console.error("🔴 Stack trace:", error.stack);
+    console.error("🔴 Tipo de error:", error.constructor.name);
+    console.error("🔴 Mensaje:", error.message);
 
     // 🆕 MEJORA #7: Mensajes de error específicos según el tipo de error
     let userMessage = 'Error al procesar la recomendación.';
@@ -463,7 +649,7 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
       errorCode = 'unavailable';
     }
 
-    throw new functions.https.HttpsError(errorCode, userMessage, error.message);
+    throw new HttpsError(errorCode, userMessage, error.message);
   }
 });
 

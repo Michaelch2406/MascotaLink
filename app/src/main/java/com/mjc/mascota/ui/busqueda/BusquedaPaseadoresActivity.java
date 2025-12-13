@@ -176,7 +176,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     // Recomendación de IA
     private LinearLayout btnBuscarConIA;
-    private RecomendacionIAHelper recomendacionIAHelper;
 
     // Handler y Runnable para la actualización periódica del mapa
     private final Handler periodicRefreshHandler = new Handler(Looper.getMainLooper());
@@ -244,25 +243,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         // Botón de Búsqueda con IA
         btnBuscarConIA = findViewById(R.id.btn_buscar_con_ia);
-        recomendacionIAHelper = new RecomendacionIAHelper(this);
 
         btnBuscarConIA.setOnClickListener(v -> {
             Log.d(TAG, "Botón Buscar con IA presionado");
-            recomendacionIAHelper.show();
-        });
 
-        recomendacionIAHelper.setOnRecommendationListener(new RecomendacionIAHelper.OnRecommendationListener() {
-            @Override
-            public void onSuccess(Map<String, Object> paseador) {
-                Log.d(TAG, "Recomendación recibida: " + paseador.get("nombre"));
-                Toast.makeText(BusquedaPaseadoresActivity.this,
-                    "✨ Encontramos tu match perfecto", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onError(String error) {
-                Log.e(TAG, "Error en recomendación: " + error);
-            }
+            // Mostrar DialogFragment de recomendación IA
+            RecomendacionIADialogFragment dialog = new RecomendacionIADialogFragment();
+            dialog.show(getSupportFragmentManager(), "RecomendacionIADialog");
         });
 
         setupRecyclerViews();
