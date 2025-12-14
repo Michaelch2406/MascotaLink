@@ -33,6 +33,10 @@ public class Paseo implements Serializable {
     private Date fecha_fin_paseo;
     private String timeZone;
 
+    // Campos para reservas agrupadas (múltiples días específicos)
+    private String grupo_reserva_id;  // ID único que vincula reservas del mismo grupo
+    private Boolean es_grupo;         // true si esta reserva es parte de un grupo
+
     // Nuevos campos para evitar warnings de Firestore y soportar historial completo
     private long tiempo_total_minutos;
     // Acepta GeoPoint o Map para evitar errores de deserialización mezclada en Firestore
@@ -130,6 +134,12 @@ public class Paseo implements Serializable {
     public void setFecha_inicio_paseo(Date fecha_inicio_paseo) { this.fecha_inicio_paseo = fecha_inicio_paseo; }
     public Date getFecha_fin_paseo() { return fecha_fin_paseo; }
     public void setFecha_fin_paseo(Date fecha_fin_paseo) { this.fecha_fin_paseo = fecha_fin_paseo; }
+
+    // Getters y Setters para reservas agrupadas
+    public String getGrupo_reserva_id() { return grupo_reserva_id; }
+    public void setGrupo_reserva_id(String grupo_reserva_id) { this.grupo_reserva_id = grupo_reserva_id; }
+    public Boolean getEs_grupo() { return es_grupo; }
+    public void setEs_grupo(Boolean es_grupo) { this.es_grupo = es_grupo; }
 
     public String getFechaFormateada() {
         if (fecha == null) return "";

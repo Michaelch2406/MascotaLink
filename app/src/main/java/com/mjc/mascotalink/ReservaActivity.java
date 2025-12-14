@@ -612,6 +612,7 @@ public class ReservaActivity extends AppCompatActivity {
                 break;
         }
 
+        actualizarResumenCosto(); // Actualizar costo cuando cambian las fechas
         cargarHorariosDisponibles();
         verificarCamposCompletos();
     }
@@ -950,8 +951,24 @@ public class ReservaActivity extends AppCompatActivity {
         if (horarioList == null || horarioList.isEmpty()) return;
 
         Calendar today = Calendar.getInstance();
+
+        // Para días específicos múltiples, validar con la fecha MÁS TEMPRANA seleccionada
+        Date fechaParaValidacion = fechaSeleccionada;
+        if (modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
+            Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+            if (fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty()) {
+                // Encontrar la fecha más temprana
+                fechaParaValidacion = null;
+                for (Date fecha : fechasSeleccionadas) {
+                    if (fechaParaValidacion == null || fecha.before(fechaParaValidacion)) {
+                        fechaParaValidacion = fecha;
+                    }
+                }
+            }
+        }
+
         Calendar selectedCal = Calendar.getInstance();
-        selectedCal.setTime(fechaSeleccionada);
+        selectedCal.setTime(fechaParaValidacion);
 
         boolean isToday = selectedCal.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
                 selectedCal.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR);
@@ -1293,6 +1310,12 @@ public class ReservaActivity extends AppCompatActivity {
             diasCalculo = 7; // 7 días consecutivos
         } else if (tipoReserva.equals("MENSUAL")) {
             diasCalculo = 30; // 30 días consecutivos
+        } else if (modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
+            // Contar días específicos seleccionados
+            Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+            if (fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty()) {
+                diasCalculo = fechasSeleccionadas.size();
+            }
         }
 
         costoTotal = tarifaPorHora * horas * diasCalculo;
@@ -1430,14 +1453,33 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void crearReservaFinal(double costoTotalReal, double tarifaConfirmada, Date horaInicio) {
+        // Detectar si necesitamos crear múltiples reservas (Días Específicos con múltiples días)
+        boolean esGrupoMultipleDias = modoFechaActual.equals("DIAS_ESPECIFICOS") &&
+                calendarioAdapter != null &&
+                calendarioAdapter.getFechasSeleccionadas().size() > 1;
+
+        if (esGrupoMultipleDias) {
+            // Crear múltiples reservas vinculadas (una por cada día seleccionado)
+            crearReservasAgrupadas(costoTotalReal, tarifaConfirmada, horaInicio);
+        } else {
+            // Crear una sola reserva (modo tradicional)
+            crearReservaIndividual(costoTotalReal, tarifaConfirmada, horaInicio, fechaSeleccionada, null, false);
+        }
+    }
+
+    /**
+     * Crea una sola reserva (modo PUNTUAL simple, SEMANAL, o MENSUAL)
+     */
+    private void crearReservaIndividual(double costoTotal, double tarifaConfirmada, Date horaInicio,
+                                        Date fecha, String grupoId, boolean esGrupo) {
         Map<String, Object> reserva = new HashMap<>();
         reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
         reserva.put("id_mascota", mascotaSeleccionada.getId());
         reserva.put("id_paseador", db.collection("usuarios").document(paseadorId));
-        reserva.put("fecha", new Timestamp(fechaSeleccionada));
+        reserva.put("fecha", new Timestamp(fecha));
         reserva.put("hora_inicio", new Timestamp(horaInicio));
         reserva.put("duracion_minutos", duracionMinutos);
-        reserva.put("costo_total", costoTotalReal); // Precio seguro calculado
+        reserva.put("costo_total", costoTotal);
         reserva.put("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
         reserva.put("tipo_reserva", tipoReserva);
         reserva.put("fecha_creacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
@@ -1447,6 +1489,12 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("notas", notasAdicionalesMascota);
         reserva.put("reminderSent", false);
         reserva.put("timeZone", java.util.TimeZone.getDefault().getID());
+
+        // Campos para reservas agrupadas
+        if (esGrupo && grupoId != null) {
+            reserva.put("grupo_reserva_id", grupoId);
+            reserva.put("es_grupo", true);
+        }
 
         // Operación CRÍTICA: Creación de reserva con retry (5 intentos)
         com.mjc.mascotalink.util.FirestoreRetryHelper.executeCritical(
@@ -1458,6 +1506,9 @@ public class ReservaActivity extends AppCompatActivity {
                 Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
                 intent.putExtra("reserva_id", reservaId);
                 intent.putExtra("reserva_estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
+                if (esGrupo && grupoId != null) {
+                    intent.putExtra("grupo_reserva_id", grupoId);
+                }
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 finish();
@@ -1468,6 +1519,96 @@ public class ReservaActivity extends AppCompatActivity {
                 Log.e(TAG, "Error crítico al crear reserva después de reintentos", e);
             }
         );
+    }
+
+    /**
+     * Crea múltiples reservas vinculadas para días específicos múltiples
+     */
+    private void crearReservasAgrupadas(double costoTotalReal, double tarifaConfirmada, Date horaInicio) {
+        Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+        int cantidadDias = fechasSeleccionadas.size();
+
+        // Generar un ID único para el grupo
+        String grupoId = java.util.UUID.randomUUID().toString();
+
+        // Calcular el costo por día (dividir el costo total entre los días)
+        double costoPorDia = costoTotalReal / cantidadDias;
+
+        Log.d(TAG, "Creando grupo de " + cantidadDias + " reservas con ID: " + grupoId);
+
+        // Convertir Set a List para iterar de forma ordenada
+        List<Date> fechasList = new java.util.ArrayList<>(fechasSeleccionadas);
+        java.util.Collections.sort(fechasList); // Ordenar por fecha
+
+        // Contador para saber cuándo completamos todas
+        final int[] reservasCreadas = {0};
+        final String[] primerReservaId = {null};
+
+        for (Date fecha : fechasList) {
+            // Crear hora de inicio específica para esta fecha
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(fecha);
+            cal.set(Calendar.HOUR_OF_DAY, horarioSeleccionado.getHora());
+            cal.set(Calendar.MINUTE, horarioSeleccionado.getMinutos());
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            Date horaInicioEspecifica = cal.getTime();
+
+            Map<String, Object> reserva = new HashMap<>();
+            reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
+            reserva.put("id_mascota", mascotaSeleccionada.getId());
+            reserva.put("id_paseador", db.collection("usuarios").document(paseadorId));
+            reserva.put("fecha", new Timestamp(fecha));
+            reserva.put("hora_inicio", new Timestamp(horaInicioEspecifica));
+            reserva.put("duracion_minutos", duracionMinutos);
+            reserva.put("costo_total", costoPorDia); // Costo dividido por día
+            reserva.put("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
+            reserva.put("tipo_reserva", "PUNTUAL"); // Cada día es PUNTUAL individual
+            reserva.put("fecha_creacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
+            reserva.put("tarifa_confirmada", tarifaConfirmada);
+            reserva.put("id_pago", null);
+            reserva.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_PENDIENTE);
+            reserva.put("notas", notasAdicionalesMascota);
+            reserva.put("reminderSent", false);
+            reserva.put("timeZone", java.util.TimeZone.getDefault().getID());
+
+            // Campos de grupo
+            reserva.put("grupo_reserva_id", grupoId);
+            reserva.put("es_grupo", true);
+
+            // Crear la reserva
+            db.collection("reservas").add(reserva)
+                .addOnSuccessListener(documentReference -> {
+                    reservasCreadas[0]++;
+                    if (primerReservaId[0] == null) {
+                        primerReservaId[0] = documentReference.getId();
+                    }
+
+                    Log.d(TAG, "Reserva " + reservasCreadas[0] + "/" + cantidadDias + " creada: " + documentReference.getId());
+
+                    // Cuando se crean todas las reservas
+                    if (reservasCreadas[0] == cantidadDias) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "Reservas creadas exitosamente (" + cantidadDias + " días)", Toast.LENGTH_SHORT).show();
+
+                            Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
+                            intent.putExtra("reserva_id", primerReservaId[0]);
+                            intent.putExtra("grupo_reserva_id", grupoId);
+                            intent.putExtra("reserva_estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+                            finish();
+                        });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al crear una de las reservas del grupo", e);
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Error al crear algunas reservas. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+                        btnConfirmarReserva.setEnabled(true);
+                    });
+                });
+        }
     }
 
     private boolean validarDatosReserva() {

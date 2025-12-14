@@ -27,8 +27,11 @@ import java.util.List;
 
 public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewHolder> {
 
+    private static final int VIEW_TYPE_INDIVIDUAL = 0;
+    private static final int VIEW_TYPE_GRUPO = 1;
+
     private Context context;
-    private List<Paseo> paseosList;
+    private List<PaseoItem> paseoItems;  // Cambiado de List<Paseo> a List<PaseoItem>
     private OnPaseoClickListener listener;
     private String userRole;
 
@@ -43,16 +46,30 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     public PaseosAdapter(Context context, List<Paseo> paseosList, OnPaseoClickListener listener, String userRole) {
         this.context = context;
-        this.paseosList = new ArrayList<>(paseosList);
+        // Agrupar reservas antes de almacenarlas
+        this.paseoItems = PaseoItem.agruparReservas(paseosList);
         this.listener = listener;
         this.userRole = userRole;
     }
-    
+
     public void updateList(List<Paseo> newList) {
-        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new PaseoDiffCallback(this.paseosList, newList));
-        this.paseosList.clear();
-        this.paseosList.addAll(newList);
-        diffResult.dispatchUpdatesTo(this);
+        // Agrupar la nueva lista
+        List<PaseoItem> newItems = PaseoItem.agruparReservas(newList);
+        // TODO: Implementar DiffUtil para PaseoItem si es necesario
+        this.paseoItems.clear();
+        this.paseoItems.addAll(newItems);
+        notifyDataSetChanged();
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        PaseoItem item = paseoItems.get(position);
+        return item.esGrupo() ? VIEW_TYPE_GRUPO : VIEW_TYPE_INDIVIDUAL;
+    }
+
+    @Override
+    public int getItemCount() {
+        return paseoItems.size();
     }
 
     @NonNull
@@ -64,11 +81,101 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     @Override
     public void onBindViewHolder(@NonNull PaseoViewHolder holder, int position) {
-        Paseo paseo = paseosList.get(position);
+        PaseoItem item = paseoItems.get(position);
+
+        if (item.esGrupo()) {
+            bindGrupoView(holder, item);
+        } else {
+            bindIndividualView(holder, item.getPaseoIndividual());
+        }
+    }
+
+    /**
+     * Vincula datos para una reserva agrupada (múltiples días)
+     */
+    private void bindGrupoView(PaseoViewHolder holder, PaseoItem item) {
+        Paseo primerPaseo = item.getPrimerPaseo();
+        if (primerPaseo == null) return;
+
+        // 1. Fecha - Mostrar rango con progreso si aplica
+        String fechaTexto = item.getRangoFechas() + " (" + item.getCantidadDias() + " días)";
+        String progresoTexto = item.getTextoProgreso();
+        if (progresoTexto != null) {
+            fechaTexto += " • " + progresoTexto;
+        }
+        holder.tvFecha.setText(fechaTexto);
+        holder.tvHoraInicioPaseo.setText(primerPaseo.getHoraFormateada() != null ? primerPaseo.getHoraFormateada() : "");
+
+        // 2. Info Principal y Secundaria (igual que individual)
+        String nombreMascota = primerPaseo.getMascotaNombre() != null ? primerPaseo.getMascotaNombre() : "Mascota";
+        holder.tvNombrePrincipal.setText(nombreMascota);
+
+        if (userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
+            holder.tvNombreSecundario.setText("Dueño: " + (primerPaseo.getDuenoNombre() != null ? primerPaseo.getDuenoNombre() : "Desconocido"));
+            cargarImagen(holder.ivFotoPerfil, primerPaseo.getMascotaFoto(), R.drawable.ic_pet_placeholder);
+        } else {
+            holder.tvNombreSecundario.setText("Paseador: " + (primerPaseo.getPaseadorNombre() != null ? primerPaseo.getPaseadorNombre() : "No asignado"));
+            cargarImagen(holder.ivFotoPerfil, primerPaseo.getPaseadorFoto(), R.drawable.ic_person);
+        }
+
+        // 3. Detalles - Duración y Costo TOTAL del grupo
+        int duracionMinutos = (int) primerPaseo.getDuracion_minutos();
+        holder.tvDuracion.setText(formatearDuracion(duracionMinutos) + "/día");
+
+        double costoTotal = item.getCostoTotal();
+        holder.tvCosto.setText(String.format("$%.2f total", costoTotal));
+
+        // 4. Estado (usar el estado efectivo del grupo)
+        String estado = item.getEstadoEfectivo();
+        holder.chipEstado.setText(estado != null ? estado : "DESCONOCIDO");
+        establecerColorEstado(holder.chipEstado, estado);
+
+        // 5. Opacidad para historial
+        float opacidad = 1.0f;
+        if (estado != null && (estado.equals("COMPLETADO") || estado.equals("CANCELADO"))) {
+            opacidad = 0.9f;
+        }
+        holder.itemView.setAlpha(opacidad);
+
+        // 6. Botones de Acción (usar el primer paseo)
+        configurarBotonesAccion(holder, estado, primerPaseo);
+
+        // Click en toda la tarjeta
+        holder.itemView.setOnClickListener(v -> {
+            boolean puedePagar = ReservaEstadoValidator.canPay(primerPaseo.getEstado()) &&
+                    !ReservaEstadoValidator.isPagoCompletado(primerPaseo.getEstado_pago());
+            if (userRole != null && !userRole.equalsIgnoreCase("PASEADOR") && puedePagar) {
+                listener.onProcesarPagoClick(primerPaseo);
+            } else {
+                listener.onPaseoClick(primerPaseo);
+            }
+        });
+    }
+
+    /**
+     * Vincula datos para una reserva individual
+     */
+    private void bindIndividualView(PaseoViewHolder holder, Paseo paseo) {
         if (paseo == null) return;
 
-        // 1. Fecha y Hora
-        holder.tvFecha.setText(paseo.getFechaFormateada() != null ? paseo.getFechaFormateada() : "");
+        // Obtener el item completo para verificar badges
+        PaseoItem currentItem = null;
+        for (PaseoItem item : paseoItems) {
+            if (!item.esGrupo() && item.getPaseoIndividual() == paseo) {
+                currentItem = item;
+                break;
+            }
+        }
+
+        // 1. Fecha y Hora con badge si es SEMANAL/MENSUAL
+        String fechaTexto = paseo.getFechaFormateada() != null ? paseo.getFechaFormateada() : "";
+        if (currentItem != null) {
+            String badge = currentItem.getBadgeTipoReserva();
+            if (badge != null) {
+                fechaTexto = badge + " • " + fechaTexto;
+            }
+        }
+        holder.tvFecha.setText(fechaTexto);
         holder.tvHoraInicioPaseo.setText(paseo.getHoraFormateada() != null ? paseo.getHoraFormateada() : "");
 
         // 2. Info Principal (Mascota) y Secundaria (Paseador/Dueño)
@@ -233,11 +340,6 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         } else {
             holder.layoutBotones.setVisibility(View.GONE);
         }
-    }
-
-    @Override
-    public int getItemCount() {
-        return paseosList.size();
     }
 
     static class PaseoViewHolder extends RecyclerView.ViewHolder {

@@ -13,11 +13,14 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.security.SessionManager;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
@@ -27,6 +30,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import android.util.Log;
 
 public class ConfirmarPagoActivity extends AppCompatActivity {
@@ -160,45 +164,146 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         return;
                     }
 
-                    Double totalDoc = documentSnapshot.getDouble("costo_total");
-                    if (totalDoc != null) {
-                        costoTotal = totalDoc;
+                    // Detectar si es parte de un grupo
+                    Boolean esGrupo = documentSnapshot.getBoolean("es_grupo");
+                    String grupoReservaId = documentSnapshot.getString("grupo_reserva_id");
+
+                    if (esGrupo != null && esGrupo && grupoReservaId != null) {
+                        // Es un grupo, cargar todas las reservas del grupo
+                        cargarGrupoReservas(documentSnapshot, grupoReservaId);
+                    } else {
+                        // Es una reserva individual, cargar normalmente
+                        cargarReservaIndividual(documentSnapshot);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error al cargar la reserva. Intenta nuevamente.", Toast.LENGTH_LONG).show();
+                    finish();
+                });
+    }
+
+    private void cargarReservaIndividual(DocumentSnapshot documentSnapshot) {
+        Double totalDoc = documentSnapshot.getDouble("costo_total");
+        if (totalDoc != null) {
+            costoTotal = totalDoc;
+        }
+
+        Timestamp fechaTimestamp = documentSnapshot.getTimestamp("fecha");
+        if (fechaTimestamp != null) {
+            fechaReserva = new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH).format(fechaTimestamp.toDate());
+        }
+
+        Timestamp horaTimestamp = documentSnapshot.getTimestamp("hora_inicio");
+        if (horaTimestamp != null) {
+            horaReserva = new SimpleDateFormat("h:mm a", Locale.US).format(horaTimestamp.toDate());
+        }
+
+        estadoReserva = documentSnapshot.getString("estado");
+        estadoPago = documentSnapshot.getString("estado_pago");
+
+        // Extract IDs handling both DocumentReference and String
+        Object paseadorObj = documentSnapshot.get("id_paseador");
+        if (paseadorObj instanceof com.google.firebase.firestore.DocumentReference) {
+            idPaseador = ((com.google.firebase.firestore.DocumentReference) paseadorObj).getId();
+        } else if (paseadorObj instanceof String) {
+            idPaseador = (String) paseadorObj;
+        }
+
+        Object duenoObj = documentSnapshot.get("id_dueno");
+        if (duenoObj instanceof com.google.firebase.firestore.DocumentReference) {
+            idDueno = ((com.google.firebase.firestore.DocumentReference) duenoObj).getId();
+        } else if (duenoObj instanceof String) {
+            idDueno = (String) duenoObj;
+        }
+
+        // Cargar nombres del paseador y mascota
+        cargarNombrePaseadorYMascota(documentSnapshot);
+    }
+
+    private void cargarGrupoReservas(DocumentSnapshot primerReserva, String grupoReservaId) {
+        Log.d(TAG, "Cargando grupo de reservas con ID: " + grupoReservaId);
+
+        // Cargar todas las reservas del grupo
+        db.collection("reservas")
+                .whereEqualTo("grupo_reserva_id", grupoReservaId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        // Fallback: solo una reserva
+                        cargarReservaIndividual(primerReserva);
+                        return;
                     }
 
-                    Timestamp fechaTimestamp = documentSnapshot.getTimestamp("fecha");
-                    if (fechaTimestamp != null) {
-                        fechaReserva = new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH).format(fechaTimestamp.toDate());
+                    int cantidadReservas = querySnapshot.size();
+                    double costoTotalGrupo = 0.0;
+                    java.util.Date fechaMasTemprana = null;
+                    java.util.Date fechaMasTardia = null;
+
+                    // Sumar costos y encontrar rango de fechas
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        Double costo = doc.getDouble("costo_total");
+                        if (costo != null) {
+                            costoTotalGrupo += costo;
+                        }
+
+                        Timestamp fechaTs = doc.getTimestamp("fecha");
+                        if (fechaTs != null) {
+                            java.util.Date fecha = fechaTs.toDate();
+                            if (fechaMasTemprana == null || fecha.before(fechaMasTemprana)) {
+                                fechaMasTemprana = fecha;
+                            }
+                            if (fechaMasTardia == null || fecha.after(fechaMasTardia)) {
+                                fechaMasTardia = fecha;
+                            }
+                        }
                     }
 
-                    Timestamp horaTimestamp = documentSnapshot.getTimestamp("hora_inicio");
+                    // Establecer datos del grupo
+                    costoTotal = costoTotalGrupo;
+
+                    // Formato de fechas para el grupo
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMM d", Locale.ENGLISH);
+                    if (fechaMasTemprana != null && fechaMasTardia != null) {
+                        fechaReserva = sdf.format(fechaMasTemprana) + " - " + sdf.format(fechaMasTardia) +
+                                      " (" + cantidadReservas + " días)";
+                    } else {
+                        fechaReserva = cantidadReservas + " días";
+                    }
+
+                    // Usar hora de la primera reserva
+                    Timestamp horaTimestamp = primerReserva.getTimestamp("hora_inicio");
                     if (horaTimestamp != null) {
                         horaReserva = new SimpleDateFormat("h:mm a", Locale.US).format(horaTimestamp.toDate());
                     }
 
-                    estadoReserva = documentSnapshot.getString("estado");
-                    estadoPago = documentSnapshot.getString("estado_pago");
+                    // Usar estado de la primera reserva (todas deberían tener el mismo estado)
+                    estadoReserva = primerReserva.getString("estado");
+                    estadoPago = primerReserva.getString("estado_pago");
 
                     // Extract IDs handling both DocumentReference and String
-                    Object paseadorObj = documentSnapshot.get("id_paseador");
+                    Object paseadorObj = primerReserva.get("id_paseador");
                     if (paseadorObj instanceof com.google.firebase.firestore.DocumentReference) {
                         idPaseador = ((com.google.firebase.firestore.DocumentReference) paseadorObj).getId();
                     } else if (paseadorObj instanceof String) {
                         idPaseador = (String) paseadorObj;
                     }
 
-                    Object duenoObj = documentSnapshot.get("id_dueno");
+                    Object duenoObj = primerReserva.get("id_dueno");
                     if (duenoObj instanceof com.google.firebase.firestore.DocumentReference) {
                         idDueno = ((com.google.firebase.firestore.DocumentReference) duenoObj).getId();
                     } else if (duenoObj instanceof String) {
                         idDueno = (String) duenoObj;
                     }
 
+                    Log.d(TAG, "Grupo cargado: " + cantidadReservas + " reservas, costo total: $" + costoTotal);
+
                     // Cargar nombres del paseador y mascota
-                    cargarNombrePaseadorYMascota(documentSnapshot);
+                    cargarNombrePaseadorYMascota(primerReserva);
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error al cargar la reserva. Intenta nuevamente.", Toast.LENGTH_LONG).show();
-                    finish();
+                    Log.e(TAG, "Error cargando grupo de reservas, usando datos individuales", e);
+                    // Fallback: cargar como individual
+                    cargarReservaIndividual(primerReserva);
                 });
     }
 
@@ -397,14 +502,14 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     private void ejecutarLogicaDePago() {
         if (mAuth.getCurrentUser() == null) return;
         String currentUid = mAuth.getCurrentUser().getUid();
-        
+
         final DocumentReference reservaRef = db.collection("reservas").document(reservaId);
         final DocumentReference nuevoPagoRef = db.collection("pagos").document();
         final String nuevoPagoId = nuevoPagoRef.getId();
 
         db.runTransaction(transaction -> {
             DocumentSnapshot snapshot = transaction.get(reservaRef);
-            
+
             if (!snapshot.exists()) {
                 throw new com.google.firebase.firestore.FirebaseFirestoreException(
                     "Reserva no encontrada",
@@ -419,12 +524,16 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                     "Estado inválido para pagar: " + estadoActual,
                     com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION);
             }
-            
+
             if (ReservaEstadoValidator.isPagoCompletado(estadoPagoActual)) {
                  throw new com.google.firebase.firestore.FirebaseFirestoreException(
                     "Pago ya realizado",
                     com.google.firebase.firestore.FirebaseFirestoreException.Code.ALREADY_EXISTS);
             }
+
+            // Detectar si es un grupo de reservas
+            Boolean esGrupo = snapshot.getBoolean("es_grupo");
+            String grupoReservaId = snapshot.getString("grupo_reserva_id");
 
             // 1. Crear documento de pago
             Map<String, Object> pagoData = new HashMap<>();
@@ -435,10 +544,16 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             pagoData.put("estado", "confirmado");
             pagoData.put("reserva_id", reservaId);
             pagoData.put("fecha_creacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
-            
+
+            // Si es grupo, agregar el ID del grupo al pago
+            if (esGrupo != null && esGrupo && grupoReservaId != null) {
+                pagoData.put("grupo_reserva_id", grupoReservaId);
+                pagoData.put("es_pago_grupal", true);
+            }
+
             transaction.set(nuevoPagoRef, pagoData);
 
-            // 2. Actualizar reserva
+            // 2. Preparar actualizaciones
             Map<String, Object> updates = new HashMap<>();
             updates.put("estado", ReservaEstadoValidator.ESTADO_CONFIRMADO);
             updates.put("id_pago", nuevoPagoId);
@@ -446,13 +561,37 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             updates.put("estado_pago", ReservaEstadoValidator.ESTADO_PAGO_CONFIRMADO);
             updates.put("fecha_pago", com.google.firebase.firestore.FieldValue.serverTimestamp());
             updates.put("hasTransitionedToInCourse", false);
-            
-            String metodoPago = encryptedPrefs != null ? 
+
+            String metodoPago = encryptedPrefs != null ?
                 encryptedPrefs.getString("selected_payment_method", "PAGO_INTERNO") : "PAGO_INTERNO";
             Log.d(TAG, "Procesando pago con método: " + metodoPago);
             updates.put("metodo_pago", metodoPago);
 
-            transaction.update(reservaRef, updates);
+            // 3. Si es grupo, actualizar TODAS las reservas del grupo
+            if (esGrupo != null && esGrupo && grupoReservaId != null) {
+                Log.d(TAG, "Actualizando grupo de reservas con ID: " + grupoReservaId);
+
+                try {
+                    // Cargar todas las reservas del grupo
+                    QuerySnapshot grupoSnapshot = Tasks.await(db.collection("reservas")
+                            .whereEqualTo("grupo_reserva_id", grupoReservaId)
+                            .get());
+
+                    Log.d(TAG, "Encontradas " + grupoSnapshot.size() + " reservas en el grupo");
+
+                    // Actualizar cada reserva del grupo
+                    for (QueryDocumentSnapshot reservaDoc : grupoSnapshot) {
+                        DocumentReference reservaGrupoRef = reservaDoc.getReference();
+                        transaction.update(reservaGrupoRef, updates);
+                    }
+                } catch (ExecutionException | InterruptedException e) {
+                    Log.e(TAG, "Error al cargar grupo de reservas: " + e.getMessage(), e);
+                    throw new RuntimeException("No se pudo actualizar el grupo de reservas", e);
+                }
+            } else {
+                // Solo una reserva, actualizar normalmente
+                transaction.update(reservaRef, updates);
+            }
 
             return nuevoPagoId;
         }).addOnSuccessListener(pagoId -> {
