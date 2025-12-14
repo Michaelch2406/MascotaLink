@@ -193,13 +193,77 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         idDueno = (String) duenoObj;
                     }
 
-                    mostrarDatos();
-                    actualizarEstadoUI();
+                    // Cargar nombres del paseador y mascota
+                    cargarNombrePaseadorYMascota(documentSnapshot);
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error al cargar la reserva. Intenta nuevamente.", Toast.LENGTH_LONG).show();
                     finish();
                 });
+    }
+
+    private void cargarNombrePaseadorYMascota(DocumentSnapshot reservaSnapshot) {
+        // Cargar nombre del paseador
+        if (idPaseador != null) {
+            db.collection("usuarios").document(idPaseador)
+                    .get()
+                    .addOnSuccessListener(paseadorDoc -> {
+                        if (paseadorDoc.exists()) {
+                            paseadorNombre = paseadorDoc.getString("nombre_display");
+                            if (paseadorNombre == null) {
+                                paseadorNombre = paseadorDoc.getString("nombre");
+                            }
+                        }
+                        // Actualizar UI después de cargar nombre del paseador
+                        mostrarDatos();
+                        actualizarEstadoUI();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error cargando nombre del paseador", e);
+                        paseadorNombre = "Paseador";
+                        mostrarDatos();
+                        actualizarEstadoUI();
+                    });
+        }
+
+        // Cargar nombre de la mascota
+        String idMascota = reservaSnapshot.getString("id_mascota");
+        if (idMascota != null && idDueno != null) {
+            // Intentar primero en la colección del dueño
+            db.collection("duenos").document(idDueno)
+                    .collection("mascotas").document(idMascota)
+                    .get()
+                    .addOnSuccessListener(mascotaDoc -> {
+                        if (mascotaDoc.exists()) {
+                            mascotaNombre = mascotaDoc.getString("nombre");
+                            mostrarDatos();
+                        } else {
+                            // Si no existe, intentar en colección global
+                            db.collection("mascotas").document(idMascota)
+                                    .get()
+                                    .addOnSuccessListener(globalMascotaDoc -> {
+                                        if (globalMascotaDoc.exists()) {
+                                            mascotaNombre = globalMascotaDoc.getString("nombre");
+                                        }
+                                        mostrarDatos();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e(TAG, "Error cargando mascota de colección global", e);
+                                        mascotaNombre = "Mascota";
+                                        mostrarDatos();
+                                    });
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error cargando nombre de la mascota", e);
+                        mascotaNombre = "Mascota";
+                        mostrarDatos();
+                    });
+        } else {
+            // Si no hay ID de mascota, solo mostrar con datos actuales
+            mostrarDatos();
+            actualizarEstadoUI();
+        }
     }
 
     private void mostrarDatos() {

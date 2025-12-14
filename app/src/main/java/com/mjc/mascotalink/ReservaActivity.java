@@ -160,6 +160,9 @@ public class ReservaActivity extends AppCompatActivity {
 
         tvPaseadorNombre.setText(paseadorNombre != null ? paseadorNombre : "Alex");
         tvTarifaValor.setText(String.format(Locale.US, "$%.1f/hora", tarifaPorHora));
+
+        // Auto-seleccionar 1 hora como duración por defecto
+        seleccionarDuracion(60, btn1Hora);
     }
 
     @Override
@@ -311,6 +314,18 @@ public class ReservaActivity extends AppCompatActivity {
                         rvMascotas.setVisibility(View.VISIBLE);
                         btnAgregarMascota.setVisibility(View.GONE);
                         setupMascotasRecyclerView();
+
+                        // Auto-seleccionar si solo hay 1 mascota
+                        if (mascotaList.size() == 1) {
+                            mascotaSeleccionada = mascotaList.get(0);
+                            tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
+                            cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
+                            // Marcar visualmente en el adapter
+                            if (mascotaAdapter != null) {
+                                mascotaAdapter.setSelectedPosition(0);
+                            }
+                            verificarCamposCompletos();
+                        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -378,6 +393,42 @@ public class ReservaActivity extends AppCompatActivity {
         datesList = new ArrayList<>();
         // Por defecto, se carga la vista mensual.
         cargarVistaMensual();
+
+        // Auto-seleccionar fecha: mañana si son más de las 8 PM, hoy en caso contrario
+        autoSeleccionarFechaInicial();
+    }
+
+    /**
+     * Auto-selecciona la fecha inicial basándose en la hora actual
+     * Si son más de las 8 PM, selecciona mañana. Si no, selecciona hoy.
+     */
+    private void autoSeleccionarFechaInicial() {
+        Calendar now = Calendar.getInstance();
+        int currentHour = now.get(Calendar.HOUR_OF_DAY);
+
+        // Si son más de las 8 PM (20:00), seleccionar mañana
+        if (currentHour >= 20) {
+            now.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        // Normalizar la fecha (eliminar hora/minutos/segundos)
+        now.set(Calendar.HOUR_OF_DAY, 0);
+        now.set(Calendar.MINUTE, 0);
+        now.set(Calendar.SECOND, 0);
+        now.set(Calendar.MILLISECOND, 0);
+
+        fechaSeleccionada = now.getTime();
+        mostrarFechaSeleccionada(fechaSeleccionada);
+
+        // Pequeño delay para asegurar que el calendarioAdapter esté listo
+        gvCalendario.postDelayed(() -> {
+            if (calendarioAdapter != null) {
+                calendarioAdapter.setSelectedDate(fechaSeleccionada);
+                calendarioAdapter.notifyDataSetChanged();
+            }
+            cargarHorariosDisponibles();
+            verificarCamposCompletos();
+        }, 300);
     }
 
     // --- FIX INICIO: Nuevos métodos para cargar las vistas del calendario ---
@@ -413,6 +464,7 @@ public class ReservaActivity extends AppCompatActivity {
                 cargarHorariosDisponibles();
                 verificarCamposCompletos();
             });
+            calendarioAdapter.setEsVistaPaseador(false); // Vista de cliente
             gvCalendario.setAdapter(calendarioAdapter);
         } else {
             calendarioAdapter.updateDates(datesList, (Calendar) cal.clone());
@@ -473,6 +525,7 @@ public class ReservaActivity extends AppCompatActivity {
                 cargarHorariosDisponibles();
                 verificarCamposCompletos();
             });
+            calendarioAdapter.setEsVistaPaseador(false); // Vista de cliente
             gvCalendario.setAdapter(calendarioAdapter);
         } else {
             calendarioAdapter.updateDates(datesList, currentMonth);
@@ -497,6 +550,10 @@ public class ReservaActivity extends AppCompatActivity {
                     // Marcar días disponibles según horario estándar
                     if (horarioDoc.exists()) {
                         marcarDiasDisponiblesSegunHorario(horarioDoc, diasDisponibles);
+                    } else {
+                        // Si no existe horario_default, usar patrón por defecto: Lunes a Viernes
+                        Log.w(TAG, "No se encontró horario_default, usando patrón Lunes-Viernes");
+                        marcarDiasDisponiblesPatronDefecto(diasDisponibles);
                     }
 
                     // PASO 2: Cargar bloqueos del mes
@@ -504,7 +561,8 @@ public class ReservaActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error cargando horario default", e);
-                    // Si falla, al menos intentar cargar bloqueos
+                    // Si falla, usar patrón por defecto y cargar bloqueos
+                    marcarDiasDisponiblesPatronDefecto(diasDisponibles);
                     cargarBloqueosDelMesReserva(diasDisponibles, diasBloqueados, diasParciales);
                 });
     }
@@ -530,6 +588,26 @@ public class ReservaActivity extends AppCompatActivity {
             Boolean estaDisponible = diasLaborales.get(diaSemana);
 
             if (estaDisponible != null && estaDisponible) {
+                diasDisponibles.add(normalizarFecha(cal.getTime()));
+            }
+        }
+    }
+
+    /**
+     * Marca días disponibles con patrón por defecto: Lunes a Viernes
+     * Se usa cuando el paseador no ha configurado su horario_default
+     */
+    private void marcarDiasDisponiblesPatronDefecto(Set<Date> diasDisponibles) {
+        // Patrón por defecto: Lunes a Viernes (días laborales estándar)
+        Calendar cal = (Calendar) currentMonth.clone();
+        int diasDelMes = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        for (int dia = 1; dia <= diasDelMes; dia++) {
+            cal.set(Calendar.DAY_OF_MONTH, dia);
+            int diaSemana = cal.get(Calendar.DAY_OF_WEEK);
+
+            // Lunes (2) a Viernes (6)
+            if (diaSemana >= Calendar.MONDAY && diaSemana <= Calendar.FRIDAY) {
                 diasDisponibles.add(normalizarFecha(cal.getTime()));
             }
         }
@@ -682,33 +760,107 @@ public class ReservaActivity extends AppCompatActivity {
 
             // Scroll automático a la primera hora disponible
             scrollToFirstAvailableTime();
+
+            // Auto-avanzar al siguiente día si no hay horarios disponibles
+            autoAvanzarSiNoHayDisponibilidad();
         }
     }
 
     /**
-     * Hace scroll automáticamente a la primera hora disponible en el RecyclerView
+     * Hace scroll automáticamente a la primera hora disponible y la selecciona
      */
     private void scrollToFirstAvailableTime() {
         if (horarioList == null || horarioList.isEmpty() || rvHorarios == null) return;
 
         // Buscar la primera hora disponible
         int firstAvailablePosition = -1;
+        HorarioSelectorAdapter.Horario primeraHoraDisponible = null;
+
         for (int i = 0; i < horarioList.size(); i++) {
             HorarioSelectorAdapter.Horario horario = horarioList.get(i);
             if (horario != null && horario.isDisponible()) {
                 firstAvailablePosition = i;
+                primeraHoraDisponible = horario;
                 break;
             }
         }
 
-        // Si se encontró una hora disponible, hacer scroll a esa posición
-        if (firstAvailablePosition >= 0) {
+        // Si se encontró una hora disponible, hacer scroll y seleccionar
+        if (firstAvailablePosition >= 0 && primeraHoraDisponible != null) {
             final int position = firstAvailablePosition;
+            final HorarioSelectorAdapter.Horario horarioFinal = primeraHoraDisponible;
+
             // Usar post para asegurar que el RecyclerView esté listo
             rvHorarios.post(() -> {
+                // Hacer scroll a la posición
                 rvHorarios.smoothScrollToPosition(position);
+
+                // Seleccionar automáticamente la hora
+                if (horarioAdapter != null) {
+                    horarioAdapter.setSelectedPosition(position);
+                }
+
+                // Actualizar variables de selección
+                horarioSeleccionado = horarioFinal;
+                tvDetalleHora.setText(horarioFinal.getHoraFormateada());
+                actualizarIndicadorDisponibilidad(horarioFinal);
+                verificarCamposCompletos();
             });
         }
+    }
+
+    /**
+     * Auto-avanza al siguiente día si no hay horarios disponibles
+     * Máximo 14 días hacia adelante para evitar loops infinitos
+     */
+    private void autoAvanzarSiNoHayDisponibilidad() {
+        if (horarioList == null || horarioList.isEmpty() || fechaSeleccionada == null) return;
+
+        // Verificar si HAY al menos una hora disponible
+        boolean hayAlgunaHoraDisponible = false;
+        for (HorarioSelectorAdapter.Horario horario : horarioList) {
+            if (horario != null && horario.isDisponible()) {
+                hayAlgunaHoraDisponible = true;
+                break;
+            }
+        }
+
+        // Si hay horas disponibles, no hacer nada
+        if (hayAlgunaHoraDisponible) return;
+
+        // Si NO hay horas disponibles, avanzar al siguiente día
+        // Pero solo si todavía no hemos avanzado demasiado (máx 14 días)
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+
+        Calendar selected = Calendar.getInstance();
+        selected.setTime(fechaSeleccionada);
+
+        long diffDays = (selected.getTimeInMillis() - today.getTimeInMillis()) / (24 * 60 * 60 * 1000);
+
+        // Límite: no avanzar más de 14 días
+        if (diffDays >= 14) {
+            // Mostrar mensaje al usuario
+            Toast.makeText(this, "No hay disponibilidad en los próximos 14 días", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Avanzar al siguiente día
+        selected.add(Calendar.DAY_OF_MONTH, 1);
+        fechaSeleccionada = selected.getTime();
+        mostrarFechaSeleccionada(fechaSeleccionada);
+
+        // Actualizar calendario visualmente
+        if (calendarioAdapter != null) {
+            calendarioAdapter.setSelectedDate(fechaSeleccionada);
+            calendarioAdapter.notifyDataSetChanged();
+        }
+
+        // Recargar horarios para el nuevo día (esto llamará recursivamente a este método)
+        cargarHorariosDisponibles();
     }
 
     private void validarDisponibilidadHorario(HorarioSelectorAdapter.Horario horario) {
