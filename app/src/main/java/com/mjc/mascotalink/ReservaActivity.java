@@ -267,6 +267,11 @@ public class ReservaActivity extends AppCompatActivity {
             tvFechaSeleccionada.setVisibility(View.GONE);
             llDisponibilidad.setVisibility(View.GONE);
 
+            // Limpiar selecciones múltiples del calendario
+            if (calendarioAdapter != null) {
+                calendarioAdapter.setFechasSeleccionadas(new HashSet<>());
+            }
+
             actualizarTextoDuracion();
             verificarCamposCompletos();
             // --- FIX FIN ---
@@ -459,15 +464,19 @@ public class ReservaActivity extends AppCompatActivity {
 
         if (calendarioAdapter == null) {
              calendarioAdapter = new CalendarioAdapter(this, datesList, currentMonth, (date, position) -> {
-                fechaSeleccionada = date;
-                mostrarFechaSeleccionada(date);
-                cargarHorariosDisponibles();
-                verificarCamposCompletos();
+                onFechaSeleccionada(date);
             });
             calendarioAdapter.setEsVistaPaseador(false); // Vista de cliente
+            // Activar selección múltiple para modo SEMANA
+            calendarioAdapter.setSeleccionMultiple(true);
             gvCalendario.setAdapter(calendarioAdapter);
         } else {
             calendarioAdapter.updateDates(datesList, (Calendar) cal.clone());
+        }
+
+        // Si hay una fecha previamente seleccionada, seleccionar la semana completa
+        if (fechaSeleccionada != null) {
+            seleccionarSemanaCompleta(fechaSeleccionada);
         }
 
         // Cargar estados de disponibilidad
@@ -520,19 +529,143 @@ public class ReservaActivity extends AppCompatActivity {
 
         if (calendarioAdapter == null) {
             calendarioAdapter = new CalendarioAdapter(this, datesList, currentMonth, (date, position) -> {
-                fechaSeleccionada = date;
-                mostrarFechaSeleccionada(date);
-                cargarHorariosDisponibles();
-                verificarCamposCompletos();
+                onFechaSeleccionada(date);
             });
             calendarioAdapter.setEsVistaPaseador(false); // Vista de cliente
+            // Activar selección múltiple si el modo es MES
+            calendarioAdapter.setSeleccionMultiple(modoFechaActual.equals("MES"));
             gvCalendario.setAdapter(calendarioAdapter);
         } else {
             calendarioAdapter.updateDates(datesList, currentMonth);
+            // Actualizar modo de selección múltiple
+            calendarioAdapter.setSeleccionMultiple(modoFechaActual.equals("MES"));
+        }
+
+        // Si modo MES, seleccionar todos los días del mes
+        if (modoFechaActual.equals("MES") && fechaSeleccionada != null) {
+            seleccionarMesCompleto(fechaSeleccionada);
         }
 
         // Cargar estados de disponibilidad del mes
         cargarEstadosDisponibilidadDelMes();
+    }
+
+    /**
+     * Maneja la selección de fecha según el modo activo (DIAS_ESPECIFICOS, SEMANA, MES)
+     */
+    private void onFechaSeleccionada(Date date) {
+        if (date == null) return;
+
+        fechaSeleccionada = date;
+
+        switch (modoFechaActual) {
+            case "SEMANA":
+                // Seleccionar todos los días de la semana
+                seleccionarSemanaCompleta(date);
+                mostrarRangoSemana(date);
+                break;
+
+            case "MES":
+                // Seleccionar todos los días del mes
+                seleccionarMesCompleto(date);
+                mostrarRangoMes(date);
+                break;
+
+            case "DIAS_ESPECIFICOS":
+            default:
+                // Selección simple de un día
+                mostrarFechaSeleccionada(date);
+                break;
+        }
+
+        cargarHorariosDisponibles();
+        verificarCamposCompletos();
+    }
+
+    /**
+     * Selecciona visualmente todos los días de la semana que contiene la fecha dada
+     */
+    private void seleccionarSemanaCompleta(Date date) {
+        if (calendarioAdapter == null || date == null) return;
+
+        Set<Date> diasSemana = new HashSet<>();
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        // Retroceder al lunes de esta semana
+        while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+            cal.add(Calendar.DATE, -1);
+        }
+
+        // Agregar los 7 días de la semana
+        for (int i = 0; i < 7; i++) {
+            diasSemana.add(normalizarFecha(cal.getTime()));
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        calendarioAdapter.setFechasSeleccionadas(diasSemana);
+    }
+
+    /**
+     * Selecciona visualmente todos los días del mes que contiene la fecha dada
+     */
+    private void seleccionarMesCompleto(Date date) {
+        if (calendarioAdapter == null || date == null) return;
+
+        Set<Date> diasMes = new HashSet<>();
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        int diasDelMes = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        // Agregar todos los días del mes
+        for (int dia = 1; dia <= diasDelMes; dia++) {
+            cal.set(Calendar.DAY_OF_MONTH, dia);
+            diasMes.add(normalizarFecha(cal.getTime()));
+        }
+
+        calendarioAdapter.setFechasSeleccionadas(diasMes);
+    }
+
+    /**
+     * Muestra el rango de fechas para la semana seleccionada
+     */
+    private void mostrarRangoSemana(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        // Encontrar lunes
+        while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+            cal.add(Calendar.DATE, -1);
+        }
+        Date inicioSemana = cal.getTime();
+
+        // Encontrar domingo
+        cal.add(Calendar.DATE, 6);
+        Date finSemana = cal.getTime();
+
+        SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM", new Locale("es", "ES"));
+        String rangoTexto = "Semana: " + sdf.format(inicioSemana) + " - " + sdf.format(finSemana) + " (7 días)";
+
+        tvFechaSeleccionada.setText(rangoTexto);
+        tvFechaSeleccionada.setVisibility(View.VISIBLE);
+        tvDetalleFecha.setText(rangoTexto);
+    }
+
+    /**
+     * Muestra el rango de fechas para el mes seleccionado
+     */
+    private void mostrarRangoMes(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        SimpleDateFormat sdfMes = new SimpleDateFormat("MMMM yyyy", new Locale("es", "ES"));
+        int diasDelMes = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+        String rangoTexto = capitalizeFirst(sdfMes.format(date)) + " (" + diasDelMes + " días)";
+
+        tvFechaSeleccionada.setText(rangoTexto);
+        tvFechaSeleccionada.setVisibility(View.VISIBLE);
+        tvDetalleFecha.setText(rangoTexto);
     }
 
     private void cargarEstadosDisponibilidadDelMes() {
