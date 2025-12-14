@@ -273,6 +273,7 @@ public class ReservaActivity extends AppCompatActivity {
             }
 
             actualizarTextoDuracion();
+            actualizarResumenCosto(); // Recalcular costo al cambiar de modo
             verificarCamposCompletos();
 
             // Auto-seleccionar DESPUÉS del reset para modos SEMANA y MES
@@ -427,13 +428,22 @@ public class ReservaActivity extends AppCompatActivity {
         now.set(Calendar.SECOND, 0);
         now.set(Calendar.MILLISECOND, 0);
 
-        fechaSeleccionada = now.getTime();
+        final Date fechaInicial = now.getTime();
+        fechaSeleccionada = fechaInicial;
         mostrarFechaSeleccionada(fechaSeleccionada);
 
         // Pequeño delay para asegurar que el calendarioAdapter esté listo
         gvCalendario.postDelayed(() -> {
             if (calendarioAdapter != null) {
-                calendarioAdapter.setSelectedDate(fechaSeleccionada);
+                // Para DIAS_ESPECIFICOS, usar multi-selección
+                if (modoFechaActual.equals("DIAS_ESPECIFICOS")) {
+                    Set<Date> fechasIniciales = new HashSet<>();
+                    fechasIniciales.add(normalizarFecha(fechaInicial));
+                    calendarioAdapter.setFechasSeleccionadas(fechasIniciales);
+                } else {
+                    // Para SEMANA y MES, usar selección simple
+                    calendarioAdapter.setSelectedDate(fechaInicial);
+                }
                 calendarioAdapter.notifyDataSetChanged();
             }
             cargarHorariosDisponibles();
@@ -563,11 +573,10 @@ public class ReservaActivity extends AppCompatActivity {
     private void onFechaSeleccionada(Date date) {
         if (date == null) return;
 
-        fechaSeleccionada = date;
-
         switch (modoFechaActual) {
             case "SEMANA":
                 // Siempre seleccionar la semana completa (bloquea deselección individual)
+                fechaSeleccionada = date;
                 gvCalendario.post(() -> {
                     seleccionarSemanaCompleta(date);
                     mostrarRangoSemana(date);
@@ -576,6 +585,7 @@ public class ReservaActivity extends AppCompatActivity {
 
             case "MES":
                 // Siempre seleccionar el mes completo (bloquea deselección individual)
+                fechaSeleccionada = date;
                 gvCalendario.post(() -> {
                     seleccionarMesCompleto(date);
                     mostrarRangoMes(date);
@@ -585,6 +595,7 @@ public class ReservaActivity extends AppCompatActivity {
             case "DIAS_ESPECIFICOS":
             default:
                 // Selección múltiple libre (permite seleccionar/deseleccionar días individuales)
+                // No establecer fechaSeleccionada aquí, ya que usamos multi-selección
                 mostrarTextoMultiplesDias();
                 break;
         }
@@ -705,6 +716,7 @@ public class ReservaActivity extends AppCompatActivity {
                 mostrarRangoMes(fechaInicial);
                 fechaSeleccionada = fechaInicial; // Restaurar después de reset
             }
+            actualizarResumenCosto(); // Actualizar costo después de auto-selección
             cargarHorariosDisponibles();
             verificarCamposCompletos();
         }, 100); // Pequeño delay para asegurar que el calendario esté listo
@@ -1290,8 +1302,15 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void verificarCamposCompletos() {
+        // Para modo de selección múltiple (DIAS_ESPECIFICOS), verificar que haya fechas seleccionadas
+        boolean hasFechaValida = fechaSeleccionada != null;
+        if (modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
+            Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+            hasFechaValida = fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty();
+        }
+
         boolean todosCompletos = mascotaSeleccionada != null &&
-                fechaSeleccionada != null &&
+                hasFechaValida &&
                 horarioSeleccionado != null &&
                 duracionMinutos > 0 &&
                 horarioSeleccionado.isDisponible(); // Verificar que el horario esté disponible

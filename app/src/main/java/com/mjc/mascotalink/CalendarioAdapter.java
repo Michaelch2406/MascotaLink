@@ -66,11 +66,12 @@ public class CalendarioAdapter extends BaseAdapter {
         Date date = dates.get(position);
 
         if (date == null) {
-            // Día vacío (de otro mes)
+            // Día vacío (de otro mes) - limpiar completamente la vista reciclada
             tvDia.setText("");
             tvDia.setEnabled(false);
             tvDia.setSelected(false);
             tvDia.setTextColor(context.getResources().getColor(android.R.color.transparent));
+            tvDia.setBackgroundResource(android.R.color.transparent); // IMPORTANTE: limpiar fondo de vista reciclada
         } else {
             Calendar cal = Calendar.getInstance();
             cal.setTime(date);
@@ -88,7 +89,8 @@ public class CalendarioAdapter extends BaseAdapter {
             boolean isBloqueado = diasBloqueados.contains(normalizedDate);
             boolean isParcial = diasParciales.contains(normalizedDate);
             boolean isDisponible = diasDisponibles.contains(normalizedDate);
-            boolean isSeleccionado = seleccionMultiple ? fechasSeleccionadas.contains(normalizedDate) : (selectedPosition == position);
+            // Asegurar que normalizedDate no sea null antes de verificar selección
+            boolean isSeleccionado = normalizedDate != null && (seleccionMultiple ? fechasSeleccionadas.contains(normalizedDate) : (selectedPosition == position));
 
             if (isPast) {
                 // Día pasado: gris opaco, deshabilitado
