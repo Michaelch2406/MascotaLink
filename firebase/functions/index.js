@@ -1781,9 +1781,9 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
 });
 
 exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
-  console.log("Running scheduled job to transition CONFIRMADO reservations to EN_CURSO.");
+  console.log("Running scheduled job to transition CONFIRMADO reservations to LISTO_PARA_INICIAR.");
   const now = admin.firestore.Timestamp.now();
-  
+
   // Look back up to 24 hours to catch any missed transitions, not just the last 5 minutes.
   // Using Firestore Timestamp for consistent query comparisons
   const twentyFourHoursAgoMillis = now.toMillis() - (24 * 60 * 60 * 1000);
@@ -1811,16 +1811,15 @@ exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
 
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
-      
+
       // Double check logic (redundant with query but safe)
       // Also check if it was already processed to avoid overwriting if query was slightly delayed
       if (reserva.estado !== "CONFIRMADO") continue;
 
-      // Add to batch
+      // Add to batch - transition to LISTO_PARA_INICIAR (ready to start, waiting for walker)
       currentBatch.update(doc.ref, {
-        estado: "EN_CURSO",
-        fecha_inicio_paseo: now, // Set start time to execution time
-        hasTransitionedToInCourse: true,
+        estado: "LISTO_PARA_INICIAR",
+        hasTransitionedToReady: true,
         actualizado_por_sistema: true,
         last_updated: now
       });
@@ -1842,10 +1841,302 @@ exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
     }
 
     await Promise.all(batches);
-    console.log(`Successfully transitioned ${processedCount} reservations to EN_CURSO.`);
+    console.log(`Successfully transitioned ${processedCount} reservations to LISTO_PARA_INICIAR.`);
 
   } catch (error) {
-    console.error("Error transitioning reservations to EN_CURSO:", error);
+    console.error("Error transitioning reservations to LISTO_PARA_INICIAR:", error);
+  }
+});
+
+// Scheduled job to send reminders 15 minutes before walk start time
+exports.sendReminder15MinBefore = onSchedule("every 5 minutes", async (event) => {
+  console.log("Running scheduled job to send 15-minute reminders.");
+  const now = admin.firestore.Timestamp.now();
+
+  // Calculate 15 minutes from now
+  const fifteenMinutesLaterMillis = now.toMillis() + (15 * 60 * 1000);
+  const fifteenMinutesLater = admin.firestore.Timestamp.fromMillis(fifteenMinutesLaterMillis);
+
+  // Look for walks starting in 12-18 minutes (5 min window to catch them)
+  const windowStartMillis = now.toMillis() + (12 * 60 * 1000);
+  const windowEndMillis = now.toMillis() + (18 * 60 * 1000);
+  const windowStart = admin.firestore.Timestamp.fromMillis(windowStartMillis);
+  const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
+
+  try {
+    const reservationsSnapshot = await db.collection("reservas")
+      .where("estado", "==", "CONFIRMADO")
+      .where("hora_inicio", ">=", windowStart)
+      .where("hora_inicio", "<=", windowEnd)
+      .get();
+
+    if (reservationsSnapshot.empty) {
+      console.log("No reservations found for 15-minute reminders.");
+      return;
+    }
+
+    console.log(`Found ${reservationsSnapshot.size} reservations for 15-minute reminders.`);
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+
+      // Skip if already sent
+      if (reserva.reminder15MinSent) continue;
+
+      // Get paseador ID
+      const paseadorRef = reserva.id_paseador;
+      let paseadorId = null;
+      if (paseadorRef) {
+        if (typeof paseadorRef === 'object' && paseadorRef.id) {
+          paseadorId = paseadorRef.id;
+        } else if (typeof paseadorRef === 'string') {
+          paseadorId = paseadorRef;
+        }
+      }
+
+      if (!paseadorId) continue;
+
+      // Get paseador's FCM token
+      const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
+      if (!paseadorDoc.exists) continue;
+
+      const fcmToken = paseadorDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      // Format time
+      const horaInicio = reserva.hora_inicio.toDate();
+      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
+      // Send notification
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: "Recordatorio de Paseo",
+          body: `Tu paseo comienza en 15 minutos (${horaFormateada}). Prepárate para salir.`
+        },
+        data: {
+          tipo: "recordatorio_paseo",
+          reservaId: doc.id,
+          click_action: "OPEN_CURRENT_WALK_ACTIVITY"
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId: "paseos_channel"
+          }
+        }
+      };
+
+      try {
+        await admin.messaging().send(message);
+        console.log(`Sent 15-minute reminder for reservation ${doc.id}`);
+
+        // Mark as sent
+        await doc.ref.update({ reminder15MinSent: true });
+      } catch (error) {
+        console.error(`Error sending 15-minute reminder for ${doc.id}:`, error);
+      }
+    }
+
+    console.log("Completed 15-minute reminder job.");
+  } catch (error) {
+    console.error("Error in 15-minute reminder job:", error);
+  }
+});
+
+// Scheduled job to send reminders 5 minutes before walk start time
+exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => {
+  console.log("Running scheduled job to send 5-minute reminders.");
+  const now = admin.firestore.Timestamp.now();
+
+  // Look for walks starting in 4-6 minutes (2 min window)
+  const windowStartMillis = now.toMillis() + (4 * 60 * 1000);
+  const windowEndMillis = now.toMillis() + (6 * 60 * 1000);
+  const windowStart = admin.firestore.Timestamp.fromMillis(windowStartMillis);
+  const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
+
+  try {
+    const reservationsSnapshot = await db.collection("reservas")
+      .where("estado", "==", "CONFIRMADO")
+      .where("hora_inicio", ">=", windowStart)
+      .where("hora_inicio", "<=", windowEnd)
+      .get();
+
+    if (reservationsSnapshot.empty) {
+      console.log("No reservations found for 5-minute reminders.");
+      return;
+    }
+
+    console.log(`Found ${reservationsSnapshot.size} reservations for 5-minute reminders.`);
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+
+      // Skip if already sent
+      if (reserva.reminder5MinSent) continue;
+
+      // Get paseador ID
+      const paseadorRef = reserva.id_paseador;
+      let paseadorId = null;
+      if (paseadorRef) {
+        if (typeof paseadorRef === 'object' && paseadorRef.id) {
+          paseadorId = paseadorRef.id;
+        } else if (typeof paseadorRef === 'string') {
+          paseadorId = paseadorRef;
+        }
+      }
+
+      if (!paseadorId) continue;
+
+      // Get paseador's FCM token
+      const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
+      if (!paseadorDoc.exists) continue;
+
+      const fcmToken = paseadorDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      // Format time
+      const horaInicio = reserva.hora_inicio.toDate();
+      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
+      // Send notification
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: "¡Paseo Próximo!",
+          body: `Tu paseo comienza en 5 minutos (${horaFormateada}). Es hora de prepararte.`
+        },
+        data: {
+          tipo: "recordatorio_paseo",
+          reservaId: doc.id,
+          click_action: "OPEN_CURRENT_WALK_ACTIVITY"
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId: "paseos_channel"
+          }
+        }
+      };
+
+      try {
+        await admin.messaging().send(message);
+        console.log(`Sent 5-minute reminder for reservation ${doc.id}`);
+
+        // Mark as sent
+        await doc.ref.update({ reminder5MinSent: true });
+      } catch (error) {
+        console.error(`Error sending 5-minute reminder for ${doc.id}:`, error);
+      }
+    }
+
+    console.log("Completed 5-minute reminder job.");
+  } catch (error) {
+    console.error("Error in 5-minute reminder job:", error);
+  }
+});
+
+// Scheduled job to notify when scheduled time has passed for LISTO_PARA_INICIAR walks
+exports.notifyOverdueWalks = onSchedule("every 5 minutes", async (event) => {
+  console.log("Running scheduled job to notify overdue walks.");
+  const now = admin.firestore.Timestamp.now();
+
+  // Look for walks in LISTO_PARA_INICIAR state where scheduled time has passed
+  const fiveMinutesAgoMillis = now.toMillis() - (5 * 60 * 1000);
+  const fiveMinutesAgo = admin.firestore.Timestamp.fromMillis(fiveMinutesAgoMillis);
+
+  try {
+    const reservationsSnapshot = await db.collection("reservas")
+      .where("estado", "==", "LISTO_PARA_INICIAR")
+      .where("hora_inicio", "<=", fiveMinutesAgo)
+      .get();
+
+    if (reservationsSnapshot.empty) {
+      console.log("No overdue LISTO_PARA_INICIAR walks found.");
+      return;
+    }
+
+    console.log(`Found ${reservationsSnapshot.size} overdue walks.`);
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+
+      // Skip if already notified about being overdue
+      if (reserva.overdueNotificationSent) continue;
+
+      // Get paseador ID
+      const paseadorRef = reserva.id_paseador;
+      let paseadorId = null;
+      if (paseadorRef) {
+        if (typeof paseadorRef === 'object' && paseadorRef.id) {
+          paseadorId = paseadorRef.id;
+        } else if (typeof paseadorRef === 'string') {
+          paseadorId = paseadorRef;
+        }
+      }
+
+      if (!paseadorId) continue;
+
+      // Get paseador's FCM token
+      const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
+      if (!paseadorDoc.exists) continue;
+
+      const fcmToken = paseadorDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      // Format time
+      const horaInicio = reserva.hora_inicio.toDate();
+      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
+      // Send notification
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: "Paseo Programado Pendiente",
+          body: `El paseo programado para las ${horaFormateada} aún no ha comenzado. Toca para iniciar.`
+        },
+        data: {
+          tipo: "paseo_retrasado",
+          reservaId: doc.id,
+          click_action: "OPEN_CURRENT_WALK_ACTIVITY"
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId: "paseos_channel"
+          }
+        }
+      };
+
+      try {
+        await admin.messaging().send(message);
+        console.log(`Sent overdue notification for reservation ${doc.id}`);
+
+        // Mark as sent
+        await doc.ref.update({ overdueNotificationSent: true });
+      } catch (error) {
+        console.error(`Error sending overdue notification for ${doc.id}:`, error);
+      }
+    }
+
+    console.log("Completed overdue walks notification job.");
+  } catch (error) {
+    console.error("Error in overdue walks notification job:", error);
   }
 });
 

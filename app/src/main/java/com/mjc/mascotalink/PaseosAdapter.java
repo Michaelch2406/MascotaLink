@@ -149,6 +149,9 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
             colorFondo = 0xFF9CA3AF;
         } else {
             switch (estado) {
+                case "LISTO_PARA_INICIAR":
+                    colorFondo = 0xFFFF9800; // Naranja - Requiere atención
+                    break;
                 case "EN_CURSO":
                     colorFondo = 0xFF4CAF50; // Verde
                     break;
@@ -181,10 +184,19 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.btnAccion2.setVisibility(View.GONE); // Hide secondary by default
 
         if (estado != null) {
-            if (estado.equals("EN_CURSO")) {
+            if (estado.equals("LISTO_PARA_INICIAR")) {
+                holder.btnAccion1.setText("Iniciar Paseo ▶");
+                holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF9800)); // Naranja
+                holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
+
+                holder.btnAccion2.setVisibility(View.VISIBLE);
+                holder.btnAccion2.setText("Chat 💬");
+                holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+            }
+            else if (estado.equals("EN_CURSO")) {
                 holder.btnAccion1.setText("Ver Ubicación 📍");
                 holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
-                
+
                 holder.btnAccion2.setVisibility(View.VISIBLE);
                 holder.btnAccion2.setText("Chat 💬");
                 holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));

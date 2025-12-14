@@ -408,6 +408,23 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- FAB Comenzar Paseo (Solo visible en estado LISTO_PARA_INICIAR) -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/btn_comenzar_paseo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="240dp"
+        android:text="Comenzar Paseo"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:icon="@drawable/ic_play_circle_outline"
+        app:iconTint="@android:color/white"
+        app:backgroundTint="#4CAF50"
+        android:visibility="gone"
+        android:contentDescription="Comenzar paseo programado" />
+
     <!-- FAB Marcar Completado (Arriba - Posición 1) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btn_finalizar_paseo"

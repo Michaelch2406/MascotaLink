@@ -2,6 +2,7 @@ package com.mjc.mascotalink.modelo;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentId;
+import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.ServerTimestamp;
 import java.util.Date;
 
@@ -118,7 +119,9 @@ public class Bloqueo {
      * Verifica si este bloqueo afecta a una hora específica
      * @param hora Hora a verificar (formato 24h, ej: 14 para 2 PM)
      * @return true si la hora está bloqueada
+     * @Exclude indica que este método NO corresponde a un campo de Firestore
      */
+    @Exclude
     public boolean afectaHora(int hora) {
         if (!activo) return false;
 
@@ -136,7 +139,9 @@ public class Bloqueo {
 
     /**
      * Obtiene una descripción legible del bloqueo
+     * @Exclude indica que este método NO corresponde a un campo de Firestore
      */
+    @Exclude
     public String getDescripcion() {
         StringBuilder desc = new StringBuilder();
 

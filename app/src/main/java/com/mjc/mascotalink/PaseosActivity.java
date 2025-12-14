@@ -104,12 +104,12 @@ public class PaseosActivity extends AppCompatActivity {
 
         db.collection("reservas")
                 .whereEqualTo(fieldToFilter, userRef)
-                .whereIn("estado", java.util.Arrays.asList("EN_CURSO", "EN_PROGRESO"))
+                .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO", "EN_PROGRESO"))
                 .limit(1)
                 .get()
                 .addOnSuccessListener(snapshots -> {
                     if (!snapshots.isEmpty()) {
-                        // Si hay un paseo activo, priorizar la pestaña "En Curso" (Índice 2)
+                        // Si hay un paseo activo o listo para iniciar, priorizar la pestaña "En Curso" (Índice 2)
                         if (tabLayout != null) {
                             TabLayout.Tab tabEnCurso = tabLayout.getTabAt(2);
                             if (tabEnCurso != null && !tabEnCurso.isSelected()) {
@@ -252,6 +252,7 @@ public class PaseosActivity extends AppCompatActivity {
         switch (state) {
             case ReservaEstadoValidator.ESTADO_ACEPTADO: return 0;
             case ReservaEstadoValidator.ESTADO_CONFIRMADO: return 1;
+            case ReservaEstadoValidator.ESTADO_LISTO_PARA_INICIAR:
             case "EN_CURSO": return 2;
             case "COMPLETADO": return 3;
             default: return 0;
@@ -330,7 +331,9 @@ public class PaseosActivity extends AppCompatActivity {
     private boolean esPaseoEnCurso(Paseo paseo) {
         if (paseo == null || paseo.getEstado() == null) return false;
         String estado = paseo.getEstado();
-        return "EN_CURSO".equalsIgnoreCase(estado) || "EN_PROGRESO".equalsIgnoreCase(estado);
+        return "LISTO_PARA_INICIAR".equalsIgnoreCase(estado) ||
+               "EN_CURSO".equalsIgnoreCase(estado) ||
+               "EN_PROGRESO".equalsIgnoreCase(estado);
     }
 
     private void setupSwipeRefresh() {
@@ -359,9 +362,17 @@ public class PaseosActivity extends AppCompatActivity {
         String fieldToFilter = "PASEADOR".equalsIgnoreCase(role) ? "id_paseador" : "id_dueno";
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
 
-        Query query = db.collection("reservas")
-                .whereEqualTo(fieldToFilter, userRef)
-                .whereEqualTo("estado", estadoActual);
+        Query query;
+        // Para "En Curso", incluir LISTO_PARA_INICIAR, EN_CURSO y EN_PROGRESO
+        if ("EN_CURSO".equals(estadoActual)) {
+            query = db.collection("reservas")
+                    .whereEqualTo(fieldToFilter, userRef)
+                    .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO", "EN_PROGRESO"));
+        } else {
+            query = db.collection("reservas")
+                    .whereEqualTo(fieldToFilter, userRef)
+                    .whereEqualTo("estado", estadoActual);
+        }
 
         firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
             if (e != null) {
@@ -391,9 +402,8 @@ public class PaseosActivity extends AppCompatActivity {
                                     // Simple logic: If we were in ACEPTADO/CONFIRMADO and it moved forward
                                     // Just check active walk again or reload appropriate tab could be complex.
                                     // For now, just removing it is correct visual feedback.
-                                    // If it became "EN_CURSO", checkActiveWalkAndRedirect will handle it on next onStart/Resume
-                                    // or we can trigger it here if we want instant redirect:
-                                    if ("EN_CURSO".equals(newState) || "EN_PROGRESO".equals(newState)) {
+                                    // If it became "LISTO_PARA_INICIAR", "EN_CURSO" or "EN_PROGRESO", switch to "En Curso" tab
+                                    if ("LISTO_PARA_INICIAR".equals(newState) || "EN_CURSO".equals(newState) || "EN_PROGRESO".equals(newState)) {
                                         if (tabLayout != null) {
                                             TabLayout.Tab tabEnCurso = tabLayout.getTabAt(2);
                                             if (tabEnCurso != null && !tabEnCurso.isSelected()) {

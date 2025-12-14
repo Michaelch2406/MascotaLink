@@ -67,10 +67,10 @@ public class HomeRepository {
         MutableLiveData<Map<String, Object>> data = new MutableLiveData<>();
         String field = role.equals("PASEADOR") ? "id_paseador" : "id_dueno";
         
-        // Buscar reservas EN_CURSO o EN_PROGRESO
+        // Buscar reservas LISTO_PARA_INICIAR, EN_CURSO o EN_PROGRESO
         db.collection("reservas")
             .whereEqualTo(field, db.collection("usuarios").document(userId))
-            .whereIn("estado", java.util.Arrays.asList("EN_CURSO", "EN_PROGRESO"))
+            .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO", "EN_PROGRESO"))
             .limit(1)
             .addSnapshotListener((snapshots, e) -> {
                 if (e != null) {

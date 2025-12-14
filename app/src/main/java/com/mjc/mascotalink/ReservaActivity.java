@@ -633,7 +633,7 @@ public class ReservaActivity extends AppCompatActivity {
 
     private void generarHorariosBase() {
         horarioList.clear();
-        for (int hora = 7; hora <= 19; hora++) {
+        for (int hora = 6; hora <= 21; hora++) {
             for (int minuto = 0; minuto < 60; minuto += 30) {
                 String horaFormateada = formatearHora(hora, minuto);
                 HorarioSelectorAdapter.Horario horario = new HorarioSelectorAdapter.Horario(
@@ -679,6 +679,35 @@ public class ReservaActivity extends AppCompatActivity {
 
         if (horarioAdapter != null) {
             horarioAdapter.notifyDataSetChanged();
+
+            // Scroll automático a la primera hora disponible
+            scrollToFirstAvailableTime();
+        }
+    }
+
+    /**
+     * Hace scroll automáticamente a la primera hora disponible en el RecyclerView
+     */
+    private void scrollToFirstAvailableTime() {
+        if (horarioList == null || horarioList.isEmpty() || rvHorarios == null) return;
+
+        // Buscar la primera hora disponible
+        int firstAvailablePosition = -1;
+        for (int i = 0; i < horarioList.size(); i++) {
+            HorarioSelectorAdapter.Horario horario = horarioList.get(i);
+            if (horario != null && horario.isDisponible()) {
+                firstAvailablePosition = i;
+                break;
+            }
+        }
+
+        // Si se encontró una hora disponible, hacer scroll a esa posición
+        if (firstAvailablePosition >= 0) {
+            final int position = firstAvailablePosition;
+            // Usar post para asegurar que el RecyclerView esté listo
+            rvHorarios.post(() -> {
+                rvHorarios.smoothScrollToPosition(position);
+            });
         }
     }
 

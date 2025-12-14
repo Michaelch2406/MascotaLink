@@ -141,6 +141,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnCancelar;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnFinalizar;
+    private com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton btnComenzarPaseo;
     private MaterialButton btnAdjuntar;
     private BottomNavigationView bottomNav;
     private ProgressBar pbLoading;
@@ -282,6 +283,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         btnContactar = findViewById(R.id.btn_contactar);
         btnCancelar = findViewById(R.id.btn_cancelar_paseo);
         btnFinalizar = findViewById(R.id.btn_finalizar_paseo);
+        btnComenzarPaseo = findViewById(R.id.btn_comenzar_paseo);
         btnAdjuntar = findViewById(R.id.btn_adjuntar_fotos);
         bottomNav = findViewById(R.id.bottom_nav);
         pbLoading = findViewById(R.id.pb_loading);
@@ -377,8 +379,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         btnContactar.setOnClickListener(v -> mostrarOpcionesContacto());
         btnCancelar.setOnClickListener(v -> iniciarProcesoCancelacion());
         btnFinalizar.setOnClickListener(v -> mostrarDialogoFinalizar());
+        btnComenzarPaseo.setOnClickListener(v -> comenzarPaseoManualmente());
         btnAdjuntar.setOnClickListener(v -> mostrarOpcionesAdjuntar());
-        
+
         // Click listeners for direct navigation
         ivFotoMascota.setOnClickListener(v -> navigateToPetProfile());
         tvNombreMascota.setOnClickListener(v -> navigateToPetProfile());
@@ -414,6 +417,92 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             .setMessage("¿Estás seguro de que deseas marcar el paseo como completado?")
             .setPositiveButton("Sí, finalizar", (dialog, which) -> confirmarFinalizacionExito())
             .setNegativeButton("Cancelar", null)
+            .show();
+    }
+
+    /**
+     * Muestra la UI cuando el paseo está en estado LISTO_PARA_INICIAR
+     * (esperando que el paseador lo inicie manualmente)
+     */
+    private void mostrarUIListoParaIniciar(@NonNull DocumentSnapshot snapshot) {
+        // Mostrar botón "Comenzar Paseo" y ocultar otros botones
+        btnComenzarPaseo.setVisibility(View.VISIBLE);
+        btnFinalizar.setVisibility(View.GONE);
+        btnContactar.setVisibility(View.VISIBLE); // Puede contactar antes de comenzar
+        btnCancelar.setVisibility(View.VISIBLE); // Puede cancelar antes de comenzar
+
+        // Actualizar estado visual
+        tvEstado.setText("Listo para iniciar");
+
+        // Cargar información básica del paseo
+        Timestamp horaInicio = snapshot.getTimestamp("hora_inicio");
+        if (horaInicio != null) {
+            actualizarFechaHora(horaInicio.toDate());
+        }
+
+        Long duracion = snapshot.getLong("duracion_minutos");
+        if (duracion != null) {
+            duracionMinutos = duracion;
+        }
+
+        // Cargar info de la mascota
+        String mascotaId = snapshot.getString("id_mascota");
+        if (mascotaId != null && !mascotaId.isEmpty()) {
+            mascotaIdActual = mascotaId;
+            cargarDatosMascota(mascotaId);
+        }
+
+        // Cargar info del dueño
+        DocumentReference duenoRef = snapshot.getDocumentReference("id_dueno");
+        if (duenoRef == null) {
+            String duenoPath = snapshot.getString("id_dueno");
+            if (duenoPath != null && !duenoPath.isEmpty()) {
+                duenoRef = db.document(duenoPath);
+            }
+        }
+        if (duenoRef != null) {
+            duenoIdActual = duenoRef.getId();
+            cargarDatosDueno(duenoRef);
+        }
+
+        // No iniciar timer ni tracking hasta que se pulse "Comenzar Paseo"
+        stopTimer();
+    }
+
+    /**
+     * Inicia el paseo manualmente cuando el paseador pulsa el botón "Comenzar Paseo"
+     * Transición: LISTO_PARA_INICIAR -> EN_CURSO
+     */
+    private void comenzarPaseoManualmente() {
+        new AlertDialog.Builder(this)
+            .setTitle("Comenzar Paseo")
+            .setMessage("¿Estás listo para comenzar el paseo ahora?")
+            .setPositiveButton("Sí, comenzar", (dialog, which) -> {
+                mostrarLoading(true);
+
+                // Actualizar estado a EN_CURSO y establecer fecha_inicio_paseo
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("estado", "EN_CURSO");
+                updates.put("fecha_inicio_paseo", Timestamp.now());
+                updates.put("actualizado_por_paseador", true);
+
+                reservaRef.update(updates)
+                    .addOnSuccessListener(unused -> {
+                        Log.d(TAG, "Paseo iniciado manualmente");
+                        Toast.makeText(this, "¡Paseo iniciado! Disfruta el recorrido.", Toast.LENGTH_SHORT).show();
+                        mostrarLoading(false);
+
+                        // El listener de Firestore se encargará de actualizar la UI
+                        // cuando detecte el cambio a EN_CURSO
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al iniciar paseo manualmente", e);
+                        Toast.makeText(this, "Error al iniciar el paseo: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                        mostrarLoading(false);
+                    });
+            })
+            .setNegativeButton("Aún no", null)
             .show();
     }
 
@@ -501,6 +590,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         }
         // ---------------------------------------------------------
 
+        // Manejo del nuevo estado LISTO_PARA_INICIAR
+        if ("LISTO_PARA_INICIAR".equalsIgnoreCase(estado)) {
+            mostrarUIListoParaIniciar(snapshot);
+            return;
+        }
+
         //vibe-fix: Validar transiciones de estado cuando el paseo se completa
         if (!estado.equalsIgnoreCase("EN_CURSO") && !estado.equalsIgnoreCase("EN_PROGRESO")) {
             if (estado.equalsIgnoreCase("COMPLETADO")) {
@@ -520,7 +615,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             return;
         }
         tvEstado.setText(getString(R.string.paseo_en_curso_state_en_progreso));
-        
+
+        // Ocultar botón "Comenzar Paseo" cuando ya está en curso
+        btnComenzarPaseo.setVisibility(View.GONE);
+
         Timestamp inicioTimestamp = snapshot.getTimestamp("fecha_inicio_paseo");
         if (inicioTimestamp == null) {
             inicioTimestamp = snapshot.getTimestamp("hora_inicio");

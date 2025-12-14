@@ -14,6 +14,7 @@ public final class ReservaEstadoValidator {
     public static final String ESTADO_CONFIRMADO = "CONFIRMADO";
     public static final String ESTADO_RECHAZADO = "RECHAZADO";
     public static final String ESTADO_CANCELADO = "CANCELADO";
+    public static final String ESTADO_LISTO_PARA_INICIAR = "LISTO_PARA_INICIAR";
     public static final String ESTADO_EN_CURSO = "EN_CURSO";
     public static final String ESTADO_COMPLETADO = "COMPLETADO";
 
@@ -26,7 +27,8 @@ public final class ReservaEstadoValidator {
         Map<String, Set<String>> transitions = new HashMap<>();
         transitions.put(ESTADO_PENDIENTE_ACEPTACION, createSet(ESTADO_ACEPTADO, ESTADO_RECHAZADO, ESTADO_CANCELADO));
         transitions.put(ESTADO_ACEPTADO, createSet(ESTADO_CONFIRMADO, ESTADO_CANCELADO));
-        transitions.put(ESTADO_CONFIRMADO, createSet(ESTADO_EN_CURSO, ESTADO_COMPLETADO, ESTADO_CANCELADO));
+        transitions.put(ESTADO_CONFIRMADO, createSet(ESTADO_LISTO_PARA_INICIAR, ESTADO_CANCELADO));
+        transitions.put(ESTADO_LISTO_PARA_INICIAR, createSet(ESTADO_EN_CURSO, ESTADO_CANCELADO));
         transitions.put(ESTADO_EN_CURSO, createSet(ESTADO_COMPLETADO, ESTADO_CANCELADO));
         transitions.put(ESTADO_COMPLETADO, Collections.emptySet());
         transitions.put(ESTADO_RECHAZADO, Collections.emptySet());
