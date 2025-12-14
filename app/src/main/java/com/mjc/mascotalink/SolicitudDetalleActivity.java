@@ -40,6 +40,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String currentUserId;
     private String idReserva;
+    private String grupoReservaId;  // Para manejar reservas agrupadas
 
     // Views
     private ImageButton ivBack;
@@ -84,8 +85,10 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         
         currentUserId = currentUser.getUid();
 
-        // Obtener id_reserva del Intent
+        // Obtener id_reserva y grupo_reserva_id del Intent
         idReserva = getIntent().getStringExtra("id_reserva");
+        grupoReservaId = getIntent().getStringExtra("grupo_reserva_id");
+
         if (idReserva == null || idReserva.isEmpty()) {
             Toast.makeText(this, "Error: No se pudo cargar la solicitud", Toast.LENGTH_SHORT).show();
             finish();
@@ -193,6 +196,17 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         return;
                     }
 
+                    // Verificar si es parte de un grupo
+                    Boolean esGrupo = reservaDoc.getBoolean("es_grupo");
+                    String grupoId = reservaDoc.getString("grupo_reserva_id");
+
+                    if (esGrupo != null && esGrupo && grupoId != null && !grupoId.isEmpty()) {
+                        // Es un grupo - cargar todas las reservas del grupo
+                        grupoReservaId = grupoId;
+                        cargarGrupoReservas(reservaDoc, grupoId);
+                        return;
+                    }
+
                     // Obtener datos de la reserva
                     DocumentReference duenoRef = reservaDoc.getDocumentReference("id_dueno");
                     if (duenoRef != null) {
@@ -238,6 +252,80 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     Toast.makeText(this, "Error al cargar los datos de la solicitud", Toast.LENGTH_SHORT).show();
                     finish();
         });
+    }
+
+    /**
+     * Carga todas las reservas de un grupo y muestra información agrupada
+     */
+    private void cargarGrupoReservas(DocumentSnapshot primerReserva, String grupoId) {
+        db.collection("reservas")
+                .whereEqualTo("grupo_reserva_id", grupoId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(this, "No se encontraron reservas del grupo", Toast.LENGTH_SHORT).show();
+                        finish();
+                        return;
+                    }
+
+                    // Ordenar reservas por fecha
+                    java.util.List<DocumentSnapshot> reservas = new java.util.ArrayList<>(querySnapshot.getDocuments());
+                    reservas.sort((r1, r2) -> {
+                        Timestamp t1 = r1.getTimestamp("fecha");
+                        Timestamp t2 = r2.getTimestamp("fecha");
+                        if (t1 == null || t2 == null) return 0;
+                        return t1.compareTo(t2);
+                    });
+
+                    int cantidadDias = reservas.size();
+                    Date fechaInicio = reservas.get(0).getTimestamp("fecha") != null ?
+                            reservas.get(0).getTimestamp("fecha").toDate() : new Date();
+                    Date fechaFin = reservas.get(cantidadDias - 1).getTimestamp("fecha") != null ?
+                            reservas.get(cantidadDias - 1).getTimestamp("fecha").toDate() : new Date();
+
+                    // Obtener datos comunes (todos comparten dueño, mascota, hora, duración)
+                    DocumentReference duenoRef = primerReserva.getDocumentReference("id_dueno");
+                    if (duenoRef != null) {
+                        idDueno = duenoRef.getId();
+                    }
+
+                    horaInicio = primerReserva.getTimestamp("hora_inicio") != null ?
+                            primerReserva.getTimestamp("hora_inicio").toDate() : new Date();
+
+                    Long duracion = primerReserva.getLong("duracion_minutos");
+                    duracionMinutos = duracion != null ? duracion.intValue() : 60;
+
+                    idMascota = primerReserva.getString("id_mascota");
+                    String notas = primerReserva.getString("notas");
+                    estadoReserva = primerReserva.getString("estado");
+                    actualizarBotonesPorEstado();
+
+                    // Mostrar notas
+                    if (notas != null && !notas.isEmpty()) {
+                        tvNotas.setText(notas);
+                    } else {
+                        tvNotas.setText("Sin notas adicionales");
+                    }
+
+                    // Mostrar rango de fechas y horario agrupado
+                    String fechaHorario = formatearFechaHorarioGrupo(fechaInicio, fechaFin, horaInicio, duracionMinutos, cantidadDias);
+                    tvFechaHorario.setText(fechaHorario);
+
+                    // Cargar datos del dueño
+                    if (duenoRef != null) {
+                        cargarDatosDueno(duenoRef);
+                    }
+
+                    // Cargar datos de la mascota
+                    if (idDueno != null && idMascota != null && !idMascota.isEmpty()) {
+                        cargarDatosMascota(idDueno, idMascota);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar grupo de reservas", e);
+                    Toast.makeText(this, "Error al cargar los datos del grupo", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
     }
 
     private void setupBottomNavigation() {
@@ -358,6 +446,32 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Formatea el rango de fechas para reservas agrupadas
+     */
+    private String formatearFechaHorarioGrupo(Date fechaInicio, Date fechaFin, Date horaInicio, int duracionMinutos, int cantidadDias) {
+        try {
+            SimpleDateFormat sdfFecha = new SimpleDateFormat("d 'de' MMM", new Locale("es", "ES"));
+            String fechaInicioStr = sdfFecha.format(fechaInicio);
+            String fechaFinStr = sdfFecha.format(fechaFin);
+
+            // Calcular hora de fin
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(horaInicio);
+            cal.add(Calendar.MINUTE, duracionMinutos);
+            Date horaFin = cal.getTime();
+
+            SimpleDateFormat sdfHora = new SimpleDateFormat("h:mm a", Locale.US);
+            String horaInicioStr = sdfHora.format(horaInicio);
+            String horaFinStr = sdfHora.format(horaFin);
+
+            return cantidadDias + " días (" + fechaInicioStr + " - " + fechaFinStr + ")\n" +
+                    horaInicioStr + " - " + horaFinStr + " cada día";
+        } catch (Exception e) {
+            return cantidadDias + " días seleccionados";
+        }
+    }
+
     private void mostrarDialogRechazar() {
         if (isFinishing()) {
             return;
@@ -393,30 +507,85 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         btnRechazar.setEnabled(false);
         btnAceptar.setEnabled(false);
 
-        // Usar retry helper para operación crítica de cambio de estado
-        com.mjc.mascotalink.util.FirestoreRetryHelper.execute(
-                () -> db.collection("reservas").document(idReserva).update(
-                        "estado", ReservaEstadoValidator.ESTADO_RECHAZADO,
-                        "motivo_rechazo", motivo,
-                        "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
-                ),
-                aVoid -> {
-                    Toast.makeText(this, "Solicitud rechazada", Toast.LENGTH_SHORT).show();
-                    estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
-                    actualizarBotonesPorEstado();
-                    // Volver a SolicitudesActivity después de 1 segundo
-                    new android.os.Handler().postDelayed(() -> {
-                        finish();
-                    }, 1000);
-                },
-                e -> {
-                    Log.e(TAG, "Error al rechazar solicitud después de reintentos", e);
-                    Toast.makeText(this, "No se pudo rechazar después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+        // Si es un grupo, rechazar todas las reservas del grupo atómicamente
+        if (grupoReservaId != null && !grupoReservaId.isEmpty()) {
+            rechazarGrupoReservas(motivo);
+        } else {
+            // Reserva individual - usar retry helper para operación crítica de cambio de estado
+            com.mjc.mascotalink.util.FirestoreRetryHelper.execute(
+                    () -> db.collection("reservas").document(idReserva).update(
+                            "estado", ReservaEstadoValidator.ESTADO_RECHAZADO,
+                            "motivo_rechazo", motivo,
+                            "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    ),
+                    aVoid -> {
+                        Toast.makeText(this, "Solicitud rechazada", Toast.LENGTH_SHORT).show();
+                        estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
+                        actualizarBotonesPorEstado();
+                        // Volver a SolicitudesActivity después de 1 segundo
+                        new android.os.Handler().postDelayed(() -> {
+                            finish();
+                        }, 1000);
+                    },
+                    e -> {
+                        Log.e(TAG, "Error al rechazar solicitud después de reintentos", e);
+                        Toast.makeText(this, "No se pudo rechazar después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+                        btnRechazar.setEnabled(true);
+                        btnAceptar.setEnabled(true);
+                    },
+                    3  // 3 reintentos para operación crítica
+            );
+        }
+    }
+
+    /**
+     * Rechaza todas las reservas de un grupo atómicamente usando transacción
+     */
+    private void rechazarGrupoReservas(String motivo) {
+        // Primero obtener todas las reservas del grupo
+        db.collection("reservas")
+                .whereEqualTo("grupo_reserva_id", grupoReservaId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(this, "No se encontraron reservas del grupo", Toast.LENGTH_SHORT).show();
+                        btnRechazar.setEnabled(true);
+                        btnAceptar.setEnabled(true);
+                        return;
+                    }
+
+                    // Usar transacción para actualizar todas las reservas atómicamente
+                    db.runTransaction(transaction -> {
+                        for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                            transaction.update(doc.getReference(),
+                                    "estado", ReservaEstadoValidator.ESTADO_RECHAZADO,
+                                    "motivo_rechazo", motivo,
+                                    "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
+                            );
+                        }
+                        return null;
+                    }).addOnSuccessListener(aVoid -> {
+                        int cantidadReservas = querySnapshot.size();
+                        Toast.makeText(this, cantidadReservas + " reservas rechazadas", Toast.LENGTH_SHORT).show();
+                        estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
+                        actualizarBotonesPorEstado();
+                        // Volver a SolicitudesActivity después de 1 segundo
+                        new android.os.Handler().postDelayed(() -> {
+                            finish();
+                        }, 1000);
+                    }).addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al rechazar grupo de reservas", e);
+                        Toast.makeText(this, "Error al rechazar las reservas. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+                        btnRechazar.setEnabled(true);
+                        btnAceptar.setEnabled(true);
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar grupo de reservas para rechazar", e);
+                    Toast.makeText(this, "Error al cargar las reservas del grupo", Toast.LENGTH_SHORT).show();
                     btnRechazar.setEnabled(true);
                     btnAceptar.setEnabled(true);
-                },
-                3  // 3 reintentos para operación crítica
-        );
+                });
     }
 
     private void aceptarSolicitud() {
@@ -428,29 +597,86 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         btnRechazar.setEnabled(false);
         btnVerPerfil.setEnabled(false);
 
-        // Usar retry helper para operación crítica de aceptación
-        com.mjc.mascotalink.util.FirestoreRetryHelper.execute(
-                () -> db.collection("reservas").document(idReserva).update(
-                        "estado", ReservaEstadoValidator.ESTADO_ACEPTADO,
-                        "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
-                ),
-                aVoid -> {
-                    Toast.makeText(this, "¡Solicitud aceptada!", Toast.LENGTH_SHORT).show();
-                    estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
-                    actualizarBotonesPorEstado();
-                    // Volver a SolicitudesActivity después de 1 segundo
-                    new android.os.Handler().postDelayed(() -> {
-                        finish();
-                    }, 1000);
-                },
-                e -> {
-                    Log.e(TAG, "Error al aceptar solicitud después de reintentos", e);
-                    Toast.makeText(this, "No se pudo aceptar después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+        // Si es un grupo, aceptar todas las reservas del grupo atómicamente
+        if (grupoReservaId != null && !grupoReservaId.isEmpty()) {
+            aceptarGrupoReservas();
+        } else {
+            // Reserva individual - usar retry helper para operación crítica de aceptación
+            com.mjc.mascotalink.util.FirestoreRetryHelper.execute(
+                    () -> db.collection("reservas").document(idReserva).update(
+                            "estado", ReservaEstadoValidator.ESTADO_ACEPTADO,
+                            "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    ),
+                    aVoid -> {
+                        Toast.makeText(this, "¡Solicitud aceptada!", Toast.LENGTH_SHORT).show();
+                        estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
+                        actualizarBotonesPorEstado();
+                        // Volver a SolicitudesActivity después de 1 segundo
+                        new android.os.Handler().postDelayed(() -> {
+                            finish();
+                        }, 1000);
+                    },
+                    e -> {
+                        Log.e(TAG, "Error al aceptar solicitud después de reintentos", e);
+                        Toast.makeText(this, "No se pudo aceptar después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+                        btnAceptar.setEnabled(true);
+                        btnRechazar.setEnabled(true);
+                        btnVerPerfil.setEnabled(true);
+                    },
+                    3  // 3 reintentos para operación crítica
+            );
+        }
+    }
+
+    /**
+     * Acepta todas las reservas de un grupo atómicamente usando transacción
+     */
+    private void aceptarGrupoReservas() {
+        // Primero obtener todas las reservas del grupo
+        db.collection("reservas")
+                .whereEqualTo("grupo_reserva_id", grupoReservaId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(this, "No se encontraron reservas del grupo", Toast.LENGTH_SHORT).show();
+                        btnAceptar.setEnabled(true);
+                        btnRechazar.setEnabled(true);
+                        btnVerPerfil.setEnabled(true);
+                        return;
+                    }
+
+                    // Usar transacción para actualizar todas las reservas atómicamente
+                    db.runTransaction(transaction -> {
+                        for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                            transaction.update(doc.getReference(),
+                                    "estado", ReservaEstadoValidator.ESTADO_ACEPTADO,
+                                    "fecha_respuesta", com.google.firebase.firestore.FieldValue.serverTimestamp()
+                            );
+                        }
+                        return null;
+                    }).addOnSuccessListener(aVoid -> {
+                        int cantidadReservas = querySnapshot.size();
+                        Toast.makeText(this, "¡" + cantidadReservas + " reservas aceptadas!", Toast.LENGTH_SHORT).show();
+                        estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
+                        actualizarBotonesPorEstado();
+                        // Volver a SolicitudesActivity después de 1 segundo
+                        new android.os.Handler().postDelayed(() -> {
+                            finish();
+                        }, 1000);
+                    }).addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al aceptar grupo de reservas", e);
+                        Toast.makeText(this, "Error al aceptar las reservas. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+                        btnAceptar.setEnabled(true);
+                        btnRechazar.setEnabled(true);
+                        btnVerPerfil.setEnabled(true);
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar grupo de reservas para aceptar", e);
+                    Toast.makeText(this, "Error al cargar las reservas del grupo", Toast.LENGTH_SHORT).show();
                     btnAceptar.setEnabled(true);
                     btnRechazar.setEnabled(true);
                     btnVerPerfil.setEnabled(true);
-                },
-                3  // 3 reintentos para operación crítica
-        );
+                });
     }
 }

@@ -50,9 +50,9 @@ public class SolicitudesActivity extends AppCompatActivity {
     private BottomNavigationView bottomNav;
     private String userRole = "PASEADOR";
 
-    // Adapter
-    private SolicitudesAdapter solicitudesAdapter;
-    private List<Solicitud> solicitudesList;
+    // Adapter - Usa PaseosAdapter (reutilizado) pero en contexto de solicitudes
+    private PaseosAdapter solicitudesAdapter;
+    private List<Paseo> solicitudesList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,7 +105,7 @@ public class SolicitudesActivity extends AppCompatActivity {
         swipeRefresh = findViewById(R.id.swipe_refresh);
         llEmptyView = findViewById(R.id.empty_view);
         bottomNav = findViewById(R.id.bottom_nav);
-        
+
         solicitudesList = new ArrayList<>();
 
         // Botón atrás
@@ -123,25 +123,47 @@ public class SolicitudesActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         rvSolicitudes.setLayoutManager(layoutManager);
-        
-        solicitudesAdapter = new SolicitudesAdapter(this, solicitudesList, new SolicitudesAdapter.OnSolicitudClickListener() {
+
+        // Usar PaseosAdapter (reutilizado) para manejar agrupaciones de solicitudes
+        solicitudesAdapter = new PaseosAdapter(this, solicitudesList, new PaseosAdapter.OnPaseoClickListener() {
             @Override
-            public void onSolicitudClick(Solicitud solicitud) {
+            public void onPaseoClick(Paseo solicitud) {
                 // Navegar a detalle de solicitud
                 Intent intent = new Intent(SolicitudesActivity.this, SolicitudDetalleActivity.class);
                 intent.putExtra("id_reserva", solicitud.getReservaId());
+                // Si es grupo, pasar también el ID del grupo
+                if (solicitud.getEs_grupo() != null && solicitud.getEs_grupo() && solicitud.getGrupo_reserva_id() != null) {
+                    intent.putExtra("grupo_reserva_id", solicitud.getGrupo_reserva_id());
+                }
                 startActivity(intent);
             }
 
             @Override
-            public void onAceptarClick(Solicitud solicitud) {
-                // Navegar a detalle de solicitud (mismo comportamiento que click en tarjeta)
-                Intent intent = new Intent(SolicitudesActivity.this, SolicitudDetalleActivity.class);
-                intent.putExtra("id_reserva", solicitud.getReservaId());
-                startActivity(intent);
+            public void onVerUbicacionClick(Paseo solicitud) {
+                // No aplica en solicitudes pendientes
             }
-        });
-        
+
+            @Override
+            public void onContactarClick(Paseo solicitud) {
+                // No aplica en solicitudes pendientes
+            }
+
+            @Override
+            public void onCalificarClick(Paseo solicitud) {
+                // No aplica en solicitudes pendientes
+            }
+
+            @Override
+            public void onVerMotivoClick(Paseo solicitud) {
+                // No aplica en solicitudes pendientes
+            }
+
+            @Override
+            public void onProcesarPagoClick(Paseo solicitud) {
+                // No aplica en solicitudes pendientes
+            }
+        }, userRole);
+
         rvSolicitudes.setAdapter(solicitudesAdapter);
     }
 
@@ -186,19 +208,19 @@ public class SolicitudesActivity extends AppCompatActivity {
                 return;
             }
 
-            List<Solicitud> solicitudesTemporales = new ArrayList<>();
+            List<Paseo> solicitudesTemporales = new ArrayList<>();
             List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
 
             for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                Solicitud solicitud = new Solicitud();
+                // Convertir DocumentSnapshot a objeto Paseo
+                Paseo solicitud = doc.toObject(Paseo.class);
+                if (solicitud == null) {
+                    solicitud = new Paseo();
+                }
                 solicitud.setReservaId(doc.getId());
-                solicitud.setFechaCreacion(doc.getTimestamp("fecha_creacion") != null ? doc.getTimestamp("fecha_creacion").toDate() : new Date());
-                solicitud.setHoraInicio(doc.getTimestamp("hora_inicio") != null ? doc.getTimestamp("hora_inicio").toDate() : new Date());
 
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
                 String idMascota = doc.getString("id_mascota");
-                solicitud.setIdDueno(duenoRef);
-                solicitud.setIdMascota(idMascota);
 
                 solicitudesTemporales.add(solicitud);
 
@@ -224,31 +246,31 @@ public class SolicitudesActivity extends AppCompatActivity {
             com.google.android.gms.tasks.Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
                 if (isDestroyed() || isFinishing()) return;
 
-                List<Solicitud> nuevasSolicitudes = new ArrayList<>();
+                List<Paseo> nuevasSolicitudes = new ArrayList<>();
                 int resultIndex = 0;
 
-                for (Solicitud solicitud : solicitudesTemporales) {
+                for (Paseo solicitud : solicitudesTemporales) {
                     DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(resultIndex++);
                     DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(resultIndex++);
 
+                    // Setear datos del dueño en el objeto Paseo
                     if (duenoDoc != null && duenoDoc.exists()) {
                         solicitud.setDuenoNombre(duenoDoc.getString("nombre_display"));
-                        solicitud.setDuenoFotoUrl(duenoDoc.getString("foto_perfil"));
                     } else {
-                        solicitud.setDuenoNombre(duenoDoc != null ? "Usuario desconocido" : "Dueño no especificado");
+                        solicitud.setDuenoNombre("Usuario desconocido");
                     }
 
+                    // Setear datos de la mascota en el objeto Paseo
                     if (mascotaDoc != null && mascotaDoc.exists()) {
-                        solicitud.setMascotaRaza(mascotaDoc.getString("raza"));
                         solicitud.setMascotaNombre(mascotaDoc.getString("nombre"));
+                        solicitud.setMascotaFoto(mascotaDoc.getString("foto_url"));
                     } else {
-                        solicitud.setMascotaRaza("Mascota");
                         solicitud.setMascotaNombre("Mascota");
                     }
 
                     nuevasSolicitudes.add(solicitud);
                 }
-                
+
                 // Reemplazar lista y notificar
                 solicitudesList.clear();
                 solicitudesList.addAll(nuevasSolicitudes);
@@ -380,7 +402,13 @@ public class SolicitudesActivity extends AppCompatActivity {
 
     private void actualizarYFinalizar() {
         // Ordenar la lista por fecha de creación descendente antes de mostrar
-        solicitudesList.sort((s1, s2) -> s2.getFechaCreacion().compareTo(s1.getFechaCreacion()));
+        solicitudesList.sort((s1, s2) -> {
+            Date fecha1 = s1.getFecha_creacion();
+            Date fecha2 = s2.getFecha_creacion();
+            if (fecha1 == null) return 1;
+            if (fecha2 == null) return -1;
+            return fecha2.compareTo(fecha1);
+        });
         if (solicitudesAdapter != null) {
             solicitudesAdapter.updateList(solicitudesList);
         }

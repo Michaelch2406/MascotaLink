@@ -1085,7 +1085,37 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
   const newReservation = event.data.data();
 
   if (newReservation.estado === "PENDIENTE_ACEPTACION") {
-    console.log(`Nueva solicitud de paseo ${reservaId} creada. Enviando notificación al paseador.`);
+    const esGrupo = newReservation.es_grupo;
+    const grupoReservaId = newReservation.grupo_reserva_id;
+
+    // Si es parte de un grupo, esperar 3 segundos para que se creen todas las reservas
+    if (esGrupo && grupoReservaId) {
+      console.log(`Reserva ${reservaId} es parte del grupo ${grupoReservaId}. Esperando agrupación...`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Verificar si ya se envió notificación para este grupo
+      const grupoSnapshot = await db.collection("reservas")
+        .where("grupo_reserva_id", "==", grupoReservaId)
+        .where("estado", "==", "PENDIENTE_ACEPTACION")
+        .get();
+
+      // Ordenar por fecha de creación y obtener la primera
+      const reservasGrupo = grupoSnapshot.docs.sort((a, b) => {
+        const aTime = a.data().fecha_creacion?.toMillis() || 0;
+        const bTime = b.data().fecha_creacion?.toMillis() || 0;
+        return aTime - bTime;
+      });
+
+      // Solo enviar notificación desde la PRIMERA reserva del grupo
+      if (reservasGrupo.length > 0 && reservasGrupo[0].id !== reservaId) {
+        console.log(`Notificación ya enviada por otra reserva del grupo ${grupoReservaId}. Saltando.`);
+        return;
+      }
+
+      console.log(`Esta es la primera reserva del grupo ${grupoReservaId}. Enviando notificación agrupada.`);
+    } else {
+      console.log(`Nueva solicitud de paseo ${reservaId} creada. Enviando notificación al paseador.`);
+    }
 
     const idDueno = newReservation.id_dueno && typeof newReservation.id_dueno === 'object' && newReservation.id_dueno.id ? newReservation.id_dueno.id : newReservation.id_dueno;
     const idPaseador = newReservation.id_paseador && typeof newReservation.id_paseador === 'object' && newReservation.id_paseador.id ? newReservation.id_paseador.id : newReservation.id_paseador;
@@ -1117,9 +1147,6 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
         return timestamp;
     };
 
-    const fecha = formatDate(newReservation.fecha);
-    const hora = formatTime(newReservation.hora_inicio);
-
     // Fetch walker's FCM token
     const paseadorDoc = await db.collection("usuarios").doc(idPaseador).get();
     const paseadorToken = paseadorDoc.exists ? paseadorDoc.data().fcmToken : null;
@@ -1129,14 +1156,12 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
     const nombreDueno = duenoDoc.exists ? duenoDoc.data().nombre_display : "Dueño";
 
     // Fetch pet's name
-    // Assuming pet info is stored in a subcollection under owner or has its own collection
     let nombreMascota = "mascota";
     if (idMascota) {
         const petDoc = await db.collection("duenos").doc(idDueno).collection("mascotas").doc(idMascota).get();
         if (petDoc.exists) {
             nombreMascota = petDoc.data().nombre || nombreMascota;
         } else {
-            // Fallback if pet doc not found, maybe it's in a global 'pets' collection or directly in 'mascotas'
             const globalPetDoc = await db.collection("mascotas").doc(idMascota).get();
             if (globalPetDoc.exists) {
                 nombreMascota = globalPetDoc.data().nombre || nombreMascota;
@@ -1144,13 +1169,43 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
         }
     }
 
+    // Construir mensaje según si es grupo o individual
+    let notificationBody;
+    if (esGrupo && grupoReservaId) {
+      // Para grupos, obtener información de fechas
+      const grupoSnapshot = await db.collection("reservas")
+        .where("grupo_reserva_id", "==", grupoReservaId)
+        .get();
+
+      const cantidadDias = grupoSnapshot.size;
+      const fechas = grupoSnapshot.docs.map(doc => doc.data().fecha).sort((a, b) => {
+        const aTime = a?.toMillis() || 0;
+        const bTime = b?.toMillis() || 0;
+        return aTime - bTime;
+      });
+
+      const fechaInicio = formatDate(fechas[0]);
+      const fechaFin = formatDate(fechas[fechas.length - 1]);
+      const hora = formatTime(newReservation.hora_inicio);
+
+      if (cantidadDias > 1) {
+        notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombreMascota} - ${cantidadDias} días (${fechaInicio} - ${fechaFin}) a las ${hora}.`;
+      } else {
+        notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombreMascota} el ${fechaInicio} a las ${hora}.`;
+      }
+    } else {
+      // Reserva individual
+      const fecha = formatDate(newReservation.fecha);
+      const hora = formatTime(newReservation.hora_inicio);
+      notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombreMascota} el ${fecha} a las ${hora}.`;
+    }
 
     if (paseadorToken) {
       const message = {
         token: paseadorToken,
         notification: {
           title: "¡Nueva solicitud de paseo!",
-          body: `${nombreDueno} ha solicitado un paseo para ${nombreMascota} el ${fecha} a las ${hora}.`,
+          body: notificationBody,
         },
         android: {
             notification: {
@@ -1303,7 +1358,36 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
 
   // Check if the status changed from PENDIENTE_ACEPTACION to ACEPTADO
   if (oldValue.estado === "PENDIENTE_ACEPTACION" && newValue.estado === "ACEPTADO") {
-    console.log(`Reserva ${reservaId} aceptada. Enviando notificación al dueño.`);
+    const esGrupo = newValue.es_grupo;
+    const grupoReservaId = newValue.grupo_reserva_id;
+
+    // Si es parte de un grupo, evitar notificaciones duplicadas
+    if (esGrupo && grupoReservaId) {
+      console.log(`Reserva ${reservaId} del grupo ${grupoReservaId} aceptada. Verificando si es la primera...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Verificar si ya se envió notificación para este grupo
+      const grupoSnapshot = await db.collection("reservas")
+        .where("grupo_reserva_id", "==", grupoReservaId)
+        .where("estado", "==", "ACEPTADO")
+        .get();
+
+      const reservasGrupo = grupoSnapshot.docs.sort((a, b) => {
+        const aTime = a.data().fecha_respuesta?.toMillis() || 0;
+        const bTime = b.data().fecha_respuesta?.toMillis() || 0;
+        return aTime - bTime;
+      });
+
+      // Solo enviar desde la primera reserva aceptada del grupo
+      if (reservasGrupo.length > 0 && reservasGrupo[0].id !== reservaId) {
+        console.log(`Notificación de aceptación ya enviada por otra reserva del grupo ${grupoReservaId}. Saltando.`);
+        return;
+      }
+
+      console.log(`Primera reserva del grupo ${grupoReservaId} aceptada. Enviando notificación agrupada.`);
+    } else {
+      console.log(`Reserva ${reservaId} aceptada. Enviando notificación al dueño.`);
+    }
 
     const idDueno = getIdValue(newValue.id_dueno);
     const idPaseador = getIdValue(newValue.id_paseador);
@@ -1340,13 +1424,29 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
         }
     }
 
+    // Construir mensaje según si es grupo o individual
+    let notificationBody;
+    if (esGrupo && grupoReservaId) {
+      const grupoSnapshot = await db.collection("reservas")
+        .where("grupo_reserva_id", "==", grupoReservaId)
+        .get();
+
+      const cantidadDias = grupoSnapshot.size;
+      if (cantidadDias > 1) {
+        notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota} - ${cantidadDias} días.`;
+      } else {
+        notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota}.`;
+      }
+    } else {
+      notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota}.`;
+    }
+
     if (duenoToken) {
       const message = {
         token: duenoToken,
         notification: {
           title: "¡Paseo aceptado!",
-          body: `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota}.`,
-          // Force Android to use the app icon (if resource exists as ic_notification or similar, otherwise defaults usually work but 'icon' key helps)
+          body: notificationBody,
         },
         android: {
             notification: {
@@ -1883,6 +1983,39 @@ exports.sendReminder15MinBefore = onSchedule("every 5 minutes", async (event) =>
       // Skip if already sent
       if (reserva.reminder15MinSent) continue;
 
+      // Si es parte de un grupo, solo enviar recordatorio para el PRIMER día del grupo
+      const esGrupo = reserva.es_grupo;
+      const grupoReservaId = reserva.grupo_reserva_id;
+      let cantidadDias = 1;
+
+      if (esGrupo && grupoReservaId) {
+        // Obtener todas las reservas del grupo
+        const grupoSnapshot = await db.collection("reservas")
+          .where("grupo_reserva_id", "==", grupoReservaId)
+          .get();
+
+        cantidadDias = grupoSnapshot.size;
+
+        // Encontrar el primer día (fecha más temprana)
+        const fechas = grupoSnapshot.docs.map(d => ({
+          id: d.id,
+          fecha: d.data().fecha
+        })).sort((a, b) => {
+          const aTime = a.fecha?.toMillis() || 0;
+          const bTime = b.fecha?.toMillis() || 0;
+          return aTime - bTime;
+        });
+
+        // Si esta NO es la reserva del primer día, saltar
+        if (fechas.length > 0 && fechas[0].id !== doc.id) {
+          console.log(`Saltando recordatorio para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
+          await doc.ref.update({ reminder15MinSent: true }); // Marcar como enviado para no procesarlo de nuevo
+          continue;
+        }
+
+        console.log(`Enviando recordatorio para primer día del grupo ${grupoReservaId} (${cantidadDias} días)`);
+      }
+
       // Get paseador ID
       const paseadorRef = reserva.id_paseador;
       let paseadorId = null;
@@ -1911,12 +2044,20 @@ exports.sendReminder15MinBefore = onSchedule("every 5 minutes", async (event) =>
         hour12: false
       });
 
+      // Construir mensaje según si es grupo
+      let notificationBody;
+      if (cantidadDias > 1) {
+        notificationBody = `Tu paseo comienza en 15 minutos (${horaFormateada}). Primer día de ${cantidadDias} días. Prepárate para salir.`;
+      } else {
+        notificationBody = `Tu paseo comienza en 15 minutos (${horaFormateada}). Prepárate para salir.`;
+      }
+
       // Send notification
       const message = {
         token: fcmToken,
         notification: {
           title: "Recordatorio de Paseo",
-          body: `Tu paseo comienza en 15 minutos (${horaFormateada}). Prepárate para salir.`
+          body: notificationBody
         },
         data: {
           tipo: "recordatorio_paseo",
@@ -1980,6 +2121,36 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
       // Skip if already sent
       if (reserva.reminder5MinSent) continue;
 
+      // Si es parte de un grupo, solo enviar recordatorio para el PRIMER día del grupo
+      const esGrupo = reserva.es_grupo;
+      const grupoReservaId = reserva.grupo_reserva_id;
+      let cantidadDias = 1;
+
+      if (esGrupo && grupoReservaId) {
+        const grupoSnapshot = await db.collection("reservas")
+          .where("grupo_reserva_id", "==", grupoReservaId)
+          .get();
+
+        cantidadDias = grupoSnapshot.size;
+
+        const fechas = grupoSnapshot.docs.map(d => ({
+          id: d.id,
+          fecha: d.data().fecha
+        })).sort((a, b) => {
+          const aTime = a.fecha?.toMillis() || 0;
+          const bTime = b.fecha?.toMillis() || 0;
+          return aTime - bTime;
+        });
+
+        if (fechas.length > 0 && fechas[0].id !== doc.id) {
+          console.log(`Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
+          await doc.ref.update({ reminder5MinSent: true });
+          continue;
+        }
+
+        console.log(`Enviando recordatorio 5min para primer día del grupo ${grupoReservaId} (${cantidadDias} días)`);
+      }
+
       // Get paseador ID
       const paseadorRef = reserva.id_paseador;
       let paseadorId = null;
@@ -2008,12 +2179,20 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
         hour12: false
       });
 
+      // Construir mensaje según si es grupo
+      let notificationBody;
+      if (cantidadDias > 1) {
+        notificationBody = `Tu paseo comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días. Es hora de prepararte.`;
+      } else {
+        notificationBody = `Tu paseo comienza en 5 minutos (${horaFormateada}). Es hora de prepararte.`;
+      }
+
       // Send notification
       const message = {
         token: fcmToken,
         notification: {
           title: "¡Paseo Próximo!",
-          body: `Tu paseo comienza en 5 minutos (${horaFormateada}). Es hora de prepararte.`
+          body: notificationBody
         },
         data: {
           tipo: "recordatorio_paseo",
