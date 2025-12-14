@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/nestedScrollView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@android:color/white">
+    android:background="@android:color/white"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -56,15 +58,95 @@
                 style="@style/Widget.MaterialComponents.Button.TextButton"/>
         </LinearLayout>
 
+        <!-- Días de la semana header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia_lunes_corto"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia_martes_corto"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia_miercoles_corto"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia_jueves_corto"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia_viernes_corto"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia_sabado_corto"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dia_domingo_corto"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"/>
+        </LinearLayout>
+
         <!-- Calendario -->
-        <GridView
+        <com.mjc.mascotalink.util.ExpandedGridView
             android:id="@+id/gridCalendario"
             android:layout_width="match_parent"
-            android:layout_height="280dp"
+            android:layout_height="wrap_content"
             android:numColumns="7"
             android:horizontalSpacing="4dp"
             android:verticalSpacing="4dp"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="16dp"
+            android:stretchMode="columnWidth"
+            android:gravity="center"/>
 
         <TextView
             android:layout_width="match_parent"

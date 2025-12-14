@@ -109,7 +109,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="D"
+                android:text="@string/dia_domingo_corto"
                 android:textColor="@color/gray_dark"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -118,7 +118,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="L"
+                android:text="@string/dia_lunes_corto"
                 android:textColor="@color/gray_dark"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -127,7 +127,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="M"
+                android:text="@string/dia_martes_corto"
                 android:textColor="@color/gray_dark"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -136,7 +136,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="M"
+                android:text="@string/dia_miercoles_corto"
                 android:textColor="@color/gray_dark"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -145,7 +145,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="J"
+                android:text="@string/dia_jueves_corto"
                 android:textColor="@color/gray_dark"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -154,7 +154,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="V"
+                android:text="@string/dia_viernes_corto"
                 android:textColor="@color/gray_dark"
                 android:textSize="12sp"
                 android:gravity="center" />
@@ -163,7 +163,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="S"
+                android:text="@string/dia_sabado_corto"
                 android:textColor="@color/gray_dark"
                 android:textSize="12sp"
                 android:gravity="center" />

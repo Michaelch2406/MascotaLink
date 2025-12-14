@@ -24,6 +24,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.CalendarioAdapter;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.modelo.Bloqueo;
+import com.mjc.mascotalink.utils.CalendarioUtils;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -41,6 +42,7 @@ public class DialogBloquearDiasFragment extends DialogFragment {
     private CalendarioAdapter calendarioAdapter;
     private TextView tvMesActual;
     private Button btnMesAnterior, btnMesSiguiente;
+    private androidx.core.widget.NestedScrollView nestedScrollView;
     private EditText etRazon;
     private RadioGroup rgTipoBloqueo;
     private RadioButton rbDiaCompleto, rbManana, rbTarde;
@@ -93,6 +95,7 @@ public class DialogBloquearDiasFragment extends DialogFragment {
         View view = inflater.inflate(R.layout.dialog_bloquear_dias, container, false);
 
         // Referencias
+        nestedScrollView = view.findViewById(R.id.nestedScrollView);
         gridCalendario = view.findViewById(R.id.gridCalendario);
         tvMesActual = view.findViewById(R.id.tvMesActual);
         btnMesAnterior = view.findViewById(R.id.btnMesAnterior);
@@ -164,27 +167,44 @@ public class DialogBloquearDiasFragment extends DialogFragment {
         // Generar lista de fechas para el calendario
         List<Date> fechasDelMes = generarFechasDelMes(mesActual);
 
-        // Crear un listener dummy para el constructor
+        // Crear el adapter
         calendarioAdapter = new CalendarioAdapter(requireContext(), fechasDelMes, mesActual, (date, position) -> {
-            // Este callback se ejecutará cuando el usuario haga click
-        });
-
-        // Configurar el listener real después de crear el adapter
-        calendarioAdapter.setListener((date, position) -> {
-            if (date != null && !esFechaPasada(date)) {
-                Date fechaNormalizada = normalizarFecha(date);
-                if (fechasSeleccionadas.contains(fechaNormalizada)) {
-                    fechasSeleccionadas.remove(fechaNormalizada);
-                } else {
-                    fechasSeleccionadas.add(fechaNormalizada);
-                }
-                calendarioAdapter.setFechasSeleccionadas(fechasSeleccionadas);
+            // El adapter ya maneja la selección internamente en modo múltiple
+            // Sincronizar nuestro set local con el del adapter
+            if (calendarioAdapter != null) {
+                fechasSeleccionadas = new HashSet<>(calendarioAdapter.getFechasSeleccionadas());
             }
         });
 
+        // IMPORTANTE: Configurar modo antes de setear el adapter
         calendarioAdapter.setSeleccionMultiple(true);
-        calendarioAdapter.setEsVistaPaseador(true); // Es vista de paseador
+        calendarioAdapter.setEsVistaPaseador(true);
         calendarioAdapter.setFechasSeleccionadas(fechasSeleccionadas);
+
+        // Evitar que el NestedScrollView intercepte los eventos touch del calendario
+        gridCalendario.setOnTouchListener((v, event) -> {
+            // Deshabilitar el scroll del NestedScrollView mientras se toca el calendario
+            int action = event.getAction();
+            switch (action) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    // Deshabilitar scroll cuando el usuario toca el calendario
+                    if (nestedScrollView != null) {
+                        nestedScrollView.requestDisallowInterceptTouchEvent(true);
+                    }
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                    break;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    // Re-habilitar scroll cuando el usuario suelta
+                    if (nestedScrollView != null) {
+                        nestedScrollView.requestDisallowInterceptTouchEvent(false);
+                    }
+                    v.getParent().requestDisallowInterceptTouchEvent(false);
+                    break;
+            }
+            return false;
+        });
+
         gridCalendario.setAdapter(calendarioAdapter);
 
         // Cargar bloqueos existentes del mes para mostrar en calendario
@@ -245,38 +265,11 @@ public class DialogBloquearDiasFragment extends DialogFragment {
     }
 
     private List<Date> generarFechasDelMes(Calendar mes) {
-        List<Date> fechas = new ArrayList<>();
-        Calendar cal = (Calendar) mes.clone();
-
-        // Primer día del mes
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        int primerDiaSemana = cal.get(Calendar.DAY_OF_WEEK); // 1=Dom, 2=Lun, ...
-
-        // Calcular días vacíos al inicio (para alinear con día de la semana)
-        int diasVacios = primerDiaSemana - 1; // 0=Dom, 1=Lun, ...
-        for (int i = 0; i < diasVacios; i++) {
-            fechas.add(null); // Días vacíos
-        }
-
-        // Agregar todos los días del mes
-        int diasDelMes = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-        for (int dia = 1; dia <= diasDelMes; dia++) {
-            cal.set(Calendar.DAY_OF_MONTH, dia);
-            fechas.add(cal.getTime());
-        }
-
-        return fechas;
+        return CalendarioUtils.generarFechasDelMes(mes);
     }
 
     private Date normalizarFecha(Date fecha) {
-        if (fecha == null) return null;
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(fecha);
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        return cal.getTime();
+        return CalendarioUtils.normalizarFecha(fecha);
     }
 
     private boolean esFechaPasada(Date fecha) {

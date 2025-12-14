@@ -24,6 +24,7 @@ import com.mjc.mascotalink.fragments.DialogHorarioDefaultFragment;
 import com.mjc.mascotalink.fragments.DialogHorarioEspecialFragment;
 import com.mjc.mascotalink.modelo.Bloqueo;
 import com.mjc.mascotalink.modelo.HorarioEspecial;
+import com.mjc.mascotalink.utils.CalendarioUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -149,27 +150,7 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private List<Date> generarFechasDelMes(Calendar mes) {
-        List<Date> fechas = new ArrayList<>();
-        Calendar cal = (Calendar) mes.clone();
-
-        // Primer día del mes
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        int primerDiaSemana = cal.get(Calendar.DAY_OF_WEEK); // 1=Dom, 2=Lun, ...
-
-        // Calcular días vacíos al inicio (para alinear con día de la semana)
-        int diasVacios = primerDiaSemana - 1; // 0=Dom, 1=Lun, ...
-        for (int i = 0; i < diasVacios; i++) {
-            fechas.add(null); // Días vacíos
-        }
-
-        // Agregar todos los días del mes
-        int diasDelMes = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-        for (int dia = 1; dia <= diasDelMes; dia++) {
-            cal.set(Calendar.DAY_OF_MONTH, dia);
-            fechas.add(cal.getTime());
-        }
-
-        return fechas;
+        return CalendarioUtils.generarFechasDelMes(mes);
     }
 
     private void mostrarDetalleDelDia(Date fecha) {
@@ -377,20 +358,62 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private String construirDescripcionHorario(Map<String, Object> data) {
-        // Construir descripción legible del horario
-        // Por ejemplo: "Lun-Vie: 9:00 - 18:00"
-        StringBuilder desc = new StringBuilder();
+        // Construir descripción legible del horario dinámicamente
+        String[] diasKeys = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"};
+        String[] diasAbrev = {"Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"};
 
-        Map<String, Object> lunes = (Map<String, Object>) data.get("lunes");
-        if (lunes != null && Boolean.TRUE.equals(lunes.get("disponible"))) {
-            String inicio = (String) lunes.get("hora_inicio");
-            String fin = (String) lunes.get("hora_fin");
-            desc.append("Lun-Vie: ").append(inicio).append(" - ").append(fin);
-        } else {
-            desc.append("Sin configurar");
+        List<String> diasDisponibles = new ArrayList<>();
+        String horaInicio = null;
+        String horaFin = null;
+
+        // Recopilar días disponibles y horarios
+        for (int i = 0; i < diasKeys.length; i++) {
+            Map<String, Object> diaData = (Map<String, Object>) data.get(diasKeys[i]);
+            if (diaData != null && Boolean.TRUE.equals(diaData.get("disponible"))) {
+                diasDisponibles.add(diasAbrev[i]);
+                if (horaInicio == null) {
+                    horaInicio = (String) diaData.get("hora_inicio");
+                    horaFin = (String) diaData.get("hora_fin");
+                }
+            }
         }
 
-        return desc.toString();
+        if (diasDisponibles.isEmpty()) {
+            return "Sin configurar";
+        }
+
+        // Intentar agrupar días consecutivos
+        String diasTexto = agruparDiasConsecutivos(diasDisponibles, diasAbrev);
+        return diasTexto + ": " + horaInicio + " - " + horaFin;
+    }
+
+    /**
+     * Agrupa días consecutivos para mostrar rangos como "Lun-Vie" en lugar de "Lun, Mar, Mié, Jue, Vie"
+     */
+    private String agruparDiasConsecutivos(List<String> diasDisponibles, String[] diasAbrev) {
+        if (diasDisponibles.isEmpty()) return "";
+        if (diasDisponibles.size() == 1) return diasDisponibles.get(0);
+
+        // Si son exactamente Lun-Vie, mostrar como rango
+        if (diasDisponibles.size() == 5 &&
+            diasDisponibles.contains("Lun") && diasDisponibles.contains("Mar") &&
+            diasDisponibles.contains("Mié") && diasDisponibles.contains("Jue") &&
+            diasDisponibles.contains("Vie")) {
+            return "Lun-Vie";
+        }
+
+        // Si son todos los días, mostrar "Todos los días"
+        if (diasDisponibles.size() == 7) {
+            return "Todos los días";
+        }
+
+        // Si son Lun-Sáb
+        if (diasDisponibles.size() == 6 && !diasDisponibles.contains("Dom")) {
+            return "Lun-Sáb";
+        }
+
+        // En otros casos, simplemente unir con comas
+        return String.join(", ", diasDisponibles);
     }
 
     private void cargarConfiguracionesActivas() {
@@ -588,15 +611,7 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private Date normalizarFecha(Date fecha) {
-        if (fecha == null) return null;
-
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(fecha);
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        return cal.getTime();
+        return CalendarioUtils.normalizarFecha(fecha);
     }
 
     private String formatearFecha(Date fecha) {

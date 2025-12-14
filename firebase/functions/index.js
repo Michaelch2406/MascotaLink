@@ -30,8 +30,16 @@ function initializeGemini() {
   }
 
   genAI = new GoogleGenerativeAI(apiKey);
-  model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-  console.log("✅ Gemini AI initialized successfully with model: gemini-2.5-flash-lite");
+  model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-lite",
+    generationConfig: {
+      temperature: 0.1,  // Baja temperatura para respuestas más consistentes (0 = determinista, 2 = creativo)
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 2048,
+    }
+  });
+  console.log("✅ Gemini AI initialized successfully with model: gemini-2.5-flash-lite (temperature: 0.1)");
 }
 
 admin.initializeApp();
