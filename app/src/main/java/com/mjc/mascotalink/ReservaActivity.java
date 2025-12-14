@@ -270,6 +270,9 @@ public class ReservaActivity extends AppCompatActivity {
             // Limpiar selecciones múltiples del calendario
             if (calendarioAdapter != null) {
                 calendarioAdapter.setFechasSeleccionadas(new HashSet<>());
+                // Configurar bloqueo de deselección según el modo
+                boolean bloquear = modoFechaActual.equals("SEMANA") || modoFechaActual.equals("MES");
+                calendarioAdapter.setBloquearDeseleccion(bloquear);
             }
 
             actualizarTextoDuracion();
@@ -484,9 +487,11 @@ public class ReservaActivity extends AppCompatActivity {
             calendarioAdapter.setEsVistaPaseador(false); // Vista de cliente
             // Activar selección múltiple para modo SEMANA
             calendarioAdapter.setSeleccionMultiple(true);
+            calendarioAdapter.setBloquearDeseleccion(true); // Bloquear deselección en modo SEMANA
             gvCalendario.setAdapter(calendarioAdapter);
         } else {
             calendarioAdapter.updateDates(datesList, (Calendar) cal.clone());
+            calendarioAdapter.setBloquearDeseleccion(true); // Asegurar bloqueo al actualizar
         }
 
         // Si hay una fecha previamente seleccionada, seleccionar la semana completa
@@ -550,12 +555,18 @@ public class ReservaActivity extends AppCompatActivity {
             // Activar selección múltiple para MES y DIAS_ESPECIFICOS
             boolean multiSelect = modoFechaActual.equals("MES") || modoFechaActual.equals("DIAS_ESPECIFICOS");
             calendarioAdapter.setSeleccionMultiple(multiSelect);
+            // Bloquear deselección solo para MES, no para DIAS_ESPECIFICOS
+            boolean bloquear = modoFechaActual.equals("MES");
+            calendarioAdapter.setBloquearDeseleccion(bloquear);
             gvCalendario.setAdapter(calendarioAdapter);
         } else {
             calendarioAdapter.updateDates(datesList, currentMonth);
             // Actualizar modo de selección múltiple
             boolean multiSelect = modoFechaActual.equals("MES") || modoFechaActual.equals("DIAS_ESPECIFICOS");
             calendarioAdapter.setSeleccionMultiple(multiSelect);
+            // Bloquear deselección solo para MES, no para DIAS_ESPECIFICOS
+            boolean bloquear = modoFechaActual.equals("MES");
+            calendarioAdapter.setBloquearDeseleccion(bloquear);
         }
 
         // Si modo MES, seleccionar todos los días del mes
@@ -595,7 +606,8 @@ public class ReservaActivity extends AppCompatActivity {
             case "DIAS_ESPECIFICOS":
             default:
                 // Selección múltiple libre (permite seleccionar/deseleccionar días individuales)
-                // No establecer fechaSeleccionada aquí, ya que usamos multi-selección
+                // Establecer fechaSeleccionada para cargar horarios (aunque usamos multi-selección)
+                fechaSeleccionada = date;
                 mostrarTextoMultiplesDias();
                 break;
         }
@@ -1468,9 +1480,23 @@ public class ReservaActivity extends AppCompatActivity {
             Toast.makeText(this, "Selecciona una mascota", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (fechaSeleccionada == null) {
-            Toast.makeText(this, "Selecciona una fecha", Toast.LENGTH_SHORT).show();
-            return false;
+
+        // Validar fecha según el modo
+        if (modoFechaActual.equals("DIAS_ESPECIFICOS")) {
+            // Para días específicos, verificar que haya al menos un día seleccionado
+            if (calendarioAdapter == null || calendarioAdapter.getFechasSeleccionadas().isEmpty()) {
+                Toast.makeText(this, "Selecciona al menos un día", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            // Para días específicos, usar la primera fecha seleccionada
+            Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+            fechaSeleccionada = fechasSeleccionadas.iterator().next();
+        } else {
+            // Para semana y mes, validar fechaSeleccionada normal
+            if (fechaSeleccionada == null) {
+                Toast.makeText(this, "Selecciona una fecha", Toast.LENGTH_SHORT).show();
+                return false;
+            }
         }
         if (horarioSeleccionado == null) {
             Toast.makeText(this, "Selecciona una hora", Toast.LENGTH_SHORT).show();

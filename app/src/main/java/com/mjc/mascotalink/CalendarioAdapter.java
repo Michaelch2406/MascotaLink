@@ -27,6 +27,7 @@ public class CalendarioAdapter extends BaseAdapter {
     private Set<Date> fechasSeleccionadas = new HashSet<>();
     private boolean seleccionMultiple = false;
     private boolean esVistaPaseador = false; // true = DisponibilidadActivity, false = ReservaActivity
+    private boolean bloquearDeseleccion = false; // true = no permite deseleccionar (para SEMANA/MES)
 
     public interface OnDateSelectedListener {
         void onDateSelected(Date date, int position);
@@ -154,7 +155,10 @@ public class CalendarioAdapter extends BaseAdapter {
                 if (seleccionMultiple) {
                     // Modo selección múltiple
                     if (fechasSeleccionadas.contains(normalizedDate)) {
-                        fechasSeleccionadas.remove(normalizedDate);
+                        // Solo permitir deseleccionar si NO está bloqueado (modo DIAS_ESPECIFICOS)
+                        if (!bloquearDeseleccion) {
+                            fechasSeleccionadas.remove(normalizedDate);
+                        }
                     } else {
                         fechasSeleccionadas.add(normalizedDate);
                     }
@@ -267,5 +271,9 @@ public class CalendarioAdapter extends BaseAdapter {
 
     public void setEsVistaPaseador(boolean esVistaPaseador) {
         this.esVistaPaseador = esVistaPaseador;
+    }
+
+    public void setBloquearDeseleccion(boolean bloquearDeseleccion) {
+        this.bloquearDeseleccion = bloquearDeseleccion;
     }
 }
