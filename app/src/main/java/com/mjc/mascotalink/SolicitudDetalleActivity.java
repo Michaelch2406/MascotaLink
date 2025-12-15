@@ -523,9 +523,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
                         actualizarBotonesPorEstado();
                         // Volver a SolicitudesActivity después de 1 segundo
-                        new android.os.Handler().postDelayed(() -> {
-                            finish();
-                        }, 1000);
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1000);
                     },
                     e -> {
                         Log.e(TAG, "Error al rechazar solicitud después de reintentos", e);
@@ -612,9 +610,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
                         actualizarBotonesPorEstado();
                         // Volver a SolicitudesActivity después de 1 segundo
-                        new android.os.Handler().postDelayed(() -> {
-                            finish();
-                        }, 1000);
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1000);
                     },
                     e -> {
                         Log.e(TAG, "Error al aceptar solicitud después de reintentos", e);

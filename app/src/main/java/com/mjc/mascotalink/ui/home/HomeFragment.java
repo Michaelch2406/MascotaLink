@@ -80,7 +80,7 @@ public class HomeFragment extends Fragment {
         // Observe errors
         viewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                Snackbar.make(view, error, Snackbar.LENGTH_LONG)
+                Snackbar.make(view, error, com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG)
                     .setAction(R.string.home_retry_action, v -> refreshData())
                     .show();
                 viewModel.clearError();

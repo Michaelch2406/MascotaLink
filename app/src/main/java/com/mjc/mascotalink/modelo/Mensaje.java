@@ -27,11 +27,11 @@ public class Mensaje implements ChatItem {
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
-    public String getId_remitente() { return id_remitente; }
-    public void setId_remitente(String id_remitente) { this.id_remitente = id_remitente; }
+    public String getIdRemitente() { return id_remitente; }
+    public void setIdRemitente(String id_remitente) { this.id_remitente = id_remitente; }
 
-    public String getId_destinatario() { return id_destinatario; }
-    public void setId_destinatario(String id_destinatario) { this.id_destinatario = id_destinatario; }
+    public String getIdDestinatario() { return id_destinatario; }
+    public void setIdDestinatario(String id_destinatario) { this.id_destinatario = id_destinatario; }
 
     public String getTexto() { return texto; }
     public void setTexto(String texto) { this.texto = texto; }
@@ -48,11 +48,11 @@ public class Mensaje implements ChatItem {
     public String getTipo() { return tipo; }
     public void setTipo(String tipo) { this.tipo = tipo; }
 
-    public Date getFecha_eliminacion() { return fecha_eliminacion; }
-    public void setFecha_eliminacion(Date fecha_eliminacion) { this.fecha_eliminacion = fecha_eliminacion; }
-    
-    public String getImagen_url() { return imagen_url; }
-    public void setImagen_url(String imagen_url) { this.imagen_url = imagen_url; }
+    public Date getFechaEliminacion() { return fecha_eliminacion; }
+    public void setFechaEliminacion(Date fecha_eliminacion) { this.fecha_eliminacion = fecha_eliminacion; }
+
+    public String getImagenUrl() { return imagen_url; }
+    public void setImagenUrl(String imagen_url) { this.imagen_url = imagen_url; }
     
     public Double getLatitud() { return latitud; }
     public void setLatitud(Double latitud) { this.latitud = latitud; }

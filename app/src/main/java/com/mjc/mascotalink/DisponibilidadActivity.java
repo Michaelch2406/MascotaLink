@@ -301,9 +301,7 @@ public class DisponibilidadActivity extends AppCompatActivity {
             }
             // Mostrar diálogo para seleccionar fecha primero
             DialogHorarioEspecialFragment dialog = DialogHorarioEspecialFragment.newInstance(currentUserId, null);
-            dialog.setOnHorarioEspecialGuardadoListener(() -> {
-                cargarDatosDisponibilidad();
-            });
+            dialog.setOnHorarioEspecialGuardadoListener(this::cargarDatosDisponibilidad);
             dialog.show(getSupportFragmentManager(), "horario_especial");
         });
     }

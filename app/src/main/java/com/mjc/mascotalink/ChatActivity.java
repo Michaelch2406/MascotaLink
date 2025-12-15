@@ -1206,16 +1206,16 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void setupMessageListeners() {
-        socketManager.on("new_message", args -> handleWebSocketNewMessage(args));
-        socketManager.on("message_read", args -> handleWebSocketMessageRead(args));
+        socketManager.on("new_message", this::handleWebSocketNewMessage);
+        socketManager.on("message_read", this::handleWebSocketMessageRead);
         socketManager.on("user_typing", args -> handleWebSocketTyping(args, true));
         socketManager.on("user_stop_typing", args -> handleWebSocketTyping(args, false));
     }
 
     private void setupPresenceListeners() {
-        socketManager.on("user_connected", args -> handleWebSocketUserConnected(args));
-        socketManager.on("user_disconnected", args -> handleWebSocketUserDisconnected(args));
-        socketManager.on("online_users_response", args -> handleWebSocketOnlineUsersResponse(args));
+        socketManager.on("user_connected", this::handleWebSocketUserConnected);
+        socketManager.on("user_disconnected", this::handleWebSocketUserDisconnected);
+        socketManager.on("online_users_response", this::handleWebSocketOnlineUsersResponse);
     }
 
     private void queryInitialPresence() {
