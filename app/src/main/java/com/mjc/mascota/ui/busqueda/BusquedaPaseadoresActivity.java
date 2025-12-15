@@ -164,7 +164,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private SwipeRefreshLayout swipeRefreshLayout;
     private NestedScrollView contentScrollView;
     private BottomNavigationView bottomNav;
-    private String userRole = "DUEÑO";
+    private String userRole = FirestoreConstants.ROLE_DUENO;
     private Context glideContext;
 
     // Map Interaction Constants & Views
@@ -199,6 +199,16 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         Log.d(TAG, "onCreate");
         setContentView(R.layout.activity_busqueda_paseadores);
 
+        initializeCore();
+        initializeViews();
+        setupUIComponents();
+        setupLocationServices();
+        restoreSavedState(savedInstanceState);
+        setupPeriodicRefresh();
+        setupNetworkMonitoring();
+    }
+
+    private void initializeCore() {
         mAuth = FirebaseAuth.getInstance();
         socketManager = SocketManager.getInstance(this);
         glideContext = getApplicationContext();
@@ -210,12 +220,14 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
 
         viewModel = new ViewModelProvider(this).get(BusquedaViewModel.class);
-        
+
         // Setup Bottom Navigation immediately to prevent flicker
         if (bottomNav != null) {
              setupBottomNavigation();
         }
+    }
 
+    private void initializeViews() {
         progressBar = findViewById(R.id.progressBar);
         emptyStateView = findViewById(R.id.emptyStateView);
         errorStateView = findViewById(R.id.errorStateView);
@@ -226,62 +238,79 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         contentScrollView = findViewById(R.id.content_scroll_view);
         bottomNav = findViewById(R.id.bottom_navigation);
-        
+
         // Map Views
         mapContainer = findViewById(R.id.map_container);
         viewMapOverlay = findViewById(R.id.view_map_overlay);
         fabRefreshMap = findViewById(R.id.fab_refresh_map);
 
-        fabRefreshMap.setOnClickListener(v -> {
-            Toast.makeText(this, "Actualizando mapa...", Toast.LENGTH_SHORT).show();
-            if (mMap != null) {
-                LatLng center = mMap.getCameraPosition().target;
-                cargarPaseadoresCercanos(center, currentSearchRadiusKm);
-            } else {
-                startLocationUpdates(); // Try to get location if map not ready or location lost
-            }
-        });
-
         // Botón de Búsqueda con IA
         btnBuscarConIA = findViewById(R.id.btn_buscar_con_ia);
+    }
 
-        btnBuscarConIA.setOnClickListener(v -> {
-            Log.d(TAG, "Botón Buscar con IA presionado");
-
-            // Mostrar DialogFragment de recomendación IA
-            RecomendacionIADialogFragment dialog = new RecomendacionIADialogFragment();
-            dialog.show(getSupportFragmentManager(), "RecomendacionIADialog");
-        });
-
+    private void setupUIComponents() {
+        setupFabRefreshMap();
+        setupBuscarConIA();
         setupRecyclerViews();
         setupSearch();
         setupPullToRefresh();
         setupPagination();
         setupToolbar();
         setupMapInteraction();
+        setupRetryButton();
+        setupMapFragment();
+    }
 
+    private void setupFabRefreshMap() {
+        fabRefreshMap.setOnClickListener(v -> {
+            Toast.makeText(this, "Actualizando mapa...", Toast.LENGTH_SHORT).show();
+            if (mMap != null) {
+                LatLng center = mMap.getCameraPosition().target;
+                cargarPaseadoresCercanos(center, currentSearchRadiusKm);
+            } else {
+                startLocationUpdates();
+            }
+        });
+    }
+
+    private void setupBuscarConIA() {
+        btnBuscarConIA.setOnClickListener(v -> {
+            Log.d(TAG, "Botón Buscar con IA presionado");
+            RecomendacionIADialogFragment dialog = new RecomendacionIADialogFragment();
+            dialog.show(getSupportFragmentManager(), "RecomendacionIADialog");
+        });
+    }
+
+    private void setupRetryButton() {
         retryButton.setOnClickListener(v -> {
             viewModel.onSearchQueryChanged(searchAutocomplete.getText().toString());
         });
+    }
 
+    private void setupMapFragment() {
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map_fragment);
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
+    }
 
+    private void setupLocationServices() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         createLocationRequest();
         createLocationCallback();
+    }
 
+    private void restoreSavedState(Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             String savedQuery = savedInstanceState.getString(SEARCH_QUERY_KEY);
             if (savedQuery != null && !savedQuery.isEmpty()) {
                 searchAutocomplete.setText(savedQuery);
             }
         }
+    }
 
-        // Configurar la actualización periódica del mapa
+    private void setupPeriodicRefresh() {
         periodicRefreshRunnable = () -> {
             if (lastKnownLocation != null && mMap != null) {
                 Log.d(TAG, "Actualizando paseadores periódicamente.");
@@ -289,9 +318,6 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             }
             periodicRefreshHandler.postDelayed(periodicRefreshRunnable, PERIODIC_REFRESH_INTERVAL_MS);
         };
-
-        // Setup NetworkMonitorHelper for WebSocket stability
-        setupNetworkMonitoring();
     }
 
     @Override
@@ -478,21 +504,21 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
 
         Log.d(TAG, "checkUserSessionAndRole: Verificando rol para UID: " + currentUser.getUid());
-        FirebaseFirestore.getInstance().collection("usuarios").document(currentUser.getUid()).get()
+        FirebaseFirestore.getInstance().collection(FirestoreConstants.COLLECTION_USUARIOS).document(currentUser.getUid()).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
-                        String rol = documentSnapshot.getString("rol");
+                        String rol = documentSnapshot.getString(FirestoreConstants.FIELD_ROL);
                         if (rol != null) {
                             userRole = rol;
                             BottomNavManager.saveUserRole(this, rol);
                         }
                         Log.d(TAG, "checkUserSessionAndRole: Rol encontrado: " + rol);
-                        if ("DUEÑO".equals(rol)) {
+                        if (FirestoreConstants.ROLE_DUENO.equals(rol)) {
                             setupObservers();
                         } else {
                             Log.w(TAG, "checkUserSessionAndRole: Acceso no autorizado para rol: " + rol);
                             Toast.makeText(this, "Acceso no autorizado para este rol.", Toast.LENGTH_LONG).show();
-                            if ("PASEADOR".equals(rol)) {
+                            if (FirestoreConstants.ROLE_PASEADOR.equals(rol)) {
                                 startActivity(new Intent(this, PerfilPaseadorActivity.class));
                             }
                             finish();
@@ -515,7 +541,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         popularesAdapter.setOnItemClickListener(paseador -> {
             Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
             intent.putExtra("paseadorId", paseador.getId());
-            intent.putExtra("viewerRole", "DUEÑO");
+            intent.putExtra("viewerRole", FirestoreConstants.ROLE_DUENO);
             startActivity(intent);
         });
 
@@ -532,7 +558,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
         intent.putExtra("paseadorId", paseador.getId());
-        intent.putExtra("viewerRole", "DUEÑO");
+        intent.putExtra("viewerRole", FirestoreConstants.ROLE_DUENO);
         startActivity(intent);
 
         PaseadorMarker marker = cachedPaseadorMarkers.get(paseador.getId());
@@ -1075,8 +1101,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
-        // CRITICAL FIX: Setup Touch Listener RECURSIVELY on the Map View hierarchy
-        // This ensures we catch touches on the SurfaceView/TextureView itself
+        setupMapTouchListener();
+        configureMapUI();
+        setupClusterManager();
+        setupInfoWindowAdapter();
+        checkLocationPermission();
+        setDefaultMapPosition();
+        loadInitialPaseadores();
+        setupCameraIdleListener();
+    }
+
+    private void setupMapTouchListener() {
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);
         if (mapFragment != null && mapFragment.getView() != null) {
             setTouchListenerRecursive(mapFragment.getView(), (v, event) -> {
@@ -1084,91 +1119,107 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 switch (action) {
                     case MotionEvent.ACTION_DOWN:
                     case MotionEvent.ACTION_MOVE:
-                        // "Congelar" el scroll padre inmediatamente al detectar intención de interactuar con el mapa
                         if (contentScrollView != null) contentScrollView.requestDisallowInterceptTouchEvent(true);
                         if (swipeRefreshLayout != null) swipeRefreshLayout.requestDisallowInterceptTouchEvent(true);
                         break;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        // Liberar el scroll padre
                         if (contentScrollView != null) contentScrollView.requestDisallowInterceptTouchEvent(false);
                         if (swipeRefreshLayout != null) swipeRefreshLayout.requestDisallowInterceptTouchEvent(false);
                         break;
                 }
-                return false; // IMPORTANTE: Devolver false para que el evento llegue al mapa
+                return false;
             });
         }
+    }
 
+    private void configureMapUI() {
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setScrollGesturesEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
         mMap.getUiSettings().setTiltGesturesEnabled(true);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
+    }
 
+    private void setupClusterManager() {
         mClusterManager = new ClusterManager<>(BusquedaPaseadoresActivity.this, mMap);
         PaseadorClusterRenderer renderer = new PaseadorClusterRenderer(BusquedaPaseadoresActivity.this, mMap, mClusterManager);
         mClusterManager.setRenderer(renderer);
         mMap.setOnCameraIdleListener(mClusterManager);
         mMap.setOnMarkerClickListener(mClusterManager);
 
-        // Two-stage selection logic
+        setupClusterItemClickListener(renderer);
+        setupMapClickListener(renderer);
+    }
+
+    private void setupClusterItemClickListener(PaseadorClusterRenderer renderer) {
         mClusterManager.setOnClusterItemClickListener(item -> {
             String clickedId = item.getPaseadorMarker().getPaseadorId();
-            
+
             if (clickedId.equals(selectedPaseadorId)) {
-                // Second click: Navigate to Profile
-                Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
-                intent.putExtra("paseadorId", clickedId);
-                intent.putExtra("viewerRole", "DUEÑO");
-                startActivity(intent);
+                navigateToProfile(clickedId);
                 return true;
             } else {
-                // First click: Select and Center
-                selectedPaseadorId = clickedId;
-                
-                // Animate Camera
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(item.getPosition(), 15f));
-                
-                // Re-render to update icons (Normal vs Selected)
-                Marker marker = renderer.getMarker(item);
-                if (marker != null) {
-                    marker.showInfoWindow();
-                    renderer.updateMarkerIcon(marker, item);
-                }
-                
-                // Deselect others
-                for (PaseadorClusterItem otherItem : mClusterManager.getAlgorithm().getItems()) {
-                    if (!otherItem.getPaseadorMarker().getPaseadorId().equals(clickedId)) {
-                        Marker otherMarker = renderer.getMarker(otherItem);
-                        if (otherMarker != null) {
-                            renderer.updateMarkerIcon(otherMarker, otherItem);
-                        }
-                    }
-                }
-                
-                return true; // Consume event
+                selectAndCenterPaseador(clickedId, item, renderer);
+                return true;
             }
         });
+    }
 
-        // Deselect on map click
+    private void navigateToProfile(String paseadorId) {
+        Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
+        intent.putExtra("paseadorId", paseadorId);
+        intent.putExtra("viewerRole", FirestoreConstants.ROLE_DUENO);
+        startActivity(intent);
+    }
+
+    private void selectAndCenterPaseador(String paseadorId, PaseadorClusterItem item, PaseadorClusterRenderer renderer) {
+        selectedPaseadorId = paseadorId;
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(item.getPosition(), 15f));
+
+        Marker marker = renderer.getMarker(item);
+        if (marker != null) {
+            marker.showInfoWindow();
+            renderer.updateMarkerIcon(marker, item);
+        }
+
+        deselectOtherPaseadores(paseadorId, renderer);
+    }
+
+    private void deselectOtherPaseadores(String selectedId, PaseadorClusterRenderer renderer) {
+        for (PaseadorClusterItem otherItem : mClusterManager.getAlgorithm().getItems()) {
+            if (!otherItem.getPaseadorMarker().getPaseadorId().equals(selectedId)) {
+                Marker otherMarker = renderer.getMarker(otherItem);
+                if (otherMarker != null) {
+                    renderer.updateMarkerIcon(otherMarker, otherItem);
+                }
+            }
+        }
+    }
+
+    private void setupMapClickListener(PaseadorClusterRenderer renderer) {
         mMap.setOnMapClickListener(latLng -> {
             if (selectedPaseadorId != null) {
                 selectedPaseadorId = null;
-                // Reset all icons
-                for (PaseadorClusterItem item : mClusterManager.getAlgorithm().getItems()) {
-                    Marker marker = renderer.getMarker(item);
-                    if (marker != null) {
-                        renderer.updateMarkerIcon(marker, item);
-                    }
-                }
+                resetAllMarkerIcons(renderer);
             }
         });
+    }
 
-        // Configurar el InfoWindowAdapter personalizado
+    private void resetAllMarkerIcons(PaseadorClusterRenderer renderer) {
+        for (PaseadorClusterItem item : mClusterManager.getAlgorithm().getItems()) {
+            Marker marker = renderer.getMarker(item);
+            if (marker != null) {
+                renderer.updateMarkerIcon(marker, item);
+            }
+        }
+    }
+
+    private void setupInfoWindowAdapter() {
         PaseadorInfoWindowAdapter infoWindowAdapter = new PaseadorInfoWindowAdapter(BusquedaPaseadoresActivity.this, paseadorId -> {
             Intent intent = new Intent(BusquedaPaseadoresActivity.this, PerfilPaseadorActivity.class);
             intent.putExtra("paseadorId", paseadorId);
-            intent.putExtra("viewerRole", "DUEÑO");
+            intent.putExtra("viewerRole", FirestoreConstants.ROLE_DUENO);
             startActivity(intent);
         });
         mMap.setInfoWindowAdapter(infoWindowAdapter);
@@ -1177,50 +1228,59 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 infoWindowAdapter.getListener().onVerPerfilClick((String) marker.getTag());
             }
         });
+    }
 
-        checkLocationPermission();
-
+    private void setDefaultMapPosition() {
         LatLng quito = new LatLng(-0.180653, -78.467834);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(quito, 12));
+    }
 
+    private void loadInitialPaseadores() {
         if (lastKnownLocation != null) {
             cargarPaseadoresCercanos(new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude()), currentSearchRadiusKm);
         }
+    }
 
+    private void setupCameraIdleListener() {
         mMap.setOnCameraIdleListener(() -> {
             mClusterManager.onCameraIdle();
-            
+
             LatLng center = mMap.getCameraPosition().target;
             float zoom = mMap.getCameraPosition().zoom;
 
-            boolean shouldReload = false;
-            if (lastLoadedLocation == null) {
-                shouldReload = true;
-            }
-            else {
-                float[] results = new float[1];
-                Location.distanceBetween(lastLoadedLocation.getLatitude(), lastLoadedLocation.getLongitude(),
-                        center.latitude, center.longitude, results);
-                if (results[0] > 500 || Math.abs(zoom - lastLoadedZoom) > 1.0) {
-                    shouldReload = true;
-                }
-            }
-
-            if (shouldReload) {
-                if (lastLoadedLocation == null) {
-                    lastLoadedLocation = new Location("map_center");
-                }
-                lastLoadedLocation.setLatitude(center.latitude);
-                lastLoadedLocation.setLongitude(center.longitude);
-                lastLoadedZoom = zoom;
-
-                mapDebounceHandler.removeCallbacks(mapDebounceRunnable);
-                mapDebounceRunnable = () -> {
-                    cargarPaseadoresCercanos(center, currentSearchRadiusKm);
-                };
-                mapDebounceHandler.postDelayed(mapDebounceRunnable, MAP_DEBOUNCE_DELAY_MS);
+            if (shouldReloadPaseadores(center, zoom)) {
+                updateLastLoadedPosition(center, zoom);
+                scheduleMapReload(center);
             }
         });
+    }
+
+    private boolean shouldReloadPaseadores(LatLng center, float zoom) {
+        if (lastLoadedLocation == null) {
+            return true;
+        }
+
+        float[] results = new float[1];
+        Location.distanceBetween(lastLoadedLocation.getLatitude(), lastLoadedLocation.getLongitude(),
+                center.latitude, center.longitude, results);
+        return results[0] > 500 || Math.abs(zoom - lastLoadedZoom) > 1.0;
+    }
+
+    private void updateLastLoadedPosition(LatLng center, float zoom) {
+        if (lastLoadedLocation == null) {
+            lastLoadedLocation = new Location("map_center");
+        }
+        lastLoadedLocation.setLatitude(center.latitude);
+        lastLoadedLocation.setLongitude(center.longitude);
+        lastLoadedZoom = zoom;
+    }
+
+    private void scheduleMapReload(LatLng center) {
+        mapDebounceHandler.removeCallbacks(mapDebounceRunnable);
+        mapDebounceRunnable = () -> {
+            cargarPaseadoresCercanos(center, currentSearchRadiusKm);
+        };
+        mapDebounceHandler.postDelayed(mapDebounceRunnable, MAP_DEBOUNCE_DELAY_MS);
     }
 
     private void setTouchListenerRecursive(View view, View.OnTouchListener listener) {
@@ -1264,7 +1324,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         if (bottomNav == null) {
             return;
         }
-        String roleForNav = userRole != null ? userRole : "DUEÑO";
+        String roleForNav = userRole != null ? userRole : FirestoreConstants.ROLE_DUENO;
         BottomNavManager.setupBottomNav(this, bottomNav, roleForNav, R.id.menu_search);
     }
 
@@ -1303,10 +1363,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         List<Task<QuerySnapshot>> geoTasks = new ArrayList<>();
 
         for (GeoQueryBounds b : bounds) {
-            Query q = firestore.collection("usuarios")
-                    .whereEqualTo("rol", "PASEADOR")
-                    .whereEqualTo("activo", true)
-                    .orderBy("ubicacion_geohash")
+            Query q = firestore.collection(FirestoreConstants.COLLECTION_USUARIOS)
+                    .whereEqualTo(FirestoreConstants.FIELD_ROL, FirestoreConstants.ROLE_PASEADOR)
+                    .whereEqualTo(FirestoreConstants.FIELD_ACTIVO, true)
+                    .orderBy(FirestoreConstants.FIELD_UBICACION_GEOHASH)
                     .startAt(b.startHash)
                     .endAt(b.endHash)
                     .limit(50);
@@ -1327,8 +1387,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     if (!seenPaseadores.add(doc.getId())) continue; // evitar duplicados
                     if (!isUsuarioEnLinea(doc)) continue;
 
-                    LatLng ubicacionActual = extraerLatLng(doc.get("ubicacion_actual"));
-                    String geohash = doc.getString("ubicacion_geohash");
+                    LatLng ubicacionActual = extraerLatLng(doc.get(FirestoreConstants.FIELD_UBICACION_ACTUAL));
+                    String geohash = doc.getString(FirestoreConstants.FIELD_UBICACION_GEOHASH);
 
                     if (ubicacionActual == null || geohash == null) {
                         Log.w(TAG, "Documento sin ubicacion_actual/geohash: " + doc.getId());
@@ -1384,9 +1444,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void cargarPaseadoresCercanosFallback(LatLng ubicacionUsuario) {
         FirebaseFirestore firestore = FirebaseFirestore.getInstance();
-        firestore.collection("usuarios")
-                .whereEqualTo("rol", "PASEADOR")
-                .whereEqualTo("activo", true)
+        firestore.collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .whereEqualTo(FirestoreConstants.FIELD_ROL, FirestoreConstants.ROLE_PASEADOR)
+                .whereEqualTo(FirestoreConstants.FIELD_ACTIVO, true)
                 .limit(50)
                 .get()
                 .addOnCompleteListener(task -> {
@@ -1445,15 +1505,15 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         // RELAXED LOGIC: Return true if the user is marked as 'activo' generally.
         // We don't want to hide walkers just because they aren't "online" right this second.
         // The map should show all AVAILABLE walkers (who have set themselves as active/working).
-        Boolean activo = doc.getBoolean("activo");
+        Boolean activo = doc.getBoolean(FirestoreConstants.FIELD_ACTIVO);
         if (Boolean.TRUE.equals(activo)) {
             return true;
         }
 
         // Fallback to legacy logic if 'activo' is missing or false but they are online
         try {
-            Boolean enLinea = doc.getBoolean("en_linea");
-            Timestamp lastSeen = doc.getTimestamp("last_seen");
+            Boolean enLinea = doc.getBoolean(FirestoreConstants.FIELD_EN_LINEA);
+            Timestamp lastSeen = doc.getTimestamp(FirestoreConstants.FIELD_LAST_SEEN);
             long now = System.currentTimeMillis();
             boolean reciente = lastSeen != null && (now - lastSeen.toDate().getTime()) <= ONLINE_TIMEOUT_MS;
 
@@ -1468,18 +1528,18 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     // M??todo renombrado y adaptado
     private Task<PaseadorMarker> buildPaseadorMarkerFromUser(DocumentSnapshot userDoc, LatLng ubicacionUsuario) {
         String userId = userDoc.getId();
-        
+
         // 1. Intentar obtener ubicaci??n en tiempo real del perfil
-        LatLng ubicacionRealtime = extraerLatLng(userDoc.get("ubicacion_actual"));
+        LatLng ubicacionRealtime = extraerLatLng(userDoc.get(FirestoreConstants.FIELD_UBICACION_ACTUAL));
 
         if (ubicacionRealtime != null) {
             return crearMarcador(userId, userDoc, ubicacionRealtime, ubicacionUsuario, true);
-        } 
-        
+        }
+
         // 2. Fallback: Buscar zona de servicio principal
-        return FirebaseFirestore.getInstance().collection("paseadores").document(userId)
-                .collection("zonas_servicio")
-                .limit(1) 
+        return FirebaseFirestore.getInstance().collection(FirestoreConstants.COLLECTION_PASEADORES).document(userId)
+                .collection(FirestoreConstants.COLLECTION_ZONAS_SERVICIO)
+                .limit(1)
                 .get()
                 .continueWithTask(task -> {
                     LatLng ubicacionFinal = null;
@@ -1540,8 +1600,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         // Filtro de radio
         if (distanciaKm <= currentSearchRadiusKm) {
-            String nombre = userDoc.getString("nombre_display");
-            String fotoUrl = userDoc.getString("foto_perfil");
+            String nombre = userDoc.getString(FirestoreConstants.FIELD_NOMBRE_DISPLAY);
+            String fotoUrl = userDoc.getString(FirestoreConstants.FIELD_FOTO_PERFIL);
             if (fotoUrl != null && !fotoUrl.isEmpty()) {
                 // Preload en cachÇ¸ para que el marker se pinte sin saltos
                 Glide.with(getApplicationContext())
@@ -1550,20 +1610,20 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         .preload();
             }
 
-            return FirebaseFirestore.getInstance().collection("paseadores").document(userId).get().continueWithTask(task1 -> {
+            return FirebaseFirestore.getInstance().collection(FirestoreConstants.COLLECTION_PASEADORES).document(userId).get().continueWithTask(task1 -> {
                 if (task1.isSuccessful()) {
                     DocumentSnapshot paseadorDoc = task1.getResult();
                     if (paseadorDoc.exists()) {
                         // Verificar estado de aprobación
-                        String estadoVerificacion = paseadorDoc.getString("verificacion_estado");
-                        if (!"APROBADO".equals(estadoVerificacion)) {
+                        String estadoVerificacion = paseadorDoc.getString(FirestoreConstants.FIELD_VERIFICACION_ESTADO);
+                        if (!FirestoreConstants.STATUS_APROBADO.equals(estadoVerificacion)) {
                             return Tasks.forResult(null);
                         }
 
-                        double calificacion = paseadorDoc.getDouble("calificacion_promedio") != null ? paseadorDoc.getDouble("calificacion_promedio") : 0.0;
+                        double calificacion = paseadorDoc.getDouble(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO) != null ? paseadorDoc.getDouble(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO) : 0.0;
 
-                        Boolean aceptaSolicitudes = userDoc.getBoolean("acepta_solicitudes");
-                        boolean enPaseo = userDoc.getBoolean("en_paseo") != null && userDoc.getBoolean("en_paseo");
+                        Boolean aceptaSolicitudes = userDoc.getBoolean(FirestoreConstants.FIELD_ACEPTA_SOLICITUDES);
+                        boolean enPaseo = userDoc.getBoolean(FirestoreConstants.FIELD_EN_PASEO) != null && userDoc.getBoolean(FirestoreConstants.FIELD_EN_PASEO);
                         if (aceptaSolicitudes != null && !aceptaSolicitudes) {
                             Log.d(TAG, "Paseador " + userId + " pausó servicios (acepta_solicitudes=false)");
                             boolean disponible = false;
@@ -1619,34 +1679,34 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         String diaKey; // clave en horario_default (lowercase, sin acentos)
         switch (dayOfWeek) {
             case Calendar.MONDAY:
-                diaActual = "Lunes";
-                diaKey = "lunes";
+                diaActual = FirestoreConstants.DAY_LUNES_CAP;
+                diaKey = FirestoreConstants.DAY_LUNES;
                 break;
             case Calendar.TUESDAY:
-                diaActual = "Martes";
-                diaKey = "martes";
+                diaActual = FirestoreConstants.DAY_MARTES_CAP;
+                diaKey = FirestoreConstants.DAY_MARTES;
                 break;
             case Calendar.WEDNESDAY:
-                diaActual = "Miércoles";
-                diaActualAlt = "Miercoles";
-                diaKey = "miercoles";
+                diaActual = FirestoreConstants.DAY_MIERCOLES_CAP;
+                diaActualAlt = FirestoreConstants.DAY_MIERCOLES_ALT;
+                diaKey = FirestoreConstants.DAY_MIERCOLES;
                 break;
             case Calendar.THURSDAY:
-                diaActual = "Jueves";
-                diaKey = "jueves";
+                diaActual = FirestoreConstants.DAY_JUEVES_CAP;
+                diaKey = FirestoreConstants.DAY_JUEVES;
                 break;
             case Calendar.FRIDAY:
-                diaActual = "Viernes";
-                diaKey = "viernes";
+                diaActual = FirestoreConstants.DAY_VIERNES_CAP;
+                diaKey = FirestoreConstants.DAY_VIERNES;
                 break;
             case Calendar.SATURDAY:
-                diaActual = "Sábado";
-                diaActualAlt = "Sabado";
-                diaKey = "sabado";
+                diaActual = FirestoreConstants.DAY_SABADO_CAP;
+                diaActualAlt = FirestoreConstants.DAY_SABADO_ALT;
+                diaKey = FirestoreConstants.DAY_SABADO;
                 break;
             case Calendar.SUNDAY:
-                diaActual = "Domingo";
-                diaKey = "domingo";
+                diaActual = FirestoreConstants.DAY_DOMINGO_CAP;
+                diaKey = FirestoreConstants.DAY_DOMINGO;
                 break;
             default:
                 Log.e(TAG, "Día de la semana inválido: " + dayOfWeek);
@@ -1662,8 +1722,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         final String finalDiaActualAlt = diaActualAlt;
 
         // 1) Intentar esquema NUEVO: horario_default
-        return db.collection("paseadores").document(paseadorId)
-                .collection("disponibilidad").document("horario_default")
+        return db.collection(FirestoreConstants.COLLECTION_PASEADORES).document(paseadorId)
+                .collection(FirestoreConstants.COLLECTION_DISPONIBILIDAD).document(FirestoreConstants.DOCUMENT_HORARIO_DEFAULT)
                 .get()
                 .continueWithTask(task -> {
                     if (task.isSuccessful()) {
@@ -1677,14 +1737,14 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                                 return Tasks.forResult(false);
                             }
 
-                            Boolean disponibleDia = (Boolean) diaData.get("disponible");
+                            Boolean disponibleDia = (Boolean) diaData.get(FirestoreConstants.FIELD_DISPONIBLE);
                             if (disponibleDia == null || !disponibleDia) {
                                 Log.d(TAG, "Horario default indica no disponible para " + finalDiaActual + ".");
                                 return Tasks.forResult(false);
                             }
 
-                            String horaInicioDefault = (String) diaData.get("hora_inicio");
-                            String horaFinDefault = (String) diaData.get("hora_fin");
+                            String horaInicioDefault = (String) diaData.get(FirestoreConstants.FIELD_HORA_INICIO);
+                            String horaFinDefault = (String) diaData.get(FirestoreConstants.FIELD_HORA_FIN);
                             if (horaInicioDefault == null || horaFinDefault == null) {
                                 Log.w(TAG, "Horario default incompleto para " + finalDiaActual + ".");
                                 return Tasks.forResult(false);
@@ -1702,12 +1762,12 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     }
 
                     // 2) Fallback LEGACY/REGISTRO: documentos con dias + hora_inicio/hora_fin (+activo opcional)
-                    Query legacyQuery = db.collection("paseadores").document(paseadorId)
-                            .collection("disponibilidad");
+                    Query legacyQuery = db.collection(FirestoreConstants.COLLECTION_PASEADORES).document(paseadorId)
+                            .collection(FirestoreConstants.COLLECTION_DISPONIBILIDAD);
                     if (finalDiaActualAlt != null) {
-                        legacyQuery = legacyQuery.whereArrayContainsAny("dias", Arrays.asList(finalDiaActual, finalDiaActualAlt));
+                        legacyQuery = legacyQuery.whereArrayContainsAny(FirestoreConstants.FIELD_DIAS, Arrays.asList(finalDiaActual, finalDiaActualAlt));
                     } else {
-                        legacyQuery = legacyQuery.whereArrayContains("dias", finalDiaActual);
+                        legacyQuery = legacyQuery.whereArrayContains(FirestoreConstants.FIELD_DIAS, finalDiaActual);
                     }
 
                     return legacyQuery.get().continueWith(legacyTask -> {
@@ -1723,13 +1783,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                         }
 
                         for (QueryDocumentSnapshot doc : querySnapshot) {
-                            Boolean activo = doc.getBoolean("activo");
+                            Boolean activo = doc.getBoolean(FirestoreConstants.FIELD_ACTIVO);
                             if (activo != null && !activo) {
                                 continue;
                             }
 
-                            String horaInicio = doc.getString("hora_inicio"); // "08:00"
-                            String horaFin = doc.getString("hora_fin");       // "17:00"
+                            String horaInicio = doc.getString(FirestoreConstants.FIELD_HORA_INICIO); // "08:00"
+                            String horaFin = doc.getString(FirestoreConstants.FIELD_HORA_FIN);       // "17:00"
 
                             if (horaInicio == null || horaFin == null) {
                                 Log.w(TAG, "Documento sin hora_inicio o hora_fin: " + doc.getId());
