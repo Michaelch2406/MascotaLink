@@ -114,23 +114,6 @@ public class RecomendacionIAHelper {
         }
     }
 
-    private void showRecommendation(Map<String, Object> recommendation, Map<String, Object> paseadorData) {
-        loadingContainer.setVisibility(View.GONE);
-        recommendationContainer.setVisibility(View.VISIBLE);
-        errorContainer.setVisibility(View.GONE);
-
-        recommendationContent.removeAllViews();
-        View itemView = LayoutInflater.from(activity)
-                .inflate(R.layout.item_paseador_recomendacion_ia, recommendationContent, false);
-
-        bindData(itemView, recommendation, paseadorData);
-        recommendationContent.addView(itemView);
-
-        if (listener != null) {
-            listener.onSuccess(recommendation);
-        }
-    }
-
     private void bindData(View itemView, Map<String, Object> recommendation, Map<String, Object> paseadorData) {
         bindBasicInfo(itemView, recommendation, paseadorData);
         bindPhoto(itemView, paseadorData);

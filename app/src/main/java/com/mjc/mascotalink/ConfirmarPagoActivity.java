@@ -584,7 +584,11 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         DocumentReference reservaGrupoRef = reservaDoc.getReference();
                         transaction.update(reservaGrupoRef, updates);
                     }
-                } catch (ExecutionException | InterruptedException e) {
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    Log.e(TAG, "Error al cargar grupo de reservas: " + e.getMessage(), e);
+                    throw new RuntimeException("No se pudo actualizar el grupo de reservas", e);
+                } catch (ExecutionException e) {
                     Log.e(TAG, "Error al cargar grupo de reservas: " + e.getMessage(), e);
                     throw new RuntimeException("No se pudo actualizar el grupo de reservas", e);
                 }

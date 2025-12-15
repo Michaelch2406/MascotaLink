@@ -209,7 +209,8 @@ public class LifecycleHelper {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
+                android.util.Log.w("LifecycleHelper", "checkLeaks interrupted", e);
             }
 
             int aliveCount = 0;

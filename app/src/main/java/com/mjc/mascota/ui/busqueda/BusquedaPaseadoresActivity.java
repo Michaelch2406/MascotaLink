@@ -1864,7 +1864,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             canvas.drawText(ratingText, x, y - textBounds.exactCenterY(), paint);
 
             return BitmapDescriptorFactory.fromBitmap(finalBitmap);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Log.e(TAG, "Error al cargar imagen para marcador: " + e.getMessage());
+            return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
+        } catch (ExecutionException | TimeoutException e) {
             Log.e(TAG, "Error al cargar imagen para marcador: " + e.getMessage());
             return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
         }
