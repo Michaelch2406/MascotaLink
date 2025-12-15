@@ -6,6 +6,23 @@ public abstract class UiState<T> {
 
     private UiState() {}
 
+    // Factory methods para acceso estático correcto
+    public static <T> Loading<T> loading() {
+        return new Loading<>();
+    }
+
+    public static <T> Success<T> success(T data) {
+        return new Success<>(data);
+    }
+
+    public static <T> Error<T> error(String message) {
+        return new Error<>(message);
+    }
+
+    public static <T> Empty<T> empty() {
+        return new Empty<>();
+    }
+
     public static final class Loading<T> extends UiState<T> {
         public Loading() {}
     }

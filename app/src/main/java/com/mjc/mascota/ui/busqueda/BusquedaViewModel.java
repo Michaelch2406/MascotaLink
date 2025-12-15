@@ -76,7 +76,7 @@ public class BusquedaViewModel extends ViewModel {
                 currentQuery = "";
                 lastVisibleDocument = null;
                 isLastPage = true;
-                _searchResults.setValue(new UiState.Empty<>());
+                _searchResults.setValue(UiState.empty());
                 return;
             }
             executeSearch(normalizedQuery, false, _filtros.getValue());
@@ -121,7 +121,7 @@ public class BusquedaViewModel extends ViewModel {
             currentQuery = query;
             lastVisibleDocument = null;
             isLastPage = false;
-            _searchResults.setValue(new UiState.Loading<>());
+            _searchResults.setValue(UiState.loading());
         }
 
         isLoadingMore = true;
@@ -143,19 +143,19 @@ public class BusquedaViewModel extends ViewModel {
                         if (currentState instanceof UiState.Success) {
                             List<PaseadorResultado> currentList = new ArrayList<>(((UiState.Success<List<PaseadorResultado>>) currentState).getData());
                             currentList.addAll(newResults);
-                            _searchResults.setValue(new UiState.Success<>(currentList));
+                            _searchResults.setValue(UiState.success(currentList));
                         }
                     } else {
-                        _searchResults.setValue(new UiState.Success<>(newResults));
+                        _searchResults.setValue(UiState.success(newResults));
                     }
 
                 } else if (uiState instanceof UiState.Empty) {
                     if (!isPaginating) {
-                        _searchResults.setValue(new UiState.Empty<>());
+                        _searchResults.setValue(UiState.empty());
                     }
                     isLastPage = true;
                 } else if (uiState instanceof UiState.Error) {
-                    _searchResults.setValue(new UiState.Error<>(((UiState.Error<PaseadorSearchResult>) uiState).getMessage()));
+                    _searchResults.setValue(UiState.error(((UiState.Error<PaseadorSearchResult>) uiState).getMessage()));
                 }
                 isLoadingMore = false;
             }
