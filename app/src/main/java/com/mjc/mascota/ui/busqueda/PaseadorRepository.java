@@ -20,6 +20,7 @@ import java.util.List;
 
 import com.mjc.mascota.modelo.Filtros;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascota.utils.FirestoreConstants;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -37,16 +38,15 @@ public class PaseadorRepository {
         MutableLiveData<UiState<List<PaseadorResultado>>> liveData = new MutableLiveData<>();
         liveData.setValue(new UiState.Loading<>());
 
-        // Mostrar cache inmediato si existe
         List<PaseadorResultado> cached = readCachedPopulares();
         if (cached != null && !cached.isEmpty()) {
             liveData.setValue(new UiState.Success<>(cached));
         }
 
-        Query query = db.collection("usuarios")
-                .whereEqualTo("rol", "PASEADOR")
-                .whereEqualTo("activo", true)
-                .orderBy("nombre_display") // Ordenar por un campo para consistencia
+        Query query = db.collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .whereEqualTo(FirestoreConstants.FIELD_ROL, FirestoreConstants.ROLE_PASEADOR)
+                .whereEqualTo(FirestoreConstants.FIELD_ACTIVO, true)
+                .orderBy(FirestoreConstants.FIELD_NOMBRE_DISPLAY)
                 .limit(10);
 
         ListenerRegistration listener = query.addSnapshotListener((value, error) -> {
@@ -75,80 +75,128 @@ public class PaseadorRepository {
         MutableLiveData<UiState<List<PaseadorResultado>>> liveData = new MutableLiveData<>();
 
         com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        Task<QuerySnapshot> favoritosTask = currentUser != null ? 
-            db.collection("usuarios").document(currentUser.getUid()).collection("favoritos").get() : 
-            Tasks.forResult(null);
+        Task<QuerySnapshot> favoritosTask = getFavoritosTask(currentUser);
 
         favoritosTask.addOnSuccessListener(favoritosSnapshot -> {
-            java.util.Set<String> favoritosIds = new java.util.HashSet<>();
-            if (favoritosSnapshot != null) {
-                for (DocumentSnapshot doc : favoritosSnapshot) {
-                    favoritosIds.add(doc.getId());
-                }
-            }
+            java.util.Set<String> favoritosIds = extractFavoritosIds(favoritosSnapshot);
+            List<Task<DocumentSnapshot>> paseadorTasks = createPaseadorTasks(userSnapshots);
 
-            List<Task<DocumentSnapshot>> paseadorTasks = new ArrayList<>();
-            for (DocumentSnapshot userDoc : userSnapshots) {
-                paseadorTasks.add(db.collection("paseadores").document(userDoc.getId()).get());
-            }
-
-            Tasks.whenAllSuccess(paseadorTasks).addOnSuccessListener(paseadorDocs -> {
-                ArrayList<PaseadorResultado> resultados = new ArrayList<>();
-                List<Task<QuerySnapshot>> zonaTasks = new ArrayList<>();
-
-                for (int i = 0; i < userSnapshots.size(); i++) {
-                    DocumentSnapshot userDoc = userSnapshots.getDocuments().get(i);
-                    DocumentSnapshot paseadorDoc = (DocumentSnapshot) paseadorDocs.get(i);
-
-                    if (!paseadorDoc.exists()) continue;
-
-                    String estado = paseadorDoc.getString("verificacion_estado");
-                    if (!"APROBADO".equals(estado)) continue;
-
-                    PaseadorResultado resultado = new PaseadorResultado();
-                    resultado.setId(userDoc.getId());
-                    resultado.setNombre(getStringSafely(userDoc, "nombre_display", "N/A"));
-                    resultado.setFotoUrl(getStringSafely(userDoc, "foto_perfil", null));
-                    resultado.setCalificacion(getDoubleSafely(paseadorDoc, "calificacion_promedio", 0.0));
-                    resultado.setTotalResenas(getLongSafely(paseadorDoc, "num_servicios_completados", 0L).intValue());
-                    resultado.setTarifaPorHora(getDoubleSafely(paseadorDoc, "precio_hora", 0.0)); // Corregido a precio_hora
-                    resultado.setFavorito(favoritosIds.contains(userDoc.getId()));
-
-                    // Set online status from usuarios collection
-                    String estadoPresencia = getStringSafely(userDoc, "estado", "offline");
-                    resultado.setEnLinea("online".equalsIgnoreCase(estadoPresencia));
-
-                    String experienciaStr = getStringSafely(paseadorDoc, "experiencia_general", "0");
-                    try {
-                        String numeros = experienciaStr.replaceAll("[^0-9]", "");
-                        resultado.setAnosExperiencia(Integer.parseInt(numeros));
-                    } catch (NumberFormatException e) {
-                        resultado.setAnosExperiencia(0);
-                    }
-
-                    resultados.add(resultado);
-                    zonaTasks.add(db.collection("paseadores").document(paseadorDoc.getId()).collection("zonas_servicio").limit(1).get());
-                }
-
-                Tasks.whenAllSuccess(zonaTasks).addOnSuccessListener(zonaSnapshots -> {
-                    for (int i = 0; i < zonaSnapshots.size(); i++) {
-                        QuerySnapshot zonaSnapshot = (QuerySnapshot) zonaSnapshots.get(i);
-                        if (!zonaSnapshot.isEmpty()) {
-                            String direccion = zonaSnapshot.getDocuments().get(0).getString("direccion");
-                            resultados.get(i).setZonaPrincipal(direccion != null ? direccion : "Sin zona especificada");
-                        } else {
-                            resultados.get(i).setZonaPrincipal("Sin zona especificada");
-                        }
-                    }
-                    liveData.setValue(new UiState.Success<>(resultados));
-                }).addOnFailureListener(e -> liveData.setValue(new UiState.Success<>(resultados))); // Fallback sin zonas
-
-            }).addOnFailureListener(e -> {
-                Log.e(TAG, "Error al combinar datos de paseadores populares", e);
-                liveData.setValue(new UiState.Error<>("No se pudieron cargar los perfiles completos."));
-            });
+            Tasks.whenAllSuccess(paseadorTasks).addOnSuccessListener(paseadorDocs ->
+                processPaseadoresData(userSnapshots, paseadorDocs, favoritosIds, liveData))
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al combinar datos de paseadores populares", e);
+                    liveData.setValue(new UiState.Error<>("No se pudieron cargar los perfiles completos."));
+                });
         });
         return liveData;
+    }
+
+    private Task<QuerySnapshot> getFavoritosTask(com.google.firebase.auth.FirebaseUser currentUser) {
+        return currentUser != null ?
+            db.collection(FirestoreConstants.COLLECTION_USUARIOS)
+              .document(currentUser.getUid())
+              .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+              .get() :
+            Tasks.forResult(null);
+    }
+
+    private java.util.Set<String> extractFavoritosIds(QuerySnapshot favoritosSnapshot) {
+        java.util.Set<String> favoritosIds = new java.util.HashSet<>();
+        if (favoritosSnapshot != null) {
+            for (DocumentSnapshot doc : favoritosSnapshot) {
+                favoritosIds.add(doc.getId());
+            }
+        }
+        return favoritosIds;
+    }
+
+    private List<Task<DocumentSnapshot>> createPaseadorTasks(QuerySnapshot userSnapshots) {
+        List<Task<DocumentSnapshot>> paseadorTasks = new ArrayList<>();
+        for (DocumentSnapshot userDoc : userSnapshots) {
+            paseadorTasks.add(db.collection(FirestoreConstants.COLLECTION_PASEADORES)
+                .document(userDoc.getId()).get());
+        }
+        return paseadorTasks;
+    }
+
+    private void processPaseadoresData(QuerySnapshot userSnapshots, List<Object> paseadorDocs,
+                                       java.util.Set<String> favoritosIds,
+                                       MutableLiveData<UiState<List<PaseadorResultado>>> liveData) {
+        ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+        List<Task<QuerySnapshot>> zonaTasks = new ArrayList<>();
+
+        for (int i = 0; i < userSnapshots.size(); i++) {
+            DocumentSnapshot userDoc = userSnapshots.getDocuments().get(i);
+            DocumentSnapshot paseadorDoc = (DocumentSnapshot) paseadorDocs.get(i);
+
+            if (!isValidPaseador(paseadorDoc)) continue;
+
+            PaseadorResultado resultado = buildPaseadorResultado(userDoc, paseadorDoc, favoritosIds);
+            resultados.add(resultado);
+
+            zonaTasks.add(db.collection(FirestoreConstants.COLLECTION_PASEADORES)
+                .document(paseadorDoc.getId())
+                .collection(FirestoreConstants.COLLECTION_ZONAS_SERVICIO)
+                .limit(1).get());
+        }
+
+        loadZonasAndComplete(zonaTasks, resultados, liveData);
+    }
+
+    private boolean isValidPaseador(DocumentSnapshot paseadorDoc) {
+        if (!paseadorDoc.exists()) return false;
+        String estado = paseadorDoc.getString(FirestoreConstants.FIELD_VERIFICACION_ESTADO);
+        return FirestoreConstants.STATUS_APROBADO.equals(estado);
+    }
+
+    private PaseadorResultado buildPaseadorResultado(DocumentSnapshot userDoc, DocumentSnapshot paseadorDoc,
+                                                     java.util.Set<String> favoritosIds) {
+        PaseadorResultado resultado = new PaseadorResultado();
+        resultado.setId(userDoc.getId());
+        resultado.setNombre(getStringSafely(userDoc, FirestoreConstants.FIELD_NOMBRE_DISPLAY, FirestoreConstants.DEFAULT_NAME));
+        resultado.setFotoUrl(getStringSafely(userDoc, FirestoreConstants.FIELD_FOTO_PERFIL, null));
+        resultado.setCalificacion(getDoubleSafely(paseadorDoc, FirestoreConstants.FIELD_CALIFICACION_PROMEDIO, 0.0));
+        resultado.setTotalResenas(getLongSafely(paseadorDoc, FirestoreConstants.FIELD_NUM_SERVICIOS_COMPLETADOS, 0L).intValue());
+        resultado.setTarifaPorHora(getDoubleSafely(paseadorDoc, FirestoreConstants.FIELD_PRECIO_HORA, 0.0));
+        resultado.setFavorito(favoritosIds.contains(userDoc.getId()));
+
+        String estadoPresencia = getStringSafely(userDoc, FirestoreConstants.FIELD_ESTADO, FirestoreConstants.STATUS_OFFLINE);
+        resultado.setEnLinea(FirestoreConstants.STATUS_ONLINE.equalsIgnoreCase(estadoPresencia));
+
+        setExperienciaFromString(resultado, paseadorDoc);
+
+        return resultado;
+    }
+
+    private void setExperienciaFromString(PaseadorResultado resultado, DocumentSnapshot paseadorDoc) {
+        String experienciaStr = getStringSafely(paseadorDoc, FirestoreConstants.FIELD_EXPERIENCIA_GENERAL, "0");
+        try {
+            String numeros = experienciaStr.replaceAll("[^0-9]", "");
+            resultado.setAnosExperiencia(Integer.parseInt(numeros));
+        } catch (NumberFormatException e) {
+            resultado.setAnosExperiencia(0);
+        }
+    }
+
+    private void loadZonasAndComplete(List<Task<QuerySnapshot>> zonaTasks,
+                                     ArrayList<PaseadorResultado> resultados,
+                                     MutableLiveData<UiState<List<PaseadorResultado>>> liveData) {
+        Tasks.whenAllSuccess(zonaTasks).addOnSuccessListener(zonaSnapshots -> {
+            for (int i = 0; i < zonaSnapshots.size(); i++) {
+                QuerySnapshot zonaSnapshot = (QuerySnapshot) zonaSnapshots.get(i);
+                String zona = extractZonaPrincipal(zonaSnapshot);
+                resultados.get(i).setZonaPrincipal(zona);
+            }
+            liveData.setValue(new UiState.Success<>(resultados));
+        }).addOnFailureListener(e -> liveData.setValue(new UiState.Success<>(resultados)));
+    }
+
+    private String extractZonaPrincipal(QuerySnapshot zonaSnapshot) {
+        if (!zonaSnapshot.isEmpty()) {
+            String direccion = zonaSnapshot.getDocuments().get(0).getString(FirestoreConstants.FIELD_DIRECCION);
+            return direccion != null ? direccion : FirestoreConstants.DEFAULT_ZONE;
+        }
+        return FirestoreConstants.DEFAULT_ZONE;
     }
 
     private void cachePopulares(List<PaseadorResultado> data) {
@@ -156,8 +204,8 @@ public class PaseadorRepository {
             JSONArray array = new JSONArray();
             for (PaseadorResultado p : data) {
                 JSONObject obj = new JSONObject();
-                obj.put("id", p.getId());
-                obj.put("nombre", p.getNombre());
+                obj.put(FirestoreConstants.FIELD_ID, p.getId());
+                obj.put(FirestoreConstants.FIELD_NOMBRE, p.getNombre());
                 obj.put("foto", p.getFotoUrl());
                 obj.put("calificacion", p.getCalificacion());
                 obj.put("totalResenas", p.getTotalResenas());
@@ -180,22 +228,11 @@ public class PaseadorRepository {
             SharedPreferences prefs = MyApplication.getAppContext().getSharedPreferences(POPULARES_CACHE_PREF, android.content.Context.MODE_PRIVATE);
             String raw = prefs.getString(POPULARES_CACHE_KEY, null);
             if (TextUtils.isEmpty(raw)) return null;
+
             JSONArray array = new JSONArray(raw);
             List<PaseadorResultado> list = new ArrayList<>();
             for (int i = 0; i < array.length(); i++) {
-                JSONObject obj = array.getJSONObject(i);
-                PaseadorResultado p = new PaseadorResultado();
-                p.setId(obj.optString("id", ""));
-                p.setNombre(obj.optString("nombre", "N/A"));
-                p.setFotoUrl(obj.optString("foto", null));
-                p.setCalificacion(obj.optDouble("calificacion", 0));
-                p.setTotalResenas(obj.optInt("totalResenas", 0));
-                p.setTarifaPorHora(obj.optDouble("tarifa", 0));
-                p.setZonaPrincipal(obj.optString("zona", "Sin zona especificada"));
-                p.setFavorito(obj.optBoolean("favorito", false));
-                p.setEnLinea(obj.optBoolean("enLinea", false));
-                p.setAnosExperiencia(obj.optInt("anosExp", 0));
-                list.add(p);
+                list.add(parsePaseadorFromJson(array.getJSONObject(i)));
             }
             return list;
         } catch (Exception e) {
@@ -204,169 +241,235 @@ public class PaseadorRepository {
         }
     }
 
+    private PaseadorResultado parsePaseadorFromJson(JSONObject obj) {
+        PaseadorResultado p = new PaseadorResultado();
+        p.setId(obj.optString(FirestoreConstants.FIELD_ID, ""));
+        p.setNombre(obj.optString(FirestoreConstants.FIELD_NOMBRE, FirestoreConstants.DEFAULT_NAME));
+        p.setFotoUrl(obj.optString("foto", null));
+        p.setCalificacion(obj.optDouble("calificacion", 0));
+        p.setTotalResenas(obj.optInt("totalResenas", 0));
+        p.setTarifaPorHora(obj.optDouble("tarifa", 0));
+        p.setZonaPrincipal(obj.optString("zona", FirestoreConstants.DEFAULT_ZONE));
+        p.setFavorito(obj.optBoolean("favorito", false));
+        p.setEnLinea(obj.optBoolean("enLinea", false));
+        p.setAnosExperiencia(obj.optInt("anosExp", 0));
+        return p;
+    }
+
     public LiveData<UiState<PaseadorSearchResult>> buscarPaseadores(String query, DocumentSnapshot lastVisible, Filtros filtros) {
         MutableLiveData<UiState<PaseadorSearchResult>> liveData = new MutableLiveData<>();
         liveData.setValue(new UiState.Loading<>());
 
         com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        Task<QuerySnapshot> favoritosTask = currentUser != null
-                ? db.collection("usuarios").document(currentUser.getUid()).collection("favoritos").get()
-                : Tasks.forResult(null);
+        Task<QuerySnapshot> favoritosTask = getFavoritosTask(currentUser);
 
-        Query firestoreQuery = db.collection("paseadores_search")
-                .whereEqualTo("activo", true)
-                .whereEqualTo("verificacion_estado", "APROBADO");
-        if (query != null && !query.isEmpty()) {
-            String queryNormalizado = query.toLowerCase();
-            firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
-                    .whereLessThanOrEqualTo("nombre_lowercase", queryNormalizado + "\uf8ff");
-        }
+        Query firestoreQuery = buildSearchQuery(query, filtros, lastVisible);
+        Task<QuerySnapshot> busquedaTask = firestoreQuery.get();
 
-        if (filtros != null) {
-            if (filtros.getMinCalificacion() > 0) {
-                firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("calificacion_promedio", filtros.getMinCalificacion());
-            }
-            if (filtros.getMinPrecio() > 0) {
-                firestoreQuery = firestoreQuery.whereGreaterThanOrEqualTo("tarifa_por_hora", filtros.getMinPrecio());
-            }
-            if (filtros.getMaxPrecio() < 100) {
-                firestoreQuery = firestoreQuery.whereLessThanOrEqualTo("tarifa_por_hora", filtros.getMaxPrecio());
-            }
-            if (filtros.getTamanosMascota() != null && !filtros.getTamanosMascota().isEmpty()) {
-                firestoreQuery = firestoreQuery.whereArrayContainsAny("tipos_perro_aceptados", filtros.getTamanosMascota());
-            }
+        Tasks.whenAllSuccess(favoritosTask, busquedaTask).addOnSuccessListener(results ->
+            processSearchResults(results, liveData))
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error en la búsqueda de paseadores para query: " + query, e);
+                liveData.setValue(new UiState.Error<>("Error al realizar la búsqueda."));
+            });
 
-            String orden = filtros.getOrden();
-            if (orden != null) {
-                switch (orden) {
-                    case "Precio (menor a mayor)":
-                        firestoreQuery = firestoreQuery.orderBy("tarifa_por_hora", Query.Direction.ASCENDING);
-                        break;
-                    case "Precio (mayor a menor)":
-                        firestoreQuery = firestoreQuery.orderBy("tarifa_por_hora", Query.Direction.DESCENDING);
-                        break;
-                    case "Calificación (mejor a peor)":
-                        firestoreQuery = firestoreQuery.orderBy("calificacion_promedio", Query.Direction.DESCENDING);
-                        break;
-                    default:
-                        if (query == null || query.isEmpty()) {
-                            firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
-                        }
-                        break;
-                }
-            }
-        } else if (query == null || query.isEmpty()) {
-            firestoreQuery = firestoreQuery.orderBy("nombre_display", Query.Direction.ASCENDING);
-        }
+        return liveData;
+    }
 
+    private Query buildSearchQuery(String query, Filtros filtros, DocumentSnapshot lastVisible) {
+        Query firestoreQuery = db.collection(FirestoreConstants.COLLECTION_PASEADORES_SEARCH)
+                .whereEqualTo(FirestoreConstants.FIELD_ACTIVO, true)
+                .whereEqualTo(FirestoreConstants.FIELD_VERIFICACION_ESTADO, FirestoreConstants.STATUS_APROBADO);
+
+        firestoreQuery = applyQueryFilter(firestoreQuery, query);
+        firestoreQuery = applyFiltros(firestoreQuery, filtros, query);
         firestoreQuery = firestoreQuery.limit(15);
+
         if (lastVisible != null) {
             firestoreQuery = firestoreQuery.startAfter(lastVisible);
         }
 
-        Task<QuerySnapshot> busquedaTask = firestoreQuery.get();
+        return firestoreQuery;
+    }
 
-        Tasks.whenAllSuccess(favoritosTask, busquedaTask).addOnSuccessListener(results -> {
-            QuerySnapshot favoritosSnapshot = (QuerySnapshot) results.get(0);
-            QuerySnapshot busquedaSnapshot = (QuerySnapshot) results.get(1);
+    private Query applyQueryFilter(Query query, String searchQuery) {
+        if (searchQuery != null && !searchQuery.isEmpty()) {
+            String queryNormalizado = searchQuery.toLowerCase();
+            return query.whereGreaterThanOrEqualTo("nombre_lowercase", queryNormalizado)
+                    .whereLessThanOrEqualTo("nombre_lowercase", queryNormalizado + "\uf8ff");
+        }
+        return query;
+    }
 
-            java.util.Set<String> favoritosIds = new java.util.HashSet<>();
-            if (favoritosSnapshot != null) {
-                for (DocumentSnapshot doc : favoritosSnapshot) {
-                    favoritosIds.add(doc.getId());
+    private Query applyFiltros(Query query, Filtros filtros, String searchQuery) {
+        if (filtros == null) {
+            if (searchQuery == null || searchQuery.isEmpty()) {
+                return query.orderBy(FirestoreConstants.FIELD_NOMBRE_DISPLAY, Query.Direction.ASCENDING);
+            }
+            return query;
+        }
+
+        if (filtros.getMinCalificacion() > 0) {
+            query = query.whereGreaterThanOrEqualTo(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO, filtros.getMinCalificacion());
+        }
+        if (filtros.getMinPrecio() > 0) {
+            query = query.whereGreaterThanOrEqualTo(FirestoreConstants.FIELD_TARIFA_POR_HORA, filtros.getMinPrecio());
+        }
+        if (filtros.getMaxPrecio() < 100) {
+            query = query.whereLessThanOrEqualTo(FirestoreConstants.FIELD_TARIFA_POR_HORA, filtros.getMaxPrecio());
+        }
+        if (filtros.getTamanosMascota() != null && !filtros.getTamanosMascota().isEmpty()) {
+            query = query.whereArrayContainsAny(FirestoreConstants.FIELD_TIPOS_PERRO_ACEPTADOS, filtros.getTamanosMascota());
+        }
+
+        return applyOrdenamiento(query, filtros.getOrden(), searchQuery);
+    }
+
+    private Query applyOrdenamiento(Query query, String orden, String searchQuery) {
+        if (orden == null) {
+            if (searchQuery == null || searchQuery.isEmpty()) {
+                return query.orderBy(FirestoreConstants.FIELD_NOMBRE_DISPLAY, Query.Direction.ASCENDING);
+            }
+            return query;
+        }
+
+        switch (orden) {
+            case "Precio (menor a mayor)":
+                return query.orderBy(FirestoreConstants.FIELD_TARIFA_POR_HORA, Query.Direction.ASCENDING);
+            case "Precio (mayor a menor)":
+                return query.orderBy(FirestoreConstants.FIELD_TARIFA_POR_HORA, Query.Direction.DESCENDING);
+            case "Calificación (mejor a peor)":
+                return query.orderBy(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO, Query.Direction.DESCENDING);
+            default:
+                if (searchQuery == null || searchQuery.isEmpty()) {
+                    return query.orderBy(FirestoreConstants.FIELD_NOMBRE_DISPLAY, Query.Direction.ASCENDING);
                 }
+                return query;
+        }
+    }
+
+    private void processSearchResults(List<Object> results, MutableLiveData<UiState<PaseadorSearchResult>> liveData) {
+        QuerySnapshot favoritosSnapshot = (QuerySnapshot) results.get(0);
+        QuerySnapshot busquedaSnapshot = (QuerySnapshot) results.get(1);
+
+        java.util.Set<String> favoritosIds = extractFavoritosIds(favoritosSnapshot);
+
+        if (busquedaSnapshot == null || busquedaSnapshot.isEmpty()) {
+            liveData.setValue(new UiState.Empty<>());
+            return;
+        }
+
+        DocumentSnapshot newLastVisible = busquedaSnapshot.getDocuments().get(busquedaSnapshot.size() - 1);
+        ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+        java.util.Map<String, Integer> indexMap = new java.util.HashMap<>();
+        java.util.List<Task<?>> detailTasks = new ArrayList<>();
+
+        for (DocumentSnapshot doc : busquedaSnapshot) {
+            PaseadorResultado resultado = buildSearchResultado(doc, favoritosIds);
+            int idx = resultados.size();
+            indexMap.put(doc.getId(), idx);
+            resultados.add(resultado);
+
+            addDetailTasks(doc.getId(), indexMap, resultados, detailTasks);
+        }
+
+        completeSearchResults(detailTasks, resultados, newLastVisible, liveData);
+    }
+
+    private PaseadorResultado buildSearchResultado(DocumentSnapshot doc, java.util.Set<String> favoritosIds) {
+        PaseadorResultado resultado = new PaseadorResultado();
+        resultado.setId(doc.getId());
+        resultado.setNombre(getStringSafely(doc, FirestoreConstants.FIELD_NOMBRE_DISPLAY, FirestoreConstants.DEFAULT_NAME));
+        resultado.setFotoUrl(getStringSafely(doc, FirestoreConstants.FIELD_FOTO_PERFIL, null));
+        resultado.setCalificacion(getDoubleSafely(doc, FirestoreConstants.FIELD_CALIFICACION_PROMEDIO, 0.0));
+        resultado.setTotalResenas(getLongSafely(doc, FirestoreConstants.FIELD_NUM_SERVICIOS_COMPLETADOS, 0L).intValue());
+
+        Double tarifa = getDoubleSafely(doc, FirestoreConstants.FIELD_TARIFA_POR_HORA, null);
+        if (tarifa == null) {
+            tarifa = getDoubleSafely(doc, FirestoreConstants.FIELD_PRECIO_HORA, 0.0);
+        }
+        resultado.setTarifaPorHora(tarifa);
+
+        resultado.setAnosExperiencia(getLongSafely(doc, FirestoreConstants.FIELD_ANOS_EXPERIENCIA, 0L).intValue());
+        resultado.setZonaPrincipal(FirestoreConstants.DEFAULT_ZONE);
+        resultado.setFavorito(favoritosIds.contains(doc.getId()));
+        resultado.setEnLinea(false);
+
+        return resultado;
+    }
+
+    private void addDetailTasks(String docId, java.util.Map<String, Integer> indexMap,
+                               ArrayList<PaseadorResultado> resultados, java.util.List<Task<?>> detailTasks) {
+        Task<DocumentSnapshot> paseadorTask = db.collection(FirestoreConstants.COLLECTION_PASEADORES)
+                .document(docId).get()
+                .addOnSuccessListener(pDoc -> updatePaseadorDetails(pDoc, docId, indexMap, resultados));
+        detailTasks.add(paseadorTask);
+
+        Task<DocumentSnapshot> usuarioTask = db.collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(docId).get()
+                .addOnSuccessListener(uDoc -> updateOnlineStatus(uDoc, docId, indexMap, resultados));
+        detailTasks.add(usuarioTask);
+
+        Task<QuerySnapshot> zonasTask = db.collection(FirestoreConstants.COLLECTION_PASEADORES)
+                .document(docId)
+                .collection(FirestoreConstants.COLLECTION_ZONAS_SERVICIO)
+                .limit(1).get()
+                .addOnSuccessListener(zonas -> updateZona(zonas, docId, indexMap, resultados));
+        detailTasks.add(zonasTask);
+    }
+
+    private void updatePaseadorDetails(DocumentSnapshot pDoc, String docId,
+                                      java.util.Map<String, Integer> indexMap,
+                                      ArrayList<PaseadorResultado> resultados) {
+        Integer position = indexMap.get(docId);
+        if (position == null || position >= resultados.size()) return;
+
+        PaseadorResultado res = resultados.get(position);
+        if (res.getTarifaPorHora() == 0.0) {
+            Double precioHora = pDoc.getDouble(FirestoreConstants.FIELD_PRECIO_HORA);
+            if (precioHora != null) res.setTarifaPorHora(precioHora);
+        }
+        Double calif = pDoc.getDouble(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO);
+        if (calif != null) res.setCalificacion(calif);
+        Long total = pDoc.getLong(FirestoreConstants.FIELD_NUM_SERVICIOS_COMPLETADOS);
+        if (total != null) res.setTotalResenas(total.intValue());
+    }
+
+    private void updateOnlineStatus(DocumentSnapshot uDoc, String docId,
+                                   java.util.Map<String, Integer> indexMap,
+                                   ArrayList<PaseadorResultado> resultados) {
+        Integer position = indexMap.get(docId);
+        if (position == null || position >= resultados.size()) return;
+
+        PaseadorResultado res = resultados.get(position);
+        String estadoPresencia = uDoc.getString(FirestoreConstants.FIELD_ESTADO);
+        res.setEnLinea(FirestoreConstants.STATUS_ONLINE.equalsIgnoreCase(estadoPresencia));
+    }
+
+    private void updateZona(QuerySnapshot zonas, String docId,
+                          java.util.Map<String, Integer> indexMap,
+                          ArrayList<PaseadorResultado> resultados) {
+        Integer position = indexMap.get(docId);
+        if (position == null || position >= resultados.size()) return;
+
+        if (zonas != null && !zonas.isEmpty()) {
+            String direccion = zonas.getDocuments().get(0).getString(FirestoreConstants.FIELD_DIRECCION);
+            if (direccion != null && !direccion.isEmpty()) {
+                resultados.get(position).setZonaPrincipal(direccion);
             }
+        }
+    }
 
-            if (busquedaSnapshot == null || busquedaSnapshot.isEmpty()) {
-                liveData.setValue(new UiState.Empty<>());
-                return;
-            }
-
-            DocumentSnapshot newLastVisible = busquedaSnapshot.getDocuments().get(busquedaSnapshot.size() - 1);
-            ArrayList<PaseadorResultado> resultados = new ArrayList<>();
-            java.util.Map<String, Integer> indexMap = new java.util.HashMap<>();
-            java.util.List<Task<?>> detailTasks = new ArrayList<>();
-
-            for (DocumentSnapshot doc : busquedaSnapshot) {
-                PaseadorResultado resultado = new PaseadorResultado();
-                resultado.setId(doc.getId());
-                resultado.setNombre(getStringSafely(doc, "nombre_display", "N/A"));
-                resultado.setFotoUrl(getStringSafely(doc, "foto_perfil", null));
-                resultado.setCalificacion(getDoubleSafely(doc, "calificacion_promedio", 0.0));
-                resultado.setTotalResenas(getLongSafely(doc, "num_servicios_completados", 0L).intValue());
-
-                Double tarifa = getDoubleSafely(doc, "tarifa_por_hora", null);
-                if (tarifa == null) {
-                    tarifa = getDoubleSafely(doc, "precio_hora", 0.0);
-                }
-                resultado.setTarifaPorHora(tarifa != null ? tarifa : 0.0);
-
-                resultado.setAnosExperiencia(getLongSafely(doc, "anos_experiencia", 0L).intValue());
-                resultado.setZonaPrincipal("Sin zona especificada");
-                resultado.setFavorito(favoritosIds.contains(doc.getId()));
-                resultado.setEnLinea(false); // Default to offline, will update from usuarios doc
-
-                int idx = resultados.size();
-                indexMap.put(doc.getId(), idx);
-                resultados.add(resultado);
-
-                Task<DocumentSnapshot> paseadorTask = db.collection("paseadores").document(doc.getId()).get()
-                        .addOnSuccessListener(pDoc -> {
-                            Integer position = indexMap.get(doc.getId());
-                            if (position == null || position >= resultados.size()) return;
-                            PaseadorResultado res = resultados.get(position);
-                            if (res.getTarifaPorHora() == 0.0) {
-                                Double precioHora = pDoc.getDouble("precio_hora");
-                                if (precioHora != null) res.setTarifaPorHora(precioHora);
-                            }
-                            Double calif = pDoc.getDouble("calificacion_promedio");
-                            if (calif != null) res.setCalificacion(calif);
-                            Long total = pDoc.getLong("num_servicios_completados");
-                            if (total != null) res.setTotalResenas(total.intValue());
-                        });
-                detailTasks.add(paseadorTask);
-
-                // Fetch online status from usuarios collection
-                Task<DocumentSnapshot> usuarioTask = db.collection("usuarios").document(doc.getId()).get()
-                        .addOnSuccessListener(uDoc -> {
-                            Integer position = indexMap.get(doc.getId());
-                            if (position == null || position >= resultados.size()) return;
-                            PaseadorResultado res = resultados.get(position);
-                            String estadoPresencia = uDoc.getString("estado");
-                            res.setEnLinea("online".equalsIgnoreCase(estadoPresencia));
-                        });
-                detailTasks.add(usuarioTask);
-
-                Task<QuerySnapshot> zonasTask = db.collection("paseadores").document(doc.getId())
-                        .collection("zonas_servicio")
-                        .limit(1)
-                        .get()
-                        .addOnSuccessListener(zonas -> {
-                            Integer position = indexMap.get(doc.getId());
-                            if (position == null || position >= resultados.size()) return;
-                            if (zonas != null && !zonas.isEmpty()) {
-                                String direccion = zonas.getDocuments().get(0).getString("direccion");
-                                if (direccion != null && !direccion.isEmpty()) {
-                                    resultados.get(position).setZonaPrincipal(direccion);
-                                }
-                            }
-                        });
-                detailTasks.add(zonasTask);
-            }
-
-            if (detailTasks.isEmpty()) {
-                liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible)));
-            } else {
-                Tasks.whenAllComplete(detailTasks).addOnCompleteListener(done ->
-                        liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible))));
-            }
-
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error en la búsqueda de paseadores para query: " + query, e);
-            liveData.setValue(new UiState.Error<>("Error al realizar la búsqueda."));
-        });
-
-        return liveData;
+    private void completeSearchResults(java.util.List<Task<?>> detailTasks,
+                                      ArrayList<PaseadorResultado> resultados,
+                                      DocumentSnapshot newLastVisible,
+                                      MutableLiveData<UiState<PaseadorSearchResult>> liveData) {
+        if (detailTasks.isEmpty()) {
+            liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible)));
+        } else {
+            Tasks.whenAllComplete(detailTasks).addOnCompleteListener(done ->
+                    liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(resultados, newLastVisible))));
+        }
     }
 
     // --- Métodos Helper de Seguridad --- //
@@ -378,7 +481,8 @@ public class PaseadorRepository {
         } catch (Exception e) {
             Log.w(TAG, "Error al leer el campo '" + field + "' como String.", e);
             return defaultValue;
-        }    }
+        }
+    }
 
     private Double getDoubleSafely(DocumentSnapshot doc, String field, Double defaultValue) {
         try {
@@ -408,40 +512,51 @@ public class PaseadorRepository {
         Log.d(TAG, "Todos los listeners de Firestore han sido limpiados.");
     }
 
-    public void toggleFavorito(String paseadorId, final boolean add) {
+    public void toggleFavorito(String paseadorId, boolean add) {
         com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
 
         String userId = currentUser.getUid();
-        DocumentReference favRef = db.collection("usuarios").document(userId).collection("favoritos").document(paseadorId);
+        DocumentReference favRef = db.collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(userId)
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId);
 
         if (add) {
-            // Lógica para AÑADIR a favoritos con desnormalización
-            DocumentReference usuarioPaseadorRef = db.collection("usuarios").document(paseadorId);
-            DocumentReference perfilPaseadorRef = db.collection("paseadores").document(paseadorId);
-
-            Task<DocumentSnapshot> usuarioTask = usuarioPaseadorRef.get();
-            Task<DocumentSnapshot> paseadorTask = perfilPaseadorRef.get();
-
-            Tasks.whenAllSuccess(usuarioTask, paseadorTask).addOnSuccessListener(results -> {
-                DocumentSnapshot usuarioDoc = (DocumentSnapshot) results.get(0);
-                DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
-
-                if (usuarioDoc.exists() && paseadorDoc.exists()) {
-                    java.util.Map<String, Object> favoritoData = new java.util.HashMap<>();
-                    favoritoData.put("fecha_agregado", com.google.firebase.firestore.FieldValue.serverTimestamp());
-                    favoritoData.put("paseador_ref", perfilPaseadorRef);
-                    favoritoData.put("nombre_display", usuarioDoc.getString("nombre_display"));
-                    favoritoData.put("foto_perfil_url", usuarioDoc.getString("foto_perfil"));
-                    favoritoData.put("calificacion_promedio", paseadorDoc.getDouble("calificacion_promedio"));
-                    favoritoData.put("precio_hora", paseadorDoc.getDouble("precio_hora"));
-
-                    favRef.set(favoritoData);
-                }
-            });
+            addToFavoritos(paseadorId, favRef);
         } else {
-            // Lógica para QUITAR de favoritos
             favRef.delete();
         }
+    }
+
+    private void addToFavoritos(String paseadorId, DocumentReference favRef) {
+        DocumentReference usuarioPaseadorRef = db.collection(FirestoreConstants.COLLECTION_USUARIOS).document(paseadorId);
+        DocumentReference perfilPaseadorRef = db.collection(FirestoreConstants.COLLECTION_PASEADORES).document(paseadorId);
+
+        Task<DocumentSnapshot> usuarioTask = usuarioPaseadorRef.get();
+        Task<DocumentSnapshot> paseadorTask = perfilPaseadorRef.get();
+
+        Tasks.whenAllSuccess(usuarioTask, paseadorTask).addOnSuccessListener(results -> {
+            DocumentSnapshot usuarioDoc = (DocumentSnapshot) results.get(0);
+            DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(1);
+
+            if (usuarioDoc.exists() && paseadorDoc.exists()) {
+                java.util.Map<String, Object> favoritoData = buildFavoritoData(usuarioDoc, paseadorDoc, perfilPaseadorRef);
+                favRef.set(favoritoData);
+            }
+        });
+    }
+
+    private java.util.Map<String, Object> buildFavoritoData(DocumentSnapshot usuarioDoc,
+                                                            DocumentSnapshot paseadorDoc,
+                                                            DocumentReference perfilPaseadorRef) {
+        java.util.Map<String, Object> favoritoData = new java.util.HashMap<>();
+        favoritoData.put("fecha_agregado", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        favoritoData.put("paseador_ref", perfilPaseadorRef);
+        favoritoData.put(FirestoreConstants.FIELD_NOMBRE_DISPLAY, usuarioDoc.getString(FirestoreConstants.FIELD_NOMBRE_DISPLAY));
+        favoritoData.put("foto_perfil_url", usuarioDoc.getString(FirestoreConstants.FIELD_FOTO_PERFIL));
+        favoritoData.put(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO, paseadorDoc.getDouble(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO));
+        favoritoData.put(FirestoreConstants.FIELD_PRECIO_HORA, paseadorDoc.getDouble(FirestoreConstants.FIELD_PRECIO_HORA));
+        return favoritoData;
     }
 }

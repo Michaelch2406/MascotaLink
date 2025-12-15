@@ -15,13 +15,12 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.functions.FirebaseFunctions;
-import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascota.utils.FirestoreConstants;
 import com.mjc.mascotalink.R;
 
 import java.util.ArrayList;
@@ -69,7 +68,6 @@ public class RecomendacionIAHelper {
         bottomSheetDialog.getBehavior().setState(BottomSheetBehavior.STATE_EXPANDED);
         bottomSheetDialog.getBehavior().setSkipCollapsed(true);
 
-        // Inicializar vistas
         loadingContainer = bottomSheetView.findViewById(R.id.loading_container);
         recommendationContainer = bottomSheetView.findViewById(R.id.recommendation_container);
         errorContainer = bottomSheetView.findViewById(R.id.error_container);
@@ -89,10 +87,7 @@ public class RecomendacionIAHelper {
     public void show() {
         showLoading();
         bottomSheetDialog.show();
-
-        // 🆕 MEJORA #8: Registrar solicitud de recomendación
         registrarEventoTelemetria("solicitud", null, null, null);
-
         buscarRecomendaciones();
     }
 
@@ -112,8 +107,6 @@ public class RecomendacionIAHelper {
         loadingContainer.setVisibility(View.GONE);
         recommendationContainer.setVisibility(View.GONE);
         errorContainer.setVisibility(View.VISIBLE);
-
-        // 🆕 MEJORA #8: Registrar error
         registrarEventoTelemetria("error", null, null, message);
 
         if (listener != null) {
@@ -139,7 +132,14 @@ public class RecomendacionIAHelper {
     }
 
     private void bindData(View itemView, Map<String, Object> recommendation, Map<String, Object> paseadorData) {
-        // Información básica
+        bindBasicInfo(itemView, recommendation, paseadorData);
+        bindPhoto(itemView, paseadorData);
+        bindReasons(itemView, recommendation);
+        bindVerifiedBadge(itemView, paseadorData);
+        setupActionButtons(itemView, recommendation, paseadorData);
+    }
+
+    private void bindBasicInfo(View itemView, Map<String, Object> recommendation, Map<String, Object> paseadorData) {
         TextView tvWalkerName = itemView.findViewById(R.id.tvWalkerName);
         TextView tvLocation = itemView.findViewById(R.id.tvLocation);
         TextView tvExperience = itemView.findViewById(R.id.tvExperience);
@@ -148,46 +148,37 @@ public class RecomendacionIAHelper {
         TextView tvReviewCount = itemView.findViewById(R.id.tvReviewCount);
         TextView tvPrice = itemView.findViewById(R.id.tvPrice);
         TextView tvMatchScore = itemView.findViewById(R.id.tvMatchScore);
-        ImageView ivProfilePhoto = itemView.findViewById(R.id.ivProfilePhoto);
         View vAvailabilityDot = itemView.findViewById(R.id.vAvailabilityDot);
-        ChipGroup chipGroupReasons = itemView.findViewById(R.id.chipGroupReasons);
 
-        // Nombre
-        String nombre = (String) recommendation.get("nombre");
+        String nombre = (String) recommendation.get(FirestoreConstants.FIELD_NOMBRE);
         tvWalkerName.setText(nombre != null ? nombre : "Paseador");
 
-        // Match Score
-        int matchScore = getIntValue(recommendation.get("match_score"));
+        int matchScore = getIntValue(recommendation.get(FirestoreConstants.FIELD_MATCH_SCORE_LOWER));
         tvMatchScore.setText(matchScore + "% Match");
 
-        // Rating
-        double calificacion = getDoubleValue(paseadorData.get("calificacion_promedio"));
+        double calificacion = getDoubleValue(paseadorData.get(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO));
         tvRating.setText(String.format(Locale.getDefault(), "%.1f", calificacion));
 
-        // Reseñas
-        int servicios = getIntValue(paseadorData.get("num_servicios_completados"));
+        int servicios = getIntValue(paseadorData.get(FirestoreConstants.FIELD_NUM_SERVICIOS_COMPLETADOS));
         tvReviewCount.setText("(" + servicios + " reseñas)");
 
-        // Precio
-        double precio = getDoubleValue(paseadorData.get("precio_hora"));
+        double precio = getDoubleValue(paseadorData.get(FirestoreConstants.FIELD_PRECIO_HORA));
         tvPrice.setText(String.format(Locale.getDefault(), "$%.0f/h", precio));
 
-        // Experiencia
-        int experiencia = getIntValue(paseadorData.get("anos_experiencia"));
+        int experiencia = getIntValue(paseadorData.get(FirestoreConstants.FIELD_ANOS_EXPERIENCIA));
         tvExperience.setText(experiencia + " años exp.");
 
-        // Ubicación (simplificada)
         tvLocation.setText("Zona cercana");
-
-        // Especialidad
         tvSpecialty.setText("Especialista en tu mascota");
-
-        // Disponibilidad (asumiendo disponible)
         vAvailabilityDot.setVisibility(View.VISIBLE);
+    }
 
-        // Foto (Cargar con Glide)
-        String fotoUrl = (String) paseadorData.get("foto_url"); // Campo usual en paseadores_search
-        if (fotoUrl == null) fotoUrl = (String) paseadorData.get("foto_perfil"); // Fallback
+    private void bindPhoto(View itemView, Map<String, Object> paseadorData) {
+        ImageView ivProfilePhoto = itemView.findViewById(R.id.ivProfilePhoto);
+        String fotoUrl = (String) paseadorData.get(FirestoreConstants.FIELD_FOTO_URL);
+        if (fotoUrl == null) {
+            fotoUrl = (String) paseadorData.get(FirestoreConstants.FIELD_FOTO_PERFIL);
+        }
 
         if (fotoUrl != null && !fotoUrl.isEmpty()) {
             Glide.with(activity)
@@ -199,141 +190,141 @@ public class RecomendacionIAHelper {
         } else {
             ivProfilePhoto.setImageResource(R.drawable.bg_avatar_circle);
         }
+    }
 
-        // Razones de IA
+    private void bindReasons(View itemView, Map<String, Object> recommendation) {
+        ChipGroup chipGroupReasons = itemView.findViewById(R.id.chipGroupReasons);
         chipGroupReasons.removeAllViews();
-        
-        // Add main reason
-        String razonIA = (String) recommendation.get("razon_ia");
+
+        String razonIA = (String) recommendation.get(FirestoreConstants.FIELD_RAZON_IA);
         if (razonIA != null && !razonIA.isEmpty()) {
-            Chip chip = new Chip(activity);
-            chip.setText("✨ " + razonIA);
-            chip.setClickable(false);
-            chip.setCheckable(false);
-            chip.setTextColor(activity.getResources().getColor(R.color.walki_ai_purple));
-            chip.setChipBackgroundColorResource(R.color.white);
-            chip.setChipStrokeColorResource(R.color.walki_ai_purple_light);
-            chip.setChipStrokeWidth(3f); // 1dp aprox
-            chipGroupReasons.addView(chip);
+            addReasonChip(chipGroupReasons, "✨ " + razonIA);
         }
 
-        // Add dynamic tags from AI
-        List<String> tags = (List<String>) recommendation.get("tags");
+        List<String> tags = (List<String>) recommendation.get(FirestoreConstants.FIELD_TAGS);
         if (tags != null && !tags.isEmpty()) {
             for (String tag : tags) {
-                Chip chip = new Chip(activity);
-                chip.setText(tag); // No emoji prefix for these tags
-                chip.setClickable(false);
-                chip.setCheckable(false);
-                chip.setTextColor(activity.getResources().getColor(R.color.walki_ai_purple));
-                chip.setChipBackgroundColorResource(R.color.white);
-                chip.setChipStrokeColorResource(R.color.walki_ai_purple_light);
-                chip.setChipStrokeWidth(3f);
-                chipGroupReasons.addView(chip);
+                addReasonChip(chipGroupReasons, tag);
             }
         }
+    }
 
-        // Verified Badge
+    private void addReasonChip(ChipGroup chipGroup, String text) {
+        Chip chip = new Chip(activity);
+        chip.setText(text);
+        chip.setClickable(false);
+        chip.setCheckable(false);
+        chip.setTextColor(activity.getResources().getColor(R.color.walki_ai_purple));
+        chip.setChipBackgroundColorResource(R.color.white);
+        chip.setChipStrokeColorResource(R.color.walki_ai_purple_light);
+        chip.setChipStrokeWidth(3f);
+        chipGroup.addView(chip);
+    }
+
+    private void bindVerifiedBadge(View itemView, Map<String, Object> paseadorData) {
         ImageView ivVerifiedBadge = itemView.findViewById(R.id.ivVerifiedBadge);
-        String verificacionEstado = (String) paseadorData.get("verificacion_estado");
+        String verificacionEstado = (String) paseadorData.get(FirestoreConstants.FIELD_VERIFICACION_ESTADO);
         if ("verificado".equals(verificacionEstado)) {
             ivVerifiedBadge.setVisibility(View.VISIBLE);
         } else {
             ivVerifiedBadge.setVisibility(View.GONE);
         }
+    }
 
-        // Botones
+    private void setupActionButtons(View itemView, Map<String, Object> recommendation, Map<String, Object> paseadorData) {
         MaterialButton btnViewProfile = itemView.findViewById(R.id.btnViewProfile);
         MaterialButton btnFavorite = itemView.findViewById(R.id.btnFavorite);
         MaterialButton btnShare = itemView.findViewById(R.id.btnShare);
 
-        String paseadorId = (String) recommendation.get("id");
+        String paseadorId = (String) recommendation.get(FirestoreConstants.FIELD_ID);
+        int matchScore = getIntValue(recommendation.get(FirestoreConstants.FIELD_MATCH_SCORE_LOWER));
+
+        setupFavoriteButton(btnFavorite, paseadorId, matchScore);
+        setupViewProfileButton(btnViewProfile, paseadorId, matchScore);
+        setupShareButton(btnShare, recommendation, paseadorData, paseadorId, matchScore);
+    }
+
+    private void setupFavoriteButton(MaterialButton btnFavorite, String paseadorId, int matchScore) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
 
-        // 1. Configurar estado inicial de favorito
-        if (currentUser != null) {
-            FirebaseFirestore.getInstance()
-                    .collection("usuarios")
-                    .document(currentUser.getUid())
-                    .collection("favoritos")
-                    .document(paseadorId)
-                    .get()
-                    .addOnSuccessListener(documentSnapshot -> {
-                        if (documentSnapshot.exists()) {
-                            // Está en favoritos: ícono relleno rojo
-                            btnFavorite.setIconResource(R.drawable.ic_corazon_lleno);
-                            btnFavorite.setIconTintResource(R.color.red_error);
-                            btnFavorite.setTag("is_fav");
-                        } else {
-                            // No está en favoritos: ícono borde gris
-                            btnFavorite.setIconResource(R.drawable.ic_favorite);
-                            btnFavorite.setIconTintResource(R.color.grey_600);
-                            btnFavorite.setTag("not_fav");
-                        }
-                    });
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        setFavoriteButtonState(btnFavorite, true);
+                    } else {
+                        setFavoriteButtonState(btnFavorite, false);
+                    }
+                });
+
+        btnFavorite.setOnClickListener(v -> toggleFavorite(btnFavorite, paseadorId, matchScore, currentUser));
+    }
+
+    private void setFavoriteButtonState(MaterialButton button, boolean isFavorite) {
+        if (isFavorite) {
+            button.setIconResource(R.drawable.ic_corazon_lleno);
+            button.setIconTintResource(R.color.red_error);
+            button.setTag("is_fav");
+        } else {
+            button.setIconResource(R.drawable.ic_favorite);
+            button.setIconTintResource(R.color.grey_600);
+            button.setTag("not_fav");
         }
+    }
 
+    private void toggleFavorite(MaterialButton button, String paseadorId, int matchScore, FirebaseUser currentUser) {
+        boolean isFav = "is_fav".equals(button.getTag());
+        com.google.firebase.firestore.DocumentReference favRef = FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId);
+
+        if (isFav) {
+            removeFavorite(favRef, button);
+        } else {
+            addFavorite(favRef, button, paseadorId, matchScore);
+        }
+    }
+
+    private void removeFavorite(com.google.firebase.firestore.DocumentReference favRef, MaterialButton button) {
+        favRef.delete().addOnSuccessListener(aVoid -> setFavoriteButtonState(button, false));
+    }
+
+    private void addFavorite(com.google.firebase.firestore.DocumentReference favRef, MaterialButton button,
+                            String paseadorId, int matchScore) {
+        Map<String, Object> favData = new HashMap<>();
+        favData.put(FirestoreConstants.FIELD_ID, paseadorId);
+        favData.put(FirestoreConstants.FIELD_TIMESTAMP, com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+        favRef.set(favData).addOnSuccessListener(aVoid -> {
+            setFavoriteButtonState(button, true);
+            registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
+        });
+    }
+
+    private void setupViewProfileButton(MaterialButton btnViewProfile, String paseadorId, int matchScore) {
         btnViewProfile.setOnClickListener(v -> {
             Log.d(TAG, "Ver perfil: " + paseadorId);
-
-            // 🆕 MEJORA #8: Registrar que vio el perfil
             registrarEventoTelemetria("ver_perfil", paseadorId, matchScore, null);
-
             bottomSheetDialog.dismiss();
 
-            // Navegar al perfil del paseador
             android.content.Intent intent = new android.content.Intent(activity, com.mjc.mascotalink.PerfilPaseadorActivity.class);
             intent.putExtra("paseador_id", paseadorId);
             activity.startActivity(intent);
         });
+    }
 
-        btnFavorite.setOnClickListener(v -> {
-            if (currentUser == null) return;
-            
-            boolean isFav = "is_fav".equals(btnFavorite.getTag());
-            com.google.firebase.firestore.DocumentReference favRef = FirebaseFirestore.getInstance()
-                    .collection("usuarios")
-                    .document(currentUser.getUid())
-                    .collection("favoritos")
-                    .document(paseadorId);
-
-            if (isFav) {
-                // Quitar de favoritos
-                favRef.delete()
-                        .addOnSuccessListener(aVoid -> {
-                            btnFavorite.setIconResource(R.drawable.ic_favorite);
-                            btnFavorite.setIconTintResource(R.color.grey_600);
-                            btnFavorite.setTag("not_fav");
-                        });
-            } else {
-                // Agregar a favoritos (guardar datos básicos para listado rápido)
-                Map<String, Object> favData = new HashMap<>();
-                favData.put("id", paseadorId);
-                favData.put("nombre", paseadorData.get("nombre"));
-                favData.put("foto_url", paseadorData.get("foto_url"));
-                favData.put("calificacion", paseadorData.get("calificacion_promedio"));
-                favData.put("timestamp", com.google.firebase.firestore.FieldValue.serverTimestamp());
-
-                favRef.set(favData)
-                        .addOnSuccessListener(aVoid -> {
-                            btnFavorite.setIconResource(R.drawable.ic_corazon_lleno);
-                            btnFavorite.setIconTintResource(R.color.red_error);
-                            btnFavorite.setTag("is_fav");
-
-                            // 🆕 MEJORA #8: Registrar que agregó a favoritos
-                            registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
-                        });
-            }
-        });
-
+    private void setupShareButton(MaterialButton btnShare, Map<String, Object> recommendation,
+                                  Map<String, Object> paseadorData, String paseadorId, int matchScore) {
         btnShare.setOnClickListener(v -> {
-            // 🆕 MEJORA #8: Registrar que compartió
             registrarEventoTelemetria("compartir", paseadorId, matchScore, null);
-            String shareText = "¡Mira este paseador que encontré en Walki!\n\n" +
-                    "Nombre: " + recommendation.get("nombre") + "\n" +
-                    "Calificación: " + String.format(Locale.getDefault(), "%.1f", getDoubleValue(paseadorData.get("calificacion_promedio"))) + " ⭐\n" +
-                    "Razón IA: " + recommendation.get("razon_ia") + "\n\n" +
-                    "Descarga la app aquí: https://walki.app"; // Link ficticio o real
+            String shareText = buildShareText(recommendation, paseadorData);
 
             android.content.Intent sendIntent = new android.content.Intent();
             sendIntent.setAction(android.content.Intent.ACTION_SEND);
@@ -343,6 +334,15 @@ public class RecomendacionIAHelper {
             android.content.Intent shareIntent = android.content.Intent.createChooser(sendIntent, "Compartir paseador via");
             activity.startActivity(shareIntent);
         });
+    }
+
+    private String buildShareText(Map<String, Object> recommendation, Map<String, Object> paseadorData) {
+        return "¡Mira este paseador que encontré en Walki!\n\n" +
+                "Nombre: " + recommendation.get(FirestoreConstants.FIELD_NOMBRE) + "\n" +
+                "Calificación: " + String.format(Locale.getDefault(), "%.1f",
+                    getDoubleValue(paseadorData.get(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO))) + " ⭐\n" +
+                "Razón IA: " + recommendation.get(FirestoreConstants.FIELD_RAZON_IA) + "\n\n" +
+                "Descarga la app aquí: https://walki.app";
     }
 
     private void buscarRecomendaciones() {
@@ -355,8 +355,7 @@ public class RecomendacionIAHelper {
         String userId = currentUser.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Obtener usuario
-        db.collection("usuarios").document(userId).get()
+        db.collection(FirestoreConstants.COLLECTION_USUARIOS).document(userId).get()
                 .addOnSuccessListener(userDoc -> {
                     if (!userDoc.exists()) {
                         showError("No se encontró tu perfil");
@@ -364,30 +363,7 @@ public class RecomendacionIAHelper {
                     }
 
                     Map<String, Object> userData = userDoc.getData();
-
-                    // 🆕 MEJORA #5: Verificar si tiene múltiples mascotas
-                    db.collection("duenos").document(userId).collection("mascotas")
-                            .get()
-                            .addOnSuccessListener(petSnapshot -> {
-                                if (petSnapshot.isEmpty()) {
-                                    showError("Registra tu mascota primero");
-                                    return;
-                                }
-
-                                List<com.google.firebase.firestore.DocumentSnapshot> mascotas = petSnapshot.getDocuments();
-
-                                if (mascotas.size() == 1) {
-                                    // Una sola mascota: usar directamente
-                                    procesarRecomendacionConMascota(mascotas.get(0).getData(), userData);
-                                } else {
-                                    // Múltiples mascotas: mostrar selector
-                                    mostrarSelectorMascota(mascotas, userData);
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "Error obteniendo mascota", e);
-                                showError("Error al obtener tu mascota");
-                            });
+                    loadMascotasAndProcess(userId, userData, db);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error obteniendo usuario", e);
@@ -395,9 +371,29 @@ public class RecomendacionIAHelper {
                 });
     }
 
-    /**
-     * Limpia los datos de Firestore para que sean serializables a JSON (elimina Timestamps).
-     */
+    private void loadMascotasAndProcess(String userId, Map<String, Object> userData, FirebaseFirestore db) {
+        db.collection(FirestoreConstants.COLLECTION_DUENOS).document(userId)
+                .collection(FirestoreConstants.COLLECTION_MASCOTAS)
+                .get()
+                .addOnSuccessListener(petSnapshot -> {
+                    if (petSnapshot.isEmpty()) {
+                        showError("Registra tu mascota primero");
+                        return;
+                    }
+
+                    List<com.google.firebase.firestore.DocumentSnapshot> mascotas = petSnapshot.getDocuments();
+                    if (mascotas.size() == 1) {
+                        procesarRecomendacionConMascota(mascotas.get(0).getData(), userData);
+                    } else {
+                        mostrarSelectorMascota(mascotas, userData);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error obteniendo mascota", e);
+                    showError("Error al obtener tu mascota");
+                });
+    }
+
     private Map<String, Object> sanitizeData(Map<String, Object> data) {
         Map<String, Object> cleanData = new HashMap<>();
         if (data == null) return cleanData;
@@ -405,32 +401,24 @@ public class RecomendacionIAHelper {
         for (Map.Entry<String, Object> entry : data.entrySet()) {
             Object value = entry.getValue();
             if (value instanceof com.google.firebase.Timestamp) {
-                // Convertir Timestamp a milisegundos (Long) que es serializable
                 cleanData.put(entry.getKey(), ((com.google.firebase.Timestamp) value).toDate().getTime());
             } else if (value instanceof GeoPoint) {
-                // Convertir GeoPoint a mapa simple
                 Map<String, Double> loc = new HashMap<>();
                 loc.put("lat", ((GeoPoint) value).getLatitude());
                 loc.put("lng", ((GeoPoint) value).getLongitude());
                 cleanData.put(entry.getKey(), loc);
             } else if (value instanceof com.google.firebase.firestore.DocumentReference) {
-                // Convertir DocumentReference a String (path)
                 cleanData.put(entry.getKey(), ((com.google.firebase.firestore.DocumentReference) value).getPath());
             } else if (value instanceof Map) {
-                // Recursividad para mapas anidados
                 cleanData.put(entry.getKey(), sanitizeData((Map<String, Object>) value));
             } else {
-                // Copiar otros valores tal cual (String, Number, Boolean, List, null)
                 cleanData.put(entry.getKey(), value);
             }
         }
         return cleanData;
     }
 
-    private void llamarCloudFunction(Map<String, Object> userData,
-                                     Map<String, Object> petData,
-                                     Map<String, Object> userLocation) {
-
+    private void llamarCloudFunction(Map<String, Object> userData, Map<String, Object> petData, Map<String, Object> userLocation) {
         Map<String, Object> data = new HashMap<>();
         data.put("userData", userData);
         data.put("petData", petData);
@@ -439,74 +427,83 @@ public class RecomendacionIAHelper {
         FirebaseFunctions.getInstance()
                 .getHttpsCallable("recomendarPaseadores")
                 .call(data)
-                .addOnSuccessListener(result -> {
-                    Map<String, Object> response = (Map<String, Object>) result.getData();
-                    List<Map<String, Object>> recommendations =
-                            (List<Map<String, Object>>) response.get("recommendations");
-
-                    if (recommendations == null || recommendations.isEmpty()) {
-                        showError("No encontramos matches perfectos");
-                        return;
-                    }
-
-                    // Cargar detalles de TODOS los recomendados en paralelo
-                    List<com.google.android.gms.tasks.Task<com.google.firebase.firestore.DocumentSnapshot>> tasks = new ArrayList<>();
-                    FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-                    for (Map<String, Object> rec : recommendations) {
-                        String paseadorId = (String) rec.get("id");
-                        tasks.add(db.collection("paseadores_search").document(paseadorId).get());
-                    }
-
-                    com.google.android.gms.tasks.Tasks.whenAllSuccess(tasks)
-                            .addOnSuccessListener(objects -> {
-                                loadingContainer.setVisibility(View.GONE);
-                                recommendationContainer.setVisibility(View.VISIBLE);
-                                errorContainer.setVisibility(View.GONE);
-                                recommendationContent.removeAllViews();
-
-                                for (int i = 0; i < objects.size(); i++) {
-                                    com.google.firebase.firestore.DocumentSnapshot doc = (com.google.firebase.firestore.DocumentSnapshot) objects.get(i);
-                                    if (doc.exists()) {
-                                        View itemView = LayoutInflater.from(activity)
-                                                .inflate(R.layout.item_paseador_recomendacion_ia, recommendationContent, false);
-
-                                        // Añadir margen inferior si hay múltiples cartas
-                                        if (objects.size() > 1 && i < objects.size() - 1) {
-                                            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                                    LinearLayout.LayoutParams.WRAP_CONTENT
-                                            );
-                                            params.setMargins(0, 0, 0, 32); // 32dp de margen
-                                            itemView.setLayoutParams(params);
-                                        }
-
-                                        bindData(itemView, recommendations.get(i), doc.getData());
-                                        recommendationContent.addView(itemView);
-                                    }
-                                }
-
-                                // 🆕 MEJORA #8: Registrar recomendaciones exitosas
-                                if (!recommendations.isEmpty()) {
-                                    Map<String, Object> firstRec = recommendations.get(0);
-                                    String paseadorId = (String) firstRec.get("id");
-                                    Integer matchScore = getIntValue(firstRec.get("match_score"));
-                                    registrarEventoTelemetria("exito", paseadorId, matchScore, null);
-                                }
-
-                                if (listener != null && !recommendations.isEmpty()) {
-                                    listener.onSuccess(recommendations.get(0));
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "Error cargando detalles de paseadores", e);
-                                showError("Error al cargar datos de recomendación");
-                            });
-                })
+                .addOnSuccessListener(result -> processCloudFunctionResponse(result))
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error llamando Cloud Function", e);
                     showError("Error al buscar recomendaciones");
                 });
+    }
+
+    private void processCloudFunctionResponse(com.google.firebase.functions.HttpsCallableResult result) {
+        Map<String, Object> response = (Map<String, Object>) result.getData();
+        List<Map<String, Object>> recommendations = (List<Map<String, Object>>) response.get("recommendations");
+
+        if (recommendations == null || recommendations.isEmpty()) {
+            showError("No encontramos matches perfectos");
+            return;
+        }
+
+        loadRecommendationDetails(recommendations);
+    }
+
+    private void loadRecommendationDetails(List<Map<String, Object>> recommendations) {
+        List<com.google.android.gms.tasks.Task<com.google.firebase.firestore.DocumentSnapshot>> tasks = new ArrayList<>();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        for (Map<String, Object> rec : recommendations) {
+            String paseadorId = (String) rec.get(FirestoreConstants.FIELD_ID);
+            tasks.add(db.collection(FirestoreConstants.COLLECTION_PASEADORES_SEARCH).document(paseadorId).get());
+        }
+
+        com.google.android.gms.tasks.Tasks.whenAllSuccess(tasks)
+                .addOnSuccessListener(objects -> displayRecommendations(objects, recommendations))
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando detalles de paseadores", e);
+                    showError("Error al cargar datos de recomendación");
+                });
+    }
+
+    private void displayRecommendations(List<Object> objects, List<Map<String, Object>> recommendations) {
+        loadingContainer.setVisibility(View.GONE);
+        recommendationContainer.setVisibility(View.VISIBLE);
+        errorContainer.setVisibility(View.GONE);
+        recommendationContent.removeAllViews();
+
+        for (int i = 0; i < objects.size(); i++) {
+            com.google.firebase.firestore.DocumentSnapshot doc = (com.google.firebase.firestore.DocumentSnapshot) objects.get(i);
+            if (doc.exists()) {
+                addRecommendationCard(doc, recommendations.get(i), i, objects.size());
+            }
+        }
+
+        if (!recommendations.isEmpty()) {
+            Map<String, Object> firstRec = recommendations.get(0);
+            String paseadorId = (String) firstRec.get(FirestoreConstants.FIELD_ID);
+            Integer matchScore = getIntValue(firstRec.get(FirestoreConstants.FIELD_MATCH_SCORE_LOWER));
+            registrarEventoTelemetria("exito", paseadorId, matchScore, null);
+
+            if (listener != null) {
+                listener.onSuccess(firstRec);
+            }
+        }
+    }
+
+    private void addRecommendationCard(com.google.firebase.firestore.DocumentSnapshot doc,
+                                      Map<String, Object> recommendation, int index, int total) {
+        View itemView = LayoutInflater.from(activity)
+                .inflate(R.layout.item_paseador_recomendacion_ia, recommendationContent, false);
+
+        if (total > 1 && index < total - 1) {
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.setMargins(0, 0, 0, 32);
+            itemView.setLayoutParams(params);
+        }
+
+        bindData(itemView, recommendation, doc.getData());
+        recommendationContent.addView(itemView);
     }
 
     private int getIntValue(Object obj) {
@@ -531,82 +528,62 @@ public class RecomendacionIAHelper {
         return 0.0;
     }
 
-    /**
-     * 🆕 MEJORA #8: Registra evento de telemetría para medir efectividad de IA
-     */
     private void registrarEventoTelemetria(String evento, String paseadorId, Integer matchScore, String errorMsg) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
 
         Map<String, Object> telemetria = new HashMap<>();
-        telemetria.put("userId", currentUser.getUid());
-        telemetria.put("timestamp", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        telemetria.put("evento", evento); // "solicitud", "exito", "ver_perfil", "favorito", "compartir", "error", "ignorado"
+        telemetria.put(FirestoreConstants.FIELD_USER_ID, currentUser.getUid());
+        telemetria.put(FirestoreConstants.FIELD_TIMESTAMP, com.google.firebase.firestore.FieldValue.serverTimestamp());
+        telemetria.put(FirestoreConstants.FIELD_EVENTO, evento);
 
         if (paseadorId != null) {
-            telemetria.put("paseadorId", paseadorId);
+            telemetria.put(FirestoreConstants.FIELD_PASEADOR_ID, paseadorId);
         }
         if (matchScore != null) {
-            telemetria.put("matchScore", matchScore);
+            telemetria.put(FirestoreConstants.FIELD_MATCH_SCORE, matchScore);
         }
         if (errorMsg != null) {
-            telemetria.put("errorMsg", errorMsg);
+            telemetria.put(FirestoreConstants.FIELD_ERROR_MSG, errorMsg);
         }
 
         FirebaseFirestore.getInstance()
-                .collection("recomendaciones_ia_logs")
+                .collection(FirestoreConstants.COLLECTION_RECOMENDACIONES_IA_LOGS)
                 .add(telemetria)
                 .addOnSuccessListener(doc -> Log.d(TAG, "📊 Telemetría: " + evento))
                 .addOnFailureListener(e -> Log.e(TAG, "Error guardando telemetría", e));
     }
 
-    /**
-     * 🆕 MEJORA #5: Procesa recomendación con una mascota específica
-     * Extrae la lógica común para evitar duplicación de código
-     */
     private void procesarRecomendacionConMascota(Map<String, Object> petData, Map<String, Object> userData) {
-        // Obtener ubicación del usuario
-        Map<String, Object> userLocation = new HashMap<>();
-        Object ubicacionObj = userData.get("ubicacion_principal");
-
-        if (ubicacionObj instanceof Map) {
-            Map<String, Object> ubicacion = (Map<String, Object>) ubicacionObj;
-            Object geopointObj = ubicacion.get("geopoint");
-
-            if (geopointObj instanceof GeoPoint) {
-                GeoPoint geoPoint = (GeoPoint) geopointObj;
-                userLocation.put("latitude", geoPoint.getLatitude());
-                userLocation.put("longitude", geoPoint.getLongitude());
-            }
-        }
-
-        // Llamar Cloud Function con datos sanitizados
+        Map<String, Object> userLocation = extractUserLocation(userData);
         llamarCloudFunction(sanitizeData(userData), sanitizeData(petData), userLocation);
     }
 
-    /**
-     * 🆕 MEJORA #5: Muestra selector de mascotas cuando el usuario tiene múltiples
-     */
-    private void mostrarSelectorMascota(List<com.google.firebase.firestore.DocumentSnapshot> mascotas,
-                                        Map<String, Object> userData) {
-        // Preparar nombres de mascotas para el selector
-        String[] nombresMascotas = new String[mascotas.size()];
-        for (int i = 0; i < mascotas.size(); i++) {
-            Map<String, Object> mascota = mascotas.get(i).getData();
-            String nombre = (String) mascota.get("nombre");
-            String tipo = (String) mascota.get("tipo_mascota");
-            nombresMascotas[i] = nombre + " (" + (tipo != null ? tipo : "Mascota") + ")";
-        }
+    private Map<String, Object> extractUserLocation(Map<String, Object> userData) {
+        Map<String, Object> userLocation = new HashMap<>();
+        Object ubicacionObj = userData.get(FirestoreConstants.FIELD_UBICACION_PRINCIPAL);
 
-        // Crear AlertDialog con selector
+        if (ubicacionObj instanceof Map) {
+            Map<String, Object> ubicacion = (Map<String, Object>) ubicacionObj;
+            Object geopointObj = ubicacion.get(FirestoreConstants.FIELD_GEOPOINT);
+
+            if (geopointObj instanceof GeoPoint) {
+                GeoPoint geoPoint = (GeoPoint) geopointObj;
+                userLocation.put(FirestoreConstants.FIELD_LATITUDE, geoPoint.getLatitude());
+                userLocation.put(FirestoreConstants.FIELD_LONGITUDE, geoPoint.getLongitude());
+            }
+        }
+        return userLocation;
+    }
+
+    private void mostrarSelectorMascota(List<com.google.firebase.firestore.DocumentSnapshot> mascotas, Map<String, Object> userData) {
+        String[] nombresMascotas = buildMascotaNames(mascotas);
+
         new android.app.AlertDialog.Builder(activity)
                 .setTitle("Selecciona tu mascota")
                 .setItems(nombresMascotas, (dialog, which) -> {
-                    // Usuario seleccionó una mascota
                     Map<String, Object> mascotaSeleccionada = mascotas.get(which).getData();
-                    Log.d(TAG, "Mascota seleccionada: " + mascotaSeleccionada.get("nombre"));
-
-                    // Procesar con la mascota seleccionada
+                    Log.d(TAG, "Mascota seleccionada: " + mascotaSeleccionada.get(FirestoreConstants.FIELD_NOMBRE));
                     procesarRecomendacionConMascota(mascotaSeleccionada, userData);
                 })
                 .setNegativeButton("Cancelar", (dialog, which) -> {
@@ -615,5 +592,16 @@ public class RecomendacionIAHelper {
                 })
                 .setCancelable(true)
                 .show();
+    }
+
+    private String[] buildMascotaNames(List<com.google.firebase.firestore.DocumentSnapshot> mascotas) {
+        String[] nombresMascotas = new String[mascotas.size()];
+        for (int i = 0; i < mascotas.size(); i++) {
+            Map<String, Object> mascota = mascotas.get(i).getData();
+            String nombre = (String) mascota.get(FirestoreConstants.FIELD_NOMBRE);
+            String tipo = (String) mascota.get("tipo_mascota");
+            nombresMascotas[i] = nombre + " (" + (tipo != null ? tipo : "Mascota") + ")";
+        }
+        return nombresMascotas;
     }
 }

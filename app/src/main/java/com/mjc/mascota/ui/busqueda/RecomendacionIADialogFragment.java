@@ -38,6 +38,7 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.functions.FirebaseFunctions;
+import com.mjc.mascota.utils.FirestoreConstants;
 import com.mjc.mascotalink.PerfilPaseadorActivity;
 import com.mjc.mascotalink.R;
 
@@ -49,21 +50,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * DialogFragment para mostrar recomendación IA como overlay flotante
- * Reemplaza el BottomSheet con un diseño más intuitivo
- */
 public class RecomendacionIADialogFragment extends DialogFragment {
 
     private static final String TAG = "RecomendacionIADialog";
 
-    // Views
     private View layoutSkeleton;
     private View layoutContent;
     private LinearLayout layoutError;
     private ImageButton btnClose;
 
-    // Content views
     private ImageView ivProfilePhoto;
     private ImageView ivVerifiedBadge;
     private TextView tvWalkerName;
@@ -81,32 +76,24 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     private MaterialButton btnShare;
     private MaterialButton btnNotInterested;
 
-    // Error views
     private TextView tvErrorMessage;
     private MaterialButton btnRetry;
 
-    // Data
     private String paseadorId;
     private int matchScore;
     private boolean isFavorite = false;
 
-    // Location
     private FusedLocationProviderClient fusedLocationClient;
-
-    // Card view para compartir como imagen
     private View cardMainRecommendation;
 
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         Dialog dialog = super.onCreateDialog(savedInstanceState);
-
-        // Hacer que el dialog sea fullscreen con fondo transparente
         if (dialog.getWindow() != null) {
             dialog.getWindow().requestFeature(Window.FEATURE_NO_TITLE);
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
-
         return dialog;
     }
 
@@ -120,21 +107,15 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        // Inicializar cliente de ubicación
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
-
         initViews(view);
         setupListeners();
-
-        // Iniciar búsqueda de recomendaciones
         buscarRecomendaciones();
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        // Hacer el dialog fullscreen
         if (getDialog() != null && getDialog().getWindow() != null) {
             getDialog().getWindow().setLayout(
                     WindowManager.LayoutParams.MATCH_PARENT,
@@ -144,16 +125,12 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     }
 
     private void initViews(View view) {
-        // Layouts de estados
         layoutSkeleton = view.findViewById(R.id.layoutSkeleton);
         layoutContent = view.findViewById(R.id.layoutContent);
         layoutError = view.findViewById(R.id.layoutError);
         btnClose = view.findViewById(R.id.btnClose);
-
-        // Card principal para compartir como imagen
         cardMainRecommendation = view.findViewById(R.id.cardMainRecommendation);
 
-        // Content views (del item incluido)
         ivProfilePhoto = view.findViewById(R.id.ivProfilePhoto);
         ivVerifiedBadge = view.findViewById(R.id.ivVerifiedBadge);
         tvWalkerName = view.findViewById(R.id.tvWalkerName);
@@ -171,23 +148,18 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         btnShare = view.findViewById(R.id.btnShare);
         btnNotInterested = view.findViewById(R.id.btnNoMeInteresa);
 
-        // Error views
         tvErrorMessage = view.findViewById(R.id.tvErrorMessage);
         btnRetry = view.findViewById(R.id.btnRetry);
     }
 
     private void setupListeners() {
-        // Cerrar al tocar el fondo oscuro
         if (getView() != null) {
             getView().setOnClickListener(v -> dismiss());
         }
 
-        // Evitar que se cierre al tocar la card
         View cardView = getView().findViewById(R.id.cardMain);
         if (cardView != null) {
-            cardView.setOnClickListener(v -> {
-                // No hacer nada, solo prevenir propagación
-            });
+            cardView.setOnClickListener(v -> {});
         }
 
         btnClose.setOnClickListener(v -> dismiss());
@@ -210,17 +182,12 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         layoutSkeleton.setVisibility(View.GONE);
         layoutContent.setVisibility(View.GONE);
         layoutError.setVisibility(View.VISIBLE);
-
         tvErrorMessage.setText(message);
-
-        // 🆕 MEJORA #8: Telemetría
         registrarEventoTelemetria("error", null, null, message);
     }
 
     private void buscarRecomendaciones() {
         showSkeleton();
-
-        // 🆕 MEJORA #8: Telemetría
         registrarEventoTelemetria("solicitud", null, null, null);
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -232,135 +199,127 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         String userId = currentUser.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Obtener datos del usuario y mascota (reutilizando lógica de RecomendacionIAHelper)
-        db.collection("usuarios").document(userId).get()
-                .addOnSuccessListener(userDoc -> {
-                    if (!userDoc.exists()) {
-                        showError("No se encontró tu perfil");
-                        return;
-                    }
-
-                    Map<String, Object> userData = userDoc.getData();
-
-                    // Obtener mascotas
-                    db.collection("duenos").document(userId).collection("mascotas")
-                            .get()
-                            .addOnSuccessListener(petSnapshot -> {
-                                if (petSnapshot.isEmpty()) {
-                                    showError("Registra tu mascota primero");
-                                    return;
-                                }
-
-                                List<DocumentSnapshot> mascotas = petSnapshot.getDocuments();
-
-                                if (mascotas.size() == 1) {
-                                    procesarRecomendacionConMascota(mascotas.get(0).getData(), userData);
-                                } else {
-                                    // TODO: Mostrar selector si tiene múltiples mascotas
-                                    // Por ahora usar la primera
-                                    procesarRecomendacionConMascota(mascotas.get(0).getData(), userData);
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "Error obteniendo mascota", e);
-                                showError("Error al obtener tu mascota");
-                            });
-                })
+        db.collection(FirestoreConstants.COLLECTION_USUARIOS).document(userId).get()
+                .addOnSuccessListener(userDoc -> processUserData(userDoc, userId, db))
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error obteniendo usuario", e);
                     showError("Error al obtener tu perfil");
                 });
     }
 
+    private void processUserData(DocumentSnapshot userDoc, String userId, FirebaseFirestore db) {
+        if (!userDoc.exists()) {
+            showError("No se encontró tu perfil");
+            return;
+        }
+
+        Map<String, Object> userData = userDoc.getData();
+        db.collection(FirestoreConstants.COLLECTION_DUENOS).document(userId)
+                .collection(FirestoreConstants.COLLECTION_MASCOTAS)
+                .get()
+                .addOnSuccessListener(petSnapshot -> processMascotasData(petSnapshot, userData))
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error obteniendo mascota", e);
+                    showError("Error al obtener tu mascota");
+                });
+    }
+
+    private void processMascotasData(com.google.firebase.firestore.QuerySnapshot petSnapshot, Map<String, Object> userData) {
+        if (petSnapshot.isEmpty()) {
+            showError("Registra tu mascota primero");
+            return;
+        }
+
+        List<DocumentSnapshot> mascotas = petSnapshot.getDocuments();
+        procesarRecomendacionConMascota(mascotas.get(0).getData(), userData);
+    }
+
     private void procesarRecomendacionConMascota(Map<String, Object> petData, Map<String, Object> userData) {
-        // Obtener ubicación - intentar múltiples fuentes
-        Map<String, Object> userLocation = new HashMap<>();
+        Map<String, Object> userLocation = extractUserLocation(userData);
 
-        // Intentar 1: ubicacion_principal.geopoint
-        Object ubicacionObj = userData.get("ubicacion_principal");
-        Log.d(TAG, "🔍 ubicacion_principal: " + ubicacionObj);
-
-        if (ubicacionObj instanceof Map) {
-            Map<String, Object> ubicacion = (Map<String, Object>) ubicacionObj;
-            Object geopointObj = ubicacion.get("geopoint");
-            Log.d(TAG, "🔍 geopoint: " + geopointObj);
-
-            if (geopointObj instanceof GeoPoint) {
-                GeoPoint geoPoint = (GeoPoint) geopointObj;
-                userLocation.put("latitude", geoPoint.getLatitude());
-                userLocation.put("longitude", geoPoint.getLongitude());
-                Log.d(TAG, "✅ Ubicación obtenida de ubicacion_principal.geopoint");
-            }
-        }
-
-        // Intentar 2: ubicacion directa (formato antiguo)
-        if (userLocation.isEmpty()) {
-            Object ubicacionDirecta = userData.get("ubicacion");
-            Log.d(TAG, "🔍 ubicacion directa: " + ubicacionDirecta);
-
-            if (ubicacionDirecta instanceof GeoPoint) {
-                GeoPoint geoPoint = (GeoPoint) ubicacionDirecta;
-                userLocation.put("latitude", geoPoint.getLatitude());
-                userLocation.put("longitude", geoPoint.getLongitude());
-                Log.d(TAG, "✅ Ubicación obtenida de ubicacion directa");
-            }
-        }
-
-        // Intentar 3: direccion_coordenadas
-        if (userLocation.isEmpty()) {
-            Object direccionCoords = userData.get("direccion_coordenadas");
-            Log.d(TAG, "🔍 direccion_coordenadas: " + direccionCoords);
-
-            if (direccionCoords instanceof GeoPoint) {
-                GeoPoint geoPoint = (GeoPoint) direccionCoords;
-                userLocation.put("latitude", geoPoint.getLatitude());
-                userLocation.put("longitude", geoPoint.getLongitude());
-                Log.d(TAG, "✅ Ubicación obtenida de direccion_coordenadas");
-            }
-        }
-
-        // Intentar 4: Campos separados lat/lng
-        if (userLocation.isEmpty()) {
-            Object lat = userData.get("latitude");
-            Object lng = userData.get("longitude");
-            Log.d(TAG, "🔍 lat/lng separados: " + lat + ", " + lng);
-
-            if (lat != null && lng != null) {
-                userLocation.put("latitude", lat);
-                userLocation.put("longitude", lng);
-                Log.d(TAG, "✅ Ubicación obtenida de lat/lng separados");
-            }
-        }
-
-        Log.d(TAG, "📍 userLocation final: " + userLocation);
-
-        // Si no hay ubicación guardada, obtener ubicación actual del GPS
-        if (!userLocation.containsKey("latitude") || !userLocation.containsKey("longitude")) {
+        if (!userLocation.containsKey(FirestoreConstants.FIELD_LATITUDE) ||
+            !userLocation.containsKey(FirestoreConstants.FIELD_LONGITUDE)) {
             Log.w(TAG, "⚠️ No hay ubicación guardada, obteniendo ubicación actual del GPS...");
             obtenerUbicacionActualYContinuar(userData, petData);
             return;
         }
 
-        // Llamar Cloud Function
         llamarCloudFunction(sanitizeData(userData), sanitizeData(petData), userLocation);
     }
 
-    /**
-     * Obtiene la ubicación actual del GPS en tiempo real
-     */
+    private Map<String, Object> extractUserLocation(Map<String, Object> userData) {
+        Map<String, Object> userLocation = new HashMap<>();
+
+        GeoPoint geoPoint = tryGetGeoPointFromUbicacionPrincipal(userData);
+        if (geoPoint == null) {
+            geoPoint = tryGetGeoPointFromUbicacion(userData);
+        }
+        if (geoPoint == null) {
+            geoPoint = tryGetGeoPointFromDireccionCoordenadas(userData);
+        }
+
+        if (geoPoint != null) {
+            userLocation.put(FirestoreConstants.FIELD_LATITUDE, geoPoint.getLatitude());
+            userLocation.put(FirestoreConstants.FIELD_LONGITUDE, geoPoint.getLongitude());
+            return userLocation;
+        }
+
+        return tryGetLocationFromSeparateFields(userData);
+    }
+
+    private GeoPoint tryGetGeoPointFromUbicacionPrincipal(Map<String, Object> userData) {
+        Object ubicacionObj = userData.get(FirestoreConstants.FIELD_UBICACION_PRINCIPAL);
+        if (ubicacionObj instanceof Map) {
+            Map<String, Object> ubicacion = (Map<String, Object>) ubicacionObj;
+            Object geopointObj = ubicacion.get(FirestoreConstants.FIELD_GEOPOINT);
+            if (geopointObj instanceof GeoPoint) {
+                Log.d(TAG, "✅ Ubicación obtenida de ubicacion_principal.geopoint");
+                return (GeoPoint) geopointObj;
+            }
+        }
+        return null;
+    }
+
+    private GeoPoint tryGetGeoPointFromUbicacion(Map<String, Object> userData) {
+        Object ubicacionDirecta = userData.get(FirestoreConstants.FIELD_UBICACION);
+        if (ubicacionDirecta instanceof GeoPoint) {
+            Log.d(TAG, "✅ Ubicación obtenida de ubicacion directa");
+            return (GeoPoint) ubicacionDirecta;
+        }
+        return null;
+    }
+
+    private GeoPoint tryGetGeoPointFromDireccionCoordenadas(Map<String, Object> userData) {
+        Object direccionCoords = userData.get(FirestoreConstants.FIELD_DIRECCION_COORDENADAS);
+        if (direccionCoords instanceof GeoPoint) {
+            Log.d(TAG, "✅ Ubicación obtenida de direccion_coordenadas");
+            return (GeoPoint) direccionCoords;
+        }
+        return null;
+    }
+
+    private Map<String, Object> tryGetLocationFromSeparateFields(Map<String, Object> userData) {
+        Map<String, Object> userLocation = new HashMap<>();
+        Object lat = userData.get(FirestoreConstants.FIELD_LATITUDE);
+        Object lng = userData.get(FirestoreConstants.FIELD_LONGITUDE);
+
+        if (lat != null && lng != null) {
+            userLocation.put(FirestoreConstants.FIELD_LATITUDE, lat);
+            userLocation.put(FirestoreConstants.FIELD_LONGITUDE, lng);
+            Log.d(TAG, "✅ Ubicación obtenida de lat/lng separados");
+        }
+        return userLocation;
+    }
+
     private void obtenerUbicacionActualYContinuar(Map<String, Object> userData, Map<String, Object> petData) {
         try {
             fusedLocationClient.getLastLocation()
                     .addOnSuccessListener(location -> {
                         if (location != null) {
                             Map<String, Object> userLocation = new HashMap<>();
-                            userLocation.put("latitude", location.getLatitude());
-                            userLocation.put("longitude", location.getLongitude());
-
-                            Log.d(TAG, "✅ Ubicación actual obtenida del GPS: " +
-                                  location.getLatitude() + ", " + location.getLongitude());
-
-                            // Continuar con la recomendación
+                            userLocation.put(FirestoreConstants.FIELD_LATITUDE, location.getLatitude());
+                            userLocation.put(FirestoreConstants.FIELD_LONGITUDE, location.getLongitude());
+                            Log.d(TAG, "✅ Ubicación actual obtenida del GPS");
                             llamarCloudFunction(sanitizeData(userData), sanitizeData(petData), userLocation);
                         } else {
                             Log.e(TAG, "❌ No se pudo obtener ubicación actual del GPS");
@@ -411,197 +370,181 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         FirebaseFunctions.getInstance()
                 .getHttpsCallable("recomendarPaseadores")
                 .call(data)
-                .addOnSuccessListener(result -> {
-                    Map<String, Object> response = (Map<String, Object>) result.getData();
-                    List<Map<String, Object>> recommendations =
-                            (List<Map<String, Object>>) response.get("recommendations");
-
-                    if (recommendations == null || recommendations.isEmpty()) {
-                        showError("No encontramos matches perfectos");
-                        return;
-                    }
-
-                    // Cargar detalles del primer recomendado
-                    Map<String, Object> firstRec = recommendations.get(0);
-                    String paseadorId = (String) firstRec.get("id");
-
-                    FirebaseFirestore.getInstance()
-                            .collection("paseadores_search")
-                            .document(paseadorId)
-                            .get()
-                            .addOnSuccessListener(doc -> {
-                                if (doc.exists()) {
-                                    showContent();
-                                    bindData(firstRec, doc.getData());
-
-                                    // 🆕 MEJORA #8: Telemetría
-                                    registrarEventoTelemetria("exito", paseadorId, getIntValue(firstRec.get("match_score")), null);
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "Error cargando datos", e);
-                                showError("Error al cargar recomendación");
-                            });
-                })
+                .addOnSuccessListener(result -> processCloudFunctionResult(result))
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error llamando Cloud Function", e);
                     showError("Error al buscar recomendaciones");
                 });
     }
 
+    private void processCloudFunctionResult(com.google.firebase.functions.HttpsCallableResult result) {
+        Map<String, Object> response = (Map<String, Object>) result.getData();
+        List<Map<String, Object>> recommendations = (List<Map<String, Object>>) response.get("recommendations");
+
+        if (recommendations == null || recommendations.isEmpty()) {
+            showError("No encontramos matches perfectos");
+            return;
+        }
+
+        loadFirstRecommendation(recommendations.get(0));
+    }
+
+    private void loadFirstRecommendation(Map<String, Object> firstRec) {
+        String paseadorId = (String) firstRec.get(FirestoreConstants.FIELD_ID);
+
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_PASEADORES_SEARCH)
+                .document(paseadorId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        showContent();
+                        bindData(firstRec, doc.getData());
+                        registrarEventoTelemetria("exito", paseadorId, getIntValue(firstRec.get(FirestoreConstants.FIELD_MATCH_SCORE_LOWER)), null);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error cargando datos", e);
+                    showError("Error al cargar recomendación");
+                });
+    }
+
     private void bindData(Map<String, Object> recommendation, Map<String, Object> paseadorData) {
-        // Guardar para telemetría
-        this.paseadorId = (String) recommendation.get("id");
-        this.matchScore = getIntValue(recommendation.get("match_score"));
+        this.paseadorId = (String) recommendation.get(FirestoreConstants.FIELD_ID);
+        this.matchScore = getIntValue(recommendation.get(FirestoreConstants.FIELD_MATCH_SCORE_LOWER));
 
-        // Obtener tags una sola vez para usar en varios lugares
-        List<String> tags = (List<String>) recommendation.get("tags");
+        List<String> tags = (List<String>) recommendation.get(FirestoreConstants.FIELD_TAGS);
 
-        // Nombre
-        String nombre = (String) recommendation.get("nombre");
+        bindBasicInfo(recommendation, paseadorData);
+        bindLocation(paseadorData, tags);
+        bindExperienceAndSpecialty(paseadorData, tags);
+        bindMatchAndRating(recommendation, paseadorData);
+        bindPhoto(paseadorData);
+        bindVerifiedBadge(paseadorData);
+        bindReason(recommendation);
+        bindTags(tags);
+        setupActionButtons(paseadorId, paseadorData);
+    }
+
+    private void bindBasicInfo(Map<String, Object> recommendation, Map<String, Object> paseadorData) {
+        String nombre = (String) recommendation.get(FirestoreConstants.FIELD_NOMBRE);
         tvWalkerName.setText(nombre != null ? nombre : "Paseador");
 
-        // Ubicación (intentar de varias fuentes)
-        String ubicacion = null;
+        double precio = getDoubleValue(paseadorData.get(FirestoreConstants.FIELD_PRECIO_HORA));
+        tvPrice.setText(String.format(Locale.getDefault(), "$%.1f", precio));
+    }
 
-        // Intento 1: zonas_principales (primera zona)
-        List<String> zonasPrincipales = (List<String>) paseadorData.get("zonas_principales");
+    private void bindLocation(Map<String, Object> paseadorData, List<String> tags) {
+        String ubicacion = extractUbicacion(paseadorData, tags);
+        tvLocation.setText(ubicacion != null ? ubicacion : "Ubicación no especificada");
+        adjustLocationLayout(ubicacion);
+    }
+
+    private String extractUbicacion(Map<String, Object> paseadorData, List<String> tags) {
+        List<String> zonasPrincipales = (List<String>) paseadorData.get(FirestoreConstants.FIELD_ZONAS_PRINCIPALES);
         if (zonasPrincipales != null && !zonasPrincipales.isEmpty()) {
-            ubicacion = zonasPrincipales.get(0);
+            return zonasPrincipales.get(0);
         }
 
-        // Intento 2: extraer de los tags de distancia
-        if (ubicacion == null && tags != null && !tags.isEmpty()) {
+        if (tags != null) {
             for (String tag : tags) {
-                if (tag.contains("km")) {
-                    ubicacion = tag; // ej: "📍 2.5km"
-                    break;
+                if (tag != null && tag.contains("km")) {
+                    return tag;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void adjustLocationLayout(String ubicacion) {
+        View llLocationExperience = getView().findViewById(R.id.llLocationExperience);
+        View llExperience = getView().findViewById(R.id.llExperience);
+        View tvSeparator = getView().findViewById(R.id.tvLocationSeparator);
+
+        if (!(llLocationExperience instanceof LinearLayout) || llExperience == null) return;
+
+        LinearLayout layoutPadre = (LinearLayout) llLocationExperience;
+        if (ubicacion != null && ubicacion.length() <= 20) {
+            setHorizontalLayout(layoutPadre, llExperience, tvSeparator);
+        } else {
+            setVerticalLayout(layoutPadre, llExperience, tvSeparator);
+        }
+    }
+
+    private void setHorizontalLayout(LinearLayout parent, View experience, View separator) {
+        parent.setOrientation(LinearLayout.HORIZONTAL);
+        parent.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        if (separator != null) separator.setVisibility(View.VISIBLE);
+        setMarginTop(experience, 0);
+    }
+
+    private void setVerticalLayout(LinearLayout parent, View experience, View separator) {
+        parent.setOrientation(LinearLayout.VERTICAL);
+        parent.setGravity(android.view.Gravity.CENTER);
+        if (separator != null) separator.setVisibility(View.GONE);
+        setMarginTop(experience, (int) (4 * getResources().getDisplayMetrics().density));
+    }
+
+    private void setMarginTop(View view, int marginTop) {
+        if (view.getLayoutParams() instanceof LinearLayout.LayoutParams) {
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) view.getLayoutParams();
+            params.topMargin = marginTop;
+            view.setLayoutParams(params);
+        }
+    }
+
+    private void bindExperienceAndSpecialty(Map<String, Object> paseadorData, List<String> tags) {
+        int experiencia = getIntValue(paseadorData.get(FirestoreConstants.FIELD_ANOS_EXPERIENCIA));
+        tvExperience.setText(experiencia + " años exp.");
+
+        String especialidad = extractEspecialidad(paseadorData, tags);
+        tvSpecialty.setText(especialidad != null ? especialidad : "Paseador Profesional");
+    }
+
+    private String extractEspecialidad(Map<String, Object> paseadorData, List<String> tags) {
+        if (tags != null) {
+            for (String tag : tags) {
+                if (tag != null && isSpecialtyTag(tag)) {
+                    return tag;
                 }
             }
         }
 
-        if (tvLocation != null) {
-            tvLocation.setText(ubicacion != null ? ubicacion : "Ubicación no especificada");
-
-            // Adaptar diseño según longitud de ubicación
-            View llLocationExperience = getView().findViewById(R.id.llLocationExperience);
-            View llExperience = getView().findViewById(R.id.llExperience);
-            View tvSeparator = getView().findViewById(R.id.tvLocationSeparator);
-
-            if (llLocationExperience instanceof LinearLayout && llExperience != null) {
-                LinearLayout layoutPadre = (LinearLayout) llLocationExperience;
-
-                // Si la ubicación es CORTA (<=20 caracteres), usar modo horizontal (1 línea)
-                if (ubicacion != null && ubicacion.length() <= 20) {
-                    layoutPadre.setOrientation(LinearLayout.HORIZONTAL);
-                    layoutPadre.setGravity(android.view.Gravity.CENTER_VERTICAL);
-
-                    // Mostrar separador "•"
-                    if (tvSeparator != null) {
-                        tvSeparator.setVisibility(View.VISIBLE);
-                    }
-
-                    // Quitar margen top de experiencia (están en la misma línea)
-                    if (llExperience.getLayoutParams() instanceof LinearLayout.LayoutParams) {
-                        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) llExperience.getLayoutParams();
-                        params.topMargin = 0;
-                        llExperience.setLayoutParams(params);
-                    }
-                } else {
-                    // Si la ubicación es LARGA (>20 caracteres), usar modo vertical (2 líneas)
-                    layoutPadre.setOrientation(LinearLayout.VERTICAL);
-                    layoutPadre.setGravity(android.view.Gravity.CENTER);
-
-                    // Ocultar separador "•"
-                    if (tvSeparator != null) {
-                        tvSeparator.setVisibility(View.GONE);
-                    }
-
-                    // Agregar margen top de experiencia (en línea separada)
-                    if (llExperience.getLayoutParams() instanceof LinearLayout.LayoutParams) {
-                        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) llExperience.getLayoutParams();
-                        params.topMargin = (int) (4 * getResources().getDisplayMetrics().density); // 4dp
-                        llExperience.setLayoutParams(params);
-                    }
-                }
+        List<String> tiposAceptados = (List<String>) paseadorData.get(FirestoreConstants.FIELD_TIPOS_PERRO_ACEPTADOS);
+        if (tiposAceptados != null && !tiposAceptados.isEmpty()) {
+            String primerTipo = tiposAceptados.get(0);
+            if (primerTipo != null && !primerTipo.isEmpty()) {
+                return "Especialista en " + primerTipo;
             }
         }
 
-        // Experiencia
-        int experiencia = getIntValue(paseadorData.get("anos_experiencia"));
-        if (tvExperience != null) {
-            tvExperience.setText(experiencia + " años exp.");
+        String tipoMascota = (String) paseadorData.get(FirestoreConstants.FIELD_ESPECIALIDAD_TIPO_MASCOTA);
+        if (tipoMascota != null && !tipoMascota.isEmpty()) {
+            return "Especialista en " + tipoMascota;
         }
 
-        // Especialidad (buscar tag apropiado o usar tipos_perro_aceptados)
-        if (tvSpecialty != null) {
-            String especialidad = null;
+        return null;
+    }
 
-            // Intento 1: Buscar en los tags uno que sea sobre tipo de perro
-            if (tags != null && !tags.isEmpty()) {
-                for (String tag : tags) {
-                    // Validar que el tag no sea null antes de usar contains
-                    if (tag != null && (tag.contains("Acepta") || tag.contains("🐕") ||
-                        tag.contains("Grande") || tag.contains("Mediano") || tag.contains("Pequeño") ||
-                        tag.contains("Especialista") || tag.contains("perro"))) {
-                        especialidad = tag;
-                        break;
-                    }
-                }
-            }
+    private boolean isSpecialtyTag(String tag) {
+        return tag.contains("Acepta") || tag.contains("🐕") ||
+               tag.contains("Grande") || tag.contains("Mediano") ||
+               tag.contains("Pequeño") || tag.contains("Especialista") ||
+               tag.contains("perro");
+    }
 
-            // Intento 2: Usar tipos_perro_aceptados del paseador
-            if (especialidad == null) {
-                List<String> tiposAceptados = (List<String>) paseadorData.get("tipos_perro_aceptados");
-                if (tiposAceptados != null && !tiposAceptados.isEmpty()) {
-                    String primerTipo = tiposAceptados.get(0);
-                    // Validar que no sea null ni vacío
-                    if (primerTipo != null && !primerTipo.isEmpty()) {
-                        especialidad = "Especialista en " + primerTipo;
-                    }
-                }
-            }
-
-            // Intento 3: Usar especialidad_tipo_mascota si existe
-            if (especialidad == null) {
-                String tipoMascota = (String) paseadorData.get("especialidad_tipo_mascota");
-                if (tipoMascota != null && !tipoMascota.isEmpty()) {
-                    especialidad = "Especialista en " + tipoMascota;
-                }
-            }
-
-            // Default: Paseador Profesional
-            tvSpecialty.setText(especialidad != null ? especialidad : "Paseador Profesional");
-        }
-
-        // Match Score
+    private void bindMatchAndRating(Map<String, Object> recommendation, Map<String, Object> paseadorData) {
         tvMatchScore.setText(matchScore + "% Match");
 
-        // Rating
-        double calificacion = getDoubleValue(paseadorData.get("calificacion_promedio"));
+        double calificacion = getDoubleValue(paseadorData.get(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO));
         tvRating.setText(String.format(Locale.getDefault(), "%.1f", calificacion));
 
-        // Reseñas
-        int servicios = getIntValue(paseadorData.get("num_servicios_completados"));
+        int servicios = getIntValue(paseadorData.get(FirestoreConstants.FIELD_NUM_SERVICIOS_COMPLETADOS));
         tvReviewCount.setText("(" + servicios + " reseñas)");
+    }
 
-        // Precio (solo el valor, el "/h" está en un TextView separado en el XML)
-        double precio = getDoubleValue(paseadorData.get("precio_hora"));
-        tvPrice.setText(String.format(Locale.getDefault(), "$%.1f", precio));
-
-        // Razón de IA (explicación detallada de Gemini)
-        String razonIA = (String) recommendation.get("razon_ia");
-        if (tvRazonIA != null) {
-            if (razonIA != null && !razonIA.isEmpty()) {
-                tvRazonIA.setText(razonIA);
-                tvRazonIA.setVisibility(View.VISIBLE);
-            } else {
-                tvRazonIA.setVisibility(View.GONE);
-            }
-        }
-
-        // Foto
-        String fotoUrl = (String) paseadorData.get("foto_url");
+    private void bindPhoto(Map<String, Object> paseadorData) {
+        String fotoUrl = (String) paseadorData.get(FirestoreConstants.FIELD_FOTO_URL);
         if (fotoUrl != null && !fotoUrl.isEmpty()) {
             Glide.with(this)
                     .load(fotoUrl)
@@ -610,19 +553,33 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                     .circleCrop()
                     .into(ivProfilePhoto);
         }
+    }
 
-        // Badge verificado (verificar si es "APROBADO" - el valor en mayúscula que viene de la BD)
-        String verificacionEstado = (String) paseadorData.get("verificacion_estado");
+    private void bindVerifiedBadge(Map<String, Object> paseadorData) {
+        String verificacionEstado = (String) paseadorData.get(FirestoreConstants.FIELD_VERIFICACION_ESTADO);
+        boolean esVerificado = FirestoreConstants.STATUS_APROBADO.equalsIgnoreCase(verificacionEstado);
+
         if (ivVerifiedBadge != null) {
-            boolean esVerificado = "APROBADO".equalsIgnoreCase(verificacionEstado);
             ivVerifiedBadge.setVisibility(esVerificado ? View.VISIBLE : View.GONE);
-            // También controlar la visibilidad del CardView padre si tiene visibilidad propia
             if (ivVerifiedBadge.getParent() instanceof View) {
                 ((View) ivVerifiedBadge.getParent()).setVisibility(esVerificado ? View.VISIBLE : View.GONE);
             }
         }
+    }
 
-        // Tags/razones (ya obtenidos al inicio del método)
+    private void bindReason(Map<String, Object> recommendation) {
+        String razonIA = (String) recommendation.get(FirestoreConstants.FIELD_RAZON_IA);
+        if (tvRazonIA != null) {
+            if (razonIA != null && !razonIA.isEmpty()) {
+                tvRazonIA.setText(razonIA);
+                tvRazonIA.setVisibility(View.VISIBLE);
+            } else {
+                tvRazonIA.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void bindTags(List<String> tags) {
         chipGroupReasons.removeAllViews();
         if (tags != null) {
             for (String tag : tags) {
@@ -633,233 +590,130 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                 chipGroupReasons.addView(chip);
             }
         }
-
-        setupActionButtons(paseadorId, paseadorData);
     }
 
     private void setupActionButtons(String paseadorId, Map<String, Object> paseadorData) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        // Verificar si ya está en favoritos y actualizar icono
         if (currentUser != null) {
-            FirebaseFirestore.getInstance()
-                    .collection("usuarios")
-                    .document(currentUser.getUid())
-                    .collection("favoritos")
-                    .document(paseadorId)
-                    .get()
-                    .addOnSuccessListener(doc -> {
-                        isFavorite = doc.exists();
-                        updateFavoriteIcon();
-                    });
+            checkAndUpdateFavoriteStatus(currentUser, paseadorId);
         }
 
-        // Ver Perfil
+        setupViewProfileButton(paseadorId);
+        setupFavoriteButton(currentUser, paseadorId, paseadorData);
+        setupShareButton(paseadorId);
+        setupNotInterestedButton(paseadorId);
+    }
+
+    private void checkAndUpdateFavoriteStatus(FirebaseUser currentUser, String paseadorId) {
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    isFavorite = doc.exists();
+                    updateFavoriteIcon();
+                });
+    }
+
+    private void setupViewProfileButton(String paseadorId) {
         btnViewProfile.setOnClickListener(v -> {
             registrarEventoTelemetria("ver_perfil", paseadorId, matchScore, null);
-
             dismiss();
             Intent intent = new Intent(requireActivity(), PerfilPaseadorActivity.class);
             intent.putExtra("paseador_id", paseadorId);
             startActivity(intent);
         });
+    }
 
-        // Favorito - Toggle (agregar o quitar)
+    private void setupFavoriteButton(FirebaseUser currentUser, String paseadorId, Map<String, Object> paseadorData) {
         btnFavorite.setOnClickListener(v -> {
             if (currentUser == null) return;
-
-            if (isFavorite) {
-                // Quitar de favoritos
-                FirebaseFirestore.getInstance()
-                        .collection("usuarios")
-                        .document(currentUser.getUid())
-                        .collection("favoritos")
-                        .document(paseadorId)
-                        .delete()
-                        .addOnSuccessListener(aVoid -> {
-                            isFavorite = false;
-                            updateFavoriteIcon();
-                            Toast.makeText(requireContext(), "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
-                            registrarEventoTelemetria("quitar_favorito", paseadorId, matchScore, null);
-                        });
-            } else {
-                // Agregar a favoritos
-                Map<String, Object> favData = new HashMap<>();
-                favData.put("id", paseadorId);
-                favData.put("nombre", paseadorData.get("nombre"));
-                favData.put("foto_url", paseadorData.get("foto_url"));
-                favData.put("calificacion", paseadorData.get("calificacion_promedio"));
-                favData.put("timestamp", FieldValue.serverTimestamp());
-
-                FirebaseFirestore.getInstance()
-                        .collection("usuarios")
-                        .document(currentUser.getUid())
-                        .collection("favoritos")
-                        .document(paseadorId)
-                        .set(favData)
-                        .addOnSuccessListener(aVoid -> {
-                            isFavorite = true;
-                            updateFavoriteIcon();
-                            Toast.makeText(requireContext(), "Agregado a favoritos", Toast.LENGTH_SHORT).show();
-                            registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
-                        });
-            }
+            toggleFavorite(currentUser, paseadorId, paseadorData);
         });
+    }
 
-        // Compartir - Capturar y compartir como imagen
+    private void toggleFavorite(FirebaseUser currentUser, String paseadorId, Map<String, Object> paseadorData) {
+        if (isFavorite) {
+            removeFavorite(currentUser, paseadorId);
+        } else {
+            addFavorite(currentUser, paseadorId, paseadorData);
+        }
+    }
+
+    private void removeFavorite(FirebaseUser currentUser, String paseadorId) {
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    isFavorite = false;
+                    updateFavoriteIcon();
+                    Toast.makeText(requireContext(), "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
+                    registrarEventoTelemetria("quitar_favorito", paseadorId, matchScore, null);
+                });
+    }
+
+    private void addFavorite(FirebaseUser currentUser, String paseadorId, Map<String, Object> paseadorData) {
+        Map<String, Object> favData = new HashMap<>();
+        favData.put(FirestoreConstants.FIELD_ID, paseadorId);
+        favData.put(FirestoreConstants.FIELD_NOMBRE, paseadorData.get(FirestoreConstants.FIELD_NOMBRE));
+        favData.put(FirestoreConstants.FIELD_FOTO_URL, paseadorData.get(FirestoreConstants.FIELD_FOTO_URL));
+        favData.put("calificacion", paseadorData.get(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO));
+        favData.put(FirestoreConstants.FIELD_TIMESTAMP, FieldValue.serverTimestamp());
+
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId)
+                .set(favData)
+                .addOnSuccessListener(aVoid -> {
+                    isFavorite = true;
+                    updateFavoriteIcon();
+                    Toast.makeText(requireContext(), "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                    registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
+                });
+    }
+
+    private void setupShareButton(String paseadorId) {
         btnShare.setOnClickListener(v -> {
             registrarEventoTelemetria("compartir", paseadorId, matchScore, null);
             compartirComoImagen();
         });
-
-        // No me interesa
-        btnNotInterested.setOnClickListener(v -> {
-            mostrarDialogNoMeInteresa(paseadorId);
-        });
     }
 
-    /**
-     * Actualiza el icono del botón de favoritos según el estado
-     */
+    private void setupNotInterestedButton(String paseadorId) {
+        btnNotInterested.setOnClickListener(v -> mostrarDialogNoMeInteresa(paseadorId));
+    }
+
     private void updateFavoriteIcon() {
         if (btnFavorite != null) {
             if (isFavorite) {
-                // Corazón lleno en rojo
                 btnFavorite.setIconResource(R.drawable.ic_favorite_filled);
-                btnFavorite.setIconTint(null); // Usar el color del drawable (rojo)
+                btnFavorite.setIconTint(null);
             } else {
-                // Corazón vacío en gris
                 btnFavorite.setIconResource(R.drawable.ic_favorite);
-                btnFavorite.setIconTint(android.content.res.ColorStateList.valueOf(0xFF64748B)); // Gris
+                btnFavorite.setIconTint(android.content.res.ColorStateList.valueOf(0xFF64748B));
             }
         }
     }
 
-    /**
-     * Captura el CardView como imagen y la comparte
-     */
     private void compartirComoImagen() {
         View rootView = getView();
-        if (rootView == null || cardMainRecommendation == null) {
-            Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "rootView o cardMainRecommendation es null");
-            return;
-        }
-
-        // Verificar que el view esté visible y tenga dimensiones
-        if (cardMainRecommendation.getVisibility() != View.VISIBLE) {
-            Toast.makeText(requireContext(), "El contenido no está visible", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "cardMainRecommendation no está visible");
-            return;
-        }
-
-        if (cardMainRecommendation.getWidth() == 0 || cardMainRecommendation.getHeight() == 0) {
-            Toast.makeText(requireContext(), "Error: el contenido no tiene dimensiones", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "cardMainRecommendation no tiene dimensiones: " + cardMainRecommendation.getWidth() + "x" + cardMainRecommendation.getHeight());
-            return;
-        }
+        if (!validateViewsForCapture(rootView)) return;
 
         try {
             Log.d(TAG, "Preparando captura para compartir...");
+            ViewVisibilityState state = new ViewVisibilityState(rootView);
+            state.prepareForCapture();
 
-            // Obtener referencias a los elementos
-            View ivWalkiLogo = rootView.findViewById(R.id.ivWalkiLogoShare);
-            View cardAiReasoning = rootView.findViewById(R.id.cardAiReasoning);
-            View llActionButtons = rootView.findViewById(R.id.llActionButtons);
-            View btnNoMeInteresa = rootView.findViewById(R.id.btnNoMeInteresa);
-            View vBottomGradient = rootView.findViewById(R.id.vBottomGradient);
-            View llHintText = rootView.findViewById(R.id.llHintText);
-            View tvHeadlineTitle = rootView.findViewById(R.id.tvHeadlineTitle);
-            View tvHeadlineSubtitle = rootView.findViewById(R.id.tvHeadlineSubtitle);
-            View btnClose = rootView.findViewById(R.id.btnClose);
-
-            // Guardar visibilidad original
-            int logoVis = ivWalkiLogo != null ? ivWalkiLogo.getVisibility() : View.GONE;
-            int aiReasoningVis = cardAiReasoning != null ? cardAiReasoning.getVisibility() : View.GONE;
-            int actionButtonsVis = llActionButtons != null ? llActionButtons.getVisibility() : View.GONE;
-            int noInterestedVis = btnNoMeInteresa != null ? btnNoMeInteresa.getVisibility() : View.GONE;
-            int gradientVis = vBottomGradient != null ? vBottomGradient.getVisibility() : View.GONE;
-            int hintVis = llHintText != null ? llHintText.getVisibility() : View.GONE;
-            int titleVis = tvHeadlineTitle != null ? tvHeadlineTitle.getVisibility() : View.GONE;
-            int subtitleVis = tvHeadlineSubtitle != null ? tvHeadlineSubtitle.getVisibility() : View.GONE;
-            int closeVis = btnClose != null ? btnClose.getVisibility() : View.GONE;
-
-            // MOSTRAR logo, OCULTAR elementos no deseados
-            if (ivWalkiLogo != null) ivWalkiLogo.setVisibility(View.VISIBLE);
-            if (cardAiReasoning != null) cardAiReasoning.setVisibility(View.GONE);
-            if (llActionButtons != null) llActionButtons.setVisibility(View.GONE);
-            if (btnNoMeInteresa != null) btnNoMeInteresa.setVisibility(View.GONE);
-            if (vBottomGradient != null) vBottomGradient.setVisibility(View.GONE);
-            if (llHintText != null) llHintText.setVisibility(View.GONE);
-            if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(View.GONE);
-            if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(View.GONE);
-            if (btnClose != null) btnClose.setVisibility(View.GONE);
-
-            // Cambiar constraint del card para que esté debajo del logo cuando se comparte
-            if (cardMainRecommendation != null && ivWalkiLogo != null) {
-                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
-                    (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
-                params.topToBottom = R.id.ivWalkiLogoShare;
-                cardMainRecommendation.setLayoutParams(params);
-            }
-
-            // Forzar re-layout y esperar a que se complete
             rootView.requestLayout();
-            rootView.post(() -> {
-                try {
-                    Log.d(TAG, "Capturando layout completo con logo...");
-
-                    // Capturar todo el layout raíz (incluye logo + card)
-                    Bitmap bitmap = capturarViewComoBitmap(rootView);
-
-                    Log.d(TAG, "Bitmap capturado correctamente: " + bitmap.getWidth() + "x" + bitmap.getHeight());
-
-                    // Restaurar visibilidad original
-                    if (ivWalkiLogo != null) ivWalkiLogo.setVisibility(logoVis);
-                    if (cardAiReasoning != null) cardAiReasoning.setVisibility(aiReasoningVis);
-                    if (llActionButtons != null) llActionButtons.setVisibility(actionButtonsVis);
-                    if (btnNoMeInteresa != null) btnNoMeInteresa.setVisibility(noInterestedVis);
-                    if (vBottomGradient != null) vBottomGradient.setVisibility(gradientVis);
-                    if (llHintText != null) llHintText.setVisibility(hintVis);
-                    if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(titleVis);
-                    if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(subtitleVis);
-                    if (btnClose != null) btnClose.setVisibility(closeVis);
-
-                    // Restaurar constraint original del card
-                    if (cardMainRecommendation != null) {
-                        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
-                            (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
-                        params.topToBottom = R.id.tvHeadlineSubtitle;
-                        cardMainRecommendation.setLayoutParams(params);
-                    }
-
-                    // Continuar con guardar y compartir
-                    guardarYCompartirImagen(bitmap);
-
-                } catch (Exception e) {
-                    Log.e(TAG, "Error al capturar imagen", e);
-                    Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
-
-                    // Restaurar visibilidad en caso de error
-                    if (ivWalkiLogo != null) ivWalkiLogo.setVisibility(logoVis);
-                    if (cardAiReasoning != null) cardAiReasoning.setVisibility(aiReasoningVis);
-                    if (llActionButtons != null) llActionButtons.setVisibility(actionButtonsVis);
-                    if (btnNoMeInteresa != null) btnNoMeInteresa.setVisibility(noInterestedVis);
-                    if (vBottomGradient != null) vBottomGradient.setVisibility(gradientVis);
-                    if (llHintText != null) llHintText.setVisibility(hintVis);
-                    if (tvHeadlineTitle != null) tvHeadlineTitle.setVisibility(titleVis);
-                    if (tvHeadlineSubtitle != null) tvHeadlineSubtitle.setVisibility(subtitleVis);
-                    if (btnClose != null) btnClose.setVisibility(closeVis);
-
-                    // Restaurar constraint original del card
-                    if (cardMainRecommendation != null) {
-                        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
-                            (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
-                        params.topToBottom = R.id.tvHeadlineSubtitle;
-                        cardMainRecommendation.setLayoutParams(params);
-                    }
-                }
-            });
+            rootView.post(() -> captureAndShare(rootView, state));
 
         } catch (Exception e) {
             Log.e(TAG, "Error al preparar captura", e);
@@ -867,13 +721,130 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         }
     }
 
-    /**
-     * Guarda el bitmap y lo comparte
-     */
+    private boolean validateViewsForCapture(View rootView) {
+        if (rootView == null || cardMainRecommendation == null) {
+            Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "rootView o cardMainRecommendation es null");
+            return false;
+        }
+
+        if (cardMainRecommendation.getVisibility() != View.VISIBLE) {
+            Toast.makeText(requireContext(), "El contenido no está visible", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "cardMainRecommendation no está visible");
+            return false;
+        }
+
+        if (cardMainRecommendation.getWidth() == 0 || cardMainRecommendation.getHeight() == 0) {
+            Toast.makeText(requireContext(), "Error: el contenido no tiene dimensiones", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "cardMainRecommendation no tiene dimensiones");
+            return false;
+        }
+
+        return true;
+    }
+
+    private void captureAndShare(View rootView, ViewVisibilityState state) {
+        try {
+            Log.d(TAG, "Capturando layout completo con logo...");
+            Bitmap bitmap = capturarViewComoBitmap(rootView);
+            Log.d(TAG, "Bitmap capturado correctamente: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+
+            state.restore();
+            guardarYCompartirImagen(bitmap);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error al capturar imagen", e);
+            Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
+            state.restore();
+        }
+    }
+
+    private class ViewVisibilityState {
+        private View rootView;
+        private View ivWalkiLogo, cardAiReasoning, llActionButtons, btnNoMeInteresa;
+        private View vBottomGradient, llHintText, tvHeadlineTitle, tvHeadlineSubtitle, btnClose;
+        private int logoVis, aiReasoningVis, actionButtonsVis, noInterestedVis;
+        private int gradientVis, hintVis, titleVis, subtitleVis, closeVis;
+
+        ViewVisibilityState(View rootView) {
+            this.rootView = rootView;
+            findViews();
+            saveVisibility();
+        }
+
+        private void findViews() {
+            ivWalkiLogo = rootView.findViewById(R.id.ivWalkiLogoShare);
+            cardAiReasoning = rootView.findViewById(R.id.cardAiReasoning);
+            llActionButtons = rootView.findViewById(R.id.llActionButtons);
+            btnNoMeInteresa = rootView.findViewById(R.id.btnNoMeInteresa);
+            vBottomGradient = rootView.findViewById(R.id.vBottomGradient);
+            llHintText = rootView.findViewById(R.id.llHintText);
+            tvHeadlineTitle = rootView.findViewById(R.id.tvHeadlineTitle);
+            tvHeadlineSubtitle = rootView.findViewById(R.id.tvHeadlineSubtitle);
+            btnClose = rootView.findViewById(R.id.btnClose);
+        }
+
+        private void saveVisibility() {
+            logoVis = getVisibility(ivWalkiLogo);
+            aiReasoningVis = getVisibility(cardAiReasoning);
+            actionButtonsVis = getVisibility(llActionButtons);
+            noInterestedVis = getVisibility(btnNoMeInteresa);
+            gradientVis = getVisibility(vBottomGradient);
+            hintVis = getVisibility(llHintText);
+            titleVis = getVisibility(tvHeadlineTitle);
+            subtitleVis = getVisibility(tvHeadlineSubtitle);
+            closeVis = getVisibility(btnClose);
+        }
+
+        private int getVisibility(View view) {
+            return view != null ? view.getVisibility() : View.GONE;
+        }
+
+        void prepareForCapture() {
+            setVisibility(ivWalkiLogo, View.VISIBLE);
+            setVisibility(cardAiReasoning, View.GONE);
+            setVisibility(llActionButtons, View.GONE);
+            setVisibility(btnNoMeInteresa, View.GONE);
+            setVisibility(vBottomGradient, View.GONE);
+            setVisibility(llHintText, View.GONE);
+            setVisibility(tvHeadlineTitle, View.GONE);
+            setVisibility(tvHeadlineSubtitle, View.GONE);
+            setVisibility(btnClose, View.GONE);
+
+            if (cardMainRecommendation != null && ivWalkiLogo != null) {
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                    (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
+                params.topToBottom = R.id.ivWalkiLogoShare;
+                cardMainRecommendation.setLayoutParams(params);
+            }
+        }
+
+        void restore() {
+            setVisibility(ivWalkiLogo, logoVis);
+            setVisibility(cardAiReasoning, aiReasoningVis);
+            setVisibility(llActionButtons, actionButtonsVis);
+            setVisibility(btnNoMeInteresa, noInterestedVis);
+            setVisibility(vBottomGradient, gradientVis);
+            setVisibility(llHintText, hintVis);
+            setVisibility(tvHeadlineTitle, titleVis);
+            setVisibility(tvHeadlineSubtitle, subtitleVis);
+            setVisibility(btnClose, closeVis);
+
+            if (cardMainRecommendation != null) {
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                    (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
+                params.topToBottom = R.id.tvHeadlineSubtitle;
+                cardMainRecommendation.setLayoutParams(params);
+            }
+        }
+
+        private void setVisibility(View view, int visibility) {
+            if (view != null) view.setVisibility(visibility);
+        }
+    }
+
     private void guardarYCompartirImagen(Bitmap bitmap) {
         try {
-
-            // Guardar el bitmap temporalmente
             File cachePath = new File(requireContext().getCacheDir(), "images");
             cachePath.mkdirs();
             File imageFile = new File(cachePath, "recomendacion_ia_" + System.currentTimeMillis() + ".png");
@@ -886,28 +857,16 @@ public class RecomendacionIADialogFragment extends DialogFragment {
 
             Log.d(TAG, "Imagen guardada correctamente. Tamaño: " + imageFile.length() + " bytes");
 
-            // Obtener URI usando FileProvider
             String authority = requireContext().getPackageName() + ".provider";
-            Log.d(TAG, "Usando authority: " + authority);
+            Uri imageUri = FileProvider.getUriForFile(requireContext(), authority, imageFile);
 
-            Uri imageUri = FileProvider.getUriForFile(
-                    requireContext(),
-                    authority,
-                    imageFile
-            );
-
-            Log.d(TAG, "URI generado: " + imageUri.toString());
-
-            // Compartir la imagen
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setType("image/png");
             shareIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
             shareIntent.putExtra(Intent.EXTRA_TEXT, "🤖 ¡La IA de Walki me recomendó este paseador perfecto para mi perro!\n\nDescarga la app: https://walki.app");
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-            Log.d(TAG, "Abriendo selector de compartir...");
             startActivity(Intent.createChooser(shareIntent, "Compartir recomendación"));
-
             Toast.makeText(requireContext(), "Imagen capturada correctamente", Toast.LENGTH_SHORT).show();
 
         } catch (IOException e) {
@@ -916,33 +875,21 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         }
     }
 
-    /**
-     * Captura un View como Bitmap con fondo blanco y mejor calidad
-     */
     private Bitmap capturarViewComoBitmap(View view) {
-        // Asegurar que el view esté completamente medido y dibujado
         view.measure(
                 View.MeasureSpec.makeMeasureSpec(view.getWidth(), View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(view.getHeight(), View.MeasureSpec.EXACTLY)
         );
         view.layout(view.getLeft(), view.getTop(), view.getRight(), view.getBottom());
 
-        // Crear bitmap con calidad alta
         Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-
-        // Dibujar fondo blanco para evitar transparencias
         canvas.drawColor(android.graphics.Color.WHITE);
-
-        // Dibujar el view
         view.draw(canvas);
 
         return bitmap;
     }
 
-    /**
-     * 🆕 MEJORA A: Dialog para preguntar razón de "No me interesa"
-     */
     private void mostrarDialogNoMeInteresa(String paseadorId) {
         String[] razones = {
                 "Muy caro",
@@ -956,34 +903,28 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                 .setTitle("¿Por qué no te interesa?")
                 .setItems(razones, (dialog, which) -> {
                     String razonSeleccionada = razones[which];
-
-                    // 🆕 MEJORA #8: Telemetría con razón
                     registrarEventoTelemetria("no_me_interesa", paseadorId, matchScore, razonSeleccionada);
-
                     dismiss();
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
 
-    /**
-     * 🆕 MEJORA #8: Registrar evento de telemetría
-     */
     private void registrarEventoTelemetria(String evento, String paseadorId, Integer matchScore, String errorMsg) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
 
         Map<String, Object> telemetria = new HashMap<>();
-        telemetria.put("userId", currentUser.getUid());
-        telemetria.put("timestamp", FieldValue.serverTimestamp());
-        telemetria.put("evento", evento);
+        telemetria.put(FirestoreConstants.FIELD_USER_ID, currentUser.getUid());
+        telemetria.put(FirestoreConstants.FIELD_TIMESTAMP, FieldValue.serverTimestamp());
+        telemetria.put(FirestoreConstants.FIELD_EVENTO, evento);
 
-        if (paseadorId != null) telemetria.put("paseadorId", paseadorId);
-        if (matchScore != null) telemetria.put("matchScore", matchScore);
-        if (errorMsg != null) telemetria.put("errorMsg", errorMsg);
+        if (paseadorId != null) telemetria.put(FirestoreConstants.FIELD_PASEADOR_ID, paseadorId);
+        if (matchScore != null) telemetria.put(FirestoreConstants.FIELD_MATCH_SCORE, matchScore);
+        if (errorMsg != null) telemetria.put(FirestoreConstants.FIELD_ERROR_MSG, errorMsg);
 
         FirebaseFirestore.getInstance()
-                .collection("recomendaciones_ia_logs")
+                .collection(FirestoreConstants.COLLECTION_RECOMENDACIONES_IA_LOGS)
                 .add(telemetria)
                 .addOnSuccessListener(doc -> Log.d(TAG, "📊 Telemetría: " + evento))
                 .addOnFailureListener(e -> Log.e(TAG, "Error telemetría", e));

@@ -95,6 +95,7 @@ import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.network.SocketManager;
 import com.mjc.mascotalink.network.NetworkMonitorHelper;
+import com.mjc.mascota.utils.FirestoreConstants;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
