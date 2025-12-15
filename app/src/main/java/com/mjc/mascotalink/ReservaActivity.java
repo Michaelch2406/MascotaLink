@@ -1410,8 +1410,17 @@ public class ReservaActivity extends AppCompatActivity {
                 // Recalcular
                 double horas = duracionMinutos / 60.0;
                 int diasCalculo = 1;
-                if (tipoReserva.equals("SEMANAL")) diasCalculo = 7; // 7 días consecutivos
-                else if (tipoReserva.equals("MENSUAL")) diasCalculo = 30; // 30 días consecutivos
+                if (tipoReserva.equals("SEMANAL")) {
+                    diasCalculo = 7; // 7 días consecutivos
+                } else if (tipoReserva.equals("MENSUAL")) {
+                    diasCalculo = 30; // 30 días consecutivos
+                } else if (tipoReserva.equals("PUNTUAL") && modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
+                    // Para días específicos múltiples, contar los días seleccionados
+                    Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+                    if (fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty()) {
+                        diasCalculo = fechasSeleccionadas.size();
+                    }
+                }
 
                 final double costoTotalReal = precioHoraReal * horas * diasCalculo;
 

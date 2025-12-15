@@ -47,7 +47,12 @@ public class PdfGenerator {
 
     private static final String TAG = "PdfGenerator";
 
-    public static Uri generarComprobante(Context context, Paseo paseo) {
+    /**
+     * Genera comprobante con información de grupo opcional
+     */
+    public static Uri generarComprobante(Context context, Paseo paseo, boolean esGrupo, int cantidadDias,
+                                          double costoTotalGrupo, String fechaInicio, String fechaFin,
+                                          String tipoReserva) {
         String fileName = "Comprobante_" + paseo.getReservaId() + ".pdf";
         OutputStream outputStream = null;
         Uri fileUri = null;
@@ -73,9 +78,9 @@ public class PdfGenerator {
             }
 
             if (outputStream != null) {
-                createPdf(context, outputStream, paseo);
+                createPdf(context, outputStream, paseo, esGrupo, cantidadDias, costoTotalGrupo, fechaInicio, fechaFin, tipoReserva);
                 Toast.makeText(context, "Comprobante descargado en Descargas/Walki", Toast.LENGTH_LONG).show();
-                
+
                 if (file != null) {
                     return Uri.fromFile(file);
                 }
@@ -100,7 +105,17 @@ public class PdfGenerator {
         }
     }
 
-    private static void createPdf(Context context, OutputStream outputStream, Paseo paseo) throws Exception {
+    /**
+     * Versión simplificada para reservas individuales (retrocompatibilidad)
+     */
+    public static Uri generarComprobante(Context context, Paseo paseo) {
+        String tipo = paseo.getTipo_reserva() != null ? paseo.getTipo_reserva() : "PUNTUAL";
+        return generarComprobante(context, paseo, false, 1, paseo.getCosto_total(), "", "", tipo);
+    }
+
+    private static void createPdf(Context context, OutputStream outputStream, Paseo paseo,
+                                   boolean esGrupo, int cantidadDias, double costoTotalGrupo,
+                                   String fechaInicio, String fechaFin, String tipoReserva) throws Exception {
         PdfWriter writer = new PdfWriter(outputStream);
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
@@ -132,10 +147,23 @@ public class PdfGenerator {
         }
 
         // Info Cell
+        String fechaTexto;
+        if (cantidadDias > 1) {
+            String tipoTexto = "";
+            if ("SEMANAL".equals(tipoReserva)) {
+                tipoTexto = " - Semanal";
+            } else if ("MENSUAL".equals(tipoReserva)) {
+                tipoTexto = " - Mensual";
+            }
+            fechaTexto = cantidadDias + " días (" + fechaInicio + " - " + fechaFin + ")" + tipoTexto;
+        } else {
+            fechaTexto = paseo.getFechaFormateada();
+        }
+
         Paragraph headerInfo = new Paragraph()
                 .add(new Text("COMPROBANTE DE PAGO\n").setBold().setFontSize(16).setFontColor(primaryColor))
                 .add(new Text("Walki App\n").setFontSize(12).setFontColor(grayColor))
-                .add(new Text("Fecha: " + paseo.getFechaFormateada() + "\n").setFontSize(10))
+                .add(new Text("Fecha: " + fechaTexto + "\n").setFontSize(10))
                 .add(new Text("ID: " + paseo.getReservaId()).setFontSize(10));
         
         Cell infoCell = new Cell().add(headerInfo).setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT);
@@ -165,7 +193,14 @@ public class PdfGenerator {
         addRow(serviceTable, "Paseador:", paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "-");
         addRow(serviceTable, "Dueño:", paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "-");
         addRow(serviceTable, "Mascota:", paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "-");
-        addRow(serviceTable, "Duración:", paseo.getDuracion_minutos() + " min");
+
+        String duracionTexto = paseo.getDuracion_minutos() + " min" + (esGrupo && cantidadDias > 1 ? "/día" : "");
+        addRow(serviceTable, "Duración:", duracionTexto);
+
+        if (esGrupo && cantidadDias > 1) {
+            addRow(serviceTable, "Cantidad de días:", String.valueOf(cantidadDias));
+        }
+
         addRow(serviceTable, "Estado:", paseo.getEstado());
 
         document.add(serviceTable);
@@ -181,9 +216,12 @@ public class PdfGenerator {
         payTable.setWidth(UnitValue.createPercentValue(100));
 
         addRow(payTable, "Método:", paseo.getMetodo_pago() != null ? paseo.getMetodo_pago() : "Desconocido");
+
         // Total Cost Row (Standout)
+        double costoMostrar = esGrupo && cantidadDias > 1 ? costoTotalGrupo : paseo.getCosto_total();
+
         Cell labelCell = new Cell().add(new Paragraph("Costo Total:")).setBorder(Border.NO_BORDER).setBold();
-        Cell valueCell = new Cell().add(new Paragraph("$" + String.format(Locale.US, "%.2f", paseo.getCosto_total())))
+        Cell valueCell = new Cell().add(new Paragraph("$" + String.format(Locale.US, "%.2f", costoMostrar)))
                 .setBorder(Border.NO_BORDER)
                 .setBold()
                 .setFontSize(14)

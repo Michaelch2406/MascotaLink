@@ -43,6 +43,7 @@ import com.mjc.mascotalink.PaseoEnCursoActivity;
 import com.mjc.mascotalink.R;
 import com.mjc.mascotalink.network.SocketManager;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,6 +81,7 @@ public class LocationService extends Service {
     // Throttling para Firestore (guardar historial)
     private long lastFirestoreSaveTime = 0;
     private static final long FIRESTORE_SAVE_INTERVAL_MS = 15000; // 15 segundos para historial
+    private final SecureRandom secureRandom = new SecureRandom();
 
     // Throttling para Ubicación Actual (búsqueda)
     private long lastRealtimeUpdateTime = 0;
@@ -561,7 +563,7 @@ public class LocationService extends Service {
         WriteBatch batch = db.batch();
         for (Map<String, Object> punto : ubicaciones) {
             // Usar timestamp como ID del documento
-            String docId = String.valueOf(System.currentTimeMillis()) + "_" + Math.random();
+            String docId = String.valueOf(System.currentTimeMillis()) + "_" + secureRandom.nextDouble();
             DocumentReference ubicacionRef = reservaRef.collection("ubicaciones_historico").document(docId);
             batch.set(ubicacionRef, punto);
         }

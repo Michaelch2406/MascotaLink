@@ -912,8 +912,8 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private boolean shouldMarkAsRead(Mensaje mensaje) {
-        return mensaje.getId_destinatario() != null &&
-               mensaje.getId_destinatario().equals(currentUserId) &&
+        return mensaje.getIdDestinatario() != null &&
+               mensaje.getIdDestinatario().equals(currentUserId) &&
                !mensaje.isLeido();
     }
 
@@ -1238,7 +1238,7 @@ public class ChatActivity extends AppCompatActivity {
                     adapter.agregarMensaje(mensaje);
                     rvMensajes.smoothScrollToPosition(adapter.getItemCount() - 1);
 
-                    if (!mensaje.getId_remitente().equals(currentUserId)) {
+                    if (!mensaje.getIdRemitente().equals(currentUserId)) {
                         socketManager.markMessageRead(chatId, mensaje.getId());
                         vibrarSutil();
                     }
@@ -1254,8 +1254,8 @@ public class ChatActivity extends AppCompatActivity {
     private Mensaje parseWebSocketMessage(JSONObject data) throws Exception {
         Mensaje mensaje = new Mensaje();
         mensaje.setId(data.optString(FirestoreConstants.FIELD_ID, ""));
-        mensaje.setId_remitente(data.optString(FirestoreConstants.FIELD_ID_REMITENTE, ""));
-        mensaje.setId_destinatario(data.optString(FirestoreConstants.FIELD_ID_DESTINATARIO, ""));
+        mensaje.setIdRemitente(data.optString(FirestoreConstants.FIELD_ID_REMITENTE, ""));
+        mensaje.setIdDestinatario(data.optString(FirestoreConstants.FIELD_ID_DESTINATARIO, ""));
         mensaje.setTexto(data.optString(FirestoreConstants.FIELD_TEXTO, ""));
         mensaje.setTipo(data.optString(FirestoreConstants.FIELD_TIPO, FirestoreConstants.MESSAGE_TYPE_TEXTO));
         mensaje.setLeido(data.optBoolean(FirestoreConstants.FIELD_LEIDO, false));
@@ -1274,7 +1274,7 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         if (data.has(FirestoreConstants.FIELD_IMAGEN_URL)) {
-            mensaje.setImagen_url(data.optString(FirestoreConstants.FIELD_IMAGEN_URL));
+            mensaje.setImagenUrl(data.optString(FirestoreConstants.FIELD_IMAGEN_URL));
         }
         if (data.has(FirestoreConstants.FIELD_LATITUD) && data.has(FirestoreConstants.FIELD_LONGITUD)) {
             mensaje.setLatitud(data.optDouble(FirestoreConstants.FIELD_LATITUD));

@@ -34,13 +34,13 @@ public class HistorialPaseosActivity extends AppCompatActivity {
     private static final String TAG = "HistorialPaseos";
 
     private RecyclerView rvHistorial;
-    private HistorialPaseosAdapter adapter;
+    private PaseosAdapter adapter; // Cambiado a PaseosAdapter para manejar grupos
     private List<Paseo> listaPaseos;
     private SwipeRefreshLayout swipeRefresh;
     private LinearLayout emptyView;
     private ProgressBar progressBar;
     private com.google.android.material.tabs.TabLayout tabLayout;
-    
+
     private FirebaseFirestore db;
     private String currentUserId;
     private String userRole;
@@ -79,14 +79,47 @@ public class HistorialPaseosActivity extends AppCompatActivity {
         swipeRefresh = findViewById(R.id.swipe_refresh);
         emptyView = findViewById(R.id.empty_view);
         tabLayout = findViewById(R.id.tab_layout);
-        
+
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
         listaPaseos = new ArrayList<>();
-        adapter = new HistorialPaseosAdapter(this, listaPaseos, userRole, this::abrirDetallePaseo);
+
+        // Usar PaseosAdapter que maneja grupos, SEMANAL y MENSUAL automáticamente
+        adapter = new PaseosAdapter(this, listaPaseos, new PaseosAdapter.OnPaseoClickListener() {
+            @Override
+            public void onPaseoClick(Paseo paseo) {
+                abrirDetallePaseo(paseo);
+            }
+
+            @Override
+            public void onVerUbicacionClick(Paseo paseo) {
+                // En historial no necesitamos ver ubicación
+            }
+
+            @Override
+            public void onContactarClick(Paseo paseo) {
+                // En historial no necesitamos contactar
+            }
+
+            @Override
+            public void onCalificarClick(Paseo paseo) {
+                // En historial no necesitamos calificar (ya está finalizado)
+            }
+
+            @Override
+            public void onVerMotivoClick(Paseo paseo) {
+                // Opcional: mostrar motivo de cancelación/rechazo
+            }
+
+            @Override
+            public void onProcesarPagoClick(Paseo paseo) {
+                // En historial el pago ya fue procesado
+            }
+        }, userRole);
+
         rvHistorial.setLayoutManager(new LinearLayoutManager(this));
         rvHistorial.setAdapter(adapter);
-        
+
         setupTabs();
     }
     
@@ -131,7 +164,8 @@ public class HistorialPaseosActivity extends AppCompatActivity {
         Intent intent = new Intent(this, DetallePaseoActivity.class);
         intent.putExtra("id_reserva", paseo.getReservaId());
         intent.putExtra("rol_usuario", userRole);
-        intent.putExtra("paseo_obj", paseo); // Opcional: pasar objeto para carga rápida
+        // NO pasar el objeto completo porque contiene GeoPoint no serializable
+        // DetallePaseoActivity lo cargará desde Firestore usando el id_reserva
         startActivity(intent);
     }
 
@@ -285,6 +319,7 @@ public class HistorialPaseosActivity extends AppCompatActivity {
         } else {
             rvHistorial.setVisibility(View.VISIBLE);
             emptyView.setVisibility(View.GONE);
+            // PaseosAdapter agrupa automáticamente las reservas
             adapter.updateList(lista);
         }
     }

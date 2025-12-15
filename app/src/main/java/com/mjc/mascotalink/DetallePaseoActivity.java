@@ -26,6 +26,7 @@ import com.mjc.mascotalink.MyApplication;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
+import java.util.Date;
 import java.util.Locale;
 
 public class DetallePaseoActivity extends AppCompatActivity {
@@ -33,6 +34,14 @@ public class DetallePaseoActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 101;
     private Paseo paseo;
     private String userRole;
+
+    // Para manejar reservas agrupadas y SEMANAL/MENSUAL
+    private boolean esGrupo = false;
+    private int cantidadDias = 1;
+    private double costoTotalGrupo = 0.0;
+    private String fechaInicioGrupo = "";
+    private String fechaFinGrupo = "";
+    private String tipoReserva = "PUNTUAL"; // PUNTUAL, SEMANAL, MENSUAL
 
     // Views
     private CircleImageView ivFotoPrincipal, ivFotoMascota;
@@ -102,12 +111,14 @@ public class DetallePaseoActivity extends AppCompatActivity {
                             new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                             PERMISSION_REQUEST_CODE);
                 } else {
-                    pdfUri = PdfGenerator.generarComprobante(this, paseo);
+                    pdfUri = PdfGenerator.generarComprobante(this, paseo, esGrupo, cantidadDias,
+                            costoTotalGrupo, fechaInicioGrupo, fechaFinGrupo, tipoReserva);
                 }
             } else {
-                pdfUri = PdfGenerator.generarComprobante(this, paseo);
+                pdfUri = PdfGenerator.generarComprobante(this, paseo, esGrupo, cantidadDias,
+                        costoTotalGrupo, fechaInicioGrupo, fechaFinGrupo, tipoReserva);
             }
-            
+
             if (pdfUri != null) {
                 abrirPdf(pdfUri);
             }
@@ -139,11 +150,45 @@ public class DetallePaseoActivity extends AppCompatActivity {
                         paseo = doc.toObject(Paseo.class);
                         if (paseo != null) {
                             paseo.setReservaId(doc.getId());
-                            // Aquí idealmente deberíamos cargar los nombres de dueño/paseador 
-                            // si no vienen en el objeto Paseo serializado (lo cual pasa al cargar de DB)
-                            // Por brevedad, asumimos que los campos básicos están o que se actualizaron
-                            // en la lista. Si faltan, se verán vacíos.
-                            llenarDatos();
+
+                            // Asegurar ID Mascota
+                            if (paseo.getIdMascota() == null && doc.contains("id_mascota")) {
+                                paseo.setIdMascota(doc.getString("id_mascota"));
+                            }
+
+                            // Leer tipo de reserva
+                            tipoReserva = doc.getString("tipo_reserva");
+                            if (tipoReserva == null) tipoReserva = "PUNTUAL";
+
+                            // Verificar si es parte de un grupo (días específicos múltiples)
+                            Boolean esGrupoFlag = doc.getBoolean("es_grupo");
+                            String grupoReservaId = doc.getString("grupo_reserva_id");
+
+                            if (esGrupoFlag != null && esGrupoFlag && grupoReservaId != null && !grupoReservaId.isEmpty()) {
+                                // Es un grupo - cargar todas las reservas del grupo
+                                esGrupo = true;
+                                cargarGrupoPaseos(grupoReservaId, doc);
+                            } else if ("SEMANAL".equals(tipoReserva)) {
+                                // Reserva semanal: 7 días consecutivos
+                                esGrupo = false;
+                                cantidadDias = 7;
+                                costoTotalGrupo = paseo.getCosto_total();
+                                calcularRangoFechasSemanalMensual(paseo.getFecha(), 7);
+                                cargarDatosRelacionados(doc);
+                            } else if ("MENSUAL".equals(tipoReserva)) {
+                                // Reserva mensual: 30 días consecutivos
+                                esGrupo = false;
+                                cantidadDias = 30;
+                                costoTotalGrupo = paseo.getCosto_total();
+                                calcularRangoFechasSemanalMensual(paseo.getFecha(), 30);
+                                cargarDatosRelacionados(doc);
+                            } else {
+                                // Reserva puntual individual
+                                esGrupo = false;
+                                cantidadDias = 1;
+                                costoTotalGrupo = paseo.getCosto_total();
+                                cargarDatosRelacionados(doc);
+                            }
                         }
                     }
                 })
@@ -151,6 +196,140 @@ public class DetallePaseoActivity extends AppCompatActivity {
                     Toast.makeText(this, "Error cargando paseo", Toast.LENGTH_SHORT).show();
                     finish();
                 });
+    }
+
+    /**
+     * Calcula el rango de fechas para reservas SEMANALES o MENSUALES
+     */
+    private void calcularRangoFechasSemanalMensual(Date fechaInicio, int dias) {
+        if (fechaInicio == null) return;
+
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTime(fechaInicio);
+
+        java.util.Calendar calFin = java.util.Calendar.getInstance();
+        calFin.setTime(fechaInicio);
+        calFin.add(java.util.Calendar.DAY_OF_MONTH, dias - 1);
+
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("d 'de' MMM", new java.util.Locale("es", "ES"));
+        fechaInicioGrupo = sdf.format(cal.getTime());
+        fechaFinGrupo = sdf.format(calFin.getTime());
+    }
+
+    /**
+     * Carga todas las reservas de un grupo y calcula el costo total
+     */
+    private void cargarGrupoPaseos(String grupoReservaId, DocumentSnapshot primeraReserva) {
+        FirebaseFirestore.getInstance().collection("reservas")
+                .whereEqualTo("grupo_reserva_id", grupoReservaId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(this, "No se encontraron reservas del grupo", Toast.LENGTH_SHORT).show();
+                        finish();
+                        return;
+                    }
+
+                    // Ordenar reservas por fecha
+                    java.util.List<DocumentSnapshot> reservas = new java.util.ArrayList<>(querySnapshot.getDocuments());
+                    reservas.sort((r1, r2) -> {
+                        com.google.firebase.Timestamp t1 = r1.getTimestamp("fecha");
+                        com.google.firebase.Timestamp t2 = r2.getTimestamp("fecha");
+                        if (t1 == null || t2 == null) return 0;
+                        return t1.compareTo(t2);
+                    });
+
+                    cantidadDias = reservas.size();
+
+                    // Calcular costo total del grupo
+                    costoTotalGrupo = 0.0;
+                    for (DocumentSnapshot doc : reservas) {
+                        Double costo = doc.getDouble("costo_total");
+                        if (costo != null) {
+                            costoTotalGrupo += costo;
+                        }
+                    }
+
+                    // Obtener fechas de inicio y fin
+                    if (reservas.size() > 0) {
+                        com.google.firebase.Timestamp fechaInicio = reservas.get(0).getTimestamp("fecha");
+                        com.google.firebase.Timestamp fechaFin = reservas.get(cantidadDias - 1).getTimestamp("fecha");
+
+                        if (fechaInicio != null && fechaFin != null) {
+                            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("d 'de' MMM", new java.util.Locale("es", "ES"));
+                            fechaInicioGrupo = sdf.format(fechaInicio.toDate());
+                            fechaFinGrupo = sdf.format(fechaFin.toDate());
+                        }
+                    }
+
+                    // Cargar datos relacionados (paseador, dueño, mascota)
+                    cargarDatosRelacionados(primeraReserva);
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error al cargar grupo de reservas", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+    }
+
+    /**
+     * Carga los datos relacionados (nombres y fotos) del paseador, dueño y mascota
+     */
+    private void cargarDatosRelacionados(DocumentSnapshot reservaDoc) {
+        if (paseo == null) return;
+
+        java.util.List<com.google.android.gms.tasks.Task<DocumentSnapshot>> tareas = new java.util.ArrayList<>();
+
+        // Obtener referencias
+        DocumentReference paseadorRef = reservaDoc.getDocumentReference("id_paseador");
+        DocumentReference duenoRef = reservaDoc.getDocumentReference("id_dueno");
+
+        // Agregar tareas para cargar documentos
+        tareas.add(paseadorRef != null ? paseadorRef.get() : com.google.android.gms.tasks.Tasks.forResult(null));
+        tareas.add(duenoRef != null ? duenoRef.get() : com.google.android.gms.tasks.Tasks.forResult(null));
+
+        // Cargar mascota si hay ID
+        if (duenoRef != null && paseo.getIdMascota() != null) {
+            tareas.add(FirebaseFirestore.getInstance()
+                    .collection("duenos").document(duenoRef.getId())
+                    .collection("mascotas").document(paseo.getIdMascota())
+                    .get());
+        } else {
+            tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
+        }
+
+        // Ejecutar todas las tareas en paralelo
+        com.google.android.gms.tasks.Tasks.whenAllSuccess(tareas).addOnSuccessListener(results -> {
+            runOnUiThread(() -> {
+                if (isDestroyed() || isFinishing()) return;
+
+                // Resultado 0: Paseador
+                DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(0);
+                if (paseadorDoc != null && paseadorDoc.exists()) {
+                    paseo.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
+                    paseo.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                }
+
+                // Resultado 1: Dueño
+                DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(1);
+                if (duenoDoc != null && duenoDoc.exists()) {
+                    paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                }
+
+                // Resultado 2: Mascota
+                DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(2);
+                if (mascotaDoc != null && mascotaDoc.exists()) {
+                    paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
+                    paseo.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                }
+
+                // Ahora sí llenar la UI con todos los datos
+                llenarDatos();
+            });
+        }).addOnFailureListener(e -> {
+            android.util.Log.e("DetallePaseo", "Error cargando datos relacionados", e);
+            // Mostrar UI aunque falten algunos datos
+            llenarDatos();
+        });
     }
 
     private void llenarDatos() {
@@ -172,9 +351,19 @@ public class DetallePaseoActivity extends AppCompatActivity {
         }
 
         tvEstadoPaseo.setText(paseo.getEstado() != null ? paseo.getEstado() : "");
-        tvFechaHora.setText(paseo.getFechaFormateada() + " - " + paseo.getHoraFormateada());
-        tvDuracionReal.setText("Duración: " + paseo.getDuracion_minutos() + " min");
-        tvCostoTotal.setText(String.format(Locale.US, "$%.2f", paseo.getCosto_total()));
+
+        // Mostrar fecha: si es grupo, mostrar rango; si es individual, mostrar fecha única
+        if (esGrupo && cantidadDias > 1) {
+            tvFechaHora.setText(cantidadDias + " días (" + fechaInicioGrupo + " - " + fechaFinGrupo + ")\n" +
+                    paseo.getHoraFormateada());
+        } else {
+            tvFechaHora.setText(paseo.getFechaFormateada() + " - " + paseo.getHoraFormateada());
+        }
+
+        tvDuracionReal.setText("Duración: " + paseo.getDuracion_minutos() + " min" + (esGrupo ? "/día" : ""));
+
+        // Mostrar costo: si es grupo, mostrar costo total del grupo; si es individual, mostrar costo único
+        tvCostoTotal.setText(String.format(Locale.US, "$%.2f", esGrupo ? costoTotalGrupo : paseo.getCosto_total()));
         
         if (paseo.getMetodo_pago() != null) {
             tvMetodoPago.setText(paseo.getMetodo_pago());
@@ -238,7 +427,8 @@ public class DetallePaseoActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Uri uri = PdfGenerator.generarComprobante(this, paseo);
+                Uri uri = PdfGenerator.generarComprobante(this, paseo, esGrupo, cantidadDias,
+                        costoTotalGrupo, fechaInicioGrupo, fechaFinGrupo, tipoReserva);
                 if (uri != null) {
                     abrirPdf(uri);
                 }

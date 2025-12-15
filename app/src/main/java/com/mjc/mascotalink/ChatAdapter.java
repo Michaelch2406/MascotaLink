@@ -81,7 +81,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                        oldMsg.isLeido() == newMsg.isLeido() &&
                        oldMsg.isEntregado() == newMsg.isEntregado() &&
                        Objects.equals(oldMsg.getTipo(), newMsg.getTipo()) &&
-                       Objects.equals(oldMsg.getImagen_url(), newMsg.getImagen_url());
+                       Objects.equals(oldMsg.getImagenUrl(), newMsg.getImagenUrl());
             } else if (oldItem instanceof DateSeparator && newItem instanceof DateSeparator) {
                 DateSeparator oldSep = (DateSeparator) oldItem;
                 DateSeparator newSep = (DateSeparator) newItem;
@@ -266,11 +266,11 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (item instanceof DateSeparator) {
             return VIEW_TYPE_DATE_SEPARATOR;
         }
-        
+
         Mensaje mensaje = (Mensaje) item;
-        boolean isSent = mensaje.getId_remitente() != null && mensaje.getId_remitente().equals(currentUserId);
+        boolean isSent = mensaje.getIdRemitente() != null && mensaje.getIdRemitente().equals(currentUserId);
         String tipo = mensaje.getTipo() != null ? mensaje.getTipo() : "texto";
-        
+
         // Determinar tipo según contenido y remitente
         if ("imagen".equals(tipo)) {
             return isSent ? VIEW_TYPE_IMAGE_SENT : VIEW_TYPE_IMAGE_RECEIVED;
@@ -464,15 +464,15 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 ivEstado = itemView.findViewById(R.id.iv_estado);
             }
         }
-        
+
         void bind(Mensaje mensaje, String time) {
             tvHora.setText(time);
-            
+
             // Cargar imagen con Glide
-            if (mensaje.getImagen_url() != null && !mensaje.getImagen_url().isEmpty()) {
+            if (mensaje.getImagenUrl() != null && !mensaje.getImagenUrl().isEmpty()) {
                 progressUpload.setVisibility(View.GONE);
-                String fixedUrl = MyApplication.getFixedUrl(mensaje.getImagen_url());
-                
+                String fixedUrl = MyApplication.getFixedUrl(mensaje.getImagenUrl());
+
                 Glide.with(itemView.getContext())
                     .load(fixedUrl)
                     .placeholder(R.drawable.ic_gallery)

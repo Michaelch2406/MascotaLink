@@ -523,7 +523,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
                         actualizarBotonesPorEstado();
                         // Volver a SolicitudesActivity después de 1 segundo
-                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1000);
+                        finishWithDelay();
                     },
                     e -> {
                         Log.e(TAG, "Error al rechazar solicitud después de reintentos", e);
@@ -568,9 +568,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         estadoReserva = ReservaEstadoValidator.ESTADO_RECHAZADO;
                         actualizarBotonesPorEstado();
                         // Volver a SolicitudesActivity después de 1 segundo
-                        new android.os.Handler().postDelayed(() -> {
-                            finish();
-                        }, 1000);
+                        finishWithDelay();
                     }).addOnFailureListener(e -> {
                         Log.e(TAG, "Error al rechazar grupo de reservas", e);
                         Toast.makeText(this, "Error al rechazar las reservas. Verifica tu conexión.", Toast.LENGTH_LONG).show();
@@ -610,7 +608,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
                         actualizarBotonesPorEstado();
                         // Volver a SolicitudesActivity después de 1 segundo
-                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1000);
+                        finishWithDelay();
                     },
                     e -> {
                         Log.e(TAG, "Error al aceptar solicitud después de reintentos", e);
@@ -656,9 +654,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
                         actualizarBotonesPorEstado();
                         // Volver a SolicitudesActivity después de 1 segundo
-                        new android.os.Handler().postDelayed(() -> {
-                            finish();
-                        }, 1000);
+                        finishWithDelay();
                     }).addOnFailureListener(e -> {
                         Log.e(TAG, "Error al aceptar grupo de reservas", e);
                         Toast.makeText(this, "Error al aceptar las reservas. Verifica tu conexión.", Toast.LENGTH_LONG).show();
@@ -674,5 +670,12 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     btnRechazar.setEnabled(true);
                     btnVerPerfil.setEnabled(true);
                 });
+    }
+
+    /**
+     * Finaliza la actividad después de un delay de 1 segundo
+     */
+    private void finishWithDelay() {
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1000);
     }
 }
