@@ -410,9 +410,8 @@ public class SolicitudesActivity extends AppCompatActivity {
             return fecha2.compareTo(fecha1);
         });
         if (solicitudesAdapter != null) {
-            // Agrupar las reservas antes de pasarlas al adapter
-            List<PaseoItem> items = PaseoItem.agruparReservas(solicitudesList);
-            solicitudesAdapter.updateList(items);
+            // El adapter agrupa automáticamente las reservas usando PaseoItem.agruparReservas()
+            solicitudesAdapter.updateList(solicitudesList);
         }
         finalizarCarga();
     }

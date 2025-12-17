@@ -211,10 +211,31 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 }
             }
         }
+        
+
+        int currentNotificationId;
+        String chatId = null;
+        if (isChatMessage) {
+            chatId = data.get("chat_id");
+            currentNotificationId = chatId != null ? chatId.hashCode() : messageNotificationId++;
+        } else {
+            String reservaId = data != null ? data.get("reservaId") : null;
+            String tipo = data != null ? data.get("tipo") : null;
+            String delay = data != null ? data.get("delay") : null;
+
+            if (reservaId != null) {
+                String key = reservaId + "|" + (tipo != null ? tipo : "") + "|" + (delay != null ? delay : "") + "|" + (clickAction != null ? clickAction : "");
+                currentNotificationId = key.hashCode();
+            } else {
+                currentNotificationId = messageNotificationId++;
+            }
+        }
 
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
-                PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+        intent.setAction("NOTIF_" + currentNotificationId);
+        intent.setData(Uri.parse("mascotalink://notif/" + currentNotificationId));
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, currentNotificationId, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         // Determinar canal basado en el tipo de notificación
         String channelId = CHANNEL_ID_PAYMENTS; // Default
@@ -262,6 +283,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setContentIntent(pendingIntent)
                         .setPriority(NotificationCompat.PRIORITY_HIGH);
         
+        /*
         int currentNotificationId;
         String chatId = null;
         if (isChatMessage) {
@@ -271,6 +293,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         } else {
             currentNotificationId = messageNotificationId++;
         }
+        */
+
 
         // Si es mensaje de chat, agregar respuesta rápida y agrupar
         if (isChatMessage) {
@@ -353,7 +377,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             notificationManager.notify(0, summaryBuilder.build());
         } else {
             createNotificationChannel(notificationManager, channelId, channelName, channelDescription);
-            notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
+            notificationManager.notify(currentNotificationId, notificationBuilder.build());
         }
     }
 

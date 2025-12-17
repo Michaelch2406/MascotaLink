@@ -1880,7 +1880,7 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
   }
 });
 
-exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
+exports.transitionToInCourse = onSchedule("every 1 minutes", async (event) => {
   console.log("Running scheduled job to transition CONFIRMADO reservations to LISTO_PARA_INICIAR.");
   const now = admin.firestore.Timestamp.now();
 
@@ -1949,17 +1949,16 @@ exports.transitionToInCourse = onSchedule("every 5 minutes", async (event) => {
 });
 
 // Scheduled job to send reminders 15 minutes before walk start time
-exports.sendReminder15MinBefore = onSchedule("every 5 minutes", async (event) => {
+exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) => {
   console.log("Running scheduled job to send 15-minute reminders.");
   const now = admin.firestore.Timestamp.now();
 
-  // Calculate 15 minutes from now
-  const fifteenMinutesLaterMillis = now.toMillis() + (15 * 60 * 1000);
-  const fifteenMinutesLater = admin.firestore.Timestamp.fromMillis(fifteenMinutesLaterMillis);
+  const targetMinutes = 15;
+  const toleranceMinutes = 2;
 
-  // Look for walks starting in 12-18 minutes (5 min window to catch them)
-  const windowStartMillis = now.toMillis() + (12 * 60 * 1000);
-  const windowEndMillis = now.toMillis() + (18 * 60 * 1000);
+  // Look for walks starting in ~15 minutes
+  const windowStartMillis = now.toMillis() + ((targetMinutes - toleranceMinutes) * 60 * 1000);
+  const windowEndMillis = now.toMillis() + ((targetMinutes + toleranceMinutes) * 60 * 1000);
   const windowStart = admin.firestore.Timestamp.fromMillis(windowStartMillis);
   const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
 
@@ -1980,8 +1979,8 @@ exports.sendReminder15MinBefore = onSchedule("every 5 minutes", async (event) =>
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
 
-      // Skip if already sent
-      if (reserva.reminder15MinSent) continue;
+      // Skip if already sent (or if another 15-min notification already covered it)
+      if (reserva.reminder15MinSent || reserva.readyWindowNotificationSent) continue;
 
       // Si es parte de un grupo, solo enviar recordatorio para el PRIMER día del grupo
       const esGrupo = reserva.es_grupo;
@@ -2009,7 +2008,7 @@ exports.sendReminder15MinBefore = onSchedule("every 5 minutes", async (event) =>
         // Si esta NO es la reserva del primer día, saltar
         if (fechas.length > 0 && fechas[0].id !== doc.id) {
           console.log(`Saltando recordatorio para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
-          await doc.ref.update({ reminder15MinSent: true }); // Marcar como enviado para no procesarlo de nuevo
+          await doc.ref.update({ reminder15MinSent: true, readyWindowNotificationSent: true }); // Marcar como enviado para no procesarlo de nuevo
           continue;
         }
 
@@ -2078,7 +2077,7 @@ exports.sendReminder15MinBefore = onSchedule("every 5 minutes", async (event) =>
         console.log(`Sent 15-minute reminder for reservation ${doc.id}`);
 
         // Mark as sent
-        await doc.ref.update({ reminder15MinSent: true });
+        await doc.ref.update({ reminder15MinSent: true, readyWindowNotificationSent: true });
       } catch (error) {
         console.error(`Error sending 15-minute reminder for ${doc.id}:`, error);
       }
@@ -2226,18 +2225,19 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
 });
 
 // Scheduled job to notify when scheduled time has passed for LISTO_PARA_INICIAR walks
-exports.notifyOverdueWalks = onSchedule("every 5 minutes", async (event) => {
+exports.notifyOverdueWalks = onSchedule("every 1 minutes", async (event) => {
   console.log("Running scheduled job to notify overdue walks.");
   const now = admin.firestore.Timestamp.now();
 
   // Look for walks in LISTO_PARA_INICIAR state where scheduled time has passed
-  const fiveMinutesAgoMillis = now.toMillis() - (5 * 60 * 1000);
-  const fiveMinutesAgo = admin.firestore.Timestamp.fromMillis(fiveMinutesAgoMillis);
+  const twentyFourHoursAgoMillis = now.toMillis() - (24 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = admin.firestore.Timestamp.fromMillis(twentyFourHoursAgoMillis);
 
   try {
     const reservationsSnapshot = await db.collection("reservas")
       .where("estado", "==", "LISTO_PARA_INICIAR")
-      .where("hora_inicio", "<=", fiveMinutesAgo)
+      .where("hora_inicio", "<=", now)
+      .where("hora_inicio", ">=", twentyFourHoursAgo)
       .get();
 
     if (reservationsSnapshot.empty) {
@@ -2320,18 +2320,18 @@ exports.notifyOverdueWalks = onSchedule("every 5 minutes", async (event) => {
 });
 
 // Notifica al paseador cuando llega la ventana de 15 minutos antes del paseo
-exports.notifyWalkReadyWindow = onSchedule("every 5 minutes", async (event) => {
+exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
   console.log("Running scheduled job to notify walkers when ready window starts.");
   const now = admin.firestore.Timestamp.now();
 
   // 🔥 MEJORA ROBUSTA: En lugar de una ventana pequeña, buscamos cualquier paseo
   // que vaya a empezar en los próximos 20 minutos y NO haya sido notificado aún.
   // Esto evita que se pierdan notificaciones si el cron se retrasa.
-  const twentyMinutesFromNowMillis = now.toMillis() + (20 * 60 * 1000);
+  const twentyMinutesFromNowMillis = now.toMillis() + (17 * 60 * 1000);
   const twentyMinutesFromNow = admin.firestore.Timestamp.fromMillis(twentyMinutesFromNowMillis);
   
   // Límite inferior: Paseos que empiezan desde "ahora" (no en el pasado)
-  const nowTimestamp = admin.firestore.Timestamp.now();
+  const nowTimestamp = admin.firestore.Timestamp.fromMillis(now.toMillis() + (13 * 60 * 1000));
 
   try {
     const reservationsSnapshot = await db.collection("reservas")
@@ -2351,7 +2351,35 @@ exports.notifyWalkReadyWindow = onSchedule("every 5 minutes", async (event) => {
       const reserva = doc.data();
 
       // Evitar enviar notificacion duplicada (CRÍTICO aquí)
-      if (reserva.readyWindowNotificationSent) continue;
+      if (reserva.readyWindowNotificationSent || reserva.reminder15MinSent) continue;
+
+      // Si es parte de un grupo, solo enviar notificacion para el PRIMER dia del grupo
+      const esGrupo = reserva.es_grupo;
+      const grupoReservaId = reserva.grupo_reserva_id;
+      if (esGrupo && grupoReservaId) {
+        try {
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
+
+          const fechas = grupoSnapshot.docs.map(d => ({
+            id: d.id,
+            fecha: d.data().fecha
+          })).sort((a, b) => {
+            const aTime = a.fecha?.toMillis() || 0;
+            const bTime = b.fecha?.toMillis() || 0;
+            return aTime - bTime;
+          });
+
+          if (fechas.length > 0 && fechas[0].id !== doc.id) {
+            console.log(`Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo ${grupoReservaId}`);
+            await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
+            continue;
+          }
+        } catch (err) {
+          console.error("Error checking grupo_reserva_id for ready window:", err);
+        }
+      }
 
       // Obtener ID del paseador
       const paseadorRef = reserva.id_paseador;
@@ -2424,7 +2452,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 5 minutes", async (event) => {
         console.log(`Sent ready window notification for reservation ${doc.id}`);
 
         // Marcar como enviada
-        await doc.ref.update({ readyWindowNotificationSent: true });
+        await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
       } catch (error) {
         console.error(`Error sending ready window notification for ${doc.id}:`, error);
       }
@@ -2437,7 +2465,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 5 minutes", async (event) => {
 });
 
 // Notificaciones escalonadas para paseos retrasados (10, 20, 30 minutos)
-exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
+exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
   console.log("Running scheduled job for delayed walk notifications.");
   const now = admin.firestore.Timestamp.now();
 
@@ -2469,6 +2497,21 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
       const horaInicioMillis = reserva.hora_inicio.toMillis();
       const retrasoMillis = now.toMillis() - horaInicioMillis;
       const retrasoMinutos = retrasoMillis / (60 * 1000);
+
+      // Autocorreccion de estado incluso si no se puede notificar (token nulo, etc.)
+      if (reserva.estado === 'CONFIRMADO') {
+        try {
+          await doc.ref.update({
+            estado: 'LISTO_PARA_INICIAR',
+            hasTransitionedToReady: true,
+            actualizado_por_sistema: true,
+            last_updated: now
+          });
+          reserva.estado = 'LISTO_PARA_INICIAR';
+        } catch (err) {
+          console.error(`Error autocorrigiendo estado para ${doc.id}:`, err);
+        }
+      }
 
       // Iterar por los niveles de retraso (30 -> 20 -> 10)
       // Procesamos del más grave al más leve para enviar la alerta correcta
@@ -2519,14 +2562,17 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
               }
             };
     
+            let sentToWalker = false;
             try {
               await admin.messaging().send(messagePaseador);
+              sentToWalker = true;
               console.log(`Sent ${delay.minutes}-minute delay notification to walker for ${doc.id}`);
             } catch (error) {
               console.error(`Error sending delay notification to walker:`, error);
             }
     
             // Si es 10 o 20 minutos, tambien notificar al dueno
+            let sentToOwner = false;
             if (delay.minutes === 10 || delay.minutes === 20) {
               const idDueno = getIdValue(reserva.id_dueno);
               if (idDueno) {
@@ -2557,6 +2603,7 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
     
                     try {
                       await admin.messaging().send(messageDueno);
+                      sentToOwner = true;
                       console.log(`Sent ${delay.minutes}-minute delay notification to owner for ${doc.id}`);
                     } catch (error) {
                       console.error(`Error sending delay notification to owner:`, error);
@@ -2567,7 +2614,10 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
             }
     
             // Marcar como enviada y Autocorrección de estado
-            const updateData = { [delay.field]: true };
+            const updateData = {};
+            if (sentToWalker || sentToOwner) {
+              updateData[delay.field] = true;
+            }
             
             if (reserva.estado === 'CONFIRMADO') {
                 updateData.estado = 'LISTO_PARA_INICIAR';
@@ -2576,7 +2626,9 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
                 console.log(`🔧 AUTOCORRECCIÓN: Paseo ${doc.id} retrasado estaba CONFIRMADO. Forzando a LISTO_PARA_INICIAR.`);
             }
     
-            await doc.ref.update(updateData);
+            if (Object.keys(updateData).length > 0) {
+              await doc.ref.update(updateData);
+            }
             
             // IMPORTANTE: Break para no enviar alerta de 10 min justo después de la de 20 en el mismo loop
             // Queremos que en el siguiente ciclo del cron evalúe si toca otra.
