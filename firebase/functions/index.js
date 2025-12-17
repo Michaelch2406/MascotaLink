@@ -2333,7 +2333,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 5 minutes", async (event) => {
 
   try {
     const reservationsSnapshot = await db.collection("reservas")
-      .where("estado", "==", "LISTO_PARA_INICIAR")
+      .where("estado", "==", "CONFIRMADO") // CORREGIDO: Antes buscaba LISTO_PARA_INICIAR
       .where("hora_inicio", ">=", windowStart)
       .where("hora_inicio", "<=", windowEnd)
       .get();
@@ -2455,7 +2455,7 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
       const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
 
       const reservationsSnapshot = await db.collection("reservas")
-        .where("estado", "==", "LISTO_PARA_INICIAR")
+        .where("estado", "in", ["LISTO_PARA_INICIAR", "CONFIRMADO"]) // CORREGIDO: Busca ambos estados por robustez
         .where("hora_inicio", ">=", windowStart)
         .where("hora_inicio", "<=", windowEnd)
         .get();
