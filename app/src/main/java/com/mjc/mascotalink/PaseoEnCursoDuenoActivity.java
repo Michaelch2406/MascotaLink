@@ -865,7 +865,13 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 btnCancelar.setAlpha(0.5f);
             }
             // Continuar cargando datos para mostrar info, pero no finalizar
-        } else if (!"EN_CURSO".equalsIgnoreCase(estado) && !"EN_PROGRESO".equalsIgnoreCase(estado)) {
+        }
+        // --- Manejo de LISTO_PARA_INICIAR: Transparencia para el dueño ---
+        else if ("LISTO_PARA_INICIAR".equalsIgnoreCase(estado)) {
+            mostrarUIListoParaIniciarDueno(snapshot);
+            return; // No continuar con el procesamiento normal
+        }
+        else if (!"EN_CURSO".equalsIgnoreCase(estado)) {
              // Bloque existente para estados finales
             if (estado.equalsIgnoreCase("COMPLETADO")) {
                 Toast.makeText(this, "El paseo ha finalizado con éxito.", Toast.LENGTH_SHORT).show();
@@ -1502,6 +1508,78 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
     private void stopTimer() {
         timerHandler.removeCallbacks(timerRunnable);
+    }
+
+    /**
+     * Muestra la UI cuando el paseo está en estado LISTO_PARA_INICIAR
+     * Proporciona transparencia al dueño sobre el estado de espera
+     */
+    private void mostrarUIListoParaIniciarDueno(DocumentSnapshot snapshot) {
+        // Actualizar estado visual
+        tvEstado.setText("El paseador puede iniciar el paseo");
+        tvEstado.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
+
+        // Calcular tiempo en este estado
+        Timestamp horaInicio = snapshot.getTimestamp("hora_inicio");
+        Timestamp ultimaActualizacion = snapshot.getTimestamp("last_updated");
+
+        if (horaInicio != null) {
+            long ahora = System.currentTimeMillis();
+            long horaProgramadaMs = horaInicio.toDate().getTime();
+
+            // Verificar si ya pasó la hora programada
+            if (ahora > horaProgramadaMs) {
+                long minutosEsperando = TimeUnit.MILLISECONDS.toMinutes(ahora - horaProgramadaMs);
+
+                if (minutosEsperando > 5) {
+                    // Mostrar alerta si lleva más de 5 minutos esperando
+                    tvInfoMascota.setText("Esperando inicio hace " + minutosEsperando + " minutos");
+                    tvInfoMascota.setTextColor(getResources().getColor(android.R.color.holo_red_light));
+                } else {
+                    tvInfoMascota.setText("El paseador debería estar llegando");
+                    tvInfoMascota.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
+                }
+            } else {
+                // Aún no llega la hora programada
+                long minutosHastaInicio = TimeUnit.MILLISECONDS.toMinutes(horaProgramadaMs - ahora);
+                tvInfoMascota.setText("Paseo programado en " + minutosHastaInicio + " minutos");
+                tvInfoMascota.setTextColor(getResources().getColor(android.R.color.darker_gray));
+            }
+        }
+
+        // Cargar información del paseador
+        DocumentReference paseadorRef = snapshot.getDocumentReference("id_paseador");
+        if (paseadorRef != null) {
+            paseadorRef.get().addOnSuccessListener(paseadorDoc -> {
+                if (paseadorDoc.exists()) {
+                    String nombrePaseador = paseadorDoc.getString("nombre_display");
+                    String fotoPaseador = paseadorDoc.getString("foto_perfil");
+
+                    if (nombrePaseador != null && !nombrePaseador.isEmpty()) {
+                        tvNombrePaseador.setText("Paseador: " + nombrePaseador);
+                    }
+
+                    if (fotoPaseador != null && !fotoPaseador.isEmpty() && ivFotoPaseador != null) {
+                        Glide.with(this)
+                            .load(MyApplication.getFixedUrl(fotoPaseador))
+                            .placeholder(R.drawable.ic_person)
+                            .into(ivFotoPaseador);
+                    }
+                }
+            });
+        }
+
+        // Mostrar botones apropiados
+        if (btnCancelar != null) {
+            btnCancelar.setVisibility(View.VISIBLE);
+            btnCancelar.setEnabled(true);
+        }
+
+        // Botón de contactar disponible
+        // (asumiendo que existe en el layout)
+
+        // No iniciar timer porque el paseo no ha comenzado
+        stopTimer();
     }
 
     private void mostrarOpcionesContacto() {

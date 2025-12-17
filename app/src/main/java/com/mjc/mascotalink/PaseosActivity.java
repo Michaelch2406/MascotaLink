@@ -104,7 +104,7 @@ public class PaseosActivity extends AppCompatActivity {
 
         db.collection("reservas")
                 .whereEqualTo(fieldToFilter, userRef)
-                .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO", "EN_PROGRESO"))
+                .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO"))
                 .limit(1)
                 .get()
                 .addOnSuccessListener(snapshots -> {
@@ -281,7 +281,25 @@ public class PaseosActivity extends AppCompatActivity {
 
             @Override
             public void onVerUbicacionClick(Paseo paseo) {
-                // Implementar navegación a mapa si aplica
+                // Abrir PaseoEnCursoActivity para LISTO_PARA_INICIAR o EN_CURSO
+                if (paseo == null) return;
+
+                String estado = paseo.getEstado();
+                if (estado == null) return;
+
+                if (estado.equals("LISTO_PARA_INICIAR") || estado.equals("EN_CURSO")) {
+                    if ("PASEADOR".equalsIgnoreCase(userRole)) {
+                        // Paseador ve PaseoEnCursoActivity
+                        Intent intent = new Intent(PaseosActivity.this, PaseoEnCursoActivity.class);
+                        intent.putExtra("id_reserva", paseo.getReservaId());
+                        startActivity(intent);
+                    } else {
+                        // Dueño ve PaseoEnCursoDuenoActivity
+                        Intent intent = new Intent(PaseosActivity.this, PaseoEnCursoDuenoActivity.class);
+                        intent.putExtra("id_reserva", paseo.getReservaId());
+                        startActivity(intent);
+                    }
+                }
             }
 
             @Override
@@ -332,8 +350,7 @@ public class PaseosActivity extends AppCompatActivity {
         if (paseo == null || paseo.getEstado() == null) return false;
         String estado = paseo.getEstado();
         return "LISTO_PARA_INICIAR".equalsIgnoreCase(estado) ||
-               "EN_CURSO".equalsIgnoreCase(estado) ||
-               "EN_PROGRESO".equalsIgnoreCase(estado);
+               "EN_CURSO".equalsIgnoreCase(estado);
     }
 
     private void setupSwipeRefresh() {
@@ -363,11 +380,11 @@ public class PaseosActivity extends AppCompatActivity {
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
 
         Query query;
-        // Para "En Curso", incluir LISTO_PARA_INICIAR, EN_CURSO y EN_PROGRESO
+        // Para "En Curso", incluir LISTO_PARA_INICIAR y EN_CURSO
         if ("EN_CURSO".equals(estadoActual)) {
             query = db.collection("reservas")
                     .whereEqualTo(fieldToFilter, userRef)
-                    .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO", "EN_PROGRESO"));
+                    .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO"));
         } else {
             query = db.collection("reservas")
                     .whereEqualTo(fieldToFilter, userRef)
@@ -402,8 +419,8 @@ public class PaseosActivity extends AppCompatActivity {
                                     // Simple logic: If we were in ACEPTADO/CONFIRMADO and it moved forward
                                     // Just check active walk again or reload appropriate tab could be complex.
                                     // For now, just removing it is correct visual feedback.
-                                    // If it became "LISTO_PARA_INICIAR", "EN_CURSO" or "EN_PROGRESO", switch to "En Curso" tab
-                                    if ("LISTO_PARA_INICIAR".equals(newState) || "EN_CURSO".equals(newState) || "EN_PROGRESO".equals(newState)) {
+                                    // If it became "LISTO_PARA_INICIAR" or "EN_CURSO", switch to "En Curso" tab
+                                    if ("LISTO_PARA_INICIAR".equals(newState) || "EN_CURSO".equals(newState)) {
                                         if (tabLayout != null) {
                                             TabLayout.Tab tabEnCurso = tabLayout.getTabAt(2);
                                             if (tabEnCurso != null && !tabEnCurso.isSelected()) {
@@ -521,15 +538,8 @@ public class PaseosActivity extends AppCompatActivity {
                     paseo.setReservaId(doc.getId());
                     paseo.setIdMascota(doc.getString("id_mascota"));
 
-                    // Auto-corrección de estado
-                    if ("CONFIRMADO".equals(paseo.getEstado()) && paseo.getHora_inicio() != null && paseo.getHora_inicio().before(now)) {
-                         db.collection("reservas").document(paseo.getReservaId())
-                                .update("estado", "EN_CURSO", 
-                                        "hasTransitionedToInCourse", true,
-                                        "fecha_inicio_paseo", new com.google.firebase.Timestamp(paseo.getHora_inicio()));
-                        // NO hacemos continue, lo mostramos igual para evitar huecos hasta que se refresque
-                        algunCambioDeEstado = true;
-                    }
+                    // Firebase Function se encarga de CONFIRMADO -> LISTO_PARA_INICIAR
+                    // El paseador debe iniciar manualmente usando el boton "Comenzar Paseo"
 
                     DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(resultIndex++);
                     DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(resultIndex++);

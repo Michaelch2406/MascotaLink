@@ -12,6 +12,7 @@ public class HomeRepository {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private static final String TAG = "HomeRepository";
     private final MutableLiveData<String> lastError = new MutableLiveData<>();
+    private static final long VENTANA_ANTICIPACION_MS = 15 * 60 * 1000; // 15 minutos
 
     public LiveData<String> getLastError() {
         return lastError;
@@ -66,12 +67,12 @@ public class HomeRepository {
     public LiveData<Map<String, Object>> getActiveReservation(String userId, String role) {
         MutableLiveData<Map<String, Object>> data = new MutableLiveData<>();
         String field = role.equals("PASEADOR") ? "id_paseador" : "id_dueno";
-        
-        // Buscar reservas LISTO_PARA_INICIAR, EN_CURSO o EN_PROGRESO
+
+        // Buscar reservas LISTO_PARA_INICIAR, EN_CURSO o CONFIRMADO
         db.collection("reservas")
             .whereEqualTo(field, db.collection("usuarios").document(userId))
-            .whereIn("estado", java.util.Arrays.asList("LISTO_PARA_INICIAR", "EN_CURSO", "EN_PROGRESO"))
-            .limit(1)
+            .whereIn("estado", java.util.Arrays.asList("CONFIRMADO", "LISTO_PARA_INICIAR", "EN_CURSO"))
+            .limit(5) // Aumentar limite para poder filtrar
             .addSnapshotListener((snapshots, e) -> {
                 if (e != null) {
                     Log.e(TAG, "Error listening active reservation", e);
@@ -79,9 +80,59 @@ public class HomeRepository {
                     return;
                 }
                 if (snapshots != null && !snapshots.isEmpty()) {
-                    Map<String, Object> resData = snapshots.getDocuments().get(0).getData();
-                    resData.put("id_documento", snapshots.getDocuments().get(0).getId());
-                    data.setValue(resData);
+                    com.google.firebase.firestore.DocumentSnapshot reservaActiva = null;
+                    long ahora = System.currentTimeMillis();
+
+                    // Buscar la primera reserva que este realmente activa
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : snapshots.getDocuments()) {
+                        String estado = doc.getString("estado");
+
+                        // Si esta EN_CURSO, usar inmediatamente
+                        if ("EN_CURSO".equals(estado)) {
+                            reservaActiva = doc;
+                            break;
+                        }
+
+                        // Si esta LISTO_PARA_INICIAR, usar
+                        if ("LISTO_PARA_INICIAR".equals(estado)) {
+                            reservaActiva = doc;
+                            break;
+                        }
+
+                        // Si esta CONFIRMADO, verificar si estamos dentro de la ventana de 15 minutos o si ya paso la hora
+                        if ("CONFIRMADO".equals(estado)) {
+                            com.google.firebase.Timestamp horaInicio = doc.getTimestamp("hora_inicio");
+                            if (horaInicio != null) {
+                                long horaProgramadaMs = horaInicio.toDate().getTime();
+                                long horaMinPermitidaMs = horaProgramadaMs - VENTANA_ANTICIPACION_MS;
+
+                                // Si estamos dentro de la ventana de 15 minutos o ya paso la hora
+                                if (ahora >= horaMinPermitidaMs) {
+                                    // Si ya paso la hora programada, auto-transicionar a LISTO_PARA_INICIAR
+                                    if (ahora >= horaProgramadaMs) {
+                                        Log.d(TAG, "Auto-transicionando reserva " + doc.getId() + " de CONFIRMADO a LISTO_PARA_INICIAR");
+                                        doc.getReference().update(
+                                            "estado", "LISTO_PARA_INICIAR",
+                                            "hasTransitionedToReady", true,
+                                            "actualizado_por_sistema", true,
+                                            "last_updated", com.google.firebase.Timestamp.now()
+                                        );
+                                    }
+                                    // Usar esta reserva (ya sea CONFIRMADO dentro de ventana o transitando a LISTO_PARA_INICIAR)
+                                    reservaActiva = doc;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (reservaActiva != null) {
+                        Map<String, Object> resData = reservaActiva.getData();
+                        resData.put("id_documento", reservaActiva.getId());
+                        data.setValue(resData);
+                    } else {
+                        data.setValue(null); // No active reservation
+                    }
                 } else {
                     data.setValue(null); // No active reservation
                 }

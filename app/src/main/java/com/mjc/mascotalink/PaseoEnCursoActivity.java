@@ -3,6 +3,7 @@ package com.mjc.mascotalink;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -185,6 +186,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private String mascotaIdActual;
     private String paseadorIdActual;
     private String duenoIdActual;
+
+    // Ventana de tiempo para permitir inicio anticipado
+    private static final long VENTANA_ANTICIPACION_MS = 15 * 60 * 1000; // 15 minutos
 
 
 
@@ -431,9 +435,6 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         btnContactar.setVisibility(View.VISIBLE); // Puede contactar antes de comenzar
         btnCancelar.setVisibility(View.VISIBLE); // Puede cancelar antes de comenzar
 
-        // Actualizar estado visual
-        tvEstado.setText("Listo para iniciar");
-
         // Cargar información básica del paseo
         Timestamp horaInicio = snapshot.getTimestamp("hora_inicio");
         if (horaInicio != null) {
@@ -443,6 +444,26 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         Long duracion = snapshot.getLong("duracion_minutos");
         if (duracion != null) {
             duracionMinutos = duracion;
+        }
+
+        // Verificar si esta en ventana permitida para iniciar
+        boolean dentroDeVentana = estaEnVentanaPermitida(horaInicio);
+
+        if (dentroDeVentana) {
+            // Puede iniciar ahora
+            btnComenzarPaseo.setEnabled(true);
+            btnComenzarPaseo.setText("Comenzar Paseo");
+            btnComenzarPaseo.setAlpha(1.0f);
+            tvEstado.setText("Listo para iniciar");
+        } else {
+            // Aun no puede iniciar
+            btnComenzarPaseo.setEnabled(false);
+            String horaPermitida = obtenerHoraPermitidaParaIniciar(horaInicio);
+            btnComenzarPaseo.setText("Disponible a las " + horaPermitida);
+            btnComenzarPaseo.setAlpha(0.6f);
+
+            long minutosRestantes = calcularMinutosParaVentana(horaInicio);
+            tvEstado.setText("Podras iniciar en " + minutosRestantes + " minutos");
         }
 
         // Cargar info de la mascota
@@ -474,6 +495,62 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
      * Transición: LISTO_PARA_INICIAR -> EN_CURSO
      */
     private void comenzarPaseoManualmente() {
+        // 1. Verificar ventana de tiempo
+        reservaRef.get().addOnSuccessListener(snapshot -> {
+            if (!snapshot.exists()) return;
+
+            Timestamp horaInicio = snapshot.getTimestamp("hora_inicio");
+            if (!estaEnVentanaPermitida(horaInicio)) {
+                long minutosRestantes = calcularMinutosParaVentana(horaInicio);
+                Toast.makeText(this,
+                    "Podrás iniciar el paseo en " + minutosRestantes + " minutos",
+                    Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            // 2. Verificar permisos de ubicación
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                new AlertDialog.Builder(this)
+                    .setTitle("Permisos de Ubicación Requeridos")
+                    .setMessage("Para iniciar el paseo necesitamos acceso a tu ubicación en tiempo real.")
+                    .setPositiveButton("Dar Permisos", (d, w) -> {
+                        ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                            REQUEST_PERMISSION_LOCATION);
+                    })
+                    .setNegativeButton("Cancelar", null)
+                    .show();
+                return;
+            }
+
+            // 3. Verificar GPS activado
+            android.location.LocationManager locationManager =
+                (android.location.LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            boolean gpsEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER);
+
+            if (!gpsEnabled) {
+                new AlertDialog.Builder(this)
+                    .setTitle("GPS Desactivado")
+                    .setMessage("Por favor activa el GPS para iniciar el paseo y rastrear la ubicación.")
+                    .setPositiveButton("Activar GPS", (d, w) -> {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivity(intent);
+                    })
+                    .setNegativeButton("Cancelar", null)
+                    .show();
+                return;
+            }
+
+            // 4. Todo OK - Mostrar confirmación final
+            mostrarDialogoConfirmacionInicio();
+        });
+    }
+
+    /**
+     * Muestra el diálogo de confirmación final para iniciar el paseo
+     */
+    private void mostrarDialogoConfirmacionInicio() {
         new AlertDialog.Builder(this)
             .setTitle("Comenzar Paseo")
             .setMessage("¿Estás listo para comenzar el paseo ahora?")
@@ -582,6 +659,46 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         String estado = snapshot.getString("estado");
         if (estado == null) estado = "";
 
+        // Auto-transicion de CONFIRMADO a LISTO_PARA_INICIAR si ya paso la hora
+        if ("CONFIRMADO".equalsIgnoreCase(estado)) {
+            Timestamp horaInicio = snapshot.getTimestamp("hora_inicio");
+            if (horaInicio != null) {
+                long ahora = System.currentTimeMillis();
+                long horaProgramadaMs = horaInicio.toDate().getTime();
+                long horaMinPermitidaMs = horaProgramadaMs - VENTANA_ANTICIPACION_MS;
+
+                // Si estamos dentro de la ventana de 15 minutos antes o ya paso la hora
+                if (ahora >= horaMinPermitidaMs) {
+                    // Si ya paso la hora programada, auto-transicionar a LISTO_PARA_INICIAR
+                    if (ahora >= horaProgramadaMs) {
+                        Log.d(TAG, "Auto-transicionando de CONFIRMADO a LISTO_PARA_INICIAR");
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("estado", "LISTO_PARA_INICIAR");
+                        updates.put("hasTransitionedToReady", true);
+                        updates.put("actualizado_por_sistema", true);
+                        updates.put("last_updated", Timestamp.now());
+
+                        reservaRef.update(updates)
+                            .addOnSuccessListener(unused -> {
+                                Log.d(TAG, "Paseo transicionado a LISTO_PARA_INICIAR exitosamente");
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error al transicionar a LISTO_PARA_INICIAR", e);
+                            });
+
+                        // No continuar procesando, esperar a que el listener detecte el cambio
+                        return;
+                    } else {
+                        // Estamos dentro de la ventana de 15 minutos pero aun no paso la hora
+                        // Mostrar UI como si fuera LISTO_PARA_INICIAR (el boton estara deshabilitado hasta que sea tiempo)
+                        Log.d(TAG, "Dentro de ventana de 15 minutos, mostrando UI de inicio");
+                        mostrarUIListoParaIniciar(snapshot);
+                        return;
+                    }
+                }
+            }
+        }
+
         // --- FIX: Manejo de Solicitud de Cancelación Bilateral ---
         if ("SOLICITUD_CANCELACION".equalsIgnoreCase(estado)) {
             String motivo = snapshot.getString("motivo_cancelacion");
@@ -597,7 +714,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         }
 
         //vibe-fix: Validar transiciones de estado cuando el paseo se completa
-        if (!estado.equalsIgnoreCase("EN_CURSO") && !estado.equalsIgnoreCase("EN_PROGRESO")) {
+        if (!estado.equalsIgnoreCase("EN_CURSO")) {
             if (estado.equalsIgnoreCase("COMPLETADO")) {
                 // Si el paseo fue completado (por acción propia o remota), cerrar la actividad
                 Log.d(TAG, "Paseo completado, cerrando actividad");
@@ -1345,6 +1462,48 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private long obtenerTiempoMinimo() {
         long duracionReal = duracionMinutos > 0 ? duracionMinutos : 60; // Si es 0, asumir 60 minutos por seguridad
         return (long) (duracionReal * 60000 * 0.75f);
+    }
+
+    /**
+     * Verifica si el paseador esta dentro de la ventana permitida para iniciar el paseo
+     * Permitido: 15 minutos antes de la hora programada hasta sin limite despues
+     */
+    private boolean estaEnVentanaPermitida(Timestamp horaInicio) {
+        if (horaInicio == null) return true; // Si no hay hora, permitir
+
+        long ahora = System.currentTimeMillis();
+        long horaProgramadaMs = horaInicio.toDate().getTime();
+        long horaMinPermitidaMs = horaProgramadaMs - VENTANA_ANTICIPACION_MS;
+
+        return ahora >= horaMinPermitidaMs;
+    }
+
+    /**
+     * Calcula cuantos minutos faltan para poder iniciar el paseo
+     */
+    private long calcularMinutosParaVentana(Timestamp horaInicio) {
+        if (horaInicio == null) return 0;
+
+        long ahora = System.currentTimeMillis();
+        long horaProgramadaMs = horaInicio.toDate().getTime();
+        long horaMinPermitidaMs = horaProgramadaMs - VENTANA_ANTICIPACION_MS;
+        long diferencia = horaMinPermitidaMs - ahora;
+
+        return Math.max(0, TimeUnit.MILLISECONDS.toMinutes(diferencia));
+    }
+
+    /**
+     * Obtiene la hora a partir de la cual se puede iniciar el paseo (15 min antes)
+     */
+    private String obtenerHoraPermitidaParaIniciar(Timestamp horaInicio) {
+        if (horaInicio == null) return "";
+
+        long horaProgramadaMs = horaInicio.toDate().getTime();
+        long horaMinPermitidaMs = horaProgramadaMs - VENTANA_ANTICIPACION_MS;
+        Date horaPermitida = new Date(horaMinPermitidaMs);
+
+        SimpleDateFormat horaFormat = new SimpleDateFormat("hh:mm a", Locale.US);
+        return horaFormat.format(horaPermitida);
     }
 
     private void startTimer() {
