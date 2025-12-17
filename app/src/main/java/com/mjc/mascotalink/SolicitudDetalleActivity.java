@@ -199,11 +199,21 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     // Verificar si es parte de un grupo
                     Boolean esGrupo = reservaDoc.getBoolean("es_grupo");
                     String grupoId = reservaDoc.getString("grupo_reserva_id");
+                    String tipoReserva = reservaDoc.getString("tipo_reserva");
+                    if (tipoReserva == null) tipoReserva = "PUNTUAL";
 
                     if (esGrupo != null && esGrupo && grupoId != null && !grupoId.isEmpty()) {
-                        // Es un grupo - cargar todas las reservas del grupo
+                        // Es un grupo de días específicos - cargar todas las reservas del grupo
                         grupoReservaId = grupoId;
                         cargarGrupoReservas(reservaDoc, grupoId);
+                        return;
+                    } else if ("SEMANAL".equals(tipoReserva)) {
+                        // Reserva semanal: 7 días
+                        cargarReservaSemanalMensual(reservaDoc, 7);
+                        return;
+                    } else if ("MENSUAL".equals(tipoReserva)) {
+                        // Reserva mensual: 30 días
+                        cargarReservaSemanalMensual(reservaDoc, 30);
                         return;
                     }
 
@@ -257,6 +267,59 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     /**
      * Carga todas las reservas de un grupo y muestra información agrupada
      */
+    /**
+     * Carga datos para reservas SEMANAL o MENSUAL (1 documento que representa múltiples días)
+     */
+    private void cargarReservaSemanalMensual(DocumentSnapshot reservaDoc, int cantidadDias) {
+        // Obtener datos de la reserva
+        DocumentReference duenoRef = reservaDoc.getDocumentReference("id_dueno");
+        if (duenoRef != null) {
+            idDueno = duenoRef.getId();
+        }
+
+        Date fechaInicio = reservaDoc.getTimestamp("fecha") != null ?
+                reservaDoc.getTimestamp("fecha").toDate() : new Date();
+
+        // Calcular fecha fin
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTime(fechaInicio);
+        cal.add(java.util.Calendar.DAY_OF_MONTH, cantidadDias - 1);
+        Date fechaFin = cal.getTime();
+
+        horaInicio = reservaDoc.getTimestamp("hora_inicio") != null ?
+                reservaDoc.getTimestamp("hora_inicio").toDate() : new Date();
+
+        Long duracion = reservaDoc.getLong("duracion_minutos");
+        duracionMinutos = duracion != null ? duracion.intValue() : 60;
+
+        idMascota = reservaDoc.getString("id_mascota");
+        String notas = reservaDoc.getString("notas");
+        estadoReserva = reservaDoc.getString("estado");
+        actualizarBotonesPorEstado();
+
+        // Mostrar notas
+        if (notas != null && !notas.isEmpty()) {
+            tvNotas.setText(notas);
+        } else {
+            tvNotas.setText("Sin notas adicionales");
+        }
+
+        // Mostrar rango de fechas y horario
+        String tipoTexto = cantidadDias == 7 ? "Semanal" : "Mensual";
+        String fechaHorario = formatearFechaHorarioGrupo(fechaInicio, fechaFin, horaInicio, duracionMinutos, cantidadDias);
+        tvFechaHorario.setText("🔁 " + tipoTexto + "\n" + fechaHorario);
+
+        // Cargar datos del dueño
+        if (duenoRef != null) {
+            cargarDatosDueno(duenoRef);
+        }
+
+        // Cargar datos de la mascota
+        if (idDueno != null && idMascota != null && !idMascota.isEmpty()) {
+            cargarDatosMascota(idDueno, idMascota);
+        }
+    }
+
     private void cargarGrupoReservas(DocumentSnapshot primerReserva, String grupoId) {
         db.collection("reservas")
                 .whereEqualTo("grupo_reserva_id", grupoId)

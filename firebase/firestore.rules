@@ -182,6 +182,16 @@ service cloud.firestore {
           true
         )
       );
+
+      // 🆕 Subcolección para historial de ubicaciones en vivo
+      match /ubicaciones_historico/{ubicacionId} {
+        allow read: if isAuthenticated() && (
+          isCurrentUser(get(/databases/$(database)/documents/reservas/$(reservaId)).data.id_dueno) ||
+          isCurrentUser(get(/databases/$(database)/documents/reservas/$(reservaId)).data.id_paseador)
+        );
+        allow create: if isAuthenticated() &&
+          isCurrentUser(get(/databases/$(database)/documents/reservas/$(reservaId)).data.id_paseador);
+      }
     }
 
     // pagos collection

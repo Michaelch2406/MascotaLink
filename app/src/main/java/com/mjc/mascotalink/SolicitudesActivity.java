@@ -263,7 +263,7 @@ public class SolicitudesActivity extends AppCompatActivity {
                     // Setear datos de la mascota en el objeto Paseo
                     if (mascotaDoc != null && mascotaDoc.exists()) {
                         solicitud.setMascotaNombre(mascotaDoc.getString("nombre"));
-                        solicitud.setMascotaFoto(mascotaDoc.getString("foto_url"));
+                        solicitud.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
                     } else {
                         solicitud.setMascotaNombre("Mascota");
                     }
@@ -410,7 +410,9 @@ public class SolicitudesActivity extends AppCompatActivity {
             return fecha2.compareTo(fecha1);
         });
         if (solicitudesAdapter != null) {
-            solicitudesAdapter.updateList(solicitudesList);
+            // Agrupar las reservas antes de pasarlas al adapter
+            List<PaseoItem> items = PaseoItem.agruparReservas(solicitudesList);
+            solicitudesAdapter.updateList(items);
         }
         finalizarCarga();
     }

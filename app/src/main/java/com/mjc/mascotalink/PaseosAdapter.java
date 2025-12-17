@@ -29,6 +29,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
     private static final int VIEW_TYPE_INDIVIDUAL = 0;
     private static final int VIEW_TYPE_GRUPO = 1;
+    private static final long VENTANA_ANTICIPACION_MS = 15 * 60 * 1000; // 15 minutos
 
     private Context context;
     private List<PaseoItem> paseoItems;  // Cambiado de List<Paseo> a List<PaseoItem>
@@ -280,6 +281,20 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         chip.setTextColor(0xFFFFFFFF); // Blanco
     }
 
+    /**
+     * Verifica si un paseo CONFIRMADO esta dentro de la ventana de 15 minutos antes de la hora programada
+     */
+    private boolean estaEnVentanaDeInicio(Paseo paseo) {
+        if (paseo == null || paseo.getHora_inicio() == null) return false;
+
+        long ahora = System.currentTimeMillis();
+        long horaProgramadaMs = paseo.getHora_inicio().getTime();
+        long horaMinPermitidaMs = horaProgramadaMs - VENTANA_ANTICIPACION_MS;
+
+        // Esta dentro de la ventana si estamos a 15 minutos o menos antes, o si ya paso la hora
+        return ahora >= horaMinPermitidaMs;
+    }
+
     private void configurarBotonesAccion(PaseoViewHolder holder, String estado, final Paseo paseo) {
         holder.layoutBotones.setVisibility(View.VISIBLE);
         holder.btnAccion1.setVisibility(View.VISIBLE);
@@ -291,7 +306,24 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.btnAccion2.setVisibility(View.GONE); // Hide secondary by default
 
         if (estado != null) {
-            if (estado.equals("LISTO_PARA_INICIAR")) {
+            // CONFIRMADO - Mostrar boton de inicio si esta dentro de la ventana de 15 minutos
+            if (estado.equals("CONFIRMADO") && userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
+                if (estaEnVentanaDeInicio(paseo)) {
+                    // Dentro de la ventana - Mostrar boton naranja para comenzar
+                    holder.btnAccion1.setText("Iniciar");
+                    holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF9800)); // Naranja
+                    holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
+
+                    holder.btnAccion2.setVisibility(View.VISIBLE);
+                    holder.btnAccion2.setText("Contactar");
+                    holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+                } else {
+                    // Fuera de ventana - Mostrar boton de ver detalles
+                    holder.btnAccion1.setText("Ver Detalles");
+                    holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
+                }
+            }
+            else if (estado.equals("LISTO_PARA_INICIAR")) {
                 holder.btnAccion1.setText("Iniciar Paseo ▶");
                 holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF9800)); // Naranja
                 holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));

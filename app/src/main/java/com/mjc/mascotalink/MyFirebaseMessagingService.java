@@ -49,6 +49,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public static final String CHANNEL_ID_MESSAGES = "messages_channel";
     public static final String CHANNEL_NAME_MESSAGES = "Mensajes";
     public static final String CHANNEL_DESCRIPTION_MESSAGES = "Notificaciones de mensajes de chat.";
+
+    public static final String CHANNEL_ID_WALKS = "paseos_channel";
+    public static final String CHANNEL_NAME_WALKS = "Recordatorios de Paseo";
+    public static final String CHANNEL_DESCRIPTION_WALKS = "Alertas sobre inicio, retrasos y recordatorios de paseos.";
     
     private static final String GROUP_KEY_MESSAGES = "com.mjc.mascotalink.MESSAGES";
     private static int messageNotificationId = 1000;
@@ -212,8 +216,40 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
                 PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
 
-        // Determinar canal basado en si es mensaje de chat
-        String channelId = isChatMessage ? CHANNEL_ID_MESSAGES : CHANNEL_ID_PAYMENTS;
+        // Determinar canal basado en el tipo de notificación
+        String channelId = CHANNEL_ID_PAYMENTS; // Default
+        String channelName = CHANNEL_NAME_PAYMENTS;
+        String channelDescription = CHANNEL_DESCRIPTION_PAYMENTS;
+
+        if (isChatMessage) {
+            channelId = CHANNEL_ID_MESSAGES;
+            channelName = CHANNEL_NAME_MESSAGES;
+            channelDescription = CHANNEL_DESCRIPTION_MESSAGES;
+        } else {
+            // Verificar si es una notificación de paseo
+            boolean isWalkNotification = false;
+            if (clickAction != null) {
+                if (clickAction.equals("OPEN_WALKS_ACTIVITY") || 
+                    clickAction.equals("OPEN_REQUESTS_ACTIVITY") || 
+                    clickAction.equals("OPEN_CURRENT_WALK_ACTIVITY") || 
+                    clickAction.equals("OPEN_CURRENT_WALK_OWNER")) {
+                    isWalkNotification = true;
+                }
+            }
+            if (data != null && (data.containsKey("tipo"))) {
+                String tipo = data.get("tipo");
+                if ("recordatorio_paseo".equals(tipo) || "paseo_retrasado".equals(tipo) || "ventana_inicio".equals(tipo) || "paseo_retrasado_dueno".equals(tipo)) {
+                    isWalkNotification = true;
+                }
+            }
+
+            if (isWalkNotification) {
+                channelId = CHANNEL_ID_WALKS;
+                channelName = CHANNEL_NAME_WALKS;
+                channelDescription = CHANNEL_DESCRIPTION_WALKS;
+            }
+        }
+
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         
         NotificationCompat.Builder notificationBuilder =
@@ -316,7 +352,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             
             notificationManager.notify(0, summaryBuilder.build());
         } else {
-            createNotificationChannel(notificationManager, channelId, CHANNEL_NAME_PAYMENTS, CHANNEL_DESCRIPTION_PAYMENTS);
+            createNotificationChannel(notificationManager, channelId, channelName, channelDescription);
             notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
         }
     }

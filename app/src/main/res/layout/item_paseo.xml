@@ -106,10 +106,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
             android:text="Rol: Nombre Secundario"
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
-            app:layout_constraintEnd_toEndOf="@+id/tv_nombre_principal"
+            app:layout_constraintEnd_toStartOf="@+id/ll_duracion_info"
             app:layout_constraintStart_toStartOf="@+id/tv_nombre_principal"
             app:layout_constraintTop_toBottomOf="@+id/tv_nombre_principal" />
 
@@ -129,16 +130,16 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/iv_foto_perfil_paseo" />
 
-        <!-- Duration Info -->
+        <!-- Duration Info - Movido a la derecha -->
         <LinearLayout
             android:id="@+id/ll_duracion_info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            app:layout_constraintStart_toStartOf="@+id/tv_nombre_secundario"
-            app:layout_constraintTop_toBottomOf="@+id/tv_nombre_secundario">
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/chip_estado_paseo"
+            app:layout_constraintBottom_toBottomOf="@+id/iv_foto_perfil_paseo">
 
             <ImageView
                 android:layout_width="14dp"
@@ -165,7 +166,7 @@
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ll_duracion_info">
+            app:layout_constraintTop_toBottomOf="@+id/iv_foto_perfil_paseo">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_accion_1"
