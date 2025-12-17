@@ -273,19 +273,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         
-        NotificationCompat.Builder notificationBuilder =
-                new NotificationCompat.Builder(this, channelId)
-                        .setSmallIcon(R.drawable.walki_logo_secundario)
-                        .setContentTitle(title != null ? title : "Walki")
-                        .setContentText(messageBody)
-                        .setAutoCancel(true)
-                        .setSound(defaultSoundUri)
-                        .setContentIntent(pendingIntent)
-                        .setPriority(NotificationCompat.PRIORITY_HIGH);
-        
-        /*
-        int currentNotificationId;
-        String chatId = null;
+	        NotificationCompat.Builder notificationBuilder =
+	                new NotificationCompat.Builder(this, channelId)
+	                        .setSmallIcon(R.drawable.walki_logo_secundario)
+	                        .setContentTitle(title != null ? title : "Walki")
+	                        .setContentText(messageBody)
+	                        .setAutoCancel(true)
+	                        .setSound(defaultSoundUri)
+	                        .setContentIntent(pendingIntent)
+	                        .setPriority(NotificationCompat.PRIORITY_HIGH);
+
+	        if (!isChatMessage) {
+	            notificationBuilder.setOnlyAlertOnce(true);
+	        }
+	        
+	        /*
+	        int currentNotificationId;
+	        String chatId = null;
         if (isChatMessage) {
             chatId = data.get("chat_id");
             // Usar el hashCode del chatId para que sea único por conversación pero constante

@@ -8,6 +8,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -324,13 +325,29 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                 }
             }
             else if (estado.equals("LISTO_PARA_INICIAR")) {
-                holder.btnAccion1.setText("Iniciar Paseo ▶");
-                holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF9800)); // Naranja
-                holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
+                Log.d("PaseosAdapter", "LISTO_PARA_INICIAR - Role: " + userRole);
+                if (userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
+                    holder.btnAccion1.setText("Iniciar Paseo ▶");
+                    holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF9800)); // Naranja
+                    holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
 
-                holder.btnAccion2.setVisibility(View.VISIBLE);
-                holder.btnAccion2.setText("Chat 💬");
-                holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+                    holder.btnAccion2.setVisibility(View.VISIBLE);
+                    holder.btnAccion2.setText("Chat 💬");
+                    holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+                } else {
+                    // DUEÑO LOGIC
+                    Log.d("PaseosAdapter", "Showing Owner buttons for LISTO_PARA_INICIAR");
+                    holder.layoutBotones.setVisibility(View.VISIBLE);
+                    
+                    holder.btnAccion1.setVisibility(View.VISIBLE);
+                    holder.btnAccion1.setText("Ver Detalles");
+                    holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF12A3ED)); // Blue default
+                    holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
+
+                    holder.btnAccion2.setVisibility(View.VISIBLE);
+                    holder.btnAccion2.setText("Chat 💬");
+                    holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
+                }
             }
             else if (estado.equals("EN_CURSO")) {
                 holder.btnAccion1.setText("Ver Ubicación 📍");

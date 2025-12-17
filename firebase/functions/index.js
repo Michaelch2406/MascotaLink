@@ -47,6 +47,82 @@ const db = admin.firestore();
 
 const getIdValue = (value) => (value && typeof value === "object" && value.id ? value.id : value);
 
+async function commitBatchedUpdates(updateEntries, { batchSize = 450 } = {}) {
+  if (!updateEntries || updateEntries.length === 0) return 0;
+
+  const merged = new Map(); // ref.path -> { ref, data }
+  for (const entry of updateEntries) {
+    if (!entry || !entry.ref || !entry.data) continue;
+    const key = entry.ref.path;
+    const existing = merged.get(key);
+    if (existing) {
+      Object.assign(existing.data, entry.data);
+    } else {
+      merged.set(key, { ref: entry.ref, data: { ...entry.data } });
+    }
+  }
+
+  const uniqueUpdates = Array.from(merged.values()).filter(u => u.data && Object.keys(u.data).length > 0);
+  if (uniqueUpdates.length === 0) return 0;
+
+  const commits = [];
+  let batch = db.batch();
+  let counter = 0;
+
+  for (const { ref, data } of uniqueUpdates) {
+    batch.update(ref, data);
+    counter++;
+    if (counter >= batchSize) {
+      commits.push(batch.commit());
+      batch = db.batch();
+      counter = 0;
+    }
+  }
+
+  if (counter > 0) {
+    commits.push(batch.commit());
+  }
+
+  await Promise.all(commits);
+  return uniqueUpdates.length;
+}
+
+async function sendEachAndUpdate(entries, logLabel) {
+  if (!entries || entries.length === 0) return { total: 0, success: 0, failure: 0, updated: 0 };
+
+  let response;
+  try {
+    response = await admin.messaging().sendEach(entries.map(e => e.message));
+  } catch (error) {
+    console.error(`${logLabel}: sendEach failed`, error);
+    return { total: entries.length, success: 0, failure: entries.length, updated: 0 };
+  }
+
+  const updates = [];
+  let success = 0;
+  let failure = 0;
+
+  for (let i = 0; i < response.responses.length; i++) {
+    const r = response.responses[i];
+    const entry = entries[i];
+    if (r.success) {
+      success++;
+      if (entry.update && entry.ref) {
+        updates.push({ ref: entry.ref, data: entry.update });
+      }
+    } else {
+      failure++;
+      console.error(`${logLabel}: send failed`, {
+        docId: entry?.docId,
+        error: r.error?.message || r.error
+      });
+    }
+  }
+
+  const updated = await commitBatchedUpdates(updates);
+  return { total: entries.length, success, failure, updated };
+}
+
 /**
  * Calculates distance between two geographical points using the Haversine formula.
  * @param {number} lat1 Latitude of point 1
@@ -1953,12 +2029,9 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
   console.log("Running scheduled job to send 15-minute reminders.");
   const now = admin.firestore.Timestamp.now();
 
-  const targetMinutes = 15;
-  const toleranceMinutes = 2;
-
-  // Look for walks starting in ~15 minutes
-  const windowStartMillis = now.toMillis() + ((targetMinutes - toleranceMinutes) * 60 * 1000);
-  const windowEndMillis = now.toMillis() + ((targetMinutes + toleranceMinutes) * 60 * 1000);
+  // Look for walks starting in 15-16 minutes (run every 1 minute)
+  const windowStartMillis = now.toMillis() + (15 * 60 * 1000);
+  const windowEndMillis = now.toMillis() + (16 * 60 * 1000) - 1;
   const windowStart = admin.firestore.Timestamp.fromMillis(windowStartMillis);
   const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
 
@@ -1975,6 +2048,8 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
     }
 
     console.log(`Found ${reservationsSnapshot.size} reservations for 15-minute reminders.`);
+
+    const entries = [];
 
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
@@ -2072,15 +2147,19 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
         }
       };
 
-      try {
-        await admin.messaging().send(message);
-        console.log(`Sent 15-minute reminder for reservation ${doc.id}`);
+      entries.push({
+        docId: doc.id,
+        ref: doc.ref,
+        update: { reminder15MinSent: true, readyWindowNotificationSent: true },
+        message
+      });
+    }
 
-        // Mark as sent
-        await doc.ref.update({ reminder15MinSent: true, readyWindowNotificationSent: true });
-      } catch (error) {
-        console.error(`Error sending 15-minute reminder for ${doc.id}:`, error);
-      }
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "sendReminder15MinBefore");
+      console.log(`sendReminder15MinBefore: sent=${result.success} failed=${result.failure} updated=${result.updated}`);
+    } else {
+      console.log("No 15-minute reminders to send.");
     }
 
     console.log("Completed 15-minute reminder job.");
@@ -2094,11 +2173,11 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
   console.log("Running scheduled job to send 5-minute reminders.");
   const now = admin.firestore.Timestamp.now();
 
-  // Look for walks starting in 4-6 minutes (2 min window)
-  const windowStartMillis = now.toMillis() + (4 * 60 * 1000);
-  const windowEndMillis = now.toMillis() + (6 * 60 * 1000);
-  const windowStart = admin.firestore.Timestamp.fromMillis(windowStartMillis);
-  const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
+	  // Look for walks starting in 5-6 minutes (run every 1 minute)
+	  const windowStartMillis = now.toMillis() + (5 * 60 * 1000);
+	  const windowEndMillis = now.toMillis() + (6 * 60 * 1000) - 1;
+	  const windowStart = admin.firestore.Timestamp.fromMillis(windowStartMillis);
+	  const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
 
   try {
     const reservationsSnapshot = await db.collection("reservas")
@@ -2113,6 +2192,8 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
     }
 
     console.log(`Found ${reservationsSnapshot.size} reservations for 5-minute reminders.`);
+
+    const entries = [];
 
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
@@ -2207,15 +2288,19 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
         }
       };
 
-      try {
-        await admin.messaging().send(message);
-        console.log(`Sent 5-minute reminder for reservation ${doc.id}`);
+      entries.push({
+        docId: doc.id,
+        ref: doc.ref,
+        update: { reminder5MinSent: true },
+        message
+      });
+    }
 
-        // Mark as sent
-        await doc.ref.update({ reminder5MinSent: true });
-      } catch (error) {
-        console.error(`Error sending 5-minute reminder for ${doc.id}:`, error);
-      }
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "sendReminder5MinBefore");
+      console.log(`sendReminder5MinBefore: sent=${result.success} failed=${result.failure} updated=${result.updated}`);
+    } else {
+      console.log("No 5-minute reminders to send.");
     }
 
     console.log("Completed 5-minute reminder job.");
@@ -2246,6 +2331,8 @@ exports.notifyOverdueWalks = onSchedule("every 1 minutes", async (event) => {
     }
 
     console.log(`Found ${reservationsSnapshot.size} overdue walks.`);
+
+    const entries = [];
 
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
@@ -2302,15 +2389,19 @@ exports.notifyOverdueWalks = onSchedule("every 1 minutes", async (event) => {
         }
       };
 
-      try {
-        await admin.messaging().send(message);
-        console.log(`Sent overdue notification for reservation ${doc.id}`);
+      entries.push({
+        docId: doc.id,
+        ref: doc.ref,
+        update: { overdueNotificationSent: true },
+        message
+      });
+    }
 
-        // Mark as sent
-        await doc.ref.update({ overdueNotificationSent: true });
-      } catch (error) {
-        console.error(`Error sending overdue notification for ${doc.id}:`, error);
-      }
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "notifyOverdueWalks");
+      console.log(`notifyOverdueWalks: sent=${result.success} failed=${result.failure} updated=${result.updated}`);
+    } else {
+      console.log("No overdue notifications to send.");
     }
 
     console.log("Completed overdue walks notification job.");
@@ -2327,11 +2418,11 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
   // 🔥 MEJORA ROBUSTA: En lugar de una ventana pequeña, buscamos cualquier paseo
   // que vaya a empezar en los próximos 20 minutos y NO haya sido notificado aún.
   // Esto evita que se pierdan notificaciones si el cron se retrasa.
-  const twentyMinutesFromNowMillis = now.toMillis() + (17 * 60 * 1000);
+  const twentyMinutesFromNowMillis = now.toMillis() + (16 * 60 * 1000) - 1;
   const twentyMinutesFromNow = admin.firestore.Timestamp.fromMillis(twentyMinutesFromNowMillis);
   
   // Límite inferior: Paseos que empiezan desde "ahora" (no en el pasado)
-  const nowTimestamp = admin.firestore.Timestamp.fromMillis(now.toMillis() + (13 * 60 * 1000));
+  const nowTimestamp = admin.firestore.Timestamp.fromMillis(now.toMillis() + (15 * 60 * 1000));
 
   try {
     const reservationsSnapshot = await db.collection("reservas")
@@ -2346,6 +2437,8 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
     }
 
     console.log(`Found ${reservationsSnapshot.size} potential walks for ready window.`);
+
+    const entries = [];
 
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
@@ -2447,15 +2540,19 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
         }
       };
 
-      try {
-        await admin.messaging().send(message);
-        console.log(`Sent ready window notification for reservation ${doc.id}`);
+      entries.push({
+        docId: doc.id,
+        ref: doc.ref,
+        update: { readyWindowNotificationSent: true, reminder15MinSent: true },
+        message
+      });
+    }
 
-        // Marcar como enviada
-        await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
-      } catch (error) {
-        console.error(`Error sending ready window notification for ${doc.id}:`, error);
-      }
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "notifyWalkReadyWindow");
+      console.log(`notifyWalkReadyWindow: sent=${result.success} failed=${result.failure} updated=${result.updated}`);
+    } else {
+      console.log("No ready window notifications to send.");
     }
 
     console.log("Completed ready window notification job.");
@@ -2487,12 +2584,14 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
         .where("hora_inicio", "<=", tenMinutesAgo) // Paseos que debieron empezar hace rato
         .get();
 
-    if (reservationsSnapshot.empty) {
-        // console.log("No delayed walks found.");
-        return;
-    }
+	    if (reservationsSnapshot.empty) {
+	        // console.log("No delayed walks found.");
+	        return;
+	    }
 
-    for (const doc of reservationsSnapshot.docs) {
+	    const entries = [];
+
+	    for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
       const horaInicioMillis = reserva.hora_inicio.toMillis();
       const retrasoMillis = now.toMillis() - horaInicioMillis;
@@ -2562,18 +2661,15 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
               }
             };
     
-            let sentToWalker = false;
-            try {
-              await admin.messaging().send(messagePaseador);
-              sentToWalker = true;
-              console.log(`Sent ${delay.minutes}-minute delay notification to walker for ${doc.id}`);
-            } catch (error) {
-              console.error(`Error sending delay notification to walker:`, error);
-            }
+	            entries.push({
+	              docId: doc.id,
+	              ref: doc.ref,
+	              update: { [delay.field]: true },
+	              message: messagePaseador
+	            });
     
             // Si es 10 o 20 minutos, tambien notificar al dueno
-            let sentToOwner = false;
-            if (delay.minutes === 10 || delay.minutes === 20) {
+	            if (delay.minutes === 10 || delay.minutes === 20) {
               const idDueno = getIdValue(reserva.id_dueno);
               if (idDueno) {
                 const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
@@ -2601,35 +2697,17 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
                       }
                     };
     
-                    try {
-                      await admin.messaging().send(messageDueno);
-                      sentToOwner = true;
-                      console.log(`Sent ${delay.minutes}-minute delay notification to owner for ${doc.id}`);
-                    } catch (error) {
-                      console.error(`Error sending delay notification to owner:`, error);
-                    }
+	                    entries.push({
+	                      docId: doc.id,
+	                      ref: doc.ref,
+	                      update: { [delay.field]: true },
+	                      message: messageDueno
+	                    });
                   }
                 }
               }
             }
-    
-            // Marcar como enviada y Autocorrección de estado
-            const updateData = {};
-            if (sentToWalker || sentToOwner) {
-              updateData[delay.field] = true;
-            }
-            
-            if (reserva.estado === 'CONFIRMADO') {
-                updateData.estado = 'LISTO_PARA_INICIAR';
-                updateData.hasTransitionedToReady = true;
-                updateData.actualizado_por_sistema = true;
-                console.log(`🔧 AUTOCORRECCIÓN: Paseo ${doc.id} retrasado estaba CONFIRMADO. Forzando a LISTO_PARA_INICIAR.`);
-            }
-    
-            if (Object.keys(updateData).length > 0) {
-              await doc.ref.update(updateData);
-            }
-            
+
             // IMPORTANTE: Break para no enviar alerta de 10 min justo después de la de 20 en el mismo loop
             // Queremos que en el siguiente ciclo del cron evalúe si toca otra.
             break; 
@@ -2637,10 +2715,17 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
       }
     }
 
-    console.log("Completed delayed walk notifications job.");
-  } catch (error) {
-    console.error("Error in delayed walk notifications job:", error);
-  }
+	    if (entries.length > 0) {
+	      const result = await sendEachAndUpdate(entries, "notifyDelayedWalks");
+	      console.log("notifyDelayedWalks: batch result", result);
+	    } else {
+	      console.log("notifyDelayedWalks: no notifications to send.");
+	    }
+
+	    console.log("Completed delayed walk notifications job.");
+	  } catch (error) {
+	    console.error("Error in delayed walk notifications job:", error);
+	  }
 });
 
 
