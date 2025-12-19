@@ -149,6 +149,7 @@ dependencies {
     testImplementation libs.junit
     testImplementation libs.mockito
     testImplementation libs.arch.core.testing
+    testImplementation libs.robolectric
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
 }

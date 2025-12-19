@@ -1818,7 +1818,9 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
   const petsToFetch = new Map(); // idDueno -> Set<idMascota>
 
   for (const doc of reservationsSnapshot.docs) {
-    const reserva = doc.data();
+	      const reserva = doc.data();
+	      const millisUntilStart = reserva.hora_inicio.toMillis() - now.toMillis();
+	      if (millisUntilStart < 0 || millisUntilStart > (5 * 60 * 1000)) continue;
     const reservaId = doc.id;
     const idDueno = getIdValue(reserva.id_dueno);
     const idPaseador = getIdValue(reserva.id_paseador);
@@ -1987,6 +1989,8 @@ exports.transitionToInCourse = onSchedule("every 1 minutes", async (event) => {
 
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
+      const millisUntilStart = reserva.hora_inicio.toMillis() - now.toMillis();
+      if (millisUntilStart < 0 || millisUntilStart > (15 * 60 * 1000)) continue;
 
       // Double check logic (redundant with query but safe)
       // Also check if it was already processed to avoid overwriting if query was slightly delayed
@@ -2027,6 +2031,8 @@ exports.transitionToInCourse = onSchedule("every 1 minutes", async (event) => {
 // Scheduled job to send reminders 15 minutes before walk start time
 exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) => {
   console.log("Running scheduled job to send 15-minute reminders.");
+  console.log("sendReminder15MinBefore: disabled (use notifyWalkReadyWindow).");
+  return;
   const now = admin.firestore.Timestamp.now();
 
   // Look for walks starting in 15-16 minutes (run every 1 minute)
@@ -2138,14 +2144,15 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
           reservaId: doc.id,
           click_action: "OPEN_CURRENT_WALK_ACTIVITY"
         },
-        android: {
-          priority: "high",
-          notification: {
-            sound: "default",
-            channelId: "paseos_channel"
-          }
-        }
-      };
+	        android: {
+	          priority: "high",
+	          notification: {
+	            sound: "default",
+	            channelId: "paseos_channel",
+	            tag: "reserva_" + doc.id + "_reminder15"
+	          }
+	        }
+	      };
 
       entries.push({
         docId: doc.id,
@@ -2173,9 +2180,9 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
   console.log("Running scheduled job to send 5-minute reminders.");
   const now = admin.firestore.Timestamp.now();
 
-	  // Look for walks starting in 5-6 minutes (run every 1 minute)
-	  const windowStartMillis = now.toMillis() + (5 * 60 * 1000);
-	  const windowEndMillis = now.toMillis() + (6 * 60 * 1000) - 1;
+	  // Look ahead to avoid missing by scheduler drift; decide by millisUntilStart below
+	  const windowStartMillis = now.toMillis();
+	  const windowEndMillis = now.toMillis() + (10 * 60 * 1000);
 	  const windowStart = admin.firestore.Timestamp.fromMillis(windowStartMillis);
 	  const windowEnd = admin.firestore.Timestamp.fromMillis(windowEndMillis);
 
@@ -2279,14 +2286,15 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
           reservaId: doc.id,
           click_action: "OPEN_CURRENT_WALK_ACTIVITY"
         },
-        android: {
-          priority: "high",
-          notification: {
-            sound: "default",
-            channelId: "paseos_channel"
-          }
-        }
-      };
+	        android: {
+	          priority: "high",
+	          notification: {
+	            sound: "default",
+	            channelId: "paseos_channel",
+	            tag: "reserva_" + doc.id + "_reminder5"
+	          }
+	        }
+	      };
 
       entries.push({
         docId: doc.id,
@@ -2380,14 +2388,15 @@ exports.notifyOverdueWalks = onSchedule("every 1 minutes", async (event) => {
           reservaId: doc.id,
           click_action: "OPEN_CURRENT_WALK_ACTIVITY"
         },
-        android: {
-          priority: "high",
-          notification: {
-            sound: "default",
-            channelId: "paseos_channel"
-          }
-        }
-      };
+	        android: {
+	          priority: "high",
+	          notification: {
+	            sound: "default",
+	            channelId: "paseos_channel",
+	            tag: "reserva_" + doc.id + "_overdue"
+	          }
+	        }
+	      };
 
       entries.push({
         docId: doc.id,
@@ -2418,11 +2427,11 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
   // 🔥 MEJORA ROBUSTA: En lugar de una ventana pequeña, buscamos cualquier paseo
   // que vaya a empezar en los próximos 20 minutos y NO haya sido notificado aún.
   // Esto evita que se pierdan notificaciones si el cron se retrasa.
-  const twentyMinutesFromNowMillis = now.toMillis() + (16 * 60 * 1000) - 1;
+  const twentyMinutesFromNowMillis = now.toMillis() + (20 * 60 * 1000);
   const twentyMinutesFromNow = admin.firestore.Timestamp.fromMillis(twentyMinutesFromNowMillis);
   
   // Límite inferior: Paseos que empiezan desde "ahora" (no en el pasado)
-  const nowTimestamp = admin.firestore.Timestamp.fromMillis(now.toMillis() + (15 * 60 * 1000));
+  const nowTimestamp = now;
 
   try {
     const reservationsSnapshot = await db.collection("reservas")
@@ -2531,14 +2540,15 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
           reservaId: doc.id,
           click_action: "OPEN_CURRENT_WALK_ACTIVITY"
         },
-        android: {
-          priority: "high",
-          notification: {
-            sound: "default",
-            channelId: "paseos_channel"
-          }
-        }
-      };
+	        android: {
+	          priority: "high",
+	          notification: {
+	            sound: "default",
+	            channelId: "paseos_channel",
+	            tag: "reserva_" + doc.id + "_ready_window"
+	          }
+	        }
+	      };
 
       entries.push({
         docId: doc.id,
@@ -2652,14 +2662,15 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
                 delay: delay.minutes.toString(),
                 click_action: "OPEN_CURRENT_WALK_ACTIVITY"
               },
-              android: {
-                priority: "high",
-                notification: {
-                  sound: "default",
-                  channelId: "paseos_channel"
-                }
-              }
-            };
+	              android: {
+	                priority: "high",
+	                notification: {
+	                  sound: "default",
+	                  channelId: "paseos_channel",
+	                  tag: "reserva_" + doc.id + "_delay_" + delay.minutes
+	                }
+	              }
+	            };
     
 	            entries.push({
 	              docId: doc.id,
@@ -2688,14 +2699,15 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
                         delay: delay.minutes.toString(),
                         click_action: "OPEN_CURRENT_WALK_OWNER"
                       },
-                      android: {
-                        priority: "high",
-                        notification: {
-                          sound: "default",
-                          channelId: "paseos_channel"
-                        }
-                      }
-                    };
+	                      android: {
+	                        priority: "high",
+	                        notification: {
+	                          sound: "default",
+	                          channelId: "paseos_channel",
+	                          tag: "reserva_" + doc.id + "_delay_owner_" + delay.minutes
+	                        }
+	                      }
+	                    };
     
 	                    entries.push({
 	                      docId: doc.id,
@@ -2728,7 +2740,316 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
 	  }
 });
 
+// ============================================================================
+// FUNCIONES HTTP PARA DESARROLLO LOCAL
+// Estas funciones permiten probar las notificaciones scheduled en el emulador
+// ============================================================================
 
+// Función HTTP para probar notificaciones de ventana de inicio (15 min antes)
+exports.debugNotifyReady = onRequest(async (req, res) => {
+  console.log("DEBUG: Manually triggering notifyWalkReadyWindow logic.");
+  const now = Timestamp.now();
+
+  const twentyMinutesFromNowMillis = now.toMillis() + (20 * 60 * 1000);
+  const twentyMinutesFromNow = Timestamp.fromMillis(twentyMinutesFromNowMillis);
+  const nowTimestamp = now;
+
+  try {
+    const reservationsSnapshot = await db.collection("reservas")
+      .where("estado", "==", "CONFIRMADO")
+      .where("hora_inicio", "<=", twentyMinutesFromNow)
+      .where("hora_inicio", ">=", nowTimestamp)
+      .get();
+
+    if (reservationsSnapshot.empty) {
+      console.log("DEBUG: No walks found entering ready window.");
+      res.status(200).send({ success: true, message: "No walks found entering ready window.", sent: 0 });
+      return;
+    }
+
+    console.log(`DEBUG: Found ${reservationsSnapshot.size} potential walks for ready window.`);
+
+    const entries = [];
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+
+      if (reserva.readyWindowNotificationSent || reserva.reminder15MinSent) continue;
+
+      const esGrupo = reserva.es_grupo;
+      const grupoReservaId = reserva.grupo_reserva_id;
+      if (esGrupo && grupoReservaId) {
+        try {
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
+
+          const fechas = grupoSnapshot.docs.map(d => ({
+            id: d.id,
+            fecha: d.data().fecha
+          })).sort((a, b) => {
+            const aTime = a.fecha?.toMillis() || 0;
+            const bTime = b.fecha?.toMillis() || 0;
+            return aTime - bTime;
+          });
+
+          if (fechas.length > 0 && fechas[0].id !== doc.id) {
+            console.log(`DEBUG: Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo ${grupoReservaId}`);
+            await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
+            continue;
+          }
+        } catch (err) {
+          console.error("DEBUG: Error checking grupo_reserva_id for ready window:", err);
+        }
+      }
+
+      const paseadorRef = reserva.id_paseador;
+      let paseadorId = null;
+      if (paseadorRef) {
+        if (typeof paseadorRef === 'object' && paseadorRef.id) {
+          paseadorId = paseadorRef.id;
+        } else if (typeof paseadorRef === 'string') {
+          paseadorId = paseadorRef;
+        }
+      }
+
+      if (!paseadorId) continue;
+
+      const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
+      if (!paseadorDoc.exists) continue;
+
+      const fcmToken = paseadorDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      const idDueno = getIdValue(reserva.id_dueno);
+      const idMascota = reserva.id_mascota;
+      let nombreMascota = "la mascota";
+
+      if (idMascota && idDueno) {
+        try {
+          const mascotaDoc = await db.collection("duenos").doc(idDueno)
+            .collection("mascotas").doc(idMascota).get();
+          if (mascotaDoc.exists) {
+            nombreMascota = mascotaDoc.data().nombre || nombreMascota;
+          }
+        } catch (err) {
+          console.error("DEBUG: Error fetching mascota:", err);
+        }
+      }
+
+      const horaInicio = reserva.hora_inicio.toDate();
+      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: "America/Guayaquil"
+      });
+
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: "Ya puedes iniciar el paseo",
+          body: `Tu paseo con ${nombreMascota} esta programado para las ${horaFormateada}. Ya puedes iniciar cuando llegues.`
+        },
+        data: {
+          tipo: "ventana_inicio",
+          reservaId: doc.id,
+          click_action: "OPEN_CURRENT_WALK_ACTIVITY"
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId: "paseos_channel",
+            tag: "reserva_" + doc.id + "_ready_window"
+          }
+        }
+      };
+
+      entries.push({
+        docId: doc.id,
+        ref: doc.ref,
+        update: { readyWindowNotificationSent: true, reminder15MinSent: true },
+        message
+      });
+    }
+
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "debugNotifyReady");
+      console.log(`DEBUG notifyWalkReadyWindow: sent=${result.success} failed=${result.failure} updated=${result.updated}`);
+      res.status(200).send({ success: true, result });
+    } else {
+      console.log("DEBUG: No ready window notifications to send.");
+      res.status(200).send({ success: true, message: "No ready window notifications to send.", sent: 0 });
+    }
+
+    console.log("DEBUG: Completed ready window notification job.");
+  } catch (error) {
+    console.error("DEBUG: Error in ready window notification job:", error);
+    res.status(500).send({ success: false, error: error.message });
+  }
+});
+
+// Función HTTP para probar notificaciones de paseos retrasados (10, 20, 30 min)
+exports.debugNotifyDelayed = onRequest(async (req, res) => {
+  console.log("DEBUG: Manually triggering notifyDelayedWalks logic.");
+  const now = Timestamp.now();
+
+  const delays = [
+    { minutes: 30, field: 'delay30MinNotificationSent', message: 'El paseo lleva 30 minutos de retraso. Considera cancelar si no puedes asistir.' },
+    { minutes: 20, field: 'delay20MinNotificationSent', message: 'El paseo lleva 20 minutos de retraso. Por favor contacta al dueno si hay algun problema.' },
+    { minutes: 10, field: 'delay10MinNotificationSent', message: 'El paseo programado hace 10 minutos aun no ha comenzado.' }
+  ];
+
+  try {
+    const tenMinutesAgoMillis = now.toMillis() - (10 * 60 * 1000);
+    const tenMinutesAgo = Timestamp.fromMillis(tenMinutesAgoMillis);
+
+    const reservationsSnapshot = await db.collection("reservas")
+        .where("estado", "in", ["LISTO_PARA_INICIAR", "CONFIRMADO"])
+        .where("hora_inicio", "<=", tenMinutesAgo)
+        .get();
+
+    if (reservationsSnapshot.empty) {
+      console.log("DEBUG: No delayed walks found.");
+      res.status(200).send({ success: true, message: "No delayed walks found.", sent: 0 });
+      return;
+    }
+
+    console.log(`DEBUG: Found ${reservationsSnapshot.size} potential delayed walks.`);
+
+    const entries = [];
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+      const horaInicioMillis = reserva.hora_inicio.toMillis();
+      const retrasoMillis = now.toMillis() - horaInicioMillis;
+      const retrasoMinutos = retrasoMillis / (60 * 1000);
+
+      if (reserva.estado === 'CONFIRMADO') {
+        try {
+          await doc.ref.update({
+            estado: 'LISTO_PARA_INICIAR',
+            hasTransitionedToReady: true,
+            actualizado_por_sistema: true,
+            last_updated: now
+          });
+          reserva.estado = 'LISTO_PARA_INICIAR';
+        } catch (err) {
+          console.error(`DEBUG: Error autocorrigiendo estado para ${doc.id}:`, err);
+        }
+      }
+
+      for (const delay of delays) {
+        if (retrasoMinutos >= delay.minutes && !reserva[delay.field]) {
+
+            const paseadorRef = reserva.id_paseador;
+            let paseadorId = null;
+            if (paseadorRef) {
+              if (typeof paseadorRef === 'object' && paseadorRef.id) {
+                paseadorId = paseadorRef.id;
+              } else if (typeof paseadorRef === 'string') {
+                paseadorId = paseadorRef;
+              }
+            }
+
+            if (!paseadorId) continue;
+
+            const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
+            if (!paseadorDoc.exists) continue;
+
+            const fcmToken = paseadorDoc.data().fcmToken;
+            if (!fcmToken) continue;
+
+            const messagePaseador = {
+              token: fcmToken,
+              notification: {
+                title: `Paseo Retrasado - ${delay.minutes} minutos`,
+                body: delay.message
+              },
+              data: {
+                tipo: "paseo_retrasado",
+                reservaId: doc.id,
+                delay: delay.minutes.toString(),
+                click_action: "OPEN_CURRENT_WALK_ACTIVITY"
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "paseos_channel",
+                  tag: "reserva_" + doc.id + "_delay_" + delay.minutes
+                }
+              }
+            };
+
+            entries.push({
+              docId: doc.id,
+              ref: doc.ref,
+              update: { [delay.field]: true },
+              message: messagePaseador
+            });
+
+            if (delay.minutes === 10 || delay.minutes === 20) {
+              const idDueno = getIdValue(reserva.id_dueno);
+              if (idDueno) {
+                const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+                if (duenoDoc.exists) {
+                  const duenoToken = duenoDoc.data().fcmToken;
+                  if (duenoToken) {
+                    const messageDueno = {
+                      token: duenoToken,
+                      notification: {
+                        title: "Paseo Retrasado",
+                        body: `El paseo lleva ${delay.minutes} minutos de retraso. El paseador aun no ha iniciado.`
+                      },
+                      data: {
+                        tipo: "paseo_retrasado_dueno",
+                        reservaId: doc.id,
+                        delay: delay.minutes.toString(),
+                        click_action: "OPEN_CURRENT_WALK_OWNER"
+                      },
+                      android: {
+                        priority: "high",
+                        notification: {
+                          sound: "default",
+                          channelId: "paseos_channel",
+                          tag: "reserva_" + doc.id + "_delay_owner_" + delay.minutes
+                        }
+                      }
+                    };
+
+                    entries.push({
+                      docId: doc.id,
+                      ref: doc.ref,
+                      update: { [delay.field]: true },
+                      message: messageDueno
+                    });
+                  }
+                }
+              }
+            }
+
+            break;
+        }
+      }
+    }
+
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "debugNotifyDelayed");
+      console.log("DEBUG notifyDelayedWalks: batch result", result);
+      res.status(200).send({ success: true, result });
+    } else {
+      console.log("DEBUG: No delayed walk notifications to send.");
+      res.status(200).send({ success: true, message: "No delayed walk notifications to send.", sent: 0 });
+    }
+
+    console.log("DEBUG: Completed delayed walk notifications job.");
+  } catch (error) {
+    console.error("DEBUG: Error in delayed walk notifications job:", error);
+    res.status(500).send({ success: false, error: error.message });
+  }
+});
 
 
 

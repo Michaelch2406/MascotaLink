@@ -7,7 +7,11 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "scheduler": "node local-scheduler.js",
+    "dev": "concurrently --raw --kill-others-on-fail --handle-input \"cd .. && firebase emulators:start --import=./firebase-data --export-on-exit=./firebase-data\" \"node local-scheduler.js\" \"cd ../.. && node websocket-server.js\"",
+    "dev-no-export": "concurrently --raw --kill-others-on-fail --handle-input \"cd .. && firebase emulators:start --import=./firebase-data\" \"node local-scheduler.js\" \"cd ../.. && node websocket-server.js\"",
+    "clean-exports": "node -e \"const fs=require('fs');const path=require('path');const dir='..';fs.readdirSync(dir).filter(f=>f.startsWith('firebase-export-')).forEach(f=>fs.rmSync(path.join(dir,f),{recursive:true,force:true}));console.log('Exports cleaned');\""
   },
   "engines": {
     "node": "22"
@@ -22,6 +26,7 @@
     "socket.io": "^4.6.1"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "eslint": "^8.15.0",
     "eslint-config-google": "^0.14.0",
     "firebase-functions-test": "^3.1.0"
