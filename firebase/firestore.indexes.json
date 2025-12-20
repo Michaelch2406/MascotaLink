@@ -83,6 +83,32 @@
         { "fieldPath": "paseadorId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "grupo_reserva_id", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "readyWindowNotificationSent", "order": "ASCENDING" },
+        { "fieldPath": "hora_inicio", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "reminder5MinSent", "order": "ASCENDING" },
+        { "fieldPath": "hora_inicio", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -307,22 +307,10 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.btnAccion2.setVisibility(View.GONE); // Hide secondary by default
 
         if (estado != null) {
-            // CONFIRMADO - Mostrar boton de inicio si esta dentro de la ventana de 15 minutos
+            // CONFIRMADO - Mostrar boton de ver detalles (el estado cambiará automáticamente a LISTO_PARA_INICIAR cuando falten 15 minutos)
             if (estado.equals("CONFIRMADO") && userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
-                if (estaEnVentanaDeInicio(paseo)) {
-                    // Dentro de la ventana - Mostrar boton naranja para comenzar
-                    holder.btnAccion1.setText("Iniciar");
-                    holder.btnAccion1.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF9800)); // Naranja
-                    holder.btnAccion1.setOnClickListener(v -> listener.onVerUbicacionClick(paseo));
-
-                    holder.btnAccion2.setVisibility(View.VISIBLE);
-                    holder.btnAccion2.setText("Contactar");
-                    holder.btnAccion2.setOnClickListener(v -> listener.onContactarClick(paseo));
-                } else {
-                    // Fuera de ventana - Mostrar boton de ver detalles
-                    holder.btnAccion1.setText("Ver Detalles");
-                    holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
-                }
+                holder.btnAccion1.setText("Ver Detalles");
+                holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
             }
             else if (estado.equals("LISTO_PARA_INICIAR")) {
                 Log.d("PaseosAdapter", "LISTO_PARA_INICIAR - Role: " + userRole);

@@ -47,6 +47,38 @@ const db = admin.firestore();
 
 const getIdValue = (value) => (value && typeof value === "object" && value.id ? value.id : value);
 
+/**
+ * Helper to format time from Firestore Timestamp with Ecuador timezone
+ * @param {admin.firestore.Timestamp} timestamp - Firestore timestamp
+ * @returns {string} Formatted time (HH:mm)
+ */
+const formatTimeEcuador = (timestamp) => {
+  if (!timestamp) return "Hora desconocida";
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: "America/Guayaquil"
+  });
+};
+
+/**
+ * Helper to format date from Firestore Timestamp with Ecuador timezone
+ * @param {admin.firestore.Timestamp} timestamp - Firestore timestamp
+ * @returns {string} Formatted date (dd/mm/yyyy)
+ */
+const formatDateEcuador = (timestamp) => {
+  if (!timestamp) return "Fecha desconocida";
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleDateString("es-ES", {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: "America/Guayaquil"
+  });
+};
+
 async function commitBatchedUpdates(updateEntries, { batchSize = 450 } = {}) {
   if (!updateEntries || updateEntries.length === 0) return 0;
 
@@ -1962,16 +1994,17 @@ exports.transitionToInCourse = onSchedule("every 1 minutes", async (event) => {
   console.log("Running scheduled job to transition CONFIRMADO reservations to LISTO_PARA_INICIAR.");
   const now = admin.firestore.Timestamp.now();
 
-  // Look back up to 24 hours to catch any missed transitions, not just the last 5 minutes.
-  // Using Firestore Timestamp for consistent query comparisons
+  // Look ahead 15 minutes and back 24 hours to catch walks ready to start
+  const fifteenMinutesFromNowMillis = now.toMillis() + (15 * 60 * 1000);
+  const fifteenMinutesFromNow = admin.firestore.Timestamp.fromMillis(fifteenMinutesFromNowMillis);
   const twentyFourHoursAgoMillis = now.toMillis() - (24 * 60 * 60 * 1000);
   const twentyFourHoursAgo = admin.firestore.Timestamp.fromMillis(twentyFourHoursAgoMillis);
 
   try {
-    // Query for reservations that match the criteria
+    // Query for reservations within 15 minutes of start time
     const reservationsSnapshot = await db.collection("reservas")
       .where("estado", "==", "CONFIRMADO")
-      .where("hora_inicio", "<=", now)
+      .where("hora_inicio", "<=", fifteenMinutesFromNow)
       .where("hora_inicio", ">=", twentyFourHoursAgo) // Optimization: Don't fetch ancient history
       .get();
 
@@ -1990,7 +2023,9 @@ exports.transitionToInCourse = onSchedule("every 1 minutes", async (event) => {
     for (const doc of reservationsSnapshot.docs) {
       const reserva = doc.data();
       const millisUntilStart = reserva.hora_inicio.toMillis() - now.toMillis();
-      if (millisUntilStart < 0 || millisUntilStart > (15 * 60 * 1000)) continue;
+
+      // Only process if within 15 minutes before start (or already started)
+      if (millisUntilStart > (15 * 60 * 1000)) continue;
 
       // Double check logic (redundant with query but safe)
       // Also check if it was already processed to avoid overwriting if query was slightly delayed
@@ -2117,12 +2152,7 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
       if (!fcmToken) continue;
 
       // Format time
-      const horaInicio = reserva.hora_inicio.toDate();
-      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
+      const horaFormateada = formatTimeEcuador(reserva.hora_inicio);
 
       // Construir mensaje según si es grupo
       let notificationBody;
@@ -2304,12 +2334,7 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
       if (!fcmToken) continue;
 
       // Format time
-      const horaInicio = reserva.hora_inicio.toDate();
-      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
+      const horaFormateada = formatTimeEcuador(reserva.hora_inicio);
 
       // Construir mensaje según si es grupo
       let notificationBody;
@@ -2408,7 +2433,8 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
 });
 
 // Scheduled job to notify when scheduled time has passed for LISTO_PARA_INICIAR walks
-exports.notifyOverdueWalks = onSchedule("every 1 minutes", async (event) => {
+// OPTIMIZACIÓN: Cada 2 minutos (no crítico, reduce ejecuciones 50%)
+exports.notifyOverdueWalks = onSchedule("every 2 minutes", async (event) => {
   console.log("Running scheduled job to notify overdue walks.");
   const now = admin.firestore.Timestamp.now();
 
@@ -2459,13 +2485,7 @@ exports.notifyOverdueWalks = onSchedule("every 1 minutes", async (event) => {
       if (!fcmToken) continue;
 
       // Format time
-      const horaInicio = reserva.hora_inicio.toDate();
-      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: "America/Guayaquil"
-      });
+      const horaFormateada = formatTimeEcuador(reserva.hora_inicio);
 
       // Send notification
       const message = {
@@ -2611,13 +2631,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
       }
 
       // Formatear hora
-      const horaInicio = reserva.hora_inicio.toDate();
-      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: "America/Guayaquil"
-      });
+      const horaFormateada = formatTimeEcuador(reserva.hora_inicio);
 
       // Enviar notificacion al paseador
       const message = {
@@ -2965,13 +2979,7 @@ exports.debugNotifyReady = onRequest(async (req, res) => {
         }
       }
 
-      const horaInicio = reserva.hora_inicio.toDate();
-      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: "America/Guayaquil"
-      });
+      const horaFormateada = formatTimeEcuador(reserva.hora_inicio);
 
       const message = {
         token: fcmToken,
@@ -3295,12 +3303,7 @@ exports.debugNotifyReminder5Min = onRequest(async (req, res) => {
       const fcmToken = paseadorDoc.data().fcmToken;
       if (!fcmToken) continue;
 
-      const horaInicio = reserva.hora_inicio.toDate();
-      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
+      const horaFormateada = formatTimeEcuador(reserva.hora_inicio);
 
       let notificationBody;
       if (cantidadDias > 1) {
@@ -3447,13 +3450,7 @@ exports.debugNotifyOverdue = onRequest(async (req, res) => {
       const fcmToken = paseadorDoc.data().fcmToken;
       if (!fcmToken) continue;
 
-      const horaInicio = reserva.hora_inicio.toDate();
-      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: "America/Guayaquil"
-      });
+      const horaFormateada = formatTimeEcuador(reserva.hora_inicio);
 
       const message = {
         token: fcmToken,
