@@ -137,6 +137,11 @@ public class LocationService extends Service {
     private static final int MAX_UBICACIONES_IN_ARRAY = 500; // Migrar a subcollection después de 500
     private boolean usandoSubcollection = false;
 
+    // Estado de la reserva en tiempo real
+    private String currentEstado = null;
+    private com.google.firebase.firestore.ListenerRegistration estadoListener = null;
+    private com.google.firebase.firestore.ListenerRegistration duenoListener = null;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -212,7 +217,10 @@ public class LocationService extends Service {
         // 2. Cargar distancia acumulada existente (si se está reanudando)
         cargarDistanciaInicial();
 
-        // 3. Unirse al room del Socket
+        // 3. Escuchar cambios de estado en tiempo real
+        setupEstadoListener();
+
+        // 4. Unirse al room del Socket
         if (socketManager.isConnected()) {
             socketManager.joinPaseo(currentReservaId);
         } else {
@@ -222,8 +230,62 @@ public class LocationService extends Service {
             // Idealmente, SocketManager debería tener una cola de "rooms pending join".
         }
 
-        // 4. Solicitar actualizaciones de ubicación
+        // 5. Solicitar actualizaciones de ubicación
         requestLocationUpdates();
+    }
+
+    /**
+     * Configura listeners en tiempo real para estado y dueño viendo mapa
+     * Detiene el tracking automáticamente si el estado cambia a algo diferente de EN_CURSO
+     */
+    private void setupEstadoListener() {
+        if (currentReservaId == null) return;
+
+        // ===== LISTENER 1: Estado de la reserva =====
+        if (estadoListener != null) {
+            estadoListener.remove();
+        }
+
+        estadoListener = db.collection("reservas").document(currentReservaId)
+                .addSnapshotListener((documentSnapshot, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "Error en listener de estado", error);
+                        return;
+                    }
+
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        String nuevoEstado = documentSnapshot.getString("estado");
+
+                        // Actualizar estado actual
+                        if (nuevoEstado != null && !nuevoEstado.equals(currentEstado)) {
+                            Log.d(TAG, "📊 Estado cambió: " + currentEstado + " → " + nuevoEstado);
+                            currentEstado = nuevoEstado;
+
+                            // Si el estado cambió a algo diferente de EN_CURSO, detener tracking
+                            if (!"EN_CURSO".equals(nuevoEstado)) {
+                                Log.w(TAG, "⚠️ Paseo ya no está EN_CURSO (estado: " + nuevoEstado + "), deteniendo tracking");
+                                stopTracking();
+                            }
+                        } else if (currentEstado == null) {
+                            // Primera vez que se obtiene el estado
+                            currentEstado = nuevoEstado;
+                            Log.d(TAG, "📊 Estado inicial: " + currentEstado);
+                        }
+
+                        // ===== OPTIMIZACIÓN: Listener para "dueño viendo mapa" =====
+                        Boolean viendo = documentSnapshot.getBoolean("dueno_viendo_mapa");
+                        boolean estadoAnterior = duenoViendoMapa;
+                        duenoViendoMapa = viendo != null ? viendo : true;
+
+                        if (estadoAnterior != duenoViendoMapa) {
+                            if (duenoViendoMapa) {
+                                Log.i(TAG, "👁️ Dueño EMPEZÓ a ver mapa - Activando WebSocket");
+                            } else {
+                                Log.i(TAG, "🚫 Dueño DEJÓ de ver mapa - Desactivando WebSocket (~10% ahorro batería)");
+                            }
+                        }
+                    }
+                });
     }
 
     /**
@@ -358,6 +420,12 @@ public class LocationService extends Service {
     private void processLocation(Location location) {
         if (currentReservaId == null || auth.getCurrentUser() == null) return;
 
+        // Verificar estado usando variable local (actualizada en tiempo real por el listener)
+        if (!"EN_CURSO".equals(currentEstado)) {
+            Log.w(TAG, "⚠️ Ubicación rechazada - estado: " + currentEstado + " (debe ser EN_CURSO)");
+            return;
+        }
+
         double lat = location.getLatitude();
         double lng = location.getLongitude();
         float accuracy = location.getAccuracy();
@@ -424,12 +492,7 @@ public class LocationService extends Service {
 
         // 1. Enviar por WebSocket (OPTIMIZADO: Throttling + Condicional)
         // Ahorro adicional: No enviar si dueño no está viendo (~5-10% batería)
-
-        // Verificar cada 30s si el dueño está viendo
-        if (now - lastDuenoCheckTime > DUENO_CHECK_INTERVAL_MS) {
-            verificarDuenoViendoMapa();
-            lastDuenoCheckTime = now;
-        }
+        // El estado de duenoViendoMapa se actualiza automáticamente por el listener
 
         long intervaloWebSocket = currentSpeed < SPEED_THRESHOLD_MPS ?
                 WEBSOCKET_SEND_INTERVAL_SLOW_MS : // 30s si detenido
@@ -497,6 +560,24 @@ public class LocationService extends Service {
      * OPTIMIZACIÓN: Reduce escrituras de Firestore de ~240/hora a ~12/hora
      */
     private void addLocationToBatch(Location location) {
+        // ===== OPTIMIZACIÓN: Eliminar duplicados cercanos =====
+        // Si la última ubicación en el batch es muy similar (< 3 metros), no agregar
+        if (!locationBatch.isEmpty()) {
+            Map<String, Object> ultimaUbicacion = locationBatch.get(locationBatch.size() - 1);
+            double lastLat = (double) ultimaUbicacion.get("lat");
+            double lastLng = (double) ultimaUbicacion.get("lng");
+
+            float[] results = new float[1];
+            Location.distanceBetween(lastLat, lastLng,
+                                    location.getLatitude(), location.getLongitude(),
+                                    results);
+
+            if (results[0] < 3.0f) { // Menos de 3 metros de diferencia
+                Log.v(TAG, "📍 Ubicación duplicada ignorada (distancia: " + String.format("%.1f", results[0]) + "m)");
+                return; // No agregar duplicado
+            }
+        }
+
         Map<String, Object> puntoMap = new HashMap<>();
         puntoMap.put("lat", location.getLatitude());
         puntoMap.put("lng", location.getLongitude());
@@ -748,37 +829,16 @@ public class LocationService extends Service {
         }
     }
 
-    /**
-     * WEBSOCKET CONDICIONAL: Verifica si el dueño está viendo el mapa
-     * Ahorro de batería: ~5-10% cuando dueño no está viendo
-     */
-    private void verificarDuenoViendoMapa() {
-        db.collection("reservas").document(currentReservaId)
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    if (snapshot.exists()) {
-                        Boolean viendo = snapshot.getBoolean("dueno_viendo_mapa");
-                        boolean estadoAnterior = duenoViendoMapa;
-                        duenoViendoMapa = viendo != null ? viendo : true; // Default: true
-
-                        // Log solo si cambió el estado
-                        if (estadoAnterior != duenoViendoMapa) {
-                            if (duenoViendoMapa) {
-                                Log.i(TAG, "👁️ Dueño EMPEZÓ a ver mapa - Activando WebSocket");
-                            } else {
-                                Log.i(TAG, "🚫 Dueño DEJÓ de ver mapa - Desactivando WebSocket (ahorro ~10% batería)");
-                            }
-                        }
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.w(TAG, "Error verificando dueno_viendo_mapa, asumiendo true", e);
-                    duenoViendoMapa = true; // Asumir que sí está viendo en caso de error
-                });
-    }
 
     private void stopTracking() {
         Log.d(TAG, "Deteniendo servicio de rastreo.");
+
+        // Remover listener de estado
+        if (estadoListener != null) {
+            estadoListener.remove();
+            estadoListener = null;
+            Log.d(TAG, "✅ Listener de estado removido");
+        }
 
         // Enviar batch final antes de detener
         sendLocationBatch();
@@ -804,6 +864,10 @@ public class LocationService extends Service {
             batteryReceiver = null;
         }
 
+        // Limpiar estado
+        currentEstado = null;
+        currentReservaId = null;
+
         stopForeground(true);
         stopSelf();
     }
@@ -811,6 +875,13 @@ public class LocationService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        // Remover listener de estado si aún existe
+        if (estadoListener != null) {
+            estadoListener.remove();
+            estadoListener = null;
+        }
+
         // Asegurar limpieza de recursos
         sendLocationBatch();
         if (batteryReceiver != null) {

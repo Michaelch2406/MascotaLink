@@ -323,6 +323,13 @@ function initializeSocketServer(io, db) {
           return socket.emit("error", { message: "Solo el paseador puede enviar ubicación" });
         }
 
+        // Verificar que el paseo esté EN_CURSO
+        const estado = paseoDoc.data().estado;
+        if (estado !== "EN_CURSO") {
+          console.log(`⚠️  Ubicación rechazada para paseo ${paseoId} - estado: ${estado} (debe ser EN_CURSO)`);
+          return socket.emit("error", { message: "Solo se puede enviar ubicación cuando el paseo está en curso" });
+        }
+
         // Stream en tiempo real a todos los participantes
         io.to(`paseo_${paseoId}`).emit("walker_location", {
           paseoId,
