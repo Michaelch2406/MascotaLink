@@ -1227,31 +1227,40 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
     const esGrupo = newReservation.es_grupo;
     const grupoReservaId = newReservation.grupo_reserva_id;
 
-    // Si es parte de un grupo, esperar 3 segundos para que se creen todas las reservas
+    // Si es parte de un grupo, verificar si debe enviar notificación
     if (esGrupo && grupoReservaId) {
-      console.log(`Reserva ${reservaId} es parte del grupo ${grupoReservaId}. Esperando agrupación...`);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log(`Reserva ${reservaId} es parte del grupo ${grupoReservaId}.`);
 
-      // Verificar si ya se envió notificación para este grupo
-      const grupoSnapshot = await db.collection("reservas")
-        .where("grupo_reserva_id", "==", grupoReservaId)
-        .where("estado", "==", "PENDIENTE_ACEPTACION")
-        .get();
+      // OPTIMIZACIÓN: Usar campo es_primer_dia_grupo si existe
+      if (newReservation.es_primer_dia_grupo !== undefined) {
+        // Usar el campo (0 queries adicionales)
+        if (!newReservation.es_primer_dia_grupo) {
+          console.log(`⚡ Saltando - no es el primer día del grupo (optimizado)`);
+          return;
+        }
+        console.log(`⚡ Es el primer día del grupo - enviando notificación (optimizado)`);
+      } else {
+        // FALLBACK: Lógica antigua para compatibilidad con reservas sin el campo
+        console.log(`⚠️  Usando fallback (reserva sin campo es_primer_dia_grupo)`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Ordenar por fecha de creación y obtener la primera
-      const reservasGrupo = grupoSnapshot.docs.sort((a, b) => {
-        const aTime = a.data().fecha_creacion?.toMillis() || 0;
-        const bTime = b.data().fecha_creacion?.toMillis() || 0;
-        return aTime - bTime;
-      });
+        const grupoSnapshot = await db.collection("reservas")
+          .where("grupo_reserva_id", "==", grupoReservaId)
+          .where("estado", "==", "PENDIENTE_ACEPTACION")
+          .get();
 
-      // Solo enviar notificación desde la PRIMERA reserva del grupo
-      if (reservasGrupo.length > 0 && reservasGrupo[0].id !== reservaId) {
-        console.log(`Notificación ya enviada por otra reserva del grupo ${grupoReservaId}. Saltando.`);
-        return;
+        const reservasGrupo = grupoSnapshot.docs.sort((a, b) => {
+          const aTime = a.data().fecha_creacion?.toMillis() || 0;
+          const bTime = b.data().fecha_creacion?.toMillis() || 0;
+          return aTime - bTime;
+        });
+
+        if (reservasGrupo.length > 0 && reservasGrupo[0].id !== reservaId) {
+          console.log(`Notificación ya enviada por otra reserva del grupo. Saltando.`);
+          return;
+        }
+        console.log(`Esta es la primera reserva del grupo. Enviando notificación.`);
       }
-
-      console.log(`Esta es la primera reserva del grupo ${grupoReservaId}. Enviando notificación agrupada.`);
     } else {
       console.log(`Nueva solicitud de paseo ${reservaId} creada. Enviando notificación al paseador.`);
     }
@@ -1491,28 +1500,37 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
 
     // Si es parte de un grupo, evitar notificaciones duplicadas
     if (esGrupo && grupoReservaId) {
-      console.log(`Reserva ${reservaId} del grupo ${grupoReservaId} aceptada. Verificando si es la primera...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`Reserva ${reservaId} del grupo ${grupoReservaId} aceptada.`);
 
-      // Verificar si ya se envió notificación para este grupo
-      const grupoSnapshot = await db.collection("reservas")
-        .where("grupo_reserva_id", "==", grupoReservaId)
-        .where("estado", "==", "ACEPTADO")
-        .get();
+      // OPTIMIZACIÓN: Usar campo es_primer_dia_grupo si existe
+      if (newValue.es_primer_dia_grupo !== undefined) {
+        if (!newValue.es_primer_dia_grupo) {
+          console.log(`⚡ Saltando - no es el primer día del grupo (optimizado)`);
+          return;
+        }
+        console.log(`⚡ Es el primer día - enviando notificación (optimizado)`);
+      } else {
+        // FALLBACK: Lógica antigua para compatibilidad
+        console.log(`⚠️  Usando fallback (reserva sin campo es_primer_dia_grupo)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const reservasGrupo = grupoSnapshot.docs.sort((a, b) => {
-        const aTime = a.data().fecha_respuesta?.toMillis() || 0;
-        const bTime = b.data().fecha_respuesta?.toMillis() || 0;
-        return aTime - bTime;
-      });
+        const grupoSnapshot = await db.collection("reservas")
+          .where("grupo_reserva_id", "==", grupoReservaId)
+          .where("estado", "==", "ACEPTADO")
+          .get();
 
-      // Solo enviar desde la primera reserva aceptada del grupo
-      if (reservasGrupo.length > 0 && reservasGrupo[0].id !== reservaId) {
-        console.log(`Notificación de aceptación ya enviada por otra reserva del grupo ${grupoReservaId}. Saltando.`);
-        return;
+        const reservasGrupo = grupoSnapshot.docs.sort((a, b) => {
+          const aTime = a.data().fecha_respuesta?.toMillis() || 0;
+          const bTime = b.data().fecha_respuesta?.toMillis() || 0;
+          return aTime - bTime;
+        });
+
+        if (reservasGrupo.length > 0 && reservasGrupo[0].id !== reservaId) {
+          console.log(`Notificación de aceptación ya enviada por otra reserva del grupo. Saltando.`);
+          return;
+        }
+        console.log(`Primera reserva del grupo aceptada. Enviando notificación agrupada.`);
       }
-
-      console.log(`Primera reserva del grupo ${grupoReservaId} aceptada. Enviando notificación agrupada.`);
     } else {
       console.log(`Reserva ${reservaId} aceptada. Enviando notificación al dueño.`);
     }
@@ -1544,11 +1562,21 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
     // Construir mensaje según si es grupo o individual
     let notificationBody;
     if (esGrupo && grupoReservaId) {
-      const grupoSnapshot = await db.collection("reservas")
-        .where("grupo_reserva_id", "==", grupoReservaId)
-        .get();
+      let cantidadDias = 1;
 
-      const cantidadDias = grupoSnapshot.size;
+      // ⚡ OPTIMIZACIÓN: Usar campo denormalizado si existe
+      if (newValue.cantidad_dias_grupo !== undefined) {
+        cantidadDias = newValue.cantidad_dias_grupo;
+        console.log(`⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
+      } else {
+        // FALLBACK: Consulta original para reservas antiguas sin el campo
+        console.log(`⚠️ Usando fallback para obtener cantidad de días del grupo`);
+        const grupoSnapshot = await db.collection("reservas")
+          .where("grupo_reserva_id", "==", grupoReservaId)
+          .get();
+        cantidadDias = grupoSnapshot.size;
+      }
+
       if (cantidadDias > 1) {
         notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota} - ${cantidadDias} días.`;
       } else {
@@ -2087,28 +2115,51 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
       let cantidadDias = 1;
 
       if (esGrupo && grupoReservaId) {
-        // Obtener todas las reservas del grupo
-        const grupoSnapshot = await db.collection("reservas")
-          .where("grupo_reserva_id", "==", grupoReservaId)
-          .get();
+        // ⚡ OPTIMIZACIÓN: Verificar con campo denormalizado si existe
+        if (reserva.es_primer_dia_grupo !== undefined) {
+          // Camino optimizado: usar campo directo
+          if (!reserva.es_primer_dia_grupo) {
+            console.log(`⚡ Saltando recordatorio para ${doc.id} - no es el primer día del grupo (optimizado)`);
+            await doc.ref.update({ reminder15MinSent: true, readyWindowNotificationSent: true });
+            continue;
+          }
+          console.log(`⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
+        } else {
+          // FALLBACK: Lógica original para reservas antiguas sin el campo
+          console.log(`⚠️ Usando fallback - verificando primer día del grupo`);
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
 
-        cantidadDias = grupoSnapshot.size;
+          // Encontrar el primer día (fecha más temprana)
+          const fechas = grupoSnapshot.docs.map(d => ({
+            id: d.id,
+            fecha: d.data().fecha
+          })).sort((a, b) => {
+            const aTime = a.fecha?.toMillis() || 0;
+            const bTime = b.fecha?.toMillis() || 0;
+            return aTime - bTime;
+          });
 
-        // Encontrar el primer día (fecha más temprana)
-        const fechas = grupoSnapshot.docs.map(d => ({
-          id: d.id,
-          fecha: d.data().fecha
-        })).sort((a, b) => {
-          const aTime = a.fecha?.toMillis() || 0;
-          const bTime = b.fecha?.toMillis() || 0;
-          return aTime - bTime;
-        });
+          // Si esta NO es la reserva del primer día, saltar
+          if (fechas.length > 0 && fechas[0].id !== doc.id) {
+            console.log(`Saltando recordatorio para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
+            await doc.ref.update({ reminder15MinSent: true, readyWindowNotificationSent: true });
+            continue;
+          }
+        }
 
-        // Si esta NO es la reserva del primer día, saltar
-        if (fechas.length > 0 && fechas[0].id !== doc.id) {
-          console.log(`Saltando recordatorio para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
-          await doc.ref.update({ reminder15MinSent: true, readyWindowNotificationSent: true }); // Marcar como enviado para no procesarlo de nuevo
-          continue;
+        // ⚡ OPTIMIZACIÓN: Obtener cantidad de días del campo si existe
+        if (reserva.cantidad_dias_grupo !== undefined) {
+          cantidadDias = reserva.cantidad_dias_grupo;
+          console.log(`⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
+        } else {
+          // FALLBACK: Consultar si no existe el campo
+          console.log(`⚠️ Usando fallback - consultando cantidad de días del grupo`);
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
+          cantidadDias = grupoSnapshot.size;
         }
 
         console.log(`Enviando recordatorio para primer día del grupo ${grupoReservaId} (${cantidadDias} días)`);
@@ -2273,25 +2324,49 @@ exports.sendReminder5MinBefore = onSchedule("every 5 minutes", async (event) => 
       let cantidadDias = 1;
 
       if (esGrupo && grupoReservaId) {
-        const grupoSnapshot = await db.collection("reservas")
-          .where("grupo_reserva_id", "==", grupoReservaId)
-          .get();
+        // ⚡ OPTIMIZACIÓN: Verificar con campo denormalizado si existe
+        if (reserva.es_primer_dia_grupo !== undefined) {
+          // Camino optimizado: usar campo directo
+          if (!reserva.es_primer_dia_grupo) {
+            console.log(`⚡ Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo (optimizado)`);
+            await doc.ref.update({ reminder5MinSent: true });
+            continue;
+          }
+          console.log(`⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
+        } else {
+          // FALLBACK: Lógica original para reservas antiguas sin el campo
+          console.log(`⚠️ Usando fallback - verificando primer día del grupo`);
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
 
-        cantidadDias = grupoSnapshot.size;
+          const fechas = grupoSnapshot.docs.map(d => ({
+            id: d.id,
+            fecha: d.data().fecha
+          })).sort((a, b) => {
+            const aTime = a.fecha?.toMillis() || 0;
+            const bTime = b.fecha?.toMillis() || 0;
+            return aTime - bTime;
+          });
 
-        const fechas = grupoSnapshot.docs.map(d => ({
-          id: d.id,
-          fecha: d.data().fecha
-        })).sort((a, b) => {
-          const aTime = a.fecha?.toMillis() || 0;
-          const bTime = b.fecha?.toMillis() || 0;
-          return aTime - bTime;
-        });
+          if (fechas.length > 0 && fechas[0].id !== doc.id) {
+            console.log(`Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
+            await doc.ref.update({ reminder5MinSent: true });
+            continue;
+          }
+        }
 
-        if (fechas.length > 0 && fechas[0].id !== doc.id) {
-          console.log(`Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
-          await doc.ref.update({ reminder5MinSent: true });
-          continue;
+        // ⚡ OPTIMIZACIÓN: Obtener cantidad de días del campo si existe
+        if (reserva.cantidad_dias_grupo !== undefined) {
+          cantidadDias = reserva.cantidad_dias_grupo;
+          console.log(`⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
+        } else {
+          // FALLBACK: Consultar si no existe el campo
+          console.log(`⚠️ Usando fallback - consultando cantidad de días del grupo`);
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
+          cantidadDias = grupoSnapshot.size;
         }
 
         console.log(`Enviando recordatorio 5min para primer día del grupo ${grupoReservaId} (${cantidadDias} días)`);
@@ -2554,27 +2629,40 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
       const esGrupo = reserva.es_grupo;
       const grupoReservaId = reserva.grupo_reserva_id;
       if (esGrupo && grupoReservaId) {
-        try {
-          const grupoSnapshot = await db.collection("reservas")
-            .where("grupo_reserva_id", "==", grupoReservaId)
-            .get();
-
-          const fechas = grupoSnapshot.docs.map(d => ({
-            id: d.id,
-            fecha: d.data().fecha
-          })).sort((a, b) => {
-            const aTime = a.fecha?.toMillis() || 0;
-            const bTime = b.fecha?.toMillis() || 0;
-            return aTime - bTime;
-          });
-
-          if (fechas.length > 0 && fechas[0].id !== doc.id) {
-            console.log(`Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo ${grupoReservaId}`);
+        // ⚡ OPTIMIZACIÓN: Verificar con campo denormalizado si existe
+        if (reserva.es_primer_dia_grupo !== undefined) {
+          // Camino optimizado: usar campo directo
+          if (!reserva.es_primer_dia_grupo) {
+            console.log(`⚡ Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo (optimizado)`);
             await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
             continue;
           }
-        } catch (err) {
-          console.error("Error checking grupo_reserva_id for ready window:", err);
+          console.log(`⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
+        } else {
+          // FALLBACK: Lógica original para reservas antiguas sin el campo
+          console.log(`⚠️ Usando fallback - verificando primer día del grupo`);
+          try {
+            const grupoSnapshot = await db.collection("reservas")
+              .where("grupo_reserva_id", "==", grupoReservaId)
+              .get();
+
+            const fechas = grupoSnapshot.docs.map(d => ({
+              id: d.id,
+              fecha: d.data().fecha
+            })).sort((a, b) => {
+              const aTime = a.fecha?.toMillis() || 0;
+              const bTime = b.fecha?.toMillis() || 0;
+              return aTime - bTime;
+            });
+
+            if (fechas.length > 0 && fechas[0].id !== doc.id) {
+              console.log(`Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo ${grupoReservaId}`);
+              await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
+              continue;
+            }
+          } catch (err) {
+            console.error("Error checking grupo_reserva_id for ready window:", err);
+          }
         }
       }
 
@@ -2906,27 +2994,40 @@ exports.debugNotifyReady = onRequest(async (req, res) => {
       const esGrupo = reserva.es_grupo;
       const grupoReservaId = reserva.grupo_reserva_id;
       if (esGrupo && grupoReservaId) {
-        try {
-          const grupoSnapshot = await db.collection("reservas")
-            .where("grupo_reserva_id", "==", grupoReservaId)
-            .get();
-
-          const fechas = grupoSnapshot.docs.map(d => ({
-            id: d.id,
-            fecha: d.data().fecha
-          })).sort((a, b) => {
-            const aTime = a.fecha?.toMillis() || 0;
-            const bTime = b.fecha?.toMillis() || 0;
-            return aTime - bTime;
-          });
-
-          if (fechas.length > 0 && fechas[0].id !== doc.id) {
-            console.log(`DEBUG: Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo ${grupoReservaId}`);
+        // ⚡ OPTIMIZACIÓN: Verificar con campo denormalizado si existe
+        if (reserva.es_primer_dia_grupo !== undefined) {
+          // Camino optimizado: usar campo directo
+          if (!reserva.es_primer_dia_grupo) {
+            console.log(`DEBUG: ⚡ Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo (optimizado)`);
             await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
             continue;
           }
-        } catch (err) {
-          console.error("DEBUG: Error checking grupo_reserva_id for ready window:", err);
+          console.log(`DEBUG: ⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
+        } else {
+          // FALLBACK: Lógica original para reservas antiguas sin el campo
+          console.log(`DEBUG: ⚠️ Usando fallback - verificando primer día del grupo`);
+          try {
+            const grupoSnapshot = await db.collection("reservas")
+              .where("grupo_reserva_id", "==", grupoReservaId)
+              .get();
+
+            const fechas = grupoSnapshot.docs.map(d => ({
+              id: d.id,
+              fecha: d.data().fecha
+            })).sort((a, b) => {
+              const aTime = a.fecha?.toMillis() || 0;
+              const bTime = b.fecha?.toMillis() || 0;
+              return aTime - bTime;
+            });
+
+            if (fechas.length > 0 && fechas[0].id !== doc.id) {
+              console.log(`DEBUG: Saltando ventana de inicio para ${doc.id} - no es el primer dia del grupo ${grupoReservaId}`);
+              await doc.ref.update({ readyWindowNotificationSent: true, reminder15MinSent: true });
+              continue;
+            }
+          } catch (err) {
+            console.error("DEBUG: Error checking grupo_reserva_id for ready window:", err);
+          }
         }
       }
 
@@ -3246,25 +3347,49 @@ exports.debugNotifyReminder5Min = onRequest(async (req, res) => {
       let cantidadDias = 1;
 
       if (esGrupo && grupoReservaId) {
-        const grupoSnapshot = await db.collection("reservas")
-          .where("grupo_reserva_id", "==", grupoReservaId)
-          .get();
+        // ⚡ OPTIMIZACIÓN: Verificar con campo denormalizado si existe
+        if (reserva.es_primer_dia_grupo !== undefined) {
+          // Camino optimizado: usar campo directo
+          if (!reserva.es_primer_dia_grupo) {
+            console.log(`DEBUG: ⚡ Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo (optimizado)`);
+            await doc.ref.update({ reminder5MinSent: true });
+            continue;
+          }
+          console.log(`DEBUG: ⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
+        } else {
+          // FALLBACK: Lógica original para reservas antiguas sin el campo
+          console.log(`DEBUG: ⚠️ Usando fallback - verificando primer día del grupo`);
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
 
-        cantidadDias = grupoSnapshot.size;
+          const fechas = grupoSnapshot.docs.map(d => ({
+            id: d.id,
+            fecha: d.data().fecha
+          })).sort((a, b) => {
+            const aTime = a.fecha?.toMillis() || 0;
+            const bTime = b.fecha?.toMillis() || 0;
+            return aTime - bTime;
+          });
 
-        const fechas = grupoSnapshot.docs.map(d => ({
-          id: d.id,
-          fecha: d.data().fecha
-        })).sort((a, b) => {
-          const aTime = a.fecha?.toMillis() || 0;
-          const bTime = b.fecha?.toMillis() || 0;
-          return aTime - bTime;
-        });
+          if (fechas.length > 0 && fechas[0].id !== doc.id) {
+            console.log(`DEBUG: Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
+            await doc.ref.update({ reminder5MinSent: true });
+            continue;
+          }
+        }
 
-        if (fechas.length > 0 && fechas[0].id !== doc.id) {
-          console.log(`DEBUG: Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
-          await doc.ref.update({ reminder5MinSent: true });
-          continue;
+        // ⚡ OPTIMIZACIÓN: Obtener cantidad de días del campo si existe
+        if (reserva.cantidad_dias_grupo !== undefined) {
+          cantidadDias = reserva.cantidad_dias_grupo;
+          console.log(`DEBUG: ⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
+        } else {
+          // FALLBACK: Consultar si no existe el campo
+          console.log(`DEBUG: ⚠️ Usando fallback - consultando cantidad de días del grupo`);
+          const grupoSnapshot = await db.collection("reservas")
+            .where("grupo_reserva_id", "==", grupoReservaId)
+            .get();
+          cantidadDias = grupoSnapshot.size;
         }
 
         console.log(`DEBUG: Enviando recordatorio 5min para primer día del grupo ${grupoReservaId} (${cantidadDias} días)`);
@@ -3740,6 +3865,128 @@ exports.recalcularContadores = onRequest(async (req, res) => {
         console.error("Error en recálculo:", error);
         res.status(500).send({ error: error.message });
     }
+});
+
+// ========================================
+// MIGRACIÓN: Agregar campo es_primer_dia_grupo
+// ========================================
+
+/**
+ * Función HTTP para migrar reservas existentes agregando el campo es_primer_dia_grupo
+ * IMPORTANTE: Ejecutar UNA VEZ después de desplegar cambios en Android
+ * USO: curl https://REGION-PROJECT.cloudfunctions.net/migrarCampoEsPrimerDia
+ */
+exports.migrarCampoEsPrimerDia = onRequest(async (req, res) => {
+  console.log("🔄 Iniciando migración de es_primer_dia_grupo...");
+
+  try {
+    // Obtener todas las reservas de grupos que NO tienen el campo
+    const reservasSnapshot = await db.collection("reservas")
+      .where("es_grupo", "==", true)
+      .get();
+
+    if (reservasSnapshot.empty) {
+      console.log("✅ No hay reservas de grupo para migrar");
+      res.status(200).send({ success: true, message: "No hay reservas para migrar", updated: 0 });
+      return;
+    }
+
+    console.log(`📊 Encontradas ${reservasSnapshot.size} reservas de grupo`);
+
+    // Agrupar reservas por grupo_reserva_id
+    const grupos = new Map();
+
+    reservasSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const grupoId = data.grupo_reserva_id;
+
+      if (!grupoId) {
+        console.warn(`⚠️  Reserva ${doc.id} tiene es_grupo=true pero sin grupo_reserva_id`);
+        return;
+      }
+
+      if (!grupos.has(grupoId)) {
+        grupos.set(grupoId, []);
+      }
+
+      grupos.get(grupoId).push({
+        id: doc.id,
+        fecha: data.fecha,
+        tienecampo: data.es_primer_dia_grupo !== undefined
+      });
+    });
+
+    console.log(`📦 ${grupos.size} grupos encontrados`);
+
+    // Procesar cada grupo
+    const batches = [];
+    let currentBatch = db.batch();
+    let batchCount = 0;
+    let totalUpdates = 0;
+
+    grupos.forEach((reservas, grupoId) => {
+      // Ordenar por fecha (de menor a mayor)
+      reservas.sort((a, b) => {
+        const aMillis = a.fecha?.toMillis() || 0;
+        const bMillis = b.fecha?.toMillis() || 0;
+        return aMillis - bMillis;
+      });
+
+      console.log(`  📅 Grupo ${grupoId}: ${reservas.length} reservas`);
+
+      // Marcar cada reserva
+      reservas.forEach((reserva, index) => {
+        const esPrimera = index === 0;
+
+        // Solo actualizar si no tiene el campo o está incorrecto
+        if (!reserva.tienecampo) {
+          const ref = db.collection("reservas").doc(reserva.id);
+          currentBatch.update(ref, {
+            es_primer_dia_grupo: esPrimera
+          });
+
+          batchCount++;
+          totalUpdates++;
+
+          console.log(`    ${esPrimera ? '🥇' : '  '} ${reserva.id} → es_primer_dia_grupo: ${esPrimera}`);
+
+          // Firestore batch limit is 500
+          if (batchCount >= 450) {
+            batches.push(currentBatch.commit());
+            currentBatch = db.batch();
+            batchCount = 0;
+          }
+        }
+      });
+    });
+
+    // Commit remaining batch
+    if (batchCount > 0) {
+      batches.push(currentBatch.commit());
+    }
+
+    // Execute all batches in parallel
+    await Promise.all(batches);
+
+    console.log(`✅ Migración completada: ${totalUpdates} reservas actualizadas en ${batches.length} batch(es)`);
+
+    res.status(200).send({
+      success: true,
+      message: `Migración completada exitosamente`,
+      grupos: grupos.size,
+      totalReservas: reservasSnapshot.size,
+      updated: totalUpdates,
+      batches: batches.length
+    });
+
+  } catch (error) {
+    console.error("❌ Error en migración:", error);
+    res.status(500).send({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
 });
 
 // ========================================

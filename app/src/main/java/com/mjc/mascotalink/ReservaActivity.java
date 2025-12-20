@@ -36,6 +36,7 @@ import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1356,18 +1357,50 @@ public class ReservaActivity extends AppCompatActivity {
         // Calcular costo estimado para el diálogo
         double horas = duracionMinutos / 60.0;
         int diasCalculo = 1;
-        if (tipoReserva.equals("SEMANAL")) diasCalculo = 7; // 7 días consecutivos
-        else if (tipoReserva.equals("MENSUAL")) diasCalculo = 30; // 30 días consecutivos
+
+        // Para días específicos múltiples, contar las fechas seleccionadas
+        if (tipoReserva.equals("PUNTUAL") && modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
+            Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+            if (fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty()) {
+                diasCalculo = fechasSeleccionadas.size();
+            }
+        } else if (tipoReserva.equals("SEMANAL")) {
+            diasCalculo = 7; // 7 días consecutivos
+        } else if (tipoReserva.equals("MENSUAL")) {
+            diasCalculo = 30; // 30 días consecutivos
+        }
+
         double costoEstimado = tarifaPorHora * horas * diasCalculo;
 
         // Construir mensaje
         StringBuilder mensaje = new StringBuilder();
         mensaje.append("Mascota: ").append(mascotaSeleccionada.getNombre()).append("\n");
-        mensaje.append("Fecha: ").append(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaSeleccionada)).append("\n");
+
+        // Mostrar fechas según el tipo
+        if (tipoReserva.equals("PUNTUAL") && modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
+            Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
+            if (fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty()) {
+                List<Date> fechasList = new ArrayList<>(fechasSeleccionadas);
+                Collections.sort(fechasList);
+
+                if (fechasList.size() == 1) {
+                    mensaje.append("Fecha: ").append(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechasList.get(0))).append("\n");
+                } else {
+                    mensaje.append("Fechas (").append(fechasList.size()).append(" días):\n");
+                    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                    for (Date fecha : fechasList) {
+                        mensaje.append("  • ").append(sdf.format(fecha)).append("\n");
+                    }
+                }
+            }
+        } else {
+            mensaje.append("Fecha: ").append(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fechaSeleccionada)).append("\n");
+        }
+
         mensaje.append("Hora: ").append(horarioSeleccionado.getHoraFormateada()).append("\n");
         mensaje.append("Duración: ").append(String.format(Locale.getDefault(), "%.1f horas", horas)).append("\n");
         if (diasCalculo > 1) {
-            mensaje.append("Días: ").append(diasCalculo).append("\n");
+            mensaje.append("Total días: ").append(diasCalculo).append("\n");
         }
         mensaje.append("Costo Total: $").append(String.format(Locale.US, "%.2f", costoEstimado)).append("\n\n");
         mensaje.append("Al confirmar, se enviará una solicitud al paseador. El costo final se verificará antes de enviar.");
@@ -1544,6 +1577,7 @@ public class ReservaActivity extends AppCompatActivity {
         double costoPorDia = costoTotalReal / cantidadDias;
 
         Log.d(TAG, "Creando grupo de " + cantidadDias + " reservas con ID: " + grupoId);
+        Log.d(TAG, "Costo total: $" + costoTotalReal + " | Costo por día: $" + costoPorDia);
 
         // Convertir Set a List para iterar de forma ordenada
         List<Date> fechasList = new java.util.ArrayList<>(fechasSeleccionadas);
@@ -1555,13 +1589,21 @@ public class ReservaActivity extends AppCompatActivity {
 
         for (Date fecha : fechasList) {
             // Crear hora de inicio específica para esta fecha
+            // CRÍTICO: Limpiar calendario primero para evitar problemas de timezone/DST
             Calendar cal = Calendar.getInstance();
             cal.setTime(fecha);
-            cal.set(Calendar.HOUR_OF_DAY, horarioSeleccionado.getHora());
-            cal.set(Calendar.MINUTE, horarioSeleccionado.getMinutos());
-            cal.set(Calendar.SECOND, 0);
-            cal.set(Calendar.MILLISECOND, 0);
-            Date horaInicioEspecifica = cal.getTime();
+
+            // Obtener solo año, mes, día de la fecha seleccionada
+            int year = cal.get(Calendar.YEAR);
+            int month = cal.get(Calendar.MONTH);
+            int day = cal.get(Calendar.DAY_OF_MONTH);
+
+            // Crear nuevo calendario limpio con la hora correcta
+            Calendar calLimpio = Calendar.getInstance();
+            calLimpio.clear();
+            calLimpio.set(year, month, day, horarioSeleccionado.getHora(), horarioSeleccionado.getMinutos(), 0);
+            calLimpio.set(Calendar.MILLISECOND, 0);
+            Date horaInicioEspecifica = calLimpio.getTime();
 
             Map<String, Object> reserva = new HashMap<>();
             reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
