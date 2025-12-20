@@ -1337,12 +1337,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                  Log.d(TAG, "Intento de finalizar paseo:");
                  Log.d(TAG, " - Duración acordada: " + duracionMinutos + " mins (Usado para cálculo: " + (duracionMinutos > 0 ? duracionMinutos : 60) + ")");
                  Log.d(TAG, " - Tiempo transcurrido: " + TimeUnit.MILLISECONDS.toMinutes(tiempoTranscurrido) + " mins");
-                 Log.d(TAG, " - Tiempo mínimo requerido (75%): " + TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo) + " mins");
+                 Log.d(TAG, " - Tiempo mínimo requerido (50%): " + TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo) + " mins");
 
                  if (tiempoTranscurrido < tiempoMinimo) {
                      long minutosRestantes = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo - tiempoTranscurrido);
                      long minutosMinimos = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo);
-                     Toast.makeText(this, "No puedes finalizar el paseo antes de " + minutosMinimos + " minutos (75% del tiempo). Faltan " + minutosRestantes + " minutos.", Toast.LENGTH_LONG).show();
+                     Toast.makeText(this, "No puedes finalizar el paseo antes de " + minutosMinimos + " minutos (50% del tiempo). Faltan " + minutosRestantes + " minutos.", Toast.LENGTH_LONG).show();
                      return;
                  }
                  confirmarFinalizacionExito(); // Reutilizar lógica de éxito
@@ -1461,7 +1461,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
 
     private long obtenerTiempoMinimo() {
         long duracionReal = duracionMinutos > 0 ? duracionMinutos : 60; // Si es 0, asumir 60 minutos por seguridad
-        return (long) (duracionReal * 60000 * 0.75f);
+        return (long) (duracionReal * 60000 * 0.5f);
     }
 
     /**
@@ -1562,10 +1562,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                             }
                         }
 
-                        // Logic for button visibility (70% of agreed duration)
+                        // Logic for button visibility (50% of agreed duration)
                         if (duracionMinutos > 0) {
                              long totalMillis = duracionMinutos * 60 * 1000;
-                             if (elapsed >= totalMillis * 0.7) {
+                             if (elapsed >= totalMillis * 0.5) {
                                  if (btnFinalizar.getVisibility() != View.VISIBLE) {
                                      btnFinalizar.setVisibility(View.VISIBLE);
                                  }
