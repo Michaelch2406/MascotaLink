@@ -45,19 +45,16 @@
             app:layout_constraintStart_toEndOf="@+id/iv_avatar_favorito"
             app:layout_constraintTop_toTopOf="@+id/iv_avatar_favorito" />
 
-        <RatingBar
-            android:id="@+id/rating_bar_favorito"
-            style="?android:attr/ratingBarStyleSmall"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:isIndicator="true"
-            android:numStars="5"
-            android:stepSize="0.1"
-            tools:rating="4.8"
-            android:progressTint="#F59E0B"
-            app:layout_constraintStart_toStartOf="@+id/tv_nombre_favorito"
-            app:layout_constraintTop_toBottomOf="@+id/tv_nombre_favorito" />
+            <RatingBar
+                android:id="@+id/rating_bar"
+                style="?android:attr/ratingBarStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:isIndicator="true"
+                android:numStars="5"
+                android:stepSize="0.5"
+                android:progressTint="#F59E0B"
+                android:rating="0" />
 
         <TextView
             android:id="@+id/tv_precio_favorito"
