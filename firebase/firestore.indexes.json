@@ -109,6 +109,15 @@
         { "fieldPath": "reminder5MinSent", "order": "ASCENDING" },
         { "fieldPath": "hora_inicio", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "reminderSent", "order": "ASCENDING" },
+        { "fieldPath": "hora_inicio", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
