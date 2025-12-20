@@ -17,11 +17,13 @@ const EMULATOR_PORT = 5001;
 // URLs de las funciones
 const FUNCTIONS = {
   debugNotifyReady: `http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/debugNotifyReady`,
-  debugNotifyDelayed: `http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/debugNotifyDelayed`
+  debugNotifyDelayed: `http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/debugNotifyDelayed`,
+  debugNotifyReminder5Min: `http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/debugNotifyReminder5Min`,
+  debugNotifyOverdue: `http://${EMULATOR_HOST}:${EMULATOR_PORT}/${PROJECT_ID}/${REGION}/debugNotifyOverdue`
 };
 
-// Intervalo en milisegundos (300000ms = 5 minutos)
-const INTERVAL = 300000;
+// Intervalo en milisegundos (60000ms = 1 minuto, igual que en producción)
+const INTERVAL = 60000;
 
 console.log("=".repeat(70));
 console.log("Local Scheduler para Firebase Functions");
@@ -85,7 +87,9 @@ async function runScheduledJobs() {
   // Ejecutar funciones en paralelo
   await Promise.all([
     callFunction('debugNotifyReady', FUNCTIONS.debugNotifyReady),
-    callFunction('debugNotifyDelayed', FUNCTIONS.debugNotifyDelayed)
+    callFunction('debugNotifyDelayed', FUNCTIONS.debugNotifyDelayed),
+    callFunction('debugNotifyReminder5Min', FUNCTIONS.debugNotifyReminder5Min),
+    callFunction('debugNotifyOverdue', FUNCTIONS.debugNotifyOverdue)
   ]);
 
   console.log("-".repeat(70));

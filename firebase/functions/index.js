@@ -2160,6 +2160,51 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
         update: { reminder15MinSent: true, readyWindowNotificationSent: true },
         message
       });
+
+      // Enviar notificación también al dueño
+      const idDueno = getIdValue(reserva.id_dueno);
+      if (idDueno) {
+        const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+        if (duenoDoc.exists) {
+          const duenoToken = duenoDoc.data().fcmToken;
+          if (duenoToken) {
+            let duenoNotificationBody;
+            if (cantidadDias > 1) {
+              duenoNotificationBody = `El paseo de tu mascota comienza en 15 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
+            } else {
+              duenoNotificationBody = `El paseo de tu mascota comienza en 15 minutos (${horaFormateada}).`;
+            }
+
+            const messageDueno = {
+              token: duenoToken,
+              notification: {
+                title: "Recordatorio de Paseo",
+                body: duenoNotificationBody
+              },
+              data: {
+                tipo: "recordatorio_paseo_dueno",
+                reservaId: doc.id,
+                click_action: "OPEN_CURRENT_WALK_OWNER"
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "paseos_channel",
+                  tag: "reserva_" + doc.id + "_reminder15_owner"
+                }
+              }
+            };
+
+            entries.push({
+              docId: doc.id,
+              ref: doc.ref,
+              update: { reminder15MinSent: true, readyWindowNotificationSent: true },
+              message: messageDueno
+            });
+          }
+        }
+      }
     }
 
     if (entries.length > 0) {
@@ -2302,6 +2347,51 @@ exports.sendReminder5MinBefore = onSchedule("every 1 minutes", async (event) => 
         update: { reminder5MinSent: true },
         message
       });
+
+      // Enviar notificación también al dueño
+      const idDueno = getIdValue(reserva.id_dueno);
+      if (idDueno) {
+        const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+        if (duenoDoc.exists) {
+          const duenoToken = duenoDoc.data().fcmToken;
+          if (duenoToken) {
+            let duenoNotificationBody;
+            if (cantidadDias > 1) {
+              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
+            } else {
+              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}).`;
+            }
+
+            const messageDueno = {
+              token: duenoToken,
+              notification: {
+                title: "¡Paseo Próximo!",
+                body: duenoNotificationBody
+              },
+              data: {
+                tipo: "recordatorio_paseo_dueno",
+                reservaId: doc.id,
+                click_action: "OPEN_CURRENT_WALK_OWNER"
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "paseos_channel",
+                  tag: "reserva_" + doc.id + "_reminder5_owner"
+                }
+              }
+            };
+
+            entries.push({
+              docId: doc.id,
+              ref: doc.ref,
+              update: { reminder5MinSent: true },
+              message: messageDueno
+            });
+          }
+        }
+      }
     }
 
     if (entries.length > 0) {
@@ -2373,7 +2463,8 @@ exports.notifyOverdueWalks = onSchedule("every 1 minutes", async (event) => {
       const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: false,
+        timeZone: "America/Guayaquil"
       });
 
       // Send notification
@@ -2528,7 +2619,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
         timeZone: "America/Guayaquil"
       });
 
-      // Enviar notificacion
+      // Enviar notificacion al paseador
       const message = {
         token: fcmToken,
         notification: {
@@ -2556,6 +2647,43 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
         update: { readyWindowNotificationSent: true, reminder15MinSent: true },
         message
       });
+
+      // Enviar notificación también al dueño
+      if (idDueno) {
+        const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+        if (duenoDoc.exists) {
+          const duenoToken = duenoDoc.data().fcmToken;
+          if (duenoToken) {
+            const messageDueno = {
+              token: duenoToken,
+              notification: {
+                title: "El paseo está por comenzar",
+                body: `El paseo de ${nombreMascota} está programado para las ${horaFormateada}. El paseador ya puede iniciarlo.`
+              },
+              data: {
+                tipo: "ventana_inicio_dueno",
+                reservaId: doc.id,
+                click_action: "OPEN_CURRENT_WALK_OWNER"
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "paseos_channel",
+                  tag: "reserva_" + doc.id + "_ready_window_owner"
+                }
+              }
+            };
+
+            entries.push({
+              docId: doc.id,
+              ref: doc.ref,
+              update: { readyWindowNotificationSent: true, reminder15MinSent: true },
+              message: messageDueno
+            });
+          }
+        }
+      }
     }
 
     if (entries.length > 0) {
@@ -2679,8 +2807,8 @@ exports.notifyDelayedWalks = onSchedule("every 1 minutes", async (event) => {
 	              message: messagePaseador
 	            });
     
-            // Si es 10 o 20 minutos, tambien notificar al dueno
-	            if (delay.minutes === 10 || delay.minutes === 20) {
+            // Notificar también al dueno para todos los retrasos
+	            if (delay.minutes === 10 || delay.minutes === 20 || delay.minutes === 30) {
               const idDueno = getIdValue(reserva.id_dueno);
               if (idDueno) {
                 const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
@@ -2872,6 +3000,43 @@ exports.debugNotifyReady = onRequest(async (req, res) => {
         update: { readyWindowNotificationSent: true, reminder15MinSent: true },
         message
       });
+
+      // Enviar notificación también al dueño
+      if (idDueno) {
+        const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+        if (duenoDoc.exists) {
+          const duenoToken = duenoDoc.data().fcmToken;
+          if (duenoToken) {
+            const messageDueno = {
+              token: duenoToken,
+              notification: {
+                title: "El paseo está por comenzar",
+                body: `El paseo de ${nombreMascota} está programado para las ${horaFormateada}. El paseador ya puede iniciarlo.`
+              },
+              data: {
+                tipo: "ventana_inicio_dueno",
+                reservaId: doc.id,
+                click_action: "OPEN_CURRENT_WALK_OWNER"
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "paseos_channel",
+                  tag: "reserva_" + doc.id + "_ready_window_owner"
+                }
+              }
+            };
+
+            entries.push({
+              docId: doc.id,
+              ref: doc.ref,
+              update: { readyWindowNotificationSent: true, reminder15MinSent: true },
+              message: messageDueno
+            });
+          }
+        }
+      }
     }
 
     if (entries.length > 0) {
@@ -2990,7 +3155,7 @@ exports.debugNotifyDelayed = onRequest(async (req, res) => {
               message: messagePaseador
             });
 
-            if (delay.minutes === 10 || delay.minutes === 20) {
+            if (delay.minutes === 10 || delay.minutes === 20 || delay.minutes === 30) {
               const idDueno = getIdValue(reserva.id_dueno);
               if (idDueno) {
                 const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
@@ -3047,6 +3212,290 @@ exports.debugNotifyDelayed = onRequest(async (req, res) => {
     console.log("DEBUG: Completed delayed walk notifications job.");
   } catch (error) {
     console.error("DEBUG: Error in delayed walk notifications job:", error);
+    res.status(500).send({ success: false, error: error.message });
+  }
+});
+
+// Función HTTP para probar notificaciones de 5 minutos antes
+exports.debugNotifyReminder5Min = onRequest(async (req, res) => {
+  console.log("DEBUG: Manually triggering sendReminder5MinBefore logic.");
+  const now = Timestamp.now();
+
+  const windowStartMillis = now.toMillis();
+  const windowEndMillis = now.toMillis() + (10 * 60 * 1000);
+  const windowStart = Timestamp.fromMillis(windowStartMillis);
+  const windowEnd = Timestamp.fromMillis(windowEndMillis);
+
+  try {
+    const reservationsSnapshot = await db.collection("reservas")
+      .where("estado", "==", "CONFIRMADO")
+      .where("hora_inicio", ">=", windowStart)
+      .where("hora_inicio", "<=", windowEnd)
+      .get();
+
+    if (reservationsSnapshot.empty) {
+      console.log("DEBUG: No reservations found for 5-minute reminders.");
+      res.status(200).send({ success: true, message: "No reservations found for 5-minute reminders.", sent: 0 });
+      return;
+    }
+
+    console.log(`DEBUG: Found ${reservationsSnapshot.size} reservations for 5-minute reminders.`);
+
+    const entries = [];
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+
+      if (reserva.reminder5MinSent) continue;
+
+      const esGrupo = reserva.es_grupo;
+      const grupoReservaId = reserva.grupo_reserva_id;
+      let cantidadDias = 1;
+
+      if (esGrupo && grupoReservaId) {
+        const grupoSnapshot = await db.collection("reservas")
+          .where("grupo_reserva_id", "==", grupoReservaId)
+          .get();
+
+        cantidadDias = grupoSnapshot.size;
+
+        const fechas = grupoSnapshot.docs.map(d => ({
+          id: d.id,
+          fecha: d.data().fecha
+        })).sort((a, b) => {
+          const aTime = a.fecha?.toMillis() || 0;
+          const bTime = b.fecha?.toMillis() || 0;
+          return aTime - bTime;
+        });
+
+        if (fechas.length > 0 && fechas[0].id !== doc.id) {
+          console.log(`DEBUG: Saltando recordatorio 5min para ${doc.id} - no es el primer día del grupo ${grupoReservaId}`);
+          await doc.ref.update({ reminder5MinSent: true });
+          continue;
+        }
+
+        console.log(`DEBUG: Enviando recordatorio 5min para primer día del grupo ${grupoReservaId} (${cantidadDias} días)`);
+      }
+
+      const paseadorRef = reserva.id_paseador;
+      let paseadorId = null;
+      if (paseadorRef) {
+        if (typeof paseadorRef === 'object' && paseadorRef.id) {
+          paseadorId = paseadorRef.id;
+        } else if (typeof paseadorRef === 'string') {
+          paseadorId = paseadorRef;
+        }
+      }
+
+      if (!paseadorId) continue;
+
+      const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
+      if (!paseadorDoc.exists) continue;
+
+      const fcmToken = paseadorDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      const horaInicio = reserva.hora_inicio.toDate();
+      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
+      let notificationBody;
+      if (cantidadDias > 1) {
+        notificationBody = `Tu paseo comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días. Es hora de prepararte.`;
+      } else {
+        notificationBody = `Tu paseo comienza en 5 minutos (${horaFormateada}). Es hora de prepararte.`;
+      }
+
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: "¡Paseo Próximo!",
+          body: notificationBody
+        },
+        data: {
+          tipo: "recordatorio_paseo",
+          reservaId: doc.id,
+          click_action: "OPEN_CURRENT_WALK_ACTIVITY"
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId: "paseos_channel",
+            tag: "reserva_" + doc.id + "_reminder5"
+          }
+        }
+      };
+
+      entries.push({
+        docId: doc.id,
+        ref: doc.ref,
+        update: { reminder5MinSent: true },
+        message
+      });
+
+      // Enviar notificación también al dueño
+      const idDueno = getIdValue(reserva.id_dueno);
+      if (idDueno) {
+        const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+        if (duenoDoc.exists) {
+          const duenoToken = duenoDoc.data().fcmToken;
+          if (duenoToken) {
+            let duenoNotificationBody;
+            if (cantidadDias > 1) {
+              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
+            } else {
+              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}).`;
+            }
+
+            const messageDueno = {
+              token: duenoToken,
+              notification: {
+                title: "¡Paseo Próximo!",
+                body: duenoNotificationBody
+              },
+              data: {
+                tipo: "recordatorio_paseo_dueno",
+                reservaId: doc.id,
+                click_action: "OPEN_CURRENT_WALK_OWNER"
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "paseos_channel",
+                  tag: "reserva_" + doc.id + "_reminder5_owner"
+                }
+              }
+            };
+
+            entries.push({
+              docId: doc.id,
+              ref: doc.ref,
+              update: { reminder5MinSent: true },
+              message: messageDueno
+            });
+          }
+        }
+      }
+    }
+
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "debugNotifyReminder5Min");
+      console.log(`DEBUG sendReminder5MinBefore: sent=${result.success} failed=${result.failure} updated=${result.updated}`);
+      res.status(200).send({ success: true, result });
+    } else {
+      console.log("DEBUG: No 5-minute reminders to send.");
+      res.status(200).send({ success: true, message: "No 5-minute reminders to send.", sent: 0 });
+    }
+
+    console.log("DEBUG: Completed 5-minute reminder job.");
+  } catch (error) {
+    console.error("DEBUG: Error in 5-minute reminder job:", error);
+    res.status(500).send({ success: false, error: error.message });
+  }
+});
+
+// Función HTTP para probar notificaciones de paseos vencidos
+exports.debugNotifyOverdue = onRequest(async (req, res) => {
+  console.log("DEBUG: Manually triggering notifyOverdueWalks logic.");
+  const now = Timestamp.now();
+
+  const twentyFourHoursAgoMillis = now.toMillis() - (24 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = Timestamp.fromMillis(twentyFourHoursAgoMillis);
+
+  try {
+    const reservationsSnapshot = await db.collection("reservas")
+      .where("estado", "==", "LISTO_PARA_INICIAR")
+      .where("hora_inicio", "<=", now)
+      .where("hora_inicio", ">=", twentyFourHoursAgo)
+      .get();
+
+    if (reservationsSnapshot.empty) {
+      console.log("DEBUG: No overdue LISTO_PARA_INICIAR walks found.");
+      res.status(200).send({ success: true, message: "No overdue walks found.", sent: 0 });
+      return;
+    }
+
+    console.log(`DEBUG: Found ${reservationsSnapshot.size} overdue walks.`);
+
+    const entries = [];
+
+    for (const doc of reservationsSnapshot.docs) {
+      const reserva = doc.data();
+
+      if (reserva.overdueNotificationSent) continue;
+
+      const paseadorRef = reserva.id_paseador;
+      let paseadorId = null;
+      if (paseadorRef) {
+        if (typeof paseadorRef === 'object' && paseadorRef.id) {
+          paseadorId = paseadorRef.id;
+        } else if (typeof paseadorRef === 'string') {
+          paseadorId = paseadorRef;
+        }
+      }
+
+      if (!paseadorId) continue;
+
+      const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
+      if (!paseadorDoc.exists) continue;
+
+      const fcmToken = paseadorDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      const horaInicio = reserva.hora_inicio.toDate();
+      const horaFormateada = horaInicio.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: "America/Guayaquil"
+      });
+
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: "Paseo Programado Pendiente",
+          body: `El paseo programado para las ${horaFormateada} aún no ha comenzado. Toca para iniciar.`
+        },
+        data: {
+          tipo: "paseo_retrasado",
+          reservaId: doc.id,
+          click_action: "OPEN_CURRENT_WALK_ACTIVITY"
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId: "paseos_channel",
+            tag: "reserva_" + doc.id + "_overdue"
+          }
+        }
+      };
+
+      entries.push({
+        docId: doc.id,
+        ref: doc.ref,
+        update: { overdueNotificationSent: true },
+        message
+      });
+    }
+
+    if (entries.length > 0) {
+      const result = await sendEachAndUpdate(entries, "debugNotifyOverdue");
+      console.log(`DEBUG notifyOverdueWalks: sent=${result.success} failed=${result.failure} updated=${result.updated}`);
+      res.status(200).send({ success: true, result });
+    } else {
+      console.log("DEBUG: No overdue notifications to send.");
+      res.status(200).send({ success: true, message: "No overdue notifications to send.", sent: 0 });
+    }
+
+    console.log("DEBUG: Completed overdue walks notification job.");
+  } catch (error) {
+    console.error("DEBUG: Error in overdue walks notification job:", error);
     res.status(500).send({ success: false, error: error.message });
   }
 });
