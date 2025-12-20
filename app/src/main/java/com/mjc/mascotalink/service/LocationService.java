@@ -279,7 +279,13 @@ public class LocationService extends Service {
 
                         if (estadoAnterior != duenoViendoMapa) {
                             if (duenoViendoMapa) {
-                                Log.i(TAG, "👁️ Dueño EMPEZÓ a ver mapa - Activando WebSocket");
+                                Log.i(TAG, "👁️ Dueño EMPEZÓ a ver mapa - Activando WebSocket y forzando actualización");
+                                // Forzar envío inmediato si tenemos ubicación reciente
+                                if (lastLocation != null && socketManager.isConnected()) {
+                                    socketManager.updateLocation(currentReservaId, lastLocation.getLatitude(), lastLocation.getLongitude(), lastLocation.getAccuracy());
+                                    // También forzar guardado en Firestore para que el fallback funcione si WS falla
+                                    sendLocationBatch();
+                                }
                             } else {
                                 Log.i(TAG, "🚫 Dueño DEJÓ de ver mapa - Desactivando WebSocket (~10% ahorro batería)");
                             }
@@ -602,10 +608,17 @@ public class LocationService extends Service {
         long now = System.currentTimeMillis();
 
         // ===== OPTIMIZACIÓN: Batch timeout dinámico =====
-        // 60s cuando en movimiento rápido, 120s cuando parado
-        long timeoutDinamico = currentSpeed > SPEED_THRESHOLD_MPS ?
-                BATCH_TIMEOUT_MS / 2 :  // 60s en movimiento
-                BATCH_TIMEOUT_MS;        // 120s parado
+        // Si el dueño está mirando: 20s (para fallback rápido)
+        // Si no: 60s/120s (ahorro de batería)
+        long timeoutDinamico;
+        
+        if (duenoViendoMapa) {
+            timeoutDinamico = 20000; // 20 segundos si el dueño mira
+        } else {
+            timeoutDinamico = currentSpeed > SPEED_THRESHOLD_MPS ?
+                    BATCH_TIMEOUT_MS / 2 :  // 60s en movimiento
+                    BATCH_TIMEOUT_MS;       // 120s parado
+        }
 
         boolean shouldSend = locationBatch.size() >= BATCH_SIZE ||
                             (now - lastBatchSendTime) >= timeoutDinamico;

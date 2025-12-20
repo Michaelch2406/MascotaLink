@@ -135,7 +135,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
     // ===== FALLBACK WEBSOCKET → FIRESTORE =====
     private long lastWebSocketUpdate = System.currentTimeMillis();
-    private static final long WEBSOCKET_TIMEOUT_MS = 30000; // 30 segundos sin updates
+    private static final long WEBSOCKET_TIMEOUT_MS = 45000; // 45 segundos sin updates (aumentado para tolerancia)
     private Handler fallbackHandler = new Handler(Looper.getMainLooper());
     private Runnable fallbackRunnable;
 
