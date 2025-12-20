@@ -469,6 +469,9 @@ public class PaseosActivity extends AppCompatActivity {
                 String mascotaId = doc.getString("id_mascota");
                 paseo.setIdMascota(mascotaId);
 
+                // Verificar si el paseo CONFIRMADO debe transicionar a LISTO_PARA_INICIAR
+                verificarYTransicionarPaseo(doc.getId(), paseo.getEstado(), paseo.getHora_inicio());
+
                 // Placeholders visuales mientras carga el detalle
                 if (paseo.getPaseadorNombre() == null) paseo.setPaseadorNombre("Cargando...");
                 if (paseo.getMascotaNombre() == null) paseo.setMascotaNombre("...");
@@ -646,6 +649,40 @@ public class PaseosActivity extends AppCompatActivity {
         Toast.makeText(this, "Error al cargar paseos.", Toast.LENGTH_SHORT).show();
         rvPaseos.setVisibility(View.GONE);
         emptyView.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Verifica si un paseo CONFIRMADO debe transicionar a LISTO_PARA_INICIAR
+     * Transiciona si faltan 15 minutos o menos para el inicio
+     */
+    private void verificarYTransicionarPaseo(String reservaId, String estado, Date horaInicio) {
+        // Solo procesar paseos CONFIRMADO
+        if (!"CONFIRMADO".equals(estado) || horaInicio == null) return;
+
+        // Calcular tiempo hasta el inicio
+        long ahora = System.currentTimeMillis();
+        long horaInicioMillis = horaInicio.getTime();
+        long millisHastaInicio = horaInicioMillis - ahora;
+        long minutosHastaInicio = millisHastaInicio / (60 * 1000);
+
+        // Si faltan 15 minutos o menos (o ya pasó la hora), transicionar a LISTO_PARA_INICIAR
+        if (millisHastaInicio <= (15 * 60 * 1000)) {
+            Log.d(TAG, "Transicionando paseo " + reservaId + " a LISTO_PARA_INICIAR (faltan " + minutosHastaInicio + " minutos)");
+
+            db.collection("reservas").document(reservaId)
+                .update(
+                    "estado", "LISTO_PARA_INICIAR",
+                    "hasTransitionedToReady", true,
+                    "actualizado_por_sistema", true,
+                    "last_updated", com.google.firebase.Timestamp.now()
+                )
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Paseo " + reservaId + " transicionado exitosamente a LISTO_PARA_INICIAR");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Error al transicionar paseo " + reservaId, e);
+                });
+        }
     }
 
     private void mostrarDialogMotivoCancelacion(Paseo paseo) {
