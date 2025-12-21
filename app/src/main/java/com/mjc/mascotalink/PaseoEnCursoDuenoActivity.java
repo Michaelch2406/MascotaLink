@@ -410,13 +410,14 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         // ===== WEBSOCKET CONDICIONAL: Indicar que dueño está viendo mapa =====
         // Esto permite al paseador ahorrar batería (no enviar WebSocket si nadie está viendo)
         if (idReserva != null) {
+            Log.d(TAG, "🔍 Actualizando dueno_viendo_mapa = true para reserva: " + idReserva);
             db.collection("reservas").document(idReserva)
                     .update("dueno_viendo_mapa", true)
                     .addOnSuccessListener(aVoid ->
-                        Log.d(TAG, "✅ Dueño viendo mapa - WebSocket activo en paseador")
+                        Log.d(TAG, "✅ Dueño viendo mapa actualizado en Firestore - WebSocket debe activarse en paseador")
                     )
                     .addOnFailureListener(e ->
-                        Log.w(TAG, "Error actualizando dueno_viendo_mapa", e)
+                        Log.e(TAG, "❌ ERROR actualizando dueno_viendo_mapa: " + e.getMessage(), e)
                     );
         }
 
@@ -460,7 +461,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         }
 
         // Limpiar listeners de WebSocket
-        socketManager.off("walker_location");
+        socketManager.off("update_location");
         socketManager.off("joined_paseo");
 
         // Limpiar monitor de red
@@ -553,9 +554,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         // Listener para actualizaciones de ubicación en tiempo real
         // ⚡ CORREGIDO: Cambiar de "walker_location" a "update_location" para coincidir con el paseador
         socketManager.on("update_location", args -> {
+            Log.d(TAG, "🎧 Listener 'update_location' ACTIVADO - args.length=" + args.length);
             if (args.length > 0) {
                 try {
                     JSONObject data = (JSONObject) args[0];
+                    Log.d(TAG, "📦 Datos recibidos: " + data.toString());
 
                     // SOPORTE DE COMPRESIÓN: Leer formato comprimido o normal (retrocompatibilidad)
                     double latitud = data.has("lat") ? data.getDouble("lat") : data.getDouble("latitud");
@@ -564,7 +567,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     long timestamp = data.has("ts") ? data.optLong("ts", System.currentTimeMillis()) :
                                     data.optLong("timestamp", System.currentTimeMillis());
 
-                    Log.d(TAG, "📍 Ubicación en tiempo real: " + latitud + ", " + longitud);
+                    Log.d(TAG, "📍 Ubicación parseada - Lat: " + latitud + ", Lng: " + longitud + ", Acc: " + accuracy);
 
                     // ===== MARCAR RECEPCIÓN DE UPDATE VÍA WEBSOCKET =====
                     lastWebSocketUpdate = System.currentTimeMillis();
@@ -1400,11 +1403,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         android.widget.RadioGroup rgMotivos = view.findViewById(R.id.rg_motivos);
         com.google.android.material.textfield.TextInputEditText etOtroMotivo = view.findViewById(R.id.et_otro_motivo);
-        
-        // Ocultar opci??n de "??xito" para el dueño
-        View rbExito = view.findViewById(R.id.rb_finalizar_exito);
-        if (rbExito != null) rbExito.setVisibility(View.GONE);
-        
+
         rgMotivos.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_otro) {
                 etOtroMotivo.setVisibility(View.VISIBLE);

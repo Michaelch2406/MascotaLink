@@ -270,11 +270,15 @@ public class LocationService extends Service {
                         boolean estadoAnterior = duenoViendoMapa;
                         duenoViendoMapa = viendo != null ? viendo : true;
 
+                        // 🔍 DEBUG: Siempre mostrar el valor leído
+                        Log.d(TAG, "🔍 dueno_viendo_mapa leído de Firestore: " + viendo + " (será: " + duenoViendoMapa + ")");
+
                         if (estadoAnterior != duenoViendoMapa) {
                             if (duenoViendoMapa) {
                                 Log.i(TAG, "👁️ Dueño EMPEZÓ a ver mapa - Activando WebSocket y forzando actualización");
                                 // Forzar envío inmediato si tenemos ubicación reciente
                                 if (lastLocation != null && socketManager.isConnected()) {
+                                    Log.d(TAG, "📡 Forzando envío inmediato de ubicación vía WebSocket");
                                     socketManager.updateLocation(currentReservaId, lastLocation.getLatitude(), lastLocation.getLongitude(), lastLocation.getAccuracy());
                                     // También forzar guardado en Firestore para que el fallback funcione si WS falla
                                     sendLocationBatch();
@@ -500,11 +504,14 @@ public class LocationService extends Service {
         if (now - lastWebSocketSendTime > intervaloWebSocket) {
             // SOLO enviar si dueño está viendo
             if (duenoViendoMapa && socketManager.isConnected()) {
+                Log.d(TAG, "📡 ENVIANDO WebSocket - duenoViendoMapa=" + duenoViendoMapa + ", connected=" + socketManager.isConnected() + ", paseoId=" + currentReservaId);
                 socketManager.updateLocation(currentReservaId, lat, lng, accuracy);
                 lastWebSocketSendTime = now;
-                Log.v(TAG, "📡 WebSocket enviado (próximo en " + (intervaloWebSocket / 1000) + "s)");
+                Log.v(TAG, "✅ WebSocket enviado exitosamente (próximo en " + (intervaloWebSocket / 1000) + "s)");
             } else if (!duenoViendoMapa) {
-                Log.d(TAG, "⏸️ WebSocket PAUSADO - Dueño no está viendo (ahorro ~10% batería)");
+                Log.d(TAG, "⏸️ WebSocket PAUSADO - duenoViendoMapa=" + duenoViendoMapa + " (ahorro ~10% batería)");
+            } else if (!socketManager.isConnected()) {
+                Log.w(TAG, "⚠️ WebSocket NO enviado - Socket desconectado");
             }
         } else {
             Log.v(TAG, "⏭️ WebSocket throttled (esperando " +
