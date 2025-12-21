@@ -49,9 +49,12 @@ public class SocketManager {
     private Context context;
     private boolean isConnected = false;
     private String currentChatId = null;
+    private String currentPaseoId = null;
 
     // Callbacks registrados
     private Map<String, Emitter.Listener> eventListeners = new HashMap<>();
+    private final List<OnConnectionListener> connectionListeners = new ArrayList<>();
+    private final List<OnPongListener> pongListeners = new ArrayList<>();
 
     // Estado de la aplicación
     private boolean isAppInForeground = true;
@@ -76,6 +79,17 @@ public class SocketManager {
             instance = new SocketManager(context);
         }
         return instance;
+    }
+
+    public void leavePaseo(String paseoId) {
+        if (paseoId == null || paseoId.isEmpty()) return;
+        if (isConnected) {
+            socket.emit("leave_paseo", paseoId);
+        }
+        if (paseoId.equals(currentPaseoId)) {
+            currentPaseoId = null;
+        }
+        Log.d(TAG, "Saliendo del paseo: " + paseoId);
     }
 
     /**
@@ -209,6 +223,7 @@ public class SocketManager {
             try {
                 socket = IO.socket(serverUrl, options);
                 setupBaseEventListeners();
+                rebindEventListeners();
                 socket.connect();
             } catch (URISyntaxException e) {
                 Log.e(TAG, "URL inválida: " + serverUrl, e);
@@ -223,33 +238,32 @@ public class SocketManager {
      */
     private void setupBaseEventListeners() {
         socket.on(Socket.EVENT_CONNECT, args -> {
-            isConnected = true;
+            updateConnectionState(true);
             Log.d(TAG, "✅ Socket conectado");
             startHeartbeat();
             processOfflineQueue();
+            rejoinRooms();
         });
 
         socket.on(Socket.EVENT_DISCONNECT, args -> {
-            isConnected = false;
+            updateConnectionState(false);
             stopHeartbeat();
             Log.d(TAG, "🔌 Socket desconectado");
         });
 
         socket.on(Socket.EVENT_CONNECT_ERROR, args -> {
-            Log.e(TAG, "❌ Error de conexión: " + (args.length > 0 ? args[0] : "unknown"));
+            String message = args.length > 0 ? String.valueOf(args[0]) : "unknown";
+            Log.e(TAG, "❌ Error de conexión: " + message);
+            notifyError(message);
         });
 
         // Usar string "reconnect" en lugar de constante (no existe en v2.1.0)
         socket.on("reconnect", args -> {
-            isConnected = true;
+            updateConnectionState(true);
             Log.d(TAG, "🔄 Socket reconectado");
             startHeartbeat();
             processOfflineQueue();
-
-            // Re-unirse al chat si había uno abierto
-            if (currentChatId != null) {
-                joinChat(currentChatId);
-            }
+            rejoinRooms();
         });
 
         socket.on("error", args -> {
@@ -265,6 +279,7 @@ public class SocketManager {
 
         socket.on("pong", args -> {
             Log.v(TAG, "Pong recibido");
+            notifyPong();
         });
     }
 
@@ -273,14 +288,13 @@ public class SocketManager {
      */
     public void disconnect() {
         stopHeartbeat();
+        updateConnectionState(false);
         if (socket != null) {
             socket.disconnect();
             socket.off();
             socket = null;
         }
         isConnected = false;
-        currentChatId = null;
-        eventListeners.clear();
     }
 
     /**
@@ -318,11 +332,13 @@ public class SocketManager {
      * Unirse a una sala de chat
      */
     public void joinChat(String chatId) {
+        if (chatId == null || chatId.isEmpty()) return;
+        currentChatId = chatId;
         if (!isConnected) {
-            Log.w(TAG, "Socket no conectado, no se puede unir al chat");
+            Log.w(TAG, "Socket no conectado, intentando unir al chat al conectar");
+            connect();
             return;
         }
-        currentChatId = chatId;
         socket.emit("join_chat", chatId);
         Log.d(TAG, "📥 Uniéndose al chat: " + chatId);
     }
@@ -331,7 +347,12 @@ public class SocketManager {
      * Salir de una sala de chat
      */
     public void leaveChat(String chatId) {
-        if (!isConnected) return;
+        if (chatId == null || chatId.isEmpty()) return;
+        if (!isConnected) {
+            Log.w(TAG, "Socket no conectado, intentando unir al paseo al conectar");
+            connect();
+            return;
+        }
 
         socket.emit("leave_chat", chatId);
         if (chatId.equals(currentChatId)) {
@@ -433,6 +454,8 @@ public class SocketManager {
      * Unirse a tracking de paseo
      */
     public void joinPaseo(String paseoId) {
+        if (paseoId == null || paseoId.isEmpty()) return;
+        currentPaseoId = paseoId;
         if (!isConnected) return;
         socket.emit("join_paseo", paseoId);
         Log.d(TAG, "🐕 Uniéndose al paseo: " + paseoId);
@@ -513,6 +536,26 @@ public class SocketManager {
         socket.emit("ping");
     }
 
+    public void addOnConnectionListener(OnConnectionListener listener) {
+        if (listener == null || connectionListeners.contains(listener)) return;
+        connectionListeners.add(listener);
+    }
+
+    public void removeOnConnectionListener(OnConnectionListener listener) {
+        if (listener == null) return;
+        connectionListeners.remove(listener);
+    }
+
+    public void addOnPongListener(OnPongListener listener) {
+        if (listener == null || pongListeners.contains(listener)) return;
+        pongListeners.add(listener);
+    }
+
+    public void removeOnPongListener(OnPongListener listener) {
+        if (listener == null) return;
+        pongListeners.remove(listener);
+    }
+
     // ========================================
     // REGISTRO DE LISTENERS
     // ========================================
@@ -521,9 +564,13 @@ public class SocketManager {
      * Registrar listener para un evento
      */
     public void on(String event, Emitter.Listener listener) {
-        if (socket == null) return;
-        socket.on(event, listener);
+        if (event == null || listener == null) return;
         eventListeners.put(event, listener);
+        if (socket == null) {
+            Log.d(TAG, "Listener en cola (socket no listo): " + event);
+            return;
+        }
+        socket.on(event, listener);
         Log.d(TAG, "👂 Listener registrado: " + event);
     }
 
@@ -531,8 +578,10 @@ public class SocketManager {
      * Remover listener de un evento
      */
     public void off(String event) {
-        if (socket == null) return;
-        socket.off(event);
+        if (event == null) return;
+        if (socket != null) {
+            socket.off(event);
+        }
         eventListeners.remove(event);
         Log.d(TAG, "🔇 Listener removido: " + event);
     }
@@ -541,9 +590,10 @@ public class SocketManager {
      * Remover todos los listeners
      */
     public void offAll() {
-        if (socket == null) return;
-        for (String event : eventListeners.keySet()) {
-            socket.off(event);
+        if (socket != null) {
+            for (String event : eventListeners.keySet()) {
+                socket.off(event);
+            }
         }
         eventListeners.clear();
         Log.d(TAG, "🔇 Todos los listeners removidos");
@@ -597,6 +647,10 @@ public class SocketManager {
         void onNewMessage(JSONObject message);
     }
 
+    public interface OnPongListener {
+        void onPong();
+    }
+
     public interface OnTypingListener {
         void onUserTyping(String userId, String userName);
         void onUserStopTyping(String userId);
@@ -624,5 +678,62 @@ public class SocketManager {
 
     public interface OnlineUsersListener {
         void onOnlineUsersResponse(String[] onlineUsers, String[] offlineUsers);
+    }
+
+    private void notifyConnected() {
+        if (connectionListeners.isEmpty()) return;
+        for (OnConnectionListener listener : new ArrayList<>(connectionListeners)) {
+            listener.onConnected();
+        }
+    }
+
+    private void notifyDisconnected() {
+        if (connectionListeners.isEmpty()) return;
+        for (OnConnectionListener listener : new ArrayList<>(connectionListeners)) {
+            listener.onDisconnected();
+        }
+    }
+
+    private void notifyError(String message) {
+        if (connectionListeners.isEmpty()) return;
+        for (OnConnectionListener listener : new ArrayList<>(connectionListeners)) {
+            listener.onError(message);
+        }
+    }
+
+    private void notifyPong() {
+        if (pongListeners.isEmpty()) return;
+        for (OnPongListener listener : new ArrayList<>(pongListeners)) {
+            listener.onPong();
+        }
+    }
+
+    private void updateConnectionState(boolean connected) {
+        if (isConnected == connected) {
+            return;
+        }
+        isConnected = connected;
+        if (connected) {
+            notifyConnected();
+        } else {
+            notifyDisconnected();
+        }
+    }
+
+    private void rebindEventListeners() {
+        if (socket == null || eventListeners.isEmpty()) return;
+        for (Map.Entry<String, Emitter.Listener> entry : new HashMap<>(eventListeners).entrySet()) {
+            socket.on(entry.getKey(), entry.getValue());
+        }
+        Log.d(TAG, "Listeners re-registrados: " + eventListeners.size());
+    }
+
+    private void rejoinRooms() {
+        if (currentChatId != null) {
+            joinChat(currentChatId);
+        }
+        if (currentPaseoId != null) {
+            joinPaseo(currentPaseoId);
+        }
     }
 }

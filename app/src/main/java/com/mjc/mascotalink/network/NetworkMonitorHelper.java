@@ -69,6 +69,26 @@ public class NetworkMonitorHelper {
 
     // Estado de la conexión
     private ConnectionState connectionState = ConnectionState.DISCONNECTED;
+    private final SocketManager.OnPongListener pongListener = this::onPongReceived;
+    private final SocketManager.OnConnectionListener socketConnectionListener =
+        new SocketManager.OnConnectionListener() {
+            @Override
+            public void onConnected() {
+                connectionState = ConnectionState.CONNECTED;
+                startPingMonitoring();
+            }
+
+            @Override
+            public void onDisconnected() {
+                connectionState = ConnectionState.DISCONNECTED;
+                stopPingMonitoring();
+            }
+
+            @Override
+            public void onError(String message) {
+                Log.w(TAG, "Socket error: " + message);
+            }
+        };
 
     /**
      * Estado de la conexión
@@ -190,6 +210,9 @@ public class NetworkMonitorHelper {
             return;
         }
 
+        socketManager.addOnPongListener(pongListener);
+        socketManager.addOnConnectionListener(socketConnectionListener);
+
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
@@ -279,6 +302,8 @@ public class NetworkMonitorHelper {
      * Desregistra el monitor de red. Llamar en onDestroy.
      */
     public void unregister() {
+        socketManager.removeOnPongListener(pongListener);
+        socketManager.removeOnConnectionListener(socketConnectionListener);
         stopPingMonitoring();
         cancelPendingReconnects();
 

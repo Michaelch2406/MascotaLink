@@ -28,7 +28,12 @@ public class Paseo implements Serializable {
     private String id_pago, transaction_id, metodo_pago, notas;
     private Date fecha_pago, fecha_creacion, fecha_respuesta;
     private Double tarifa_confirmada;
-    private Boolean hasTransitionedToInCourse, reminderSent;
+    private Boolean hasTransitionedToInCourse;
+    private Boolean hasTransitionedToReady;
+    private Boolean reminderSent;
+    private Boolean actualizado_por_paseador;
+    private Boolean actualizado_por_sistema;
+    private Date last_updated;
     private Date fecha_inicio_paseo;
     private Date fecha_fin_paseo;
     private String timeZone;
@@ -127,8 +132,16 @@ public class Paseo implements Serializable {
     public void setTarifa_confirmada(Double tarifa_confirmada) { this.tarifa_confirmada = tarifa_confirmada; }
     public Boolean getHasTransitionedToInCourse() { return hasTransitionedToInCourse; }
     public void setHasTransitionedToInCourse(Boolean hasTransitionedToInCourse) { this.hasTransitionedToInCourse = hasTransitionedToInCourse; }
+    public Boolean getHasTransitionedToReady() { return hasTransitionedToReady; }
+    public void setHasTransitionedToReady(Boolean hasTransitionedToReady) { this.hasTransitionedToReady = hasTransitionedToReady; }
     public Boolean getReminderSent() { return reminderSent; }
     public void setReminderSent(Boolean reminderSent) { this.reminderSent = reminderSent; }
+    public Boolean getActualizado_por_paseador() { return actualizado_por_paseador; }
+    public void setActualizado_por_paseador(Boolean actualizado_por_paseador) { this.actualizado_por_paseador = actualizado_por_paseador; }
+    public Boolean getActualizado_por_sistema() { return actualizado_por_sistema; }
+    public void setActualizado_por_sistema(Boolean actualizado_por_sistema) { this.actualizado_por_sistema = actualizado_por_sistema; }
+    public Date getLast_updated() { return last_updated; }
+    public void setLast_updated(Date last_updated) { this.last_updated = last_updated; }
     
     public Date getFecha_inicio_paseo() { return fecha_inicio_paseo; }
     public void setFecha_inicio_paseo(Date fecha_inicio_paseo) { this.fecha_inicio_paseo = fecha_inicio_paseo; }

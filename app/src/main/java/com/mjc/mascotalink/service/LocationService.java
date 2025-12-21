@@ -221,14 +221,7 @@ public class LocationService extends Service {
         setupEstadoListener();
 
         // 4. Unirse al room del Socket
-        if (socketManager.isConnected()) {
-            socketManager.joinPaseo(currentReservaId);
-        } else {
-            socketManager.connect();
-            // El listener de conexión en SocketManager o Activity debería encargarse de unirse,
-            // pero aquí forzamos un reintento simple o dependemos de la reconexión automática.
-            // Idealmente, SocketManager debería tener una cola de "rooms pending join".
-        }
+        socketManager.joinPaseo(currentReservaId);
 
         // 5. Solicitar actualizaciones de ubicación
         requestLocationUpdates();

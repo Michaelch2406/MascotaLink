@@ -421,7 +421,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         }
 
         // Reconectar al paseo para recibir ubicación en tiempo real
-        if (idReserva != null && socketManager.isConnected()) {
+        if (idReserva != null) {
             socketManager.joinPaseo(idReserva);
         }
     }
@@ -613,7 +613,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         });
 
         // Unirse al paseo si está conectado
-        if (idReserva != null && socketManager.isConnected()) {
+        if (idReserva != null) {
             socketManager.joinPaseo(idReserva);
         }
     }

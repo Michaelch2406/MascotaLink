@@ -1264,10 +1264,23 @@ public class ChatActivity extends AppCompatActivity {
         String timestampStr = data.optString(FirestoreConstants.FIELD_TIMESTAMP, "");
         if (!timestampStr.isEmpty()) {
             try {
-                Date date = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).parse(timestampStr);
+                // Parse standard ISO 8601 date from JavaScript's toISOString() (always UTC)
+                // Format: yyyy-MM-dd'T'HH:mm:ss.SSSZ
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US);
+                sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                Date date = sdf.parse(timestampStr);
                 mensaje.setTimestamp(date != null ? date : new Date());
             } catch (Exception e) {
-                mensaje.setTimestamp(new Date());
+                // Fallback for formats without milliseconds or different precision
+                try {
+                     java.text.SimpleDateFormat sdfFallback = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
+                     sdfFallback.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                     Date date = sdfFallback.parse(timestampStr);
+                     mensaje.setTimestamp(date != null ? date : new Date());
+                } catch (Exception ex) {
+                    Log.e(TAG, "Error parsing timestamp: " + timestampStr, ex);
+                    mensaje.setTimestamp(new Date());
+                }
             }
         } else {
             mensaje.setTimestamp(new Date());

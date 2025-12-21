@@ -243,9 +243,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         reservaRef = db.collection("reservas").document(idReserva);
 
         // Unirse al paseo vía WebSocket para streaming en tiempo real
-        if (socketManager.isConnected()) {
-            socketManager.joinPaseo(idReserva);
-        }
+        socketManager.joinPaseo(idReserva);
 
         // Configurar detección de cambios de red con NetworkMonitorHelper
         networkMonitor.setCurrentRoom(idReserva, NetworkMonitorHelper.RoomType.PASEO);
@@ -266,7 +264,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         startLocationUpdates();
 
         // Reconectar al paseo si es necesario
-        if (idReserva != null && socketManager.isConnected()) {
+        if (idReserva != null) {
             socketManager.joinPaseo(idReserva);
         }
     }
