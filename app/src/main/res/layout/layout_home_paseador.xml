@@ -127,6 +127,49 @@
                             android:layout_marginStart="16dp"/>
                     </LinearLayout>
 
+                    <!-- CONTENEDOR DE ESTADÍSTICAS EN VIVO (Solo visible en Paseo Activo) -->
+                    <LinearLayout
+                        android:id="@+id/layout_stats_live_paseador"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="16dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tv_live_timer_paseador"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="00:00:00"
+                            android:textColor="@color/white"
+                            android:textSize="36sp"
+                            android:textStyle="bold"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="4dp">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:src="@drawable/ic_map"
+                                app:tint="#E0E0E0"/>
+
+                            <TextView
+                                android:id="@+id/tv_live_distancia_paseador"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.0 km recorridos"
+                                android:textColor="#E0E0E0"
+                                android:textSize="14sp"
+                                android:layout_marginStart="6dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
                     <TextView
                         android:id="@+id/tv_mision_descripcion"
                         android:layout_width="match_parent"

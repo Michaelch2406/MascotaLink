@@ -569,12 +569,21 @@ public class NetworkMonitorHelper {
      */
     public void forceReconnect() {
         Log.d(TAG, "🔄 Reconexión forzada solicitada");
+        
+        // Forzar desconexión real para limpiar estado zombie
+        Log.d(TAG, "🔌 Forzando desconexión de socket zombie");
+        if (socketManager != null) {
+            socketManager.disconnect();
+        }
+
         // Resetear el throttling para permitir reconexión inmediata
         lastReconnectTime = 0;
         isReconnecting = false;
         reconnectAttempts = 0;
         cancelPendingReconnects();
         stopPingMonitoring();
+        
+        // Iniciar nueva conexión limpia
         reconnectWebSocket();
     }
 

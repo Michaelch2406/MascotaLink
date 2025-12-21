@@ -68,11 +68,11 @@ public class HomeRepository {
         MutableLiveData<Map<String, Object>> data = new MutableLiveData<>();
         String field = role.equals("PASEADOR") ? "id_paseador" : "id_dueno";
 
-        // Buscar reservas LISTO_PARA_INICIAR, EN_CURSO o CONFIRMADO
+        // Buscar reservas LISTO_PARA_INICIAR, EN_CURSO, CONFIRMADO o PENDIENTE (ambas versiones)
         db.collection("reservas")
             .whereEqualTo(field, db.collection("usuarios").document(userId))
-            .whereIn("estado", java.util.Arrays.asList("CONFIRMADO", "LISTO_PARA_INICIAR", "EN_CURSO"))
-            .limit(5) // Aumentar limite para poder filtrar
+            .whereIn("estado", java.util.Arrays.asList("CONFIRMADO", "LISTO_PARA_INICIAR", "EN_CURSO", "PENDIENTE_ACEPTACION", "PENDIENTE"))
+            .limit(10) // Aumentar limite para poder filtrar
             .addSnapshotListener((snapshots, e) -> {
                 if (e != null) {
                     Log.e(TAG, "Error listening active reservation", e);
@@ -97,6 +97,14 @@ public class HomeRepository {
                         if ("LISTO_PARA_INICIAR".equals(estado)) {
                             reservaActiva = doc;
                             break;
+                        }
+                        
+                        // Si es PENDIENTE_ACEPTACION o PENDIENTE, considerar como activa (para mostrar alerta naranja)
+                        if ("PENDIENTE_ACEPTACION".equals(estado) || "PENDIENTE".equals(estado)) {
+                            reservaActiva = doc;
+                            // No hacemos break inmediato porque preferimos mostrar una EN_CURSO si existe simultáneamente
+                            // Pero si es lo único que hay, se mostrará.
+                            continue;
                         }
 
                         // Si esta CONFIRMADO, verificar si estamos dentro de la ventana de 15 minutos o si ya paso la hora

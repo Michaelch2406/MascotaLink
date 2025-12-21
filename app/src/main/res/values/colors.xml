@@ -44,6 +44,7 @@
     <color name="yellow_600">#FDD835</color>
     <color name="grey_600">#757575</color>
     <color name="orange_500">#FF9800</color>
+    <color name="orange_primary">#FB8C00</color>
 
     <!-- Modern UI Colors -->
     <color name="background_modern">#F9FAFB</color>

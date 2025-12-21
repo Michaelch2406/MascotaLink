@@ -59,6 +59,80 @@ public class ResumenPaseoActivity extends AppCompatActivity {
     private String idPaseador;
     private String idDueno;
     private boolean isRatingSubmitting = false;
+    private String lastSuggestedText = "";
+    private boolean hasPhotos = false;
+    private boolean isLongWalk = false;
+
+    // --- SUGERENCIAS: DUEÑO -> PASEADOR (OW) ---
+    private static final String[] SUGGESTIONS_OW_5_STARS = {
+        "Servicio impecable y muy profesional. Totalmente recomendado.",
+        "Excelente cuidado y atención a los detalles. Sin duda volveré a reservar.",
+        "Paseador puntual y responsable. Mi mascota regresó muy contenta.",
+        "Trato inmejorable con los animales. Transmite mucha confianza.",
+        "La mejor opción para paseos seguros y divertidos."
+    };
+    private static final String[] SUGGESTIONS_OW_4_STARS = {
+        "Buen servicio, cumplió con lo esperado.",
+        "Experiencia positiva, paseador amable y correcto.",
+        "Todo en orden, un servicio recomendable.",
+        "Buena atención y cumplimiento del horario."
+    };
+    private static final String[] SUGGESTIONS_OW_3_STARS = {
+        "Servicio aceptable, cumplió con lo básico.",
+        "El paseo se realizó sin inconvenientes mayores.",
+        "Atención correcta, dentro del promedio.",
+        "Servicio estándar, podría mejorar en comunicación."
+    };
+    private static final String[] SUGGESTIONS_OW_LOW_STARS = {
+        "La experiencia no fue la esperada.",
+        "Hubo aspectos del servicio que requieren mejora.",
+        "No quedé conforme con la atención brindada.",
+        "Servicio por debajo de las expectativas."
+    };
+    // Contextuales OW
+    private static final String[] SUGGESTIONS_OW_PHOTOS = {
+        "Envía fotos durante todo el recorrido, lo cual brinda mucha tranquilidad.",
+        "Excelente documentación del paseo con fotos y reportes constantes.",
+        "Mantiene buena comunicación visual del estado de la mascota."
+    };
+    private static final String[] SUGGESTIONS_OW_LONG_WALK = {
+        "Cumplió perfectamente con el tiempo acordado y la ruta.",
+        "Gran caminata, ideal para perros con mucha energía.",
+        "Paseo completo y dinámico, excelente para ejercitar a la mascota."
+    };
+
+    // --- SUGERENCIAS: PASEADOR -> DUEÑO/MASCOTA (WO) ---
+    private static final String[] SUGGESTIONS_WO_5_STARS = {
+        "¡Un placer pasear a esta mascota! Muy educada y obediente.",
+        "Excelente experiencia. El dueño es muy amable y puntual.",
+        "La mascota se portó increíble, espero volver a pasearla pronto.",
+        "Todo perfecto, instrucciones claras y mascota feliz.",
+        "Gran paseo, hubo muy buena conexión con la mascota."
+    };
+    private static final String[] SUGGESTIONS_WO_4_STARS = {
+        "Buen paseo, la mascota es tranquila en general.",
+        "Experiencia positiva, todo transcurrió con normalidad.",
+        "Mascota amigable, el paseo fue agradable.",
+        "Buen comportamiento durante la mayor parte del recorrido."
+    };
+    private static final String[] SUGGESTIONS_WO_3_STARS = {
+        "Paseo correcto, aunque la mascota tira un poco de la correa.",
+        "Mascota con mucha energía, requiere paciencia.",
+        "Todo bien, aunque hubo algunos momentos de distracción.",
+        "Comportamiento aceptable, dentro del promedio."
+    };
+    private static final String[] SUGGESTIONS_WO_LOW_STARS = {
+        "Fue difícil controlar a la mascota durante el paseo.",
+        "Hubo problemas de comportamiento que complicaron la ruta.",
+        "La mascota no seguía instrucciones básicas.",
+        "Experiencia complicada, requiere más entrenamiento."
+    };
+    // Contextuales WO
+    private static final String[] SUGGESTIONS_WO_LONG_WALK = {
+        "La mascota tiene gran resistencia, aguantó el paseo largo perfectamente.",
+        "Disfrutó mucho la caminata larga, tiene mucha energía.",
+        "Excelente compañero para rutas extensas."
+    };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -101,6 +175,19 @@ public class ResumenPaseoActivity extends AppCompatActivity {
         btnEnviarCalificacion = findViewById(R.id.btn_enviar_calificacion);
         btnVolverInicio = findViewById(R.id.btn_volver_inicio);
 
+        // Lógica de Sugerencias Automáticas
+        ratingBar.setOnRatingBarChangeListener((ratingBar, rating, fromUser) -> {
+            if (fromUser) {
+                String currentText = etComentario.getText().toString().trim();
+                // Solo sugerir si está vacío o si el texto actual es una sugerencia anterior (no sobreescribir texto del usuario)
+                if (currentText.isEmpty() || currentText.equals(lastSuggestedText)) {
+                    String suggestion = getSuggestionForRating(rating);
+                    etComentario.setText(suggestion);
+                    lastSuggestedText = suggestion; // Recordar qué sugerimos
+                }
+            }
+        });
+
         btnEnviarCalificacion.setOnClickListener(v -> submitRating());
         
         btnVolverInicio.setOnClickListener(v -> {
@@ -109,6 +196,57 @@ public class ResumenPaseoActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+    }
+
+    private String getSuggestionForRating(float rating) {
+        java.util.List<String> pool = new java.util.ArrayList<>();
+        boolean esPaseador = "PASEADOR".equalsIgnoreCase(currentUserRole);
+        
+        if (esPaseador) {
+            // --- SUGERENCIAS PARA PASEADOR (WO) ---
+            if (rating >= 4.5) {
+                java.util.Collections.addAll(pool, SUGGESTIONS_WO_5_STARS);
+            } else if (rating >= 4.0) {
+                java.util.Collections.addAll(pool, SUGGESTIONS_WO_4_STARS);
+            } else if (rating >= 3.0) {
+                java.util.Collections.addAll(pool, SUGGESTIONS_WO_3_STARS);
+            } else {
+                java.util.Collections.addAll(pool, SUGGESTIONS_WO_LOW_STARS);
+            }
+            
+            // Contextuales WO
+            if (rating >= 4.0 && isLongWalk) {
+                java.util.Collections.addAll(pool, SUGGESTIONS_WO_LONG_WALK);
+            }
+            // (Nota: 'hasPhotos' no aplica mucho aquí porque el paseador es quien las toma)
+            
+        } else {
+            // --- SUGERENCIAS PARA DUEÑO (OW) ---
+            if (rating >= 4.5) {
+                java.util.Collections.addAll(pool, SUGGESTIONS_OW_5_STARS);
+            } else if (rating >= 4.0) {
+                java.util.Collections.addAll(pool, SUGGESTIONS_OW_4_STARS);
+            } else if (rating >= 3.0) {
+                java.util.Collections.addAll(pool, SUGGESTIONS_OW_3_STARS);
+            } else {
+                java.util.Collections.addAll(pool, SUGGESTIONS_OW_LOW_STARS);
+            }
+            
+            // Contextuales OW
+            if (rating >= 4.0) {
+                if (hasPhotos) {
+                    java.util.Collections.addAll(pool, SUGGESTIONS_OW_PHOTOS);
+                }
+                if (isLongWalk) {
+                    java.util.Collections.addAll(pool, SUGGESTIONS_OW_LONG_WALK);
+                }
+            }
+        }
+        
+        if (pool.isEmpty()) return "";
+        
+        int index = (int) (Math.random() * pool.size());
+        return pool.get(index);
     }
 
     private void determineRoleAndLoadData() {
@@ -329,20 +467,23 @@ public class ResumenPaseoActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Check if user rated
-        if (cardCalificacion.getVisibility() == View.VISIBLE) {
+        // Si el usuario aún no ha calificado, pedir confirmación
+        if (cardCalificacion != null && cardCalificacion.getVisibility() == View.VISIBLE) {
              new AlertDialog.Builder(this)
                 .setTitle("¿Salir sin calificar?")
                 .setMessage("Tu opinión es importante. ¿Seguro que quieres salir?")
                 .setPositiveButton("Salir", (dialog, which) -> {
-                    startActivity(new Intent(this, MainActivity.class));
+                    // Navegación manual para limpiar el stack
+                    Intent intent = new Intent(this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
                     finish();
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
         } else {
-            startActivity(new Intent(this, MainActivity.class));
-            finish();
+            // Si ya calificó o no hay tarjeta, usar comportamiento estándar
+            super.onBackPressed();
         }
     }
 }
