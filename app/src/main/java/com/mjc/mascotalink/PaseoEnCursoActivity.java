@@ -1327,25 +1327,6 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             else if (selectedId == R.id.rb_emergencia) motivo = "Emergencia con la mascota";
             else if (selectedId == R.id.rb_seguridad) motivo = "Problema de seguridad";
             else if (selectedId == R.id.rb_otro) motivo = etOtroMotivo.getText().toString();
-            else if (selectedId == R.id.rb_finalizar_exito) { // Opción para finalizar con éxito
-                 long tiempoTranscurrido = calcularTiempoTranscurrido();
-                 long tiempoMinimo = obtenerTiempoMinimo();
-
-                 // Logs para depuración
-                 Log.d(TAG, "Intento de finalizar paseo:");
-                 Log.d(TAG, " - Duración acordada: " + duracionMinutos + " mins (Usado para cálculo: " + (duracionMinutos > 0 ? duracionMinutos : 60) + ")");
-                 Log.d(TAG, " - Tiempo transcurrido: " + TimeUnit.MILLISECONDS.toMinutes(tiempoTranscurrido) + " mins");
-                 Log.d(TAG, " - Tiempo mínimo requerido (50%): " + TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo) + " mins");
-
-                 if (tiempoTranscurrido < tiempoMinimo) {
-                     long minutosRestantes = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo - tiempoTranscurrido);
-                     long minutosMinimos = TimeUnit.MILLISECONDS.toMinutes(tiempoMinimo);
-                     Toast.makeText(this, "No puedes finalizar el paseo antes de " + minutosMinimos + " minutos (50% del tiempo). Faltan " + minutosRestantes + " minutos.", Toast.LENGTH_LONG).show();
-                     return;
-                 }
-                 confirmarFinalizacionExito(); // Reutilizar lógica de éxito
-                 return;
-            }
 
             if (motivo.isEmpty()) {
                 Toast.makeText(this, "Debes especificar el motivo", Toast.LENGTH_SHORT).show();

@@ -551,7 +551,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         });
 
         // Listener para actualizaciones de ubicación en tiempo real
-        socketManager.on("walker_location", args -> {
+        // ⚡ CORREGIDO: Cambiar de "walker_location" a "update_location" para coincidir con el paseador
+        socketManager.on("update_location", args -> {
             if (args.length > 0) {
                 try {
                     JSONObject data = (JSONObject) args[0];

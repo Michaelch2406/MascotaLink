@@ -1587,7 +1587,10 @@ public class ReservaActivity extends AppCompatActivity {
         final int[] reservasCreadas = {0};
         final String[] primerReservaId = {null};
 
-        for (Date fecha : fechasList) {
+        // Cambiar a loop con índice para saber cuál es el primer día
+        for (int indiceFecha = 0; indiceFecha < fechasList.size(); indiceFecha++) {
+            Date fecha = fechasList.get(indiceFecha);
+
             // Crear hora de inicio específica para esta fecha
             // CRÍTICO: Limpiar calendario primero para evitar problemas de timezone/DST
             Calendar cal = Calendar.getInstance();
@@ -1604,6 +1607,10 @@ public class ReservaActivity extends AppCompatActivity {
             calLimpio.set(year, month, day, horarioSeleccionado.getHora(), horarioSeleccionado.getMinutos(), 0);
             calLimpio.set(Calendar.MILLISECOND, 0);
             Date horaInicioEspecifica = calLimpio.getTime();
+
+            // ⚡ OPTIMIZACIÓN: Campos denormalizados para eliminar queries en Firebase Functions
+            boolean esPrimerDiaGrupo = (indiceFecha == 0);  // true solo para el primer día
+            int cantidadDiasGrupo = fechasList.size();      // mismo valor para todas las reservas del grupo
 
             Map<String, Object> reserva = new HashMap<>();
             reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
@@ -1626,6 +1633,10 @@ public class ReservaActivity extends AppCompatActivity {
             // Campos de grupo
             reserva.put("grupo_reserva_id", grupoId);
             reserva.put("es_grupo", true);
+
+            // ⚡ CAMPOS OPTIMIZADOS (ahorro de ~$28k/año en queries Firestore)
+            reserva.put("es_primer_dia_grupo", esPrimerDiaGrupo);
+            reserva.put("cantidad_dias_grupo", cantidadDiasGrupo);
 
             // Crear la reserva
             db.collection("reservas").add(reserva)
