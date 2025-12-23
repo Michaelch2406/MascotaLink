@@ -370,6 +370,10 @@ public class SocketManager {
         return socket != null && socket.connected();
     }
 
+    public boolean isConnecting() {
+        return isConnecting;
+    }
+
     // ========================================
     // EVENTOS DE CHAT
     // ========================================

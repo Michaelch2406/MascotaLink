@@ -565,15 +565,18 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
 
                 reservaRef.update(updates)
                     .addOnSuccessListener(unused -> {
-                        Log.d(TAG, "Paseo iniciado manualmente");
+                        Log.d(TAG, "✅ Paseo iniciado manualmente - Notificando vía WebSocket");
                         Toast.makeText(this, "¡Paseo iniciado! Disfruta el recorrido.", Toast.LENGTH_SHORT).show();
                         mostrarLoading(false);
+
+                        // Enviar notificación explícita vía WebSocket al dueño
+                        enviarNotificacionInicioPaseo();
 
                         // El listener de Firestore se encargará de actualizar la UI
                         // cuando detecte el cambio a EN_CURSO
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "Error al iniciar paseo manualmente", e);
+                        Log.e(TAG, "❌ Error al iniciar paseo manualmente", e);
                         Toast.makeText(this, "Error al iniciar el paseo: " + e.getMessage(),
                             Toast.LENGTH_SHORT).show();
                         mostrarLoading(false);
@@ -581,6 +584,25 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             })
             .setNegativeButton("Aún no", null)
             .show();
+    }
+
+    /**
+     * Envía notificación explícita vía WebSocket cuando el paseador inicia el paseo
+     * Esto asegura que el dueño reciba la señal inmediatamente
+     */
+    private void enviarNotificacionInicioPaseo() {
+        if (socketManager == null || !socketManager.isConnected()) {
+            Log.w(TAG, "⚠️ SocketManager no disponible o desconectado");
+            return;
+        }
+
+        try {
+            // Actualizar estado del paseo vía WebSocket
+            socketManager.updatePaseoEstado(idReserva, "EN_CURSO");
+            Log.d(TAG, "📡 Notificación de inicio enviada vía WebSocket - Paseo: " + idReserva);
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error enviando notificación de inicio vía WebSocket", e);
+        }
     }
 
     private void cargarRoleYBottomNav() {

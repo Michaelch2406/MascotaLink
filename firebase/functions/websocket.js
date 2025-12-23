@@ -295,8 +295,14 @@ function initializeSocketServer(io, db) {
           return socket.emit("error", { message: "No autorizado para este paseo" });
         }
 
-        socket.join(`paseo_${paseoId}`);
-        console.log(`🐕 ${socket.userName} se unió al paseo ${paseoId}`);
+        const roomName = `paseo_${paseoId}`;
+        socket.join(roomName);
+
+        const room = io.sockets.adapter.rooms.get(roomName);
+        const clientsInRoom = room ? room.size : 0;
+
+        console.log(`[JOIN_PASEO] Usuario ${socket.userName} (${socket.userId}) se unio a sala "${roomName}"`);
+        console.log(`[JOIN_PASEO] Total de clientes en sala: ${clientsInRoom}`);
 
         socket.emit("joined_paseo", { paseoId });
       } catch (error) {
@@ -310,16 +316,34 @@ function initializeSocketServer(io, db) {
      */
     socket.on("update_location", async (data) => {
       try {
-        const { paseoId, latitud, longitud, accuracy } = data;
+        console.log(`[UPDATE_LOCATION] Recibido de usuario ${socket.userName} (${socket.userId})`);
+        console.log(`[UPDATE_LOCATION] Datos raw:`, JSON.stringify(data));
+
+        // SOPORTE DE COMPRESIÓN: Leer formato comprimido o normal (retrocompatibilidad)
+        const paseoId = data.p || data.paseoId;
+        const latitud = data.lat || data.latitud;
+        const longitud = data.lng || data.longitud;
+        const accuracy = data.acc || data.accuracy || 0;
+        const speed = data.speed || 0;
+        const timestamp = data.ts || data.timestamp || Date.now();
+
+        if (!paseoId) {
+          console.error("[UPDATE_LOCATION] ERROR: sin paseoId en datos:", data);
+          return socket.emit("error", { message: "paseoId requerido" });
+        }
+
+        console.log(`[UPDATE_LOCATION] Parseado: paseoId=${paseoId}, lat=${latitud}, lng=${longitud}`);
 
         // Verificar que el usuario es el paseador
         const paseoDoc = await db.collection("reservas").doc(paseoId).get();
         if (!paseoDoc.exists) {
+          console.error(`❌ Paseo ${paseoId} no encontrado`);
           return socket.emit("error", { message: "Paseo no encontrado" });
         }
 
         const idPaseador = extractId(paseoDoc.data().id_paseador);
         if (socket.userId !== idPaseador) {
+          console.error(`❌ Usuario ${socket.userId} no es el paseador de ${paseoId}`);
           return socket.emit("error", { message: "Solo el paseador puede enviar ubicación" });
         }
 
@@ -330,27 +354,48 @@ function initializeSocketServer(io, db) {
           return socket.emit("error", { message: "Solo se puede enviar ubicación cuando el paseo está en curso" });
         }
 
-        // Stream en tiempo real a todos los participantes
-        io.to(`paseo_${paseoId}`).emit("walker_location", {
+        // Obtener info de la sala para debugging
+        const roomName = `paseo_${paseoId}`;
+        const room = io.sockets.adapter.rooms.get(roomName);
+        const clientsInRoom = room ? room.size : 0;
+
+        console.log(`[UPDATE_LOCATION] Emitiendo a sala "${roomName}" con ${clientsInRoom} clientes`);
+        console.log(`[UPDATE_LOCATION] Datos: lat=${latitud}, lng=${longitud}, acc=${accuracy}`);
+
+        // Stream en tiempo real a todos los participantes (usar mismo evento que el cliente escucha)
+        io.to(roomName).emit("update_location", {
           paseoId,
-          latitud,
-          longitud,
-          accuracy,
-          timestamp: Date.now(),
+          lat: latitud,
+          lng: longitud,
+          acc: accuracy,
+          speed: speed,
+          ts: timestamp,
         });
 
-        // Guardar en Firestore solo cada 30 segundos (reduce writes)
+        console.log(`[UPDATE_LOCATION] Ubicacion streamed para paseo ${paseoId} a ${clientsInRoom} cliente(s)`);
+
+        // Guardar en Firestore solo cada 10 segundos (reduce writes pero mantiene historial)
         const lastSave = socket.lastLocationSave || 0;
-        if (Date.now() - lastSave > 30000) {
+        if (Date.now() - lastSave > 10000) {
+          const locationData = {
+            lat: latitud,
+            lng: longitud,
+            acc: accuracy,
+            speed: speed,
+            ts: admin.firestore.Timestamp.fromMillis(timestamp),
+          };
+
           await db.collection("reservas").doc(paseoId).update({
             ubicacion_actual: new admin.firestore.GeoPoint(latitud, longitud),
             ultima_actualizacion: admin.firestore.FieldValue.serverTimestamp(),
+            ubicaciones: admin.firestore.FieldValue.arrayUnion(locationData),
           });
           socket.lastLocationSave = Date.now();
-          console.log(`📍 Ubicación guardada para paseo ${paseoId}`);
+          console.log(`✅ Ubicación guardada en Firestore para paseo ${paseoId}`);
         }
       } catch (error) {
         console.error("Error al actualizar ubicación:", error);
+        socket.emit("error", { message: "Error al actualizar ubicación" });
       }
     });
 

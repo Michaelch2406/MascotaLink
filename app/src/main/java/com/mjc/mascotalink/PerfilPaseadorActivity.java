@@ -200,11 +200,13 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
         ivBack.setOnClickListener(v -> finish());
 
+        // Inicializar AuthListener inmediatamente para que esté disponible en onStart()
+        setupAuthListener();
+
         // Diferir operaciones no críticas para mejorar tiempo de inicio
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             setupListeners();
             setupResenasRecyclerView();
-            setupAuthListener();
         });
 
         paseadorId = getIntent().getStringExtra("paseadorId");
@@ -667,7 +669,9 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     @Override
     protected void onStart() {
         super.onStart();
-        mAuth.addAuthStateListener(mAuthListener);
+        if (mAuthListener != null) {
+            mAuth.addAuthStateListener(mAuthListener);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
