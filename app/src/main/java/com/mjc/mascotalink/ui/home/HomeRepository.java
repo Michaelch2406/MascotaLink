@@ -68,12 +68,23 @@ public class HomeRepository {
         MutableLiveData<Map<String, Object>> data = new MutableLiveData<>();
         String field = role.equals("PASEADOR") ? "id_paseador" : "id_dueno";
 
+        // FASE 1 - PERFORMANCE: Query optimizada con whereIn() - una sola query en lugar de múltiples
+        // NOTA: Para mejor performance, crear índice compuesto en Firestore:
+        // Collection: reservas
+        // Fields: id_dueno (Ascending), estado (Array-contains), hora_inicio (Descending)
+        // Fields: id_paseador (Ascending), estado (Array-contains), hora_inicio (Descending)
+
+        long startTime = System.currentTimeMillis();
+
         // Buscar reservas LISTO_PARA_INICIAR, EN_CURSO, CONFIRMADO o PENDIENTE (ambas versiones)
         db.collection("reservas")
             .whereEqualTo(field, db.collection("usuarios").document(userId))
             .whereIn("estado", java.util.Arrays.asList("CONFIRMADO", "LISTO_PARA_INICIAR", "EN_CURSO", "PENDIENTE_ACEPTACION", "PENDIENTE"))
             .limit(10) // Aumentar limite para poder filtrar
             .addSnapshotListener((snapshots, e) -> {
+                long queryTime = System.currentTimeMillis() - startTime;
+                Log.d(TAG, "📊 getActiveReservation query completada en " + queryTime + "ms");
+
                 if (e != null) {
                     Log.e(TAG, "Error listening active reservation", e);
                     lastError.setValue("Error al verificar paseos activos: " + e.getMessage());

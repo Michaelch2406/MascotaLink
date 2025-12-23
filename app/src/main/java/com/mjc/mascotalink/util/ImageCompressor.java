@@ -13,22 +13,58 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * Utilidad para comprimir imágenes antes de subirlas.
  * Reduce el tamaño manteniendo calidad visual aceptable.
  */
 public class ImageCompressor {
+
+    private static final Executor backgroundExecutor = Executors.newSingleThreadExecutor();
     
     private static final String TAG = "ImageCompressor";
     private static final int MAX_WIDTH = 1024;
     private static final int MAX_HEIGHT = 1024;
     private static final int QUALITY = 80; // 0-100
     private static final long MAX_SIZE_BYTES = 1024 * 1024; // 1MB
-    
+
     /**
-     * Comprime una imagen desde una URI.
-     * 
+     * Callback para compresión asíncrona
+     */
+    public interface CompressionCallback {
+        void onSuccess(File compressedFile);
+        void onError(Exception error);
+    }
+
+    /**
+     * Comprime una imagen de forma asíncrona en background thread.
+     * RECOMENDADO: Usar este método en lugar de compressImage() para evitar bloquear UI.
+     *
+     * @param context Contexto de la aplicación
+     * @param imageUri URI de la imagen original
+     * @param callback Callback con resultado
+     */
+    public static void compressImageAsync(Context context, Uri imageUri, CompressionCallback callback) {
+        backgroundExecutor.execute(() -> {
+            try {
+                File result = compressImage(context, imageUri);
+                if (result != null) {
+                    callback.onSuccess(result);
+                } else {
+                    callback.onError(new IOException("Compresión falló"));
+                }
+            } catch (Exception e) {
+                callback.onError(e);
+            }
+        });
+    }
+
+    /**
+     * Comprime una imagen desde una URI (método síncrono).
+     * NOTA: Este método bloquea el thread actual. Usar compressImageAsync() para UI thread.
+     *
      * @param context Contexto de la aplicación
      * @param imageUri URI de la imagen original
      * @return File con la imagen comprimida, o null si falla

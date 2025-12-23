@@ -90,11 +90,12 @@ public class PaseosActivity extends AppCompatActivity {
         String cachedRole = BottomNavManager.getUserRole(this);
         if (cachedRole != null) {
             userRole = cachedRole;
-            checkActiveWalkAndRedirect(userRole); // Check for active walk immediately
+            // FASE 1 - CRÍTICO: NO llamar checkActiveWalkAndRedirect() aquí (race condition)
+            // Se llama después de obtener el rol REAL de Firestore en fetchUserRoleAndSetupUI()
             setupRecyclerView(userRole);
             setupTabLayout(userRole);
         }
-        
+
         fetchUserRoleAndSetupUI();
     }
 
@@ -180,6 +181,13 @@ public class PaseosActivity extends AppCompatActivity {
                                 setupRecyclerView(userRole);
                                 setupTabLayout(userRole);
                             }
+
+                            // FASE 1 - CRÍTICO: Verificar paseo activo DESPUÉS de obtener rol real (RACE CONDITION FIX)
+                            if (!hasCheckedActiveWalk) {
+                                checkActiveWalkAndRedirect(fetchedRole);
+                                hasCheckedActiveWalk = true;
+                            }
+
                             // Solo cargar si la actividad está visible
                             if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
                                 cargarPaseos(userRole);
@@ -375,12 +383,19 @@ public class PaseosActivity extends AppCompatActivity {
         }
 
         swipeRefresh.setRefreshing(true);
+        long startTime = System.currentTimeMillis(); // FASE 1 - PERFORMANCE: Medir tiempo de query
 
         String fieldToFilter = "PASEADOR".equalsIgnoreCase(role) ? "id_paseador" : "id_dueno";
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
 
+        // FASE 1 - PERFORMANCE: Query optimizada con whereIn()
+        // NOTA: Para mejor performance, crear índice compuesto en Firestore:
+        // Collection: reservas
+        // Fields: id_dueno (Ascending), estado (Array-contains), fecha (Descending)
+        // Fields: id_paseador (Ascending), estado (Array-contains), fecha (Descending)
+
         Query query;
-        // Para "En Curso", incluir LISTO_PARA_INICIAR y EN_CURSO
+        // Para "En Curso", incluir LISTO_PARA_INICIAR y EN_CURSO (optimizado con whereIn)
         if ("EN_CURSO".equals(estadoActual)) {
             query = db.collection("reservas")
                     .whereEqualTo(fieldToFilter, userRef)
@@ -392,6 +407,10 @@ public class PaseosActivity extends AppCompatActivity {
         }
 
         firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
+            // FASE 1 - PERFORMANCE: Log de tiempo de query
+            long queryTime = System.currentTimeMillis() - startTime;
+            Log.d(TAG, "📊 Query completada en " + queryTime + "ms - Estado: " + estadoActual);
+
             if (e != null) {
                 manejarError(e);
                 return;

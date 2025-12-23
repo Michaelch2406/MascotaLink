@@ -118,6 +118,42 @@
         { "fieldPath": "reminderSent", "order": "ASCENDING" },
         { "fieldPath": "hora_inicio", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_dueno", "order": "ASCENDING" },
+        { "fieldPath": "estado", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_paseador", "order": "ASCENDING" },
+        { "fieldPath": "estado", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_dueno", "order": "ASCENDING" },
+        { "fieldPath": "estado", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "hora_inicio", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_paseador", "order": "ASCENDING" },
+        { "fieldPath": "estado", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "hora_inicio", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

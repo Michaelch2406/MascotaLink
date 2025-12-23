@@ -180,18 +180,24 @@ public class HistorialPaseosActivity extends AppCompatActivity {
         }
 
         swipeRefresh.setRefreshing(true);
+        long startTime = System.currentTimeMillis();
         // No limpiamos listaPaseos aquí para evitar parpadeo, se limpia al recibir datos
 
         String campoFiltro = "PASEADOR".equalsIgnoreCase(userRole) ? "id_paseador" : "id_dueno";
         DocumentReference userRef = db.collection("usuarios").document(currentUserId);
 
-        // Consultamos paseos donde el usuario participa
+        // Optimización: Limitar a 50 paseos más recientes + ordenamiento
+        // NOTA: Índice requerido en firestore.indexes.json
         Query query = db.collection("reservas")
                 .whereEqualTo(campoFiltro, userRef)
-                .whereIn("estado", Arrays.asList("COMPLETADO", "CANCELADO", "RECHAZADO", "FINALIZADO"));
-                //.orderBy("fecha", Query.Direction.DESCENDING); // Comentado por si falta índice
+                .whereIn("estado", Arrays.asList("COMPLETADO", "CANCELADO", "RECHAZADO", "FINALIZADO"))
+                .orderBy("fecha", Query.Direction.DESCENDING)
+                .limit(50);
 
         firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
+            long queryTime = System.currentTimeMillis() - startTime;
+            Log.d(TAG, "Query completada en " + queryTime + "ms");
+
             if (e != null) {
                 manejarError(e);
                 return;

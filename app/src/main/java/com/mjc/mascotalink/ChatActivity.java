@@ -1495,6 +1495,19 @@ public class ChatActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
+        // FASE 1 - CRÍTICO: Limpiar listeners de Firestore (MEMORY LEAK FIX)
+        if (newMessagesListener != null) {
+            newMessagesListener.remove();
+            newMessagesListener = null;
+            Log.d(TAG, "✅ newMessagesListener removido");
+        }
+
+        if (statusUpdatesListener != null) {
+            statusUpdatesListener.remove();
+            statusUpdatesListener = null;
+            Log.d(TAG, "✅ statusUpdatesListener removido");
+        }
+
         if (networkMonitor != null) {
             networkMonitor.unregister();
         }
