@@ -13,6 +13,9 @@ const admin = require("firebase-admin");
 function initializeSocketServer(io, db) {
   console.log("🚀 Inicializando servidor WebSocket...");
 
+  // Caché de estado de paseos activos para evitar consultas repetidas a Firestore
+  const paseoEstadoCache = new Map();
+
   // ========================================
   // MIDDLEWARE DE AUTENTICACIÓN
   // ========================================
@@ -20,7 +23,7 @@ function initializeSocketServer(io, db) {
     const token = socket.handshake.auth.token;
 
     if (!token) {
-      console.warn("❌ Conexión rechazada: sin token");
+      console.warn(" Conexión rechazada: sin token");
       return next(new Error("Authentication token required"));
     }
 
@@ -36,12 +39,12 @@ function initializeSocketServer(io, db) {
         const userData = userDoc.data();
         socket.userRole = userData.rol || "DUENO";
         socket.userName = userData.nombre_display || "Usuario";
-        console.log(`✅ Usuario autenticado: ${socket.userName} (${socket.userId})`);
+        console.log(` Usuario autenticado: ${socket.userName} (${socket.userId})`);
       }
 
       next();
     } catch (error) {
-      console.error("❌ Error de autenticación:", error.message);
+      console.error(" Error de autenticación:", error.message);
       next(new Error("Authentication failed"));
     }
   });
@@ -50,7 +53,7 @@ function initializeSocketServer(io, db) {
   // GESTIÓN DE CONEXIONES
   // ========================================
   io.on("connection", (socket) => {
-    console.log(`🔌 Usuario conectado: ${socket.userName} [${socket.userId}]`);
+    console.log(` Usuario conectado: ${socket.userName} [${socket.userId}]`);
 
     // Unir al usuario a su room personal
     socket.join(socket.userId);
@@ -71,13 +74,13 @@ function initializeSocketServer(io, db) {
         const chatDoc = await db.collection("chats").doc(chatId).get();
 
         if (!chatDoc.exists) {
-          console.warn(`❌ Chat ${chatId} no existe`);
+          console.warn(` Chat ${chatId} no existe`);
           return socket.emit("error", { message: "Chat no encontrado" });
         }
 
         const participantes = chatDoc.data().participantes || [];
         if (!participantes.includes(socket.userId)) {
-          console.warn(`❌ Usuario ${socket.userId} no autorizado para chat ${chatId}`);
+          console.warn(` Usuario ${socket.userId} no autorizado para chat ${chatId}`);
           return socket.emit("error", { message: "No autorizado" });
         }
 
@@ -251,7 +254,7 @@ function initializeSocketServer(io, db) {
           readBy: socket.userId,
         });
 
-        console.log(`✅ Mensaje ${messageId} marcado como leído`);
+        console.log(` Mensaje ${messageId} marcado como leído`);
       } catch (error) {
         console.error("Error al marcar como leído:", error);
       }
@@ -301,8 +304,18 @@ function initializeSocketServer(io, db) {
         const room = io.sockets.adapter.rooms.get(roomName);
         const clientsInRoom = room ? room.size : 0;
 
+        // Cachear el estado del paseo para evitar consultas repetidas
+        const estadoActual = paseoData.estado;
+        paseoEstadoCache.set(paseoId, {
+          estado: estadoActual,
+          idPaseador: idPaseador,
+          idDueno: idDueno,
+          timestamp: Date.now(),
+        });
+
         console.log(`[JOIN_PASEO] Usuario ${socket.userName} (${socket.userId}) se unio a sala "${roomName}"`);
         console.log(`[JOIN_PASEO] Total de clientes en sala: ${clientsInRoom}`);
+        console.log(`[JOIN_PASEO] Estado cacheado: ${estadoActual}`);
 
         socket.emit("joined_paseo", { paseoId });
       } catch (error) {
@@ -334,23 +347,44 @@ function initializeSocketServer(io, db) {
 
         console.log(`[UPDATE_LOCATION] Parseado: paseoId=${paseoId}, lat=${latitud}, lng=${longitud}`);
 
-        // Verificar que el usuario es el paseador
-        const paseoDoc = await db.collection("reservas").doc(paseoId).get();
-        if (!paseoDoc.exists) {
-          console.error(`❌ Paseo ${paseoId} no encontrado`);
-          return socket.emit("error", { message: "Paseo no encontrado" });
+        // Usar cache si esta disponible, sino consultar Firestore
+        let cachedData = paseoEstadoCache.get(paseoId);
+
+        if (!cachedData || Date.now() - cachedData.timestamp > 60000) {
+          // Cache no disponible o expirado (>60s), consultar Firestore
+          console.log(`[UPDATE_LOCATION] Cache expirado para ${paseoId}, consultando Firestore...`);
+          const paseoDoc = await db.collection("reservas").doc(paseoId).get();
+          if (!paseoDoc.exists) {
+            console.error(`[UPDATE_LOCATION] ERROR: Paseo ${paseoId} no encontrado`);
+            return socket.emit("error", { message: "Paseo no encontrado" });
+          }
+
+          const idPaseador = extractId(paseoDoc.data().id_paseador);
+          const idDueno = extractId(paseoDoc.data().id_dueno);
+          const estado = paseoDoc.data().estado;
+
+          // Actualizar cache
+          cachedData = {
+            estado: estado,
+            idPaseador: idPaseador,
+            idDueno: idDueno,
+            timestamp: Date.now(),
+          };
+          paseoEstadoCache.set(paseoId, cachedData);
+          console.log(`[UPDATE_LOCATION] Cache actualizado: estado=${estado}`);
+        } else {
+          console.log(`[UPDATE_LOCATION] Usando cache: estado=${cachedData.estado}`);
         }
 
-        const idPaseador = extractId(paseoDoc.data().id_paseador);
-        if (socket.userId !== idPaseador) {
-          console.error(`❌ Usuario ${socket.userId} no es el paseador de ${paseoId}`);
+        // Verificar que el usuario es el paseador
+        if (socket.userId !== cachedData.idPaseador) {
+          console.error(`[UPDATE_LOCATION] ERROR: Usuario ${socket.userId} no es el paseador de ${paseoId}`);
           return socket.emit("error", { message: "Solo el paseador puede enviar ubicación" });
         }
 
-        // Verificar que el paseo esté EN_CURSO
-        const estado = paseoDoc.data().estado;
-        if (estado !== "EN_CURSO") {
-          console.log(`⚠️  Ubicación rechazada para paseo ${paseoId} - estado: ${estado} (debe ser EN_CURSO)`);
+        // Verificar que el paseo este EN_CURSO
+        if (cachedData.estado !== "EN_CURSO") {
+          console.log(`[UPDATE_LOCATION] WARN: Ubicacion rechazada para paseo ${paseoId} - estado: ${cachedData.estado} (debe ser EN_CURSO)`);
           return socket.emit("error", { message: "Solo se puede enviar ubicación cuando el paseo está en curso" });
         }
 
@@ -391,7 +425,7 @@ function initializeSocketServer(io, db) {
             ubicaciones: admin.firestore.FieldValue.arrayUnion(locationData),
           });
           socket.lastLocationSave = Date.now();
-          console.log(`✅ Ubicación guardada en Firestore para paseo ${paseoId}`);
+          console.log(` Ubicación guardada en Firestore para paseo ${paseoId}`);
         }
       } catch (error) {
         console.error("Error al actualizar ubicación:", error);
@@ -426,6 +460,24 @@ function initializeSocketServer(io, db) {
           [`fecha_${nuevoEstado.toLowerCase()}`]: admin.firestore.FieldValue.serverTimestamp(),
         });
 
+        // Actualizar cache inmediatamente
+        const cachedData = paseoEstadoCache.get(paseoId);
+        if (cachedData) {
+          cachedData.estado = nuevoEstado;
+          cachedData.timestamp = Date.now();
+          paseoEstadoCache.set(paseoId, cachedData);
+          console.log(`[PASEO_ESTADO_CHANGE] Cache actualizado: ${paseoId} -> ${nuevoEstado}`);
+        } else {
+          // Si no existe en cache, crearlo
+          paseoEstadoCache.set(paseoId, {
+            estado: nuevoEstado,
+            idPaseador: idPaseador,
+            idDueno: idDueno,
+            timestamp: Date.now(),
+          });
+          console.log(`[PASEO_ESTADO_CHANGE] Cache creado: ${paseoId} -> ${nuevoEstado}`);
+        }
+
         // Notificar a todos los participantes
         io.to(`paseo_${paseoId}`).emit("paseo_updated", {
           paseoId,
@@ -433,7 +485,13 @@ function initializeSocketServer(io, db) {
           changedBy: socket.userId,
         });
 
-        console.log(`🚶 Estado de paseo ${paseoId} cambiado a ${nuevoEstado}`);
+        console.log(`[PASEO_ESTADO_CHANGE] Estado de paseo ${paseoId} cambiado a ${nuevoEstado}`);
+
+        // Limpiar cache si el paseo termino
+        if (nuevoEstado === "COMPLETADO" || nuevoEstado === "CANCELADO") {
+          paseoEstadoCache.delete(paseoId);
+          console.log(`[PASEO_ESTADO_CHANGE] Cache eliminado para paseo finalizado: ${paseoId}`);
+        }
       } catch (error) {
         console.error("Error al cambiar estado de paseo:", error);
         socket.emit("error", { message: "Error al cambiar estado" });
@@ -469,7 +527,7 @@ function initializeSocketServer(io, db) {
     // DESCONEXIÓN
     // ========================================
     socket.on("disconnect", async (reason) => {
-      console.log(`🔌 Usuario desconectado: ${socket.userName} [${reason}]`);
+      console.log(` Usuario desconectado: ${socket.userName} [${reason}]`);
 
       try {
         // Actualizar presencia a "offline"
@@ -498,7 +556,7 @@ function initializeSocketServer(io, db) {
     });
   });
 
-  console.log("✅ Servidor WebSocket inicializado correctamente");
+  console.log(" Servidor WebSocket inicializado correctamente");
 }
 
 // ========================================

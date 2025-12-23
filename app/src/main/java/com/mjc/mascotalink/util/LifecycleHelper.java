@@ -65,7 +65,7 @@ public class LifecycleHelper {
             if (callback != null) {
                 callback.handleMessage(msg);
             } else {
-                Log.w(TAG, "⚠️ Callback ya fue garbage collected");
+                Log.w(TAG, " Callback ya fue garbage collected");
             }
         }
 
@@ -88,7 +88,7 @@ public class LifecycleHelper {
             if (!isDestroyed) {
                 cleanupTasks.add(task);
             } else {
-                Log.w(TAG, "⚠️ Lifecycle ya destruido, ejecutando cleanup inmediatamente");
+                Log.w(TAG, " Lifecycle ya destruido, ejecutando cleanup inmediatamente");
                 task.run();
             }
         }
@@ -180,7 +180,7 @@ public class LifecycleHelper {
             if (runnable != null) {
                 runnable.run();
             } else {
-                Log.w(TAG, "⚠️ Runnable ya fue garbage collected");
+                Log.w(TAG, " Runnable ya fue garbage collected");
             }
         }
     }
@@ -227,9 +227,9 @@ public class LifecycleHelper {
             trackedObjects.removeAll(toRemove);
 
             if (aliveCount > 0) {
-                Log.w(TAG, "⚠️ Posibles leaks: " + aliveCount + " objetos aún en memoria");
+                Log.w(TAG, " Posibles leaks: " + aliveCount + " objetos aún en memoria");
             } else {
-                Log.d(TAG, "✅ No se detectaron leaks");
+                Log.d(TAG, " No se detectaron leaks");
             }
         }
     }
@@ -239,14 +239,14 @@ public class LifecycleHelper {
      */
     public static boolean isContextValid(Context context) {
         if (context == null) {
-            Log.w(TAG, "⚠️ Context es null");
+            Log.w(TAG, " Context es null");
             return false;
         }
 
         if (context instanceof android.app.Activity) {
             android.app.Activity activity = (android.app.Activity) context;
             if (activity.isFinishing() || activity.isDestroyed()) {
-                Log.w(TAG, "⚠️ Activity ya está finishing/destroyed");
+                Log.w(TAG, " Activity ya está finishing/destroyed");
                 return false;
             }
         }

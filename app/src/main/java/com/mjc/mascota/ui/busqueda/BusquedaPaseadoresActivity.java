@@ -878,7 +878,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
           // Subscribe to presence updates
           socketManager.subscribePresence(paseadorIds);
-          Log.d(TAG, "👁️ Suscrito a presencia de " + paseadorIds.length + " paseadores");
+          Log.d(TAG, " Suscrito a presencia de " + paseadorIds.length + " paseadores");
       }
 
       private void updatePaseadorOnlineStatus(String paseadorId, boolean isOnline) {
@@ -916,7 +916,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                   } else if (contentScrollView.getVisibility() == View.VISIBLE) {
                       popularesAdapter.submitList(updatedList);
                   }
-                  Log.d(TAG, "👁️ Actualizado estado online de paseador " + paseadorId + ": " + isOnline);
+                  Log.d(TAG, " Actualizado estado online de paseador " + paseadorId + ": " + isOnline);
               }
           });
       }
@@ -925,7 +925,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
           if (socketManager != null) {
               socketManager.off("user_connected");
               socketManager.off("user_disconnected");
-              Log.d(TAG, "👁️ Limpieza de listeners de presencia");
+              Log.d(TAG, " Limpieza de listeners de presencia");
           }
       }
 
@@ -941,7 +941,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                       if (reconnectSnackbar == null || !reconnectSnackbar.isShown()) {
                           reconnectSnackbar = com.google.android.material.snackbar.Snackbar.make(
                               findViewById(android.R.id.content),
-                              "⚠️ Sin conexión. El estado 'En línea' puede estar desactualizado.",
+                              " Sin conexión. El estado 'En línea' puede estar desactualizado.",
                               com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
                           );
                           reconnectSnackbar.setAction("Reintentar", v -> {
@@ -976,7 +976,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                       // Mostrar confirmación breve
                       com.google.android.material.snackbar.Snackbar.make(
                           findViewById(android.R.id.content),
-                          "✅ Conexión restaurada. Actualizando estado de paseadores...",
+                          " Conexión restaurada. Actualizando estado de paseadores...",
                           com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
                       ).show();
 
@@ -999,7 +999,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
               @Override
               public void onReconnectionFailed(int attempts) {
-                  Log.w(TAG, "❌ Reconexión fallida tras " + attempts + " intentos");
+                  Log.w(TAG, " Reconexión fallida tras " + attempts + " intentos");
                   runOnUiThread(() -> {
                       if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
                           reconnectSnackbar.dismiss();

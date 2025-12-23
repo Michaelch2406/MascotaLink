@@ -74,7 +74,7 @@ public class WalkiGlideModule extends AppGlideModule {
             builder.setLogLevel(Log.ERROR);
         }
 
-        Log.d(TAG, "✅ Glide configurado - Memory: " + (MEMORY_CACHE_SIZE / 1024 / 1024) +
+        Log.d(TAG, " Glide configurado - Memory: " + (MEMORY_CACHE_SIZE / 1024 / 1024) +
                 "MB, Disk: " + (DISK_CACHE_SIZE / 1024 / 1024) + "MB");
     }
 

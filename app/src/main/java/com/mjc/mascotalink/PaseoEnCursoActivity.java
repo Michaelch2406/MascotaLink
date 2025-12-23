@@ -237,6 +237,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
 
         reservaRef = db.collection("reservas").document(idReserva);
 
+        // Conectar al WebSocket antes de unirse al paseo
+        socketManager.connect();
+
         // Unirse al paseo vía WebSocket para streaming en tiempo real
         socketManager.joinPaseo(idReserva);
 
@@ -265,8 +268,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         }
         startLocationUpdates();
 
-        // Reconectar al paseo si es necesario
+        // Reconectar al WebSocket y unirse al paseo
         if (idReserva != null) {
+            socketManager.connect();
             socketManager.joinPaseo(idReserva);
         }
     }
@@ -565,7 +569,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
 
                 reservaRef.update(updates)
                     .addOnSuccessListener(unused -> {
-                        Log.d(TAG, "✅ Paseo iniciado manualmente - Notificando vía WebSocket");
+                        Log.d(TAG, " Paseo iniciado manualmente - Notificando vía WebSocket");
                         Toast.makeText(this, "¡Paseo iniciado! Disfruta el recorrido.", Toast.LENGTH_SHORT).show();
                         mostrarLoading(false);
 
@@ -576,7 +580,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                         // cuando detecte el cambio a EN_CURSO
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "❌ Error al iniciar paseo manualmente", e);
+                        Log.e(TAG, " Error al iniciar paseo manualmente", e);
                         Toast.makeText(this, "Error al iniciar el paseo: " + e.getMessage(),
                             Toast.LENGTH_SHORT).show();
                         mostrarLoading(false);
@@ -592,7 +596,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
      */
     private void enviarNotificacionInicioPaseo() {
         if (socketManager == null || !socketManager.isConnected()) {
-            Log.w(TAG, "⚠️ SocketManager no disponible o desconectado");
+            Log.w(TAG, " SocketManager no disponible o desconectado");
             return;
         }
 
@@ -601,7 +605,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             socketManager.updatePaseoEstado(idReserva, "EN_CURSO");
             Log.d(TAG, "📡 Notificación de inicio enviada vía WebSocket - Paseo: " + idReserva);
         } catch (Exception e) {
-            Log.e(TAG, "❌ Error enviando notificación de inicio vía WebSocket", e);
+            Log.e(TAG, " Error enviando notificación de inicio vía WebSocket", e);
         }
     }
 
@@ -1674,13 +1678,23 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     }
 
     private void startLocationService() {
-        Intent serviceIntent = new Intent(this, LocationService.class);
-        serviceIntent.setAction(LocationService.ACTION_START_TRACKING);
-        serviceIntent.putExtra(LocationService.EXTRA_RESERVA_ID, idReserva);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
+        Log.d(TAG, ">>> INTENTANDO INICIAR LocationService para paseo: " + idReserva);
+        try {
+            Intent serviceIntent = new Intent(this, LocationService.class);
+            serviceIntent.setAction(LocationService.ACTION_START_TRACKING);
+            serviceIntent.putExtra(LocationService.EXTRA_RESERVA_ID, idReserva);
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                Log.d(TAG, ">>> Iniciando como FOREGROUND service (Android O+)");
+                startForegroundService(serviceIntent);
+            } else {
+                Log.d(TAG, ">>> Iniciando como servicio normal");
+                startService(serviceIntent);
+            }
+            Log.d(TAG, ">>> LocationService iniciado exitosamente");
+        } catch (Exception e) {
+            Log.e(TAG, ">>> ERROR al iniciar LocationService", e);
+            Toast.makeText(this, "Error al iniciar tracking: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1700,12 +1714,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             if (fusedLocationClient != null && locationCallback != null) {
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
                 actualizarEstadoUbicacion("Ubicación: buscando señal...");
-                Log.d(TAG, "✅ Location updates iniciados - Intervalo: 7s, Min distancia: 6m");
+                Log.d(TAG, " Location updates iniciados - Intervalo: 7s, Min distancia: 6m");
             } else {
-                Log.e(TAG, "❌ No se puede iniciar location updates - fusedLocationClient o callback null");
+                Log.e(TAG, " No se puede iniciar location updates - fusedLocationClient o callback null");
             }
         } else {
-            Log.e(TAG, "❌ Permiso ACCESS_FINE_LOCATION no otorgado");
+            Log.e(TAG, " Permiso ACCESS_FINE_LOCATION no otorgado");
         }
     }
 

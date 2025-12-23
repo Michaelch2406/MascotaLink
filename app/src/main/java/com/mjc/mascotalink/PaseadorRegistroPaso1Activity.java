@@ -288,7 +288,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private void onContinuar() {
         if (!validarCamposPantalla1()) {
-            Toast.makeText(this, "⚠️ Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, " Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
             return;
         }
         guardarDatosCompletos();

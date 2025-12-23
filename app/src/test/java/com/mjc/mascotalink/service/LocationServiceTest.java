@@ -20,9 +20,9 @@ import static org.mockito.Mockito.*;
  * Componente: LocationService (870+ líneas)
  *
  * PUNTOS CRÍTICOS PROBADOS:
- * 1. ✅ Validación de precisión GPS - Rechaza ubicaciones con accuracy > 500m
- * 2. ✅ Detección de saltos anormales - Rechaza saltos > 100m en < 2 segundos
- * 3. ✅ Cálculo de distancia acumulada - Solo cuenta movimientos > 5m
+ * 1.  Validación de precisión GPS - Rechaza ubicaciones con accuracy > 500m
+ * 2.  Detección de saltos anormales - Rechaza saltos > 100m en < 2 segundos
+ * 3.  Cálculo de distancia acumulada - Solo cuenta movimientos > 5m
  *
  * IMPACTO:
  * - Previene datos GPS corruptos que afectan el rastreo en tiempo real
@@ -63,8 +63,8 @@ public class LocationServiceTest {
      * - Cambio abrupto de red GPS a celular
      *
      * RESULTADO ESPERADO:
-     * ✅ Ubicaciones con accuracy > 500m son rechazadas
-     * ✅ Ubicaciones con accuracy <= 500m son aceptadas
+     *  Ubicaciones con accuracy > 500m son rechazadas
+     *  Ubicaciones con accuracy <= 500m son aceptadas
      */
     @Test
     public void testValidacionPrecisionGPS_RechazaUbicacionesMuyImprecisas() {
@@ -102,9 +102,9 @@ public class LocationServiceTest {
      * - Pérdida temporal de señal GPS
      *
      * RESULTADO ESPERADO:
-     * ✅ Salto de 150m en 1 segundo es rechazado (anormal)
-     * ✅ Salto de 150m en 5 segundos es aceptado (movimiento rápido normal)
-     * ✅ Salto de 50m en 1 segundo es aceptado (movimiento normal)
+     *  Salto de 150m en 1 segundo es rechazado (anormal)
+     *  Salto de 150m en 5 segundos es aceptado (movimiento rápido normal)
+     *  Salto de 50m en 1 segundo es aceptado (movimiento normal)
      */
     @Test
     public void testDeteccionSaltosAnormales_RechazaTeleportacionGPS() {
@@ -157,9 +157,9 @@ public class LocationServiceTest {
      * - Evitar distancias infladas por ruido GPS
      *
      * RESULTADO ESPERADO:
-     * ✅ Movimientos > 5m se acumulan correctamente
-     * ✅ Movimientos <= 5m son ignorados (ruido GPS)
-     * ✅ Distancia acumulada se calcula correctamente con múltiples puntos
+     *  Movimientos > 5m se acumulan correctamente
+     *  Movimientos <= 5m son ignorados (ruido GPS)
+     *  Distancia acumulada se calcula correctamente con múltiples puntos
      */
     @Test
     public void testCalculoDistanciaAcumulada_FiltraRuidoGPS() {
@@ -220,8 +220,8 @@ public class LocationServiceTest {
      * LÍNEA DE CÓDIGO: LocationService.java:387-391
      *
      * RESULTADO ESPERADO:
-     * ✅ Ubicación estacionaria + baja precisión es rechazada
-     * ✅ Ubicación estacionaria + buena precisión puede ser aceptada
+     *  Ubicación estacionaria + baja precisión es rechazada
+     *  Ubicación estacionaria + buena precisión puede ser aceptada
      */
     @Test
     public void testFiltroCombinadoEstacionarioBajaPrecision() {
@@ -246,10 +246,10 @@ public class LocationServiceTest {
     /**
      * RESUMEN DE COBERTURA:
      *
-     * ✅ Validación de precisión GPS (MAX_ACCURACY_METERS = 500m)
-     * ✅ Detección de saltos anormales (MAX_JUMP_METERS = 100m en < 2s)
-     * ✅ Cálculo de distancia acumulada (solo > 5m)
-     * ✅ Filtro combinado estacionario + baja precisión
+     *  Validación de precisión GPS (MAX_ACCURACY_METERS = 500m)
+     *  Detección de saltos anormales (MAX_JUMP_METERS = 100m en < 2s)
+     *  Cálculo de distancia acumulada (solo > 5m)
+     *  Filtro combinado estacionario + baja precisión
      *
      * MÉTRICAS DE CALIDAD:
      * - Cobertura de lógica crítica: ~40% del método processLocation()

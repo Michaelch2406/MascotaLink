@@ -373,8 +373,8 @@ public class HomeFragment extends Fragment {
                     layoutStats.setVisibility(View.GONE);
                     desc.setVisibility(View.VISIBLE);
 
-                    // Estado: Pendiente (Gris/Neutral)
-                    header.setBackgroundResource(R.drawable.bg_gradient_card);
+                    // Estado: Pendiente (Amarillo/Naranja vistoso)
+                    header.setBackgroundResource(R.drawable.bg_gradient_yellow_card);
                     titulo.setText("Solicitud Enviada");
                     titulo.setTextColor(getResources().getColor(R.color.white));
 
@@ -392,7 +392,7 @@ public class HomeFragment extends Fragment {
                     desc.setTextColor(getResources().getColor(R.color.white));
 
                     btn.setText("Ver Estado");
-                    btn.setTextColor(getResources().getColor(R.color.text_secondary));
+                    btn.setTextColor(getResources().getColor(R.color.amber_dark));
                     icon.setImageResource(R.drawable.ic_access_time);
                     icon.setColorFilter(getResources().getColor(R.color.white));
 

@@ -315,7 +315,7 @@ public class SolicitudesActivity extends AppCompatActivity {
                         if (connectionSnackbar == null || !connectionSnackbar.isShown()) {
                             connectionSnackbar = com.google.android.material.snackbar.Snackbar.make(
                                 findViewById(android.R.id.content),
-                                "⚠️ Sin conexión. Las solicitudes pueden estar desactualizadas.",
+                                " Sin conexión. Las solicitudes pueden estar desactualizadas.",
                                 com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
                             );
                             connectionSnackbar.setAction("Reintentar", v -> {
@@ -351,7 +351,7 @@ public class SolicitudesActivity extends AppCompatActivity {
                         // Mostrar confirmación y auto-refresh
                         com.google.android.material.snackbar.Snackbar.make(
                             findViewById(android.R.id.content),
-                            "✅ Conexión restaurada. Actualizando...",
+                            " Conexión restaurada. Actualizando...",
                             com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
                         ).show();
 

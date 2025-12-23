@@ -143,7 +143,7 @@ public class APIClient {
                     // Si la respuesta es exitosa, retornar
                     if (response.isSuccessful()) {
                         if (attempt > 0) {
-                            Log.d(TAG, "✅ Request exitoso después de " + attempt + " reintentos");
+                            Log.d(TAG, " Request exitoso después de " + attempt + " reintentos");
                         }
                         return response;
                     }
@@ -165,7 +165,7 @@ public class APIClient {
                     throw new IOException("Retry interrumpido", e);
                 } catch (IOException e) {
                     lastException = e;
-                    Log.w(TAG, "⚠️ Request falló (intento " + (attempt + 1) + "/" +
+                    Log.w(TAG, " Request falló (intento " + (attempt + 1) + "/" +
                               (MAX_RETRIES + 1) + "): " + e.getMessage());
 
                     // En el último intento, lanzar la excepción

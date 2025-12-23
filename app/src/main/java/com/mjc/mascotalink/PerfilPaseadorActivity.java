@@ -1214,7 +1214,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     runOnUiThread(() -> {
                         badgePerfilEnLinea.setVisibility(View.VISIBLE);
                     });
-                    Log.d(TAG, "👁️ Paseador conectado: " + userId);
+                    Log.d(TAG, " Paseador conectado: " + userId);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error procesando user_connected", e);
@@ -1233,7 +1233,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                         // Reload from Firestore to get updated ultima_conexion
                         reloadUltimaConexion();
                     });
-                    Log.d(TAG, "👁️ Paseador desconectado: " + userId);
+                    Log.d(TAG, " Paseador desconectado: " + userId);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error procesando user_disconnected", e);
@@ -1304,7 +1304,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         // Query initial status and subscribe to presence updates
         socketManager.getOnlineUsers(new String[]{paseadorId});
         socketManager.subscribePresence(new String[]{paseadorId});
-        Log.d(TAG, "👁️ Presencia configurada para paseador: " + paseadorId);
+        Log.d(TAG, " Presencia configurada para paseador: " + paseadorId);
     }
 
     private void cleanupPresenceListeners() {
@@ -1313,7 +1313,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             socketManager.off("user_disconnected");
             socketManager.off("online_users_response");
             socketManager.unsubscribePresence(new String[]{paseadorId});
-            Log.d(TAG, "👁️ Limpieza de presencia para paseador: " + paseadorId);
+            Log.d(TAG, " Limpieza de presencia para paseador: " + paseadorId);
         }
     }
 

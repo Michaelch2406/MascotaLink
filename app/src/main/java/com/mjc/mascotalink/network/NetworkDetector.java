@@ -91,7 +91,7 @@ public class NetworkDetector {
             if (configManager.shouldPreferTailscale()) {
                 String tailscaleIp = detectTailscaleConnection(context);
                 if (tailscaleIp != null) {
-                    Log.i(TAG, "✅ [PRIORIDAD 1] Tailscale detectado: " + tailscaleIp);
+                    Log.i(TAG, " [PRIORIDAD 1] Tailscale detectado: " + tailscaleIp);
                     return tailscaleIp;
                 }
             }
@@ -100,7 +100,7 @@ public class NetworkDetector {
             if (ssid != null) {
                 String cachedIp = getCachedIpForSsid(context, ssid);
                 if (cachedIp != null) {
-                    Log.i(TAG, "✅ [PRIORIDAD 2] IP en caché para SSID '" + ssid + "': " + cachedIp);
+                    Log.i(TAG, " [PRIORIDAD 2] IP en caché para SSID '" + ssid + "': " + cachedIp);
                     return cachedIp;
                 }
             }
@@ -121,7 +121,7 @@ public class NetworkDetector {
             // ===== PRIORIDAD 4: SSID CONOCIDO (LEGACY) =====
             String ssidBasedIp = detectBySSID(context);
             if (ssidBasedIp != null) {
-                Log.i(TAG, "✅ [PRIORIDAD 4] Red conocida por SSID legacy: " + ssidBasedIp);
+                Log.i(TAG, " [PRIORIDAD 4] Red conocida por SSID legacy: " + ssidBasedIp);
                 if (ssid != null) {
                     cacheIpForSsid(context, ssid, ssidBasedIp);
                 }
@@ -131,7 +131,7 @@ public class NetworkDetector {
             // ===== PRIORIDAD 5: CONFIGURACIÓN MANUAL =====
             String manualIp = configManager.getManualIp();
             if (manualIp != null && !manualIp.isEmpty()) {
-                Log.i(TAG, "✅ [PRIORIDAD 5] IP manual configurada: " + manualIp);
+                Log.i(TAG, " [PRIORIDAD 5] IP manual configurada: " + manualIp);
                 return manualIp;
             }
 
@@ -139,7 +139,7 @@ public class NetworkDetector {
             if (configManager.isAutoDetectEnabled() && localIp != null) {
                 String detectedIp = smartDetectEmulatorIp(context, localIp);
                 if (detectedIp != null) {
-                    Log.i(TAG, "✅ [PRIORIDAD 6] IP detectada automáticamente: " + detectedIp);
+                    Log.i(TAG, " [PRIORIDAD 6] IP detectada automáticamente: " + detectedIp);
                     // Guardar en caché para futuras conexiones
                     if (ssid != null) {
                         cacheIpForSsid(context, ssid, detectedIp);
@@ -149,11 +149,11 @@ public class NetworkDetector {
             }
 
             // ===== PRIORIDAD 7: FALLBACK =====
-            Log.w(TAG, "⚠️ [FALLBACK] No se detectó ninguna red, usando: " + DEFAULT_HOST);
+            Log.w(TAG, " [FALLBACK] No se detectó ninguna red, usando: " + DEFAULT_HOST);
             return DEFAULT_HOST;
 
         } catch (Exception e) {
-            Log.e(TAG, "❌ Error al detectar red: " + e.getMessage(), e);
+            Log.e(TAG, " Error al detectar red: " + e.getMessage(), e);
             return DEFAULT_HOST;
         }
     }
@@ -164,25 +164,25 @@ public class NetworkDetector {
     @Nullable
     private static String getHardcodedIpForSubnet(String localIp) {
         if (localIp.startsWith("192.168.0.")) {
-            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Casa (192.168.0.x) detectada. Usando: 192.168.0.147");
+            Log.i(TAG, " [PRIORIDAD 3] Subred Casa (192.168.0.x) detectada. Usando: 192.168.0.147");
             return "192.168.0.147";
         } else if (localIp.startsWith("192.168.1.")) {
-            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Escuela (192.168.1.x) detectada. Usando: 192.168.1.86");
+            Log.i(TAG, " [PRIORIDAD 3] Subred Escuela (192.168.1.x) detectada. Usando: 192.168.1.86");
             return "192.168.1.86";
         } else if (localIp.startsWith("192.168.137.")) {
-            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Hotspot (192.168.137.x) detectada. Usando: 192.168.137.1");
+            Log.i(TAG, " [PRIORIDAD 3] Subred Hotspot (192.168.137.x) detectada. Usando: 192.168.137.1");
             return "192.168.137.1";
         } else if (localIp.startsWith("10.10.0.")) {
-            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Trabajo (10.10.0.x) detectada. Usando: 10.10.0.142");
+            Log.i(TAG, " [PRIORIDAD 3] Subred Trabajo (10.10.0.x) detectada. Usando: 10.10.0.142");
             return "10.10.0.142";
         } else if (localIp.startsWith("10.0.2.")) {
-            Log.i(TAG, "✅ [PRIORIDAD 3] Emulador Android Estándar (10.0.2.x) detectado. Usando: 10.0.2.2");
+            Log.i(TAG, " [PRIORIDAD 3] Emulador Android Estándar (10.0.2.x) detectado. Usando: 10.0.2.2");
             return "10.0.2.2";
         } else if (localIp.startsWith("10.0.3.")) {
-            Log.i(TAG, "✅ [PRIORIDAD 3] Emulador Genymotion (10.0.3.x) detectado. Usando: 10.0.3.2");
+            Log.i(TAG, " [PRIORIDAD 3] Emulador Genymotion (10.0.3.x) detectado. Usando: 10.0.3.2");
             return "10.0.3.2";
         } else if (localIp.startsWith("10.106.12.")) {
-            Log.i(TAG, "✅ [PRIORIDAD 3] Subred Hotspot Detectada (10.106.12.x). Usando: 10.106.12.132");
+            Log.i(TAG, " [PRIORIDAD 3] Subred Hotspot Detectada (10.106.12.x). Usando: 10.106.12.132");
             return "10.106.12.132";
         }
         return null;
@@ -421,7 +421,7 @@ public class NetworkDetector {
             }
         }
 
-        // ✅ Rango CGNAT de Tailscale: 100.64.0.0/10 (100.64.0.0 - 100.127.255.255)
+        //  Rango CGNAT de Tailscale: 100.64.0.0/10 (100.64.0.0 - 100.127.255.255)
         if (ip.startsWith("100.")) {
             try {
                 String[] parts = ip.split("\\.");

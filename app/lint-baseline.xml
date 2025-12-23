@@ -947,7 +947,7 @@
     <issue
         id="SetTextI18n"
         message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
-        errorLine1="            tvAntecedentesNombre.setText(&quot;✅ Archivo subido: &quot; + getFileName(uri));"
+        errorLine1="            tvAntecedentesNombre.setText(&quot; Archivo subido: &quot; + getFileName(uri));"
         errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -958,7 +958,7 @@
     <issue
         id="SetTextI18n"
         message="String literal in `setText` can not be translated. Use Android resources instead."
-        errorLine1="            tvAntecedentesNombre.setText(&quot;✅ Archivo subido: &quot; + getFileName(uri));"
+        errorLine1="            tvAntecedentesNombre.setText(&quot; Archivo subido: &quot; + getFileName(uri));"
         errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -969,7 +969,7 @@
     <issue
         id="SetTextI18n"
         message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
-        errorLine1="            tvMedicoNombre.setText(&quot;✅ Archivo subido: &quot; + getFileName(uri));"
+        errorLine1="            tvMedicoNombre.setText(&quot; Archivo subido: &quot; + getFileName(uri));"
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -980,7 +980,7 @@
     <issue
         id="SetTextI18n"
         message="String literal in `setText` can not be translated. Use Android resources instead."
-        errorLine1="            tvMedicoNombre.setText(&quot;✅ Archivo subido: &quot; + getFileName(uri));"
+        errorLine1="            tvMedicoNombre.setText(&quot; Archivo subido: &quot; + getFileName(uri));"
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -991,7 +991,7 @@
     <issue
         id="SetTextI18n"
         message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
-        errorLine1="                tvAntecedentesNombre.setText(&quot;✅ Archivo subido: &quot; + getFileNameFromUri(antecedentesUri));"
+        errorLine1="                tvAntecedentesNombre.setText(&quot; Archivo subido: &quot; + getFileNameFromUri(antecedentesUri));"
         errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -1002,7 +1002,7 @@
     <issue
         id="SetTextI18n"
         message="String literal in `setText` can not be translated. Use Android resources instead."
-        errorLine1="                tvAntecedentesNombre.setText(&quot;✅ Archivo subido: &quot; + getFileNameFromUri(antecedentesUri));"
+        errorLine1="                tvAntecedentesNombre.setText(&quot; Archivo subido: &quot; + getFileNameFromUri(antecedentesUri));"
         errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -1013,7 +1013,7 @@
     <issue
         id="SetTextI18n"
         message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
-        errorLine1="                tvMedicoNombre.setText(&quot;✅ Archivo subido: &quot; + getFileNameFromUri(medicoUri));"
+        errorLine1="                tvMedicoNombre.setText(&quot; Archivo subido: &quot; + getFileNameFromUri(medicoUri));"
         errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -1024,7 +1024,7 @@
     <issue
         id="SetTextI18n"
         message="String literal in `setText` can not be translated. Use Android resources instead."
-        errorLine1="                tvMedicoNombre.setText(&quot;✅ Archivo subido: &quot; + getFileNameFromUri(medicoUri));"
+        errorLine1="                tvMedicoNombre.setText(&quot; Archivo subido: &quot; + getFileNameFromUri(medicoUri));"
         errorLine2="                                       ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/mjc/mascotalink/PaseadorRegistroPaso3Activity.java"
@@ -1892,8 +1892,8 @@
 
     <issue
         id="HardcodedText"
-        message="Hardcoded string &quot;✅ Continuar al Paso 3&quot;, should use `@string` resource"
-        errorLine1="            android:text=&quot;✅ Continuar al Paso 3&quot;"
+        message="Hardcoded string &quot; Continuar al Paso 3&quot;, should use `@string` resource"
+        errorLine1="            android:text=&quot; Continuar al Paso 3&quot;"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/layout/activity_paseador_registro_paso2.xml"

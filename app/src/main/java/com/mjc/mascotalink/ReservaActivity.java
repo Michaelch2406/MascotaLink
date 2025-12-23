@@ -1767,7 +1767,7 @@ public class ReservaActivity extends AppCompatActivity {
                             btnConfirmarReserva.setEnabled(false);
                         }
                         Toast.makeText(ReservaActivity.this,
-                            "⚠️ Sin conexión. No se puede crear la reserva.",
+                            " Sin conexión. No se puede crear la reserva.",
                             Toast.LENGTH_LONG).show();
                     });
                 }
@@ -1784,7 +1784,7 @@ public class ReservaActivity extends AppCompatActivity {
                 public void onReconnected() {
                     runOnUiThread(() -> {
                         Toast.makeText(ReservaActivity.this,
-                            "✅ Conexión restaurada",
+                            " Conexión restaurada",
                             Toast.LENGTH_SHORT).show();
                         verificarCamposCompletos();
                     });

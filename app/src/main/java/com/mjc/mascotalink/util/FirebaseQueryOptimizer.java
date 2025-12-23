@@ -56,7 +56,7 @@ public class FirebaseQueryOptimizer {
     private void enableOfflinePersistence() {
         try {
             db.enableNetwork(); // Asegurar que la red esté habilitada
-            Log.d(TAG, "✅ Persistencia offline habilitada");
+            Log.d(TAG, " Persistencia offline habilitada");
         } catch (Exception e) {
             Log.w(TAG, "Persistencia offline ya estaba habilitada o falló", e);
         }
@@ -95,7 +95,7 @@ public class FirebaseQueryOptimizer {
          */
         public QueryBuilder whereIn(String field, List<?> values) {
             if (values.size() > 10) {
-                Log.w(TAG, "⚠️ whereIn soporta máximo 10 valores, truncando...");
+                Log.w(TAG, " whereIn soporta máximo 10 valores, truncando...");
                 values = values.subList(0, 10);
             }
             query = query.whereIn(field, values);
@@ -184,7 +184,7 @@ public class FirebaseQueryOptimizer {
                                     @NonNull Source source,
                                     @NonNull QuerySnapshotCallback callback) {
         if (lifecycleOwner.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
-            Log.w(TAG, "⚠️ No se puede agregar listener a lifecycle DESTROYED");
+            Log.w(TAG, " No se puede agregar listener a lifecycle DESTROYED");
             return;
         }
 
@@ -213,7 +213,7 @@ public class FirebaseQueryOptimizer {
             }
         });
 
-        Log.d(TAG, "✅ Listener agregado (total activos: " + activeListeners.size() + ")");
+        Log.d(TAG, " Listener agregado (total activos: " + activeListeners.size() + ")");
     }
 
     /**
@@ -223,7 +223,7 @@ public class FirebaseQueryOptimizer {
                                    @NonNull DocumentReference document,
                                    @NonNull DocumentSnapshotCallback callback) {
         if (lifecycleOwner.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
-            Log.w(TAG, "⚠️ No se puede agregar listener a lifecycle DESTROYED");
+            Log.w(TAG, " No se puede agregar listener a lifecycle DESTROYED");
             return;
         }
 
@@ -247,7 +247,7 @@ public class FirebaseQueryOptimizer {
             }
         });
 
-        Log.d(TAG, "✅ Document listener agregado");
+        Log.d(TAG, " Document listener agregado");
     }
 
     /**
@@ -279,7 +279,7 @@ public class FirebaseQueryOptimizer {
      */
     public WriteBatch startBatch() {
         if (currentBatch != null) {
-            Log.w(TAG, "⚠️ Ya existe un batch activo, se committeará automáticamente");
+            Log.w(TAG, " Ya existe un batch activo, se committeará automáticamente");
             commitBatch();
         }
         currentBatch = db.batch();
@@ -306,7 +306,7 @@ public class FirebaseQueryOptimizer {
 
         // Auto-commit si se alcanza el límite de Firestore
         if (batchOperationCount >= MAX_BATCH_SIZE) {
-            Log.w(TAG, "⚠️ Batch alcanzó límite de 500 operaciones, committeando automáticamente");
+            Log.w(TAG, " Batch alcanzó límite de 500 operaciones, committeando automáticamente");
             commitBatch();
         }
     }
@@ -316,17 +316,17 @@ public class FirebaseQueryOptimizer {
      */
     public void commitBatch() {
         if (currentBatch == null) {
-            Log.w(TAG, "⚠️ No hay batch activo para committear");
+            Log.w(TAG, " No hay batch activo para committear");
             return;
         }
 
         final int operations = batchOperationCount;
         currentBatch.commit()
                 .addOnSuccessListener(aVoid ->
-                        Log.d(TAG, "✅ Batch committeado exitosamente (" + operations + " operaciones)")
+                        Log.d(TAG, " Batch committeado exitosamente (" + operations + " operaciones)")
                 )
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "❌ Error al committear batch", e)
+                        Log.e(TAG, " Error al committear batch", e)
                 );
 
         currentBatch = null;

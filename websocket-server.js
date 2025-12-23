@@ -58,12 +58,12 @@ io.use(async (socket, next) => {
   console.log('Firestore Emulator:', process.env.FIRESTORE_EMULATOR_HOST);
 
   if (!token) {
-    console.warn('❌ Conexión rechazada: sin token');
+    console.warn(' Conexión rechazada: sin token');
     return next(new Error('Authentication token required'));
   }
 
   try {
-    console.log('🔍 Verificando token con Firebase Auth...');
+    console.log(' Verificando token con Firebase Auth...');
 
     let decoded;
     try {
@@ -71,7 +71,7 @@ io.use(async (socket, next) => {
       decoded = await admin.auth().verifyIdToken(token, false);
     } catch (verifyError) {
       // Si falla (token revocado), decodificar sin verificar (SOLO DESARROLLO)
-      console.warn('⚠️  Token revocado, decodificando sin verificar (solo desarrollo)');
+      console.warn('  Token revocado, decodificando sin verificar (solo desarrollo)');
 
       // Decodificar el token JWT manualmente
       const base64Url = token.split('.')[1];
@@ -81,10 +81,10 @@ io.use(async (socket, next) => {
       }).join(''));
 
       decoded = JSON.parse(jsonPayload);
-      console.log('✅ Token decodificado manualmente (sin verificación)');
+      console.log(' Token decodificado manualmente (sin verificación)');
     }
 
-    console.log('✅ Token procesado exitosamente');
+    console.log(' Token procesado exitosamente');
     console.log('UID:', decoded.uid || decoded.user_id);
     console.log('Email:', decoded.email);
 
@@ -96,15 +96,15 @@ io.use(async (socket, next) => {
       const userData = userDoc.data();
       socket.userRole = userData.rol || 'DUENO';
       socket.userName = userData.nombre_display || 'Usuario';
-      console.log(`✅ Usuario autenticado: ${socket.userName} (${socket.userId})`);
+      console.log(` Usuario autenticado: ${socket.userName} (${socket.userId})`);
     } else {
-      console.warn(`⚠️  Usuario ${socket.userId} no existe en Firestore`);
+      console.warn(`  Usuario ${socket.userId} no existe en Firestore`);
       socket.userName = decoded.email || 'Usuario';
     }
 
     next();
   } catch (error) {
-    console.error('❌ Error de autenticación detallado:');
+    console.error(' Error de autenticación detallado:');
     console.error('   Mensaje:', error.message);
     console.error('   Code:', error.code);
     console.error('   Stack:', error.stack);
@@ -116,7 +116,7 @@ io.use(async (socket, next) => {
 // GESTIÓN DE CONEXIONES
 // ========================================
 io.on('connection', (socket) => {
-  console.log(`🔌 Usuario conectado: ${socket.userName} [${socket.userId}]`);
+  console.log(` Usuario conectado: ${socket.userName} [${socket.userId}]`);
 
   socket.join(socket.userId);
   updateUserPresence(socket.userId, 'online');
@@ -180,7 +180,7 @@ io.on('connection', (socket) => {
         timestamp: Date.now()
       });
 
-      console.log(`📊 Consulta de presencia: ${onlineUsers.length} online, ${offlineUsers.length} offline`);
+      console.log(` Consulta de presencia: ${onlineUsers.length} online, ${offlineUsers.length} offline`);
     } catch (error) {
       console.error('Error al obtener usuarios online:', error);
     }
@@ -193,7 +193,7 @@ io.on('connection', (socket) => {
       for (const userId of userIds) {
         socket.join(`presence_${userId}`);
       }
-      console.log(`👁️ ${socket.userName} suscrito a presencia de ${userIds.length} usuarios`);
+      console.log(` ${socket.userName} suscrito a presencia de ${userIds.length} usuarios`);
     } catch (error) {
       console.error('Error al suscribirse a presencia:', error);
     }
@@ -205,7 +205,7 @@ io.on('connection', (socket) => {
       for (const userId of userIds) {
         socket.leave(`presence_${userId}`);
       }
-      console.log(`👁️ ${socket.userName} desuscrito de presencia de ${userIds.length} usuarios`);
+      console.log(` ${socket.userName} desuscrito de presencia de ${userIds.length} usuarios`);
     } catch (error) {
       console.error('Error al desuscribirse de presencia:', error);
     }
@@ -220,13 +220,13 @@ io.on('connection', (socket) => {
       const chatDoc = await db.collection('chats').doc(chatId).get();
 
       if (!chatDoc.exists) {
-        console.warn(`❌ Chat ${chatId} no existe`);
+        console.warn(` Chat ${chatId} no existe`);
         return socket.emit('error', { message: 'Chat no encontrado' });
       }
 
       const participantes = chatDoc.data().participantes || [];
       if (!participantes.includes(socket.userId)) {
-        console.warn(`❌ Usuario ${socket.userId} no autorizado para chat ${chatId}`);
+        console.warn(` Usuario ${socket.userId} no autorizado para chat ${chatId}`);
         return socket.emit('error', { message: 'No autorizado' });
       }
 
@@ -370,7 +370,7 @@ io.on('connection', (socket) => {
         readBy: socket.userId,
       });
 
-      console.log(`✅ Mensaje ${messageId} marcado como leído`);
+      console.log(` Mensaje ${messageId} marcado como leído`);
     } catch (error) {
       console.error('Error al marcar como leído:', error);
     }
@@ -430,7 +430,7 @@ io.on('connection', (socket) => {
 
       // Validar que paseoId existe y no está vacío
       if (!paseoId) {
-        console.error('❌ Error: paseoId vacío o undefined', { p: data.p, paseoId: data.paseoId });
+        console.error(' Error: paseoId vacío o undefined', { p: data.p, paseoId: data.paseoId });
         return socket.emit('error', { message: 'paseoId inválido o vacío' });
       }
 
@@ -454,11 +454,20 @@ io.on('connection', (socket) => {
 
       const lastSave = socket.lastLocationSave || 0;
       if (Date.now() - lastSave > 30000) {
+        const ubicacionData = {
+          latitud: latitud,
+          longitud: longitud,
+          accuracy: accuracy || null,
+          timestamp: admin.firestore.Timestamp.fromMillis(timestamp)
+        };
+
         await db.collection('reservas').doc(paseoId).update({
           ubicacion_actual: new admin.firestore.GeoPoint(latitud, longitud),
           ultima_actualizacion: admin.firestore.FieldValue.serverTimestamp(),
+          ubicaciones: admin.firestore.FieldValue.arrayUnion(ubicacionData)
         });
         socket.lastLocationSave = Date.now();
+        console.log(`Ubicacion guardada en Firestore para paseo ${paseoId}`);
       }
     } catch (error) {
       console.error('Error al actualizar ubicación:', error);
@@ -473,7 +482,7 @@ io.on('connection', (socket) => {
   // DESCONEXIÓN
   // ========================================
   socket.on('disconnect', async (reason) => {
-    console.log(`🔌 Usuario desconectado: ${socket.userName} [${reason}]`);
+    console.log(` Usuario desconectado: ${socket.userName} [${reason}]`);
 
     try {
       await updateUserPresence(socket.userId, 'offline');
@@ -543,7 +552,7 @@ function extractId(value) {
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Servidor WebSocket corriendo en puerto ${PORT}`);
+  console.log(` Servidor WebSocket corriendo en puerto ${PORT}`);
   console.log(`📍 URL: http://localhost:${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });

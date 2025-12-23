@@ -205,7 +205,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
             } catch (Exception e) {
                 prefs.edit().remove("fotoPerfilUri").apply();
                 fotoPerfilUri = null;
-                Toast.makeText(this, "⚠️ Imagen anterior no disponible. Selecciona una nueva.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, " Imagen anterior no disponible. Selecciona una nueva.", Toast.LENGTH_SHORT).show();
             }
         }
 
@@ -216,7 +216,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
             } catch (Exception e) {
                 prefs.edit().remove("selfieUri").apply();
                 selfieUri = null;
-                Toast.makeText(this, "⚠️ Selfie anterior no disponible. Tómala de nuevo.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, " Selfie anterior no disponible. Tómala de nuevo.", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -227,7 +227,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
             layoutSelfieEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
         } catch (Exception e) {
-            Toast.makeText(this, "⚠️ No se pudo mostrar la preview de la selfie.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, " No se pudo mostrar la preview de la selfie.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -237,7 +237,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
             layoutFotoPerfilEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
         } catch (Exception e) {
-            Toast.makeText(this, "⚠️ No se pudo mostrar la preview de la foto.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, " No se pudo mostrar la preview de la foto.", Toast.LENGTH_SHORT).show();
         }
     }
 

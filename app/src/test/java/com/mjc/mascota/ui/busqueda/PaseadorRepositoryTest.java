@@ -23,9 +23,9 @@ import static org.mockito.Mockito.*;
  * Componente: PaseadorRepository (562 líneas)
  *
  * PUNTOS CRÍTICOS PROBADOS:
- * 1. ✅ Parsing seguro de datos Firestore - Previene crashes por datos nulos/corruptos
- * 2. ✅ Validación de estado de paseador - Solo muestra paseadores aprobados
- * 3. ✅ Serialización de caché JSON - Persistencia correcta en SharedPreferences
+ * 1.  Parsing seguro de datos Firestore - Previene crashes por datos nulos/corruptos
+ * 2.  Validación de estado de paseador - Solo muestra paseadores aprobados
+ * 3.  Serialización de caché JSON - Persistencia correcta en SharedPreferences
  *
  * IMPACTO:
  * - Previene crashes por NullPointerException en datos de Firestore
@@ -59,9 +59,9 @@ public class PaseadorRepositoryTest {
      * - Datos corruptos por escritura simultánea
      *
      * RESULTADO ESPERADO:
-     * ✅ Campo null retorna valor por defecto sin crash
-     * ✅ Campo existente retorna valor correcto
-     * ✅ Excepción en lectura retorna valor por defecto
+     *  Campo null retorna valor por defecto sin crash
+     *  Campo existente retorna valor correcto
+     *  Excepción en lectura retorna valor por defecto
      */
     @Test
     public void testParsingSafetyString_ManejaValoresNulos() {
@@ -95,9 +95,9 @@ public class PaseadorRepositoryTest {
      * - Tipo de dato incorrecto (String en vez de Number)
      *
      * RESULTADO ESPERADO:
-     * ✅ Campo null retorna 0.0 por defecto
-     * ✅ Campo válido retorna valor correcto
-     * ✅ Manejo de valores en el límite (0.0, 5.0, etc.)
+     *  Campo null retorna 0.0 por defecto
+     *  Campo válido retorna valor correcto
+     *  Manejo de valores en el límite (0.0, 5.0, etc.)
      */
     @Test
     public void testParsingSafetyDouble_ManejaValoresNulosYLimites() {
@@ -140,9 +140,9 @@ public class PaseadorRepositoryTest {
      * - Valor muy grande (edge case)
      *
      * RESULTADO ESPERADO:
-     * ✅ Campo null retorna 0L por defecto
-     * ✅ Valores válidos se retornan correctamente
-     * ✅ Conversión a int maneja rangos correctos
+     *  Campo null retorna 0L por defecto
+     *  Valores válidos se retornan correctamente
+     *  Conversión a int maneja rangos correctos
      */
     @Test
     public void testParsingSafetyLong_ManejaContadoresNulos() {
@@ -184,9 +184,9 @@ public class PaseadorRepositoryTest {
      * - Documento de paseador no existe (datos inconsistentes)
      *
      * RESULTADO ESPERADO:
-     * ✅ Solo paseadores APROBADOS pasan la validación
-     * ✅ Estados PENDIENTE y RECHAZADO son filtrados
-     * ✅ Documentos inexistentes son rechazados
+     *  Solo paseadores APROBADOS pasan la validación
+     *  Estados PENDIENTE y RECHAZADO son filtrados
+     *  Documentos inexistentes son rechazados
      */
     @Test
     public void testValidacionEstadoPaseador_SoloAprobados() {
@@ -259,9 +259,9 @@ public class PaseadorRepositoryTest {
      * - Manejar datos corruptos en caché
      *
      * RESULTADO ESPERADO:
-     * ✅ Serialización JSON correcta con todos los campos
-     * ✅ Parsing JSON restaura objetos correctamente
-     * ✅ Valores opcionales (fotoUrl null) se manejan bien
+     *  Serialización JSON correcta con todos los campos
+     *  Parsing JSON restaura objetos correctamente
+     *  Valores opcionales (fotoUrl null) se manejan bien
      */
     @Test
     public void testCacheSerializacionJSON_CorrectoRoundTrip() throws Exception {
@@ -325,9 +325,9 @@ public class PaseadorRepositoryTest {
      * - Campo experiencia_general: null o corrupto
      *
      * RESULTADO ESPERADO:
-     * ✅ Extrae números correctamente de texto
-     * ✅ Maneja valores numéricos directos
-     * ✅ Retorna 0 para valores inválidos
+     *  Extrae números correctamente de texto
+     *  Maneja valores numéricos directos
+     *  Retorna 0 para valores inválidos
      */
     @Test
     public void testParsingExperienciaDesdeString_ExtraeNumeros() {
@@ -386,12 +386,12 @@ public class PaseadorRepositoryTest {
     /**
      * RESUMEN DE COBERTURA:
      *
-     * ✅ Parsing seguro de String (getStringSafely)
-     * ✅ Parsing seguro de Double (getDoubleSafely)
-     * ✅ Parsing seguro de Long (getLongSafely)
-     * ✅ Validación de estado APROBADO (isValidPaseador)
-     * ✅ Serialización/parsing de caché JSON
-     * ✅ Conversión de experiencia texto → número
+     *  Parsing seguro de String (getStringSafely)
+     *  Parsing seguro de Double (getDoubleSafely)
+     *  Parsing seguro de Long (getLongSafely)
+     *  Validación de estado APROBADO (isValidPaseador)
+     *  Serialización/parsing de caché JSON
+     *  Conversión de experiencia texto → número
      *
      * MÉTRICAS DE CALIDAD:
      * - Cobertura de métodos helper: 100% (6/6 métodos críticos)

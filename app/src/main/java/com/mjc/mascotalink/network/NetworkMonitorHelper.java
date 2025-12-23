@@ -253,13 +253,13 @@ public class NetworkMonitorHelper {
                         Network activeNetwork = connectivityManager.getActiveNetwork();
                         if (activeNetwork == null) {
                             // Realmente no hay red
-                            Log.w(TAG, "❌ Sin red confirmado");
+                            Log.w(TAG, " Sin red confirmado");
                             if (callback != null) {
                                 new Handler(Looper.getMainLooper()).post(() -> callback.onNetworkLost());
                             }
                         } else {
                             // Hay otra red disponible (fue cambio de red)
-                            Log.d(TAG, "✅ Cambio de red detectado, hay red disponible");
+                            Log.d(TAG, " Cambio de red detectado, hay red disponible");
                         }
                     }
                 }, NETWORK_VERIFICATION_DELAY);
@@ -287,7 +287,7 @@ public class NetworkMonitorHelper {
 
         try {
             connectivityManager.registerDefaultNetworkCallback(networkCallback);
-            Log.d(TAG, "✅ NetworkCallback registrado");
+            Log.d(TAG, " NetworkCallback registrado");
 
             // Iniciar monitoreo de ping si hay conexión
             if (socketManager.isConnected()) {
@@ -324,21 +324,21 @@ public class NetworkMonitorHelper {
     private void reconnectWebSocket() {
         // Evitar reconexiones múltiples simultáneas
         if (isReconnecting) {
-            Log.d(TAG, "⏸️ Reconexión ya en progreso, ignorando...");
+            Log.d(TAG, " Reconexión ya en progreso, ignorando...");
             return;
         }
 
         // Throttling: mínimo 5 segundos entre reconexiones
         long now = System.currentTimeMillis();
         if (now - lastReconnectTime < MIN_RECONNECT_INTERVAL) {
-            Log.d(TAG, "⏸️ Muy pronto para reconectar, esperando...");
+            Log.d(TAG, " Muy pronto para reconectar, esperando...");
             return;
         }
 
         // Verificar límite de intentos
         if (reconnectAttempts >= MAX_RETRY_ATTEMPTS) {
             long backoffDelay = calculateBackoffDelay(reconnectAttempts);
-            Log.w(TAG, "⚠️ Máximo de intentos alcanzado (" + reconnectAttempts + "), esperando " + backoffDelay + "ms antes de reintentar");
+            Log.w(TAG, " Máximo de intentos alcanzado (" + reconnectAttempts + "), esperando " + backoffDelay + "ms antes de reintentar");
 
             connectionState = ConnectionState.FAILED;
             if (callback != null) {
@@ -383,10 +383,10 @@ public class NetworkMonitorHelper {
                     // Unirse según el tipo de room
                     if (roomType == RoomType.CHAT) {
                         socketManager.joinChat(currentRoomId);
-                        Log.d(TAG, "✅ Re-unido al chat tras cambio de red: " + currentRoomId);
+                        Log.d(TAG, " Re-unido al chat tras cambio de red: " + currentRoomId);
                     } else if (roomType == RoomType.PASEO) {
                         socketManager.joinPaseo(currentRoomId);
-                        Log.d(TAG, "✅ Re-unido al paseo tras cambio de red: " + currentRoomId);
+                        Log.d(TAG, " Re-unido al paseo tras cambio de red: " + currentRoomId);
                     }
 
                     // Reconexión exitosa, resetear intentos
@@ -402,14 +402,14 @@ public class NetworkMonitorHelper {
                     startPingMonitoring();
                 } else if (!socketManager.isConnected()) {
                     // Falló la reconexión, programar reintento
-                    Log.w(TAG, "❌ Falló reconexión, programando reintento...");
+                    Log.w(TAG, " Falló reconexión, programando reintento...");
                     long backoffDelay = calculateBackoffDelay(reconnectAttempts);
                     scheduleReconnect(backoffDelay);
                 }
                 isReconnecting = false;
             }, 2000);
         } else {
-            Log.d(TAG, "✅ Socket ya está conectado, no se requiere reconexión");
+            Log.d(TAG, " Socket ya está conectado, no se requiere reconexión");
             connectionState = ConnectionState.CONNECTED;
             reconnectAttempts = 0;
         }
@@ -468,7 +468,7 @@ public class NetworkMonitorHelper {
                     // Verificar si hubo pong reciente
                     long timeSinceLastPong = System.currentTimeMillis() - lastPongTime;
                     if (timeSinceLastPong > PING_INTERVAL + PING_TIMEOUT) {
-                        Log.w(TAG, "⚠️ No se recibió pong en " + timeSinceLastPong + "ms, conexión puede estar muerta");
+                        Log.w(TAG, " No se recibió pong en " + timeSinceLastPong + "ms, conexión puede estar muerta");
                         // Forzar reconexión
                         forceReconnect();
                     } else {
@@ -596,7 +596,7 @@ public class NetworkMonitorHelper {
         Log.d(TAG, "🔄 Reconexión forzada solicitada");
         
         // Forzar desconexión real para limpiar estado zombie
-        Log.d(TAG, "🔌 Forzando desconexión de socket zombie");
+        Log.d(TAG, " Forzando desconexión de socket zombie");
         if (socketManager != null) {
             socketManager.disconnect();
         }

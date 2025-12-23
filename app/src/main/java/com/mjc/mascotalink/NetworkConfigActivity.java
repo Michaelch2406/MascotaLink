@@ -139,10 +139,10 @@ public class NetworkConfigActivity extends AppCompatActivity {
     private void updateTailscaleStatus() {
         boolean isActive = NetworkDetector.isTailscaleActive(this);
         if (isActive) {
-            tvTailscaleStatus.setText("Estado: ✅ Activo");
+            tvTailscaleStatus.setText("Estado:  Activo");
             tvTailscaleStatus.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
         } else {
-            tvTailscaleStatus.setText("Estado: ❌ Inactivo");
+            tvTailscaleStatus.setText("Estado:  Inactivo");
             tvTailscaleStatus.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
         }
     }

@@ -83,7 +83,7 @@ public class HomeRepository {
             .limit(10) // Aumentar limite para poder filtrar
             .addSnapshotListener((snapshots, e) -> {
                 long queryTime = System.currentTimeMillis() - startTime;
-                Log.d(TAG, "📊 getActiveReservation query completada en " + queryTime + "ms");
+                Log.d(TAG, " getActiveReservation query completada en " + queryTime + "ms");
 
                 if (e != null) {
                     Log.e(TAG, "Error listening active reservation", e);

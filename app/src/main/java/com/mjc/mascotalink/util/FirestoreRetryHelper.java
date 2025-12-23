@@ -78,7 +78,7 @@ public class FirestoreRetryHelper {
         operation.execute()
                 .addOnSuccessListener(result -> {
                     if (currentAttempt > 0) {
-                        Log.d(TAG, "✅ Éxito después de " + (currentAttempt + 1) + " intento(s)");
+                        Log.d(TAG, " Éxito después de " + (currentAttempt + 1) + " intento(s)");
                     }
                     onSuccess.onSuccess(result);
                 })
@@ -88,7 +88,7 @@ public class FirestoreRetryHelper {
                         long nextDelay = delayMs * 2; // 1s, 2s, 4s, 8s...
                         long cappedDelay = Math.min(nextDelay, 10000); // Máximo 10 segundos
 
-                        Log.w(TAG, "⚠️ Intento " + (currentAttempt + 1) + " falló. Reintentando en " +
+                        Log.w(TAG, " Intento " + (currentAttempt + 1) + " falló. Reintentando en " +
                                    (cappedDelay/1000) + "s... Error: " + error.getMessage());
 
                         // Programar siguiente intento
@@ -99,7 +99,7 @@ public class FirestoreRetryHelper {
 
                     } else {
                         // Agotar todos los reintentos
-                        Log.e(TAG, "❌ Operación falló después de " + (maxRetries + 1) +
+                        Log.e(TAG, " Operación falló después de " + (maxRetries + 1) +
                                   " intentos. Error: " + error.getMessage());
                         onFailure.onFailure(error);
                     }

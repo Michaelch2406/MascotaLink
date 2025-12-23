@@ -533,7 +533,7 @@ public class RecomendacionIAHelper {
         FirebaseFirestore.getInstance()
                 .collection(FirestoreConstants.COLLECTION_RECOMENDACIONES_IA_LOGS)
                 .add(telemetria)
-                .addOnSuccessListener(doc -> Log.d(TAG, "📊 Telemetría: " + evento))
+                .addOnSuccessListener(doc -> Log.d(TAG, " Telemetría: " + evento))
                 .addOnFailureListener(e -> Log.e(TAG, "Error guardando telemetría", e));
     }
 

@@ -137,10 +137,10 @@ public class MyApplication extends Application {
 
         // Conectar inmediatamente si ya hay sesión activa
         if (auth.getCurrentUser() != null) {
-            Log.d(TAG, "✅ Usuario autenticado - Conectando WebSocket al inicio");
+            Log.d(TAG, " Usuario autenticado - Conectando WebSocket al inicio");
             socketManager.connect();
         } else {
-            Log.d(TAG, "⏸️ Usuario NO autenticado - WebSocket se conectará al login (Lazy Connection)");
+            Log.d(TAG, " Usuario NO autenticado - WebSocket se conectará al login (Lazy Connection)");
         }
 
         // Configurar listener de autenticación para auto-conectar/desconectar
@@ -148,7 +148,7 @@ public class MyApplication extends Application {
             if (firebaseAuth.getCurrentUser() != null) {
                 // Usuario se autenticó → Conectar WebSocket
                 String userId = firebaseAuth.getCurrentUser().getUid();
-                Log.d(TAG, "🔐 Usuario autenticado (" + userId + ") - Conectando WebSocket");
+                Log.d(TAG, " Usuario autenticado (" + userId + ") - Conectando WebSocket");
                 socketManager.connect();
 
                 // Sincronizar FCM y badges
@@ -166,7 +166,7 @@ public class MyApplication extends Application {
 
         // Registrar listener
         auth.addAuthStateListener(authStateListener);
-        Log.d(TAG, "👂 AuthStateListener registrado para WebSocket auto-connect/disconnect");
+        Log.d(TAG, " AuthStateListener registrado para WebSocket auto-connect/disconnect");
     }
 
     public static String getCurrentEmulatorHost(Context context) {
@@ -196,7 +196,7 @@ public class MyApplication extends Application {
      * - Closeable sin cerrar
      */
     private void enableStrictMode() {
-        Log.d(TAG, "🔍 Habilitando StrictMode para debug");
+        Log.d(TAG, " Habilitando StrictMode para debug");
 
         // Thread Policy: detecta operaciones bloqueantes en el main thread
         StrictMode.ThreadPolicy threadPolicy = new StrictMode.ThreadPolicy.Builder()
@@ -218,6 +218,6 @@ public class MyApplication extends Application {
         StrictMode.setThreadPolicy(threadPolicy);
         StrictMode.setVmPolicy(vmPolicy);
 
-        Log.d(TAG, "✅ StrictMode habilitado - Se logearán violaciones en debug");
+        Log.d(TAG, " StrictMode habilitado - Se logearán violaciones en debug");
     }
 }

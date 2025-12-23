@@ -695,7 +695,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         badgePerfilEnLinea.setVisibility(View.VISIBLE);
                     });
-                    Log.d(TAG, "👁️ Dueño conectado: " + userId);
+                    Log.d(TAG, " Dueño conectado: " + userId);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error procesando user_connected", e);
@@ -712,7 +712,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         badgePerfilEnLinea.setVisibility(View.GONE);
                     });
-                    Log.d(TAG, "👁️ Dueño desconectado: " + userId);
+                    Log.d(TAG, " Dueño desconectado: " + userId);
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error procesando user_disconnected", e);
@@ -750,7 +750,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         // Query initial status and subscribe to presence updates
         socketManager.getOnlineUsers(new String[]{duenoId});
         socketManager.subscribePresence(new String[]{duenoId});
-        Log.d(TAG, "👁️ Presencia configurada para dueño: " + duenoId);
+        Log.d(TAG, " Presencia configurada para dueño: " + duenoId);
     }
 
     private void cleanupPresenceListeners() {
@@ -759,7 +759,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             socketManager.off("user_disconnected");
             socketManager.off("online_users_response");
             socketManager.unsubscribePresence(new String[]{duenoId});
-            Log.d(TAG, "👁️ Limpieza de presencia para dueño: " + duenoId);
+            Log.d(TAG, " Limpieza de presencia para dueño: " + duenoId);
         }
     }
 

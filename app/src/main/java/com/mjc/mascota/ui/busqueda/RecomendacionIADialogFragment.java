@@ -239,7 +239,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
 
         if (!userLocation.containsKey(FirestoreConstants.FIELD_LATITUDE) ||
             !userLocation.containsKey(FirestoreConstants.FIELD_LONGITUDE)) {
-            Log.w(TAG, "⚠️ No hay ubicación guardada, obteniendo ubicación actual del GPS...");
+            Log.w(TAG, " No hay ubicación guardada, obteniendo ubicación actual del GPS...");
             obtenerUbicacionActualYContinuar(userData, petData);
             return;
         }
@@ -273,7 +273,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             Map<String, Object> ubicacion = (Map<String, Object>) ubicacionObj;
             Object geopointObj = ubicacion.get(FirestoreConstants.FIELD_GEOPOINT);
             if (geopointObj instanceof GeoPoint) {
-                Log.d(TAG, "✅ Ubicación obtenida de ubicacion_principal.geopoint");
+                Log.d(TAG, " Ubicación obtenida de ubicacion_principal.geopoint");
                 return (GeoPoint) geopointObj;
             }
         }
@@ -283,7 +283,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     private GeoPoint tryGetGeoPointFromUbicacion(Map<String, Object> userData) {
         Object ubicacionDirecta = userData.get(FirestoreConstants.FIELD_UBICACION);
         if (ubicacionDirecta instanceof GeoPoint) {
-            Log.d(TAG, "✅ Ubicación obtenida de ubicacion directa");
+            Log.d(TAG, " Ubicación obtenida de ubicacion directa");
             return (GeoPoint) ubicacionDirecta;
         }
         return null;
@@ -292,7 +292,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     private GeoPoint tryGetGeoPointFromDireccionCoordenadas(Map<String, Object> userData) {
         Object direccionCoords = userData.get(FirestoreConstants.FIELD_DIRECCION_COORDENADAS);
         if (direccionCoords instanceof GeoPoint) {
-            Log.d(TAG, "✅ Ubicación obtenida de direccion_coordenadas");
+            Log.d(TAG, " Ubicación obtenida de direccion_coordenadas");
             return (GeoPoint) direccionCoords;
         }
         return null;
@@ -306,7 +306,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         if (lat != null && lng != null) {
             userLocation.put(FirestoreConstants.FIELD_LATITUDE, lat);
             userLocation.put(FirestoreConstants.FIELD_LONGITUDE, lng);
-            Log.d(TAG, "✅ Ubicación obtenida de lat/lng separados");
+            Log.d(TAG, " Ubicación obtenida de lat/lng separados");
         }
         return userLocation;
     }
@@ -319,19 +319,19 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                             Map<String, Object> userLocation = new HashMap<>();
                             userLocation.put(FirestoreConstants.FIELD_LATITUDE, location.getLatitude());
                             userLocation.put(FirestoreConstants.FIELD_LONGITUDE, location.getLongitude());
-                            Log.d(TAG, "✅ Ubicación actual obtenida del GPS");
+                            Log.d(TAG, " Ubicación actual obtenida del GPS");
                             llamarCloudFunction(sanitizeData(userData), sanitizeData(petData), userLocation);
                         } else {
-                            Log.e(TAG, "❌ No se pudo obtener ubicación actual del GPS");
+                            Log.e(TAG, " No se pudo obtener ubicación actual del GPS");
                             showError("No se pudo obtener tu ubicación actual. Por favor activa el GPS y los permisos de ubicación.");
                         }
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "❌ Error al obtener ubicación del GPS: " + e.getMessage(), e);
+                        Log.e(TAG, " Error al obtener ubicación del GPS: " + e.getMessage(), e);
                         showError("Error al obtener tu ubicación: " + e.getMessage());
                     });
         } catch (SecurityException e) {
-            Log.e(TAG, "❌ Sin permisos de ubicación: " + e.getMessage(), e);
+            Log.e(TAG, " Sin permisos de ubicación: " + e.getMessage(), e);
             showError("Se requieren permisos de ubicación. Por favor actívalos en la configuración de la app.");
         }
     }
@@ -926,7 +926,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         FirebaseFirestore.getInstance()
                 .collection(FirestoreConstants.COLLECTION_RECOMENDACIONES_IA_LOGS)
                 .add(telemetria)
-                .addOnSuccessListener(doc -> Log.d(TAG, "📊 Telemetría: " + evento))
+                .addOnSuccessListener(doc -> Log.d(TAG, " Telemetría: " + evento))
                 .addOnFailureListener(e -> Log.e(TAG, "Error telemetría", e));
     }
 

@@ -175,7 +175,7 @@ public class SocketManager {
         stopHeartbeat();
         if (isAppInForeground && isConnected) {
             heartbeatHandler.postDelayed(heartbeatRunnable, HEARTBEAT_INTERVAL);
-            Log.d(TAG, "🫀 Heartbeat iniciado");
+            Log.d(TAG, " Heartbeat iniciado");
         }
     }
 
@@ -193,13 +193,13 @@ public class SocketManager {
     public void connect() {
         // Si ya está conectado, no hacer nada
         if (isConnected()) {
-            Log.d(TAG, "✅ Socket ya conectado, saltando connect()");
+            Log.d(TAG, " Socket ya conectado, saltando connect()");
             return;
         }
 
         // Si ya está intentando conectar, no duplicar
         if (isConnecting) {
-            Log.d(TAG, "⏳ Conexión en progreso, esperando...");
+            Log.d(TAG, " Conexión en progreso, esperando...");
             return;
         }
 
@@ -211,7 +211,7 @@ public class SocketManager {
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            Log.e(TAG, "❌ Usuario no autenticado - conexión pospuesta hasta login");
+            Log.e(TAG, " Usuario no autenticado - conexión pospuesta hasta login");
             return;
         }
 
@@ -261,7 +261,7 @@ public class SocketManager {
         socket.on(Socket.EVENT_CONNECT, args -> {
             isConnecting = false;
             updateConnectionState(true);
-            Log.d(TAG, "✅ Socket conectado");
+            Log.d(TAG, " Socket conectado");
             startHeartbeat();
             processPendingOperations();
             processOfflineQueue();
@@ -272,13 +272,13 @@ public class SocketManager {
             isConnecting = false;
             updateConnectionState(false);
             stopHeartbeat();
-            Log.d(TAG, "🔌 Socket desconectado");
+            Log.d(TAG, " Socket desconectado");
         });
 
         socket.on(Socket.EVENT_CONNECT_ERROR, args -> {
             isConnecting = false;
             String message = args.length > 0 ? String.valueOf(args[0]) : "unknown";
-            Log.e(TAG, "❌ Error de conexión: " + message);
+            Log.e(TAG, " Error de conexión: " + message);
             notifyError(message);
         });
 
@@ -433,7 +433,7 @@ public class SocketManager {
                 offlineMessageQueue.add(queuedMsg);
                 Log.d(TAG, "📥 Mensaje agregado a cola offline (" + offlineMessageQueue.size() + "/" + MAX_QUEUE_SIZE + ")");
             } else {
-                Log.w(TAG, "⚠️ Cola offline llena, mensaje descartado");
+                Log.w(TAG, " Cola offline llena, mensaje descartado");
             }
             return;
         }
@@ -635,13 +635,13 @@ public class SocketManager {
 
         // LAZY CONNECTION: Si no hay socket, conectar y el listener se registrará en rebindEventListeners()
         if (socket == null) {
-            Log.d(TAG, "👂 Listener en cola (socket no listo): " + event + " - Conectando...");
+            Log.d(TAG, " Listener en cola (socket no listo): " + event + " - Conectando...");
             connect();
             return;
         }
 
         socket.on(event, listener);
-        Log.d(TAG, "👂 Listener registrado: " + event);
+        Log.d(TAG, " Listener registrado: " + event);
     }
 
     /**
@@ -685,7 +685,7 @@ public class SocketManager {
                 array.put(uid);
             }
             socket.emit("subscribe_presence", array);
-            Log.d(TAG, "👁️ Suscrito a presencia de " + userIds.length + " usuarios");
+            Log.d(TAG, " Suscrito a presencia de " + userIds.length + " usuarios");
         } catch (Exception e) {
             Log.e(TAG, "Error al suscribirse a presencia", e);
         }
@@ -703,7 +703,7 @@ public class SocketManager {
                 array.put(uid);
             }
             socket.emit("unsubscribe_presence", array);
-            Log.d(TAG, "👁️ Desuscrito de presencia de " + userIds.length + " usuarios");
+            Log.d(TAG, " Desuscrito de presencia de " + userIds.length + " usuarios");
         } catch (Exception e) {
             Log.e(TAG, "Error al desuscribirse de presencia", e);
         }

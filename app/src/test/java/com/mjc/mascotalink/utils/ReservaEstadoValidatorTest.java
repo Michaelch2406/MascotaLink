@@ -15,10 +15,10 @@ import static com.mjc.mascotalink.utils.ReservaEstadoValidator.*;
  * Componente: ReservaEstadoValidator (66 líneas)
  *
  * PUNTOS CRÍTICOS PROBADOS:
- * 1. ✅ Transiciones válidas - Flujo correcto PENDIENTE → ACEPTADO → ... → COMPLETADO
- * 2. ✅ Transiciones inválidas - Previene saltos ilegales (ej: PENDIENTE → EN_CURSO)
- * 3. ✅ Estados terminales - COMPLETADO, RECHAZADO, CANCELADO no permiten transiciones
- * 4. ✅ Validación de pago - Solo se puede pagar en estado ACEPTADO
+ * 1.  Transiciones válidas - Flujo correcto PENDIENTE → ACEPTADO → ... → COMPLETADO
+ * 2.  Transiciones inválidas - Previene saltos ilegales (ej: PENDIENTE → EN_CURSO)
+ * 3.  Estados terminales - COMPLETADO, RECHAZADO, CANCELADO no permiten transiciones
+ * 4.  Validación de pago - Solo se puede pagar en estado ACEPTADO
  *
  * IMPACTO:
  * - Previene corrupción de datos en el flujo de reservas
@@ -36,14 +36,14 @@ public class ReservaEstadoValidatorTest {
      * LÍNEA DE CÓDIGO: ReservaEstadoValidator.java:28
      *
      * CASO DE USO:
-     * - Paseador acepta solicitud → ACEPTADO ✅
-     * - Paseador rechaza solicitud → RECHAZADO ✅
-     * - Dueño cancela antes de aceptación → CANCELADO ✅
-     * - Intentar saltar directamente a EN_CURSO → INVÁLIDO ❌
+     * - Paseador acepta solicitud → ACEPTADO 
+     * - Paseador rechaza solicitud → RECHAZADO 
+     * - Dueño cancela antes de aceptación → CANCELADO 
+     * - Intentar saltar directamente a EN_CURSO → INVÁLIDO 
      *
      * RESULTADO ESPERADO:
-     * ✅ Transiciones permitidas: ACEPTADO, RECHAZADO, CANCELADO
-     * ❌ Transiciones bloqueadas: CONFIRMADO, LISTO_PARA_INICIAR, EN_CURSO, COMPLETADO
+     *  Transiciones permitidas: ACEPTADO, RECHAZADO, CANCELADO
+     *  Transiciones bloqueadas: CONFIRMADO, LISTO_PARA_INICIAR, EN_CURSO, COMPLETADO
      */
     @Test
     public void testTransicionesValidasDesdePendiente() {
@@ -78,13 +78,13 @@ public class ReservaEstadoValidatorTest {
      * LÍNEA DE CÓDIGO: ReservaEstadoValidator.java:29
      *
      * CASO DE USO:
-     * - Dueño paga y confirma → CONFIRMADO ✅
-     * - Dueño cancela después de aceptación → CANCELADO ✅
-     * - Intentar iniciar paseo sin pagar → INVÁLIDO ❌
+     * - Dueño paga y confirma → CONFIRMADO 
+     * - Dueño cancela después de aceptación → CANCELADO 
+     * - Intentar iniciar paseo sin pagar → INVÁLIDO 
      *
      * RESULTADO ESPERADO:
-     * ✅ Solo CONFIRMADO y CANCELADO permitidos
-     * ❌ No se puede ir directamente a LISTO o EN_CURSO
+     *  Solo CONFIRMADO y CANCELADO permitidos
+     *  No se puede ir directamente a LISTO o EN_CURSO
      */
     @Test
     public void testTransicionesValidasDesdeAceptado() {
@@ -119,8 +119,8 @@ public class ReservaEstadoValidatorTest {
      * PENDIENTE → ACEPTADO → CONFIRMADO → LISTO → EN_CURSO → COMPLETADO
      *
      * RESULTADO ESPERADO:
-     * ✅ Cada transición es válida
-     * ✅ Estado final es terminal (no permite más cambios)
+     *  Cada transición es válida
+     *  Estado final es terminal (no permite más cambios)
      */
     @Test
     public void testFlujoCompletoReservaExitosa() {
@@ -168,8 +168,8 @@ public class ReservaEstadoValidatorTest {
      * - Reserva rechazada no puede ser confirmada
      *
      * RESULTADO ESPERADO:
-     * ✅ isTerminal() retorna true para estos estados
-     * ❌ No se permite ninguna transición desde ellos
+     *  isTerminal() retorna true para estos estados
+     *  No se permite ninguna transición desde ellos
      */
     @Test
     public void testEstadosTerminalesNoPermitenTransiciones() {
@@ -209,13 +209,13 @@ public class ReservaEstadoValidatorTest {
      * LÍNEA DE CÓDIGO: ReservaEstadoValidator.java:55-57
      *
      * CASO DE USO:
-     * - Intentar pagar antes de aceptación → INVÁLIDO ❌
-     * - Pagar después de aceptación → VÁLIDO ✅
-     * - Intentar pagar después de confirmación → INVÁLIDO ❌
+     * - Intentar pagar antes de aceptación → INVÁLIDO 
+     * - Pagar después de aceptación → VÁLIDO 
+     * - Intentar pagar después de confirmación → INVÁLIDO 
      *
      * RESULTADO ESPERADO:
-     * ✅ canPay() solo retorna true para estado ACEPTADO
-     * ❌ Todos los demás estados bloquean el pago
+     *  canPay() solo retorna true para estado ACEPTADO
+     *  Todos los demás estados bloquean el pago
      */
     @Test
     public void testValidacionPago_SoloEnEstadoAceptado() {
@@ -253,8 +253,8 @@ public class ReservaEstadoValidatorTest {
      * LÍNEA DE CÓDIGO: ReservaEstadoValidator.java:63-65
      *
      * RESULTADO ESPERADO:
-     * ✅ CONFIRMADO indica pago completado
-     * ❌ PENDIENTE indica pago pendiente
+     *  CONFIRMADO indica pago completado
+     *  PENDIENTE indica pago pendiente
      */
     @Test
     public void testValidacionEstadoPago() {
@@ -287,8 +287,8 @@ public class ReservaEstadoValidatorTest {
      * - Error en sincronización Firestore
      *
      * RESULTADO ESPERADO:
-     * ✅ Estados null retornan false sin crash
-     * ✅ Combinaciones null son manejadas correctamente
+     *  Estados null retornan false sin crash
+     *  Combinaciones null son manejadas correctamente
      */
     @Test
     public void testManejoValoresNull_NoGeneraCrash() {
@@ -330,9 +330,9 @@ public class ReservaEstadoValidatorTest {
      * - NO se puede cancelar si ya está en curso
      *
      * RESULTADO ESPERADO:
-     * ✅ Cancelación permitida hasta LISTO_PARA_INICIAR
-     * ✅ EN_CURSO permite cancelación (emergencia)
-     * ❌ COMPLETADO no permite cancelación
+     *  Cancelación permitida hasta LISTO_PARA_INICIAR
+     *  EN_CURSO permite cancelación (emergencia)
+     *  COMPLETADO no permite cancelación
      */
     @Test
     public void testCancelacionPermitidaHastaInicio() {
@@ -371,14 +371,14 @@ public class ReservaEstadoValidatorTest {
      *
      * Desde → A           | PEND | ACEP | CONF | RECH | CANC | LIST | CURS | COMP
      * --------------------+------+------+------+------+------+------+------+------
-     * PENDIENTE           |  ❌  |  ✅  |  ❌  |  ✅  |  ✅  |  ❌  |  ❌  |  ❌
-     * ACEPTADO            |  ❌  |  ❌  |  ✅  |  ❌  |  ✅  |  ❌  |  ❌  |  ❌
-     * CONFIRMADO          |  ❌  |  ❌  |  ❌  |  ❌  |  ✅  |  ✅  |  ❌  |  ❌
-     * RECHAZADO (term.)   |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌
-     * CANCELADO (term.)   |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌
-     * LISTO               |  ❌  |  ❌  |  ❌  |  ❌  |  ✅  |  ❌  |  ✅  |  ❌
-     * EN_CURSO            |  ❌  |  ❌  |  ❌  |  ❌  |  ✅  |  ❌  |  ❌  |  ✅
-     * COMPLETADO (term.)  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌  |  ❌
+     * PENDIENTE           |    |    |    |    |    |    |    |  
+     * ACEPTADO            |    |    |    |    |    |    |    |  
+     * CONFIRMADO          |    |    |    |    |    |    |    |  
+     * RECHAZADO (term.)   |    |    |    |    |    |    |    |  
+     * CANCELADO (term.)   |    |    |    |    |    |    |    |  
+     * LISTO               |    |    |    |    |    |    |    |  
+     * EN_CURSO            |    |    |    |    |    |    |    |  
+     * COMPLETADO (term.)  |    |    |    |    |    |    |    |  
      */
     @Test
     public void testMatrizCompletaTransiciones_64Combinaciones() {
@@ -429,14 +429,14 @@ public class ReservaEstadoValidatorTest {
     /**
      * RESUMEN DE COBERTURA:
      *
-     * ✅ Transiciones válidas desde cada estado (8 estados)
-     * ✅ Transiciones inválidas detectadas correctamente
-     * ✅ Estados terminales no permiten cambios
-     * ✅ Validación de pago solo en ACEPTADO
-     * ✅ Flujo completo exitoso PENDIENTE → COMPLETADO
-     * ✅ Cancelación permitida desde múltiples estados
-     * ✅ Manejo seguro de valores null
-     * ✅ Matriz completa de 64 combinaciones
+     *  Transiciones válidas desde cada estado (8 estados)
+     *  Transiciones inválidas detectadas correctamente
+     *  Estados terminales no permiten cambios
+     *  Validación de pago solo en ACEPTADO
+     *  Flujo completo exitoso PENDIENTE → COMPLETADO
+     *  Cancelación permitida desde múltiples estados
+     *  Manejo seguro de valores null
+     *  Matriz completa de 64 combinaciones
      *
      * MÉTRICAS DE CALIDAD:
      * - Cobertura de métodos públicos: 100% (4/4 métodos)

@@ -234,7 +234,7 @@ public class ChatActivity extends AppCompatActivity {
         @Override
         public void onNetworkLost() {
             runOnUiThread(() -> {
-                updateConnectionStatus("⚠️ Sin conexión", R.color.red_error);
+                updateConnectionStatus(" Sin conexión", R.color.red_error);
                 showReconnectSnackbar();
                 disableSendButton();
             });
@@ -265,7 +265,7 @@ public class ChatActivity extends AppCompatActivity {
         @Override
         public void onReconnectionFailed(int attempts) {
             runOnUiThread(() -> {
-                updateConnectionStatus("❌ Sin conexión", R.color.red_error);
+                updateConnectionStatus(" Sin conexión", R.color.red_error);
                 dismissReconnectSnackbar();
                 showReconnectionFailedSnackbar();
             });
@@ -322,13 +322,13 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         private void handleReconnection() {
-            Log.d(TAG, "✅ Reconectado al chat, re-configurando listeners");
+            Log.d(TAG, " Reconectado al chat, re-configurando listeners");
             tvEstadoChat.setTextColor(getColor(R.color.gray_dark));
             dismissReconnectSnackbar();
 
             com.google.android.material.snackbar.Snackbar.make(
                 findViewById(android.R.id.content),
-                "✅ Conexión restaurada",
+                " Conexión restaurada",
                 com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
             ).show();
 
@@ -1353,7 +1353,7 @@ public class ChatActivity extends AppCompatActivity {
                         tvEstadoChat.setVisibility(View.VISIBLE);
                     }
                 });
-                Log.d(TAG, "👁️ Otro usuario conectado: " + userId);
+                Log.d(TAG, " Otro usuario conectado: " + userId);
             }
         } catch (JSONException e) {
             Log.e(TAG, "Error parseando user_connected", e);
@@ -1375,7 +1375,7 @@ public class ChatActivity extends AppCompatActivity {
                         tvEstadoChat.setVisibility(View.VISIBLE);
                     }
                 });
-                Log.d(TAG, "👁️ Otro usuario desconectado: " + userId);
+                Log.d(TAG, " Otro usuario desconectado: " + userId);
             }
         } catch (JSONException e) {
             Log.e(TAG, "Error parseando user_disconnected", e);
@@ -1411,7 +1411,7 @@ public class ChatActivity extends AppCompatActivity {
                 }
             });
 
-            Log.d(TAG, "📊 Estado de presencia: " + (finalIsOnline ? "online" : "offline"));
+            Log.d(TAG, " Estado de presencia: " + (finalIsOnline ? "online" : "offline"));
         } catch (JSONException e) {
             Log.e(TAG, "Error parseando online_users_response", e);
         }
@@ -1499,13 +1499,13 @@ public class ChatActivity extends AppCompatActivity {
         if (newMessagesListener != null) {
             newMessagesListener.remove();
             newMessagesListener = null;
-            Log.d(TAG, "✅ newMessagesListener removido");
+            Log.d(TAG, " newMessagesListener removido");
         }
 
         if (statusUpdatesListener != null) {
             statusUpdatesListener.remove();
             statusUpdatesListener = null;
-            Log.d(TAG, "✅ statusUpdatesListener removido");
+            Log.d(TAG, " statusUpdatesListener removido");
         }
 
         if (networkMonitor != null) {

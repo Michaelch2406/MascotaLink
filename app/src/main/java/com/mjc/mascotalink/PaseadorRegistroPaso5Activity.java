@@ -597,7 +597,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
 
     private void mostrarError(String msg) {
         new AlertDialog.Builder(this)
-                .setTitle("⚠️ Error")
+                .setTitle(" Error")
                 .setMessage(msg)
                 .setPositiveButton("Entendido", null)
                 .show();

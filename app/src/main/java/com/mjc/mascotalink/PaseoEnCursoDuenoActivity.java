@@ -169,7 +169,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             public void onNetworkLost() {
                 runOnUiThread(() -> {
                     if (tvUbicacionEstado != null) {
-                        tvUbicacionEstado.setText("⚠️ Sin conexión - Intentando reconectar...");
+                        tvUbicacionEstado.setText(" Sin conexión - Intentando reconectar...");
                         tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.red_error));
                     }
                     // Mostrar Snackbar persistente
@@ -214,7 +214,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     // Mostrar confirmación
                     com.google.android.material.snackbar.Snackbar.make(
                         findViewById(android.R.id.content),
-                        "✅ Conexión restaurada",
+                        " Conexión restaurada",
                         com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
                     ).show();
                 });
@@ -238,7 +238,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             public void onReconnectionFailed(int attempts) {
                 runOnUiThread(() -> {
                     if (tvUbicacionEstado != null) {
-                        tvUbicacionEstado.setText("❌ Conexión fallida tras " + attempts + " intentos");
+                        tvUbicacionEstado.setText(" Conexión fallida tras " + attempts + " intentos");
                         tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.red_error));
                     }
                     if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
@@ -319,7 +319,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
      * Sin esperar a onResume, asegurando que reciba ubicaciones en tiempo real lo antes posible
      */
     private void forceWebSocketConnection() {
-        Log.d(TAG, "🔌 Forzando conexión WebSocket inmediata para el dueño");
+        Log.d(TAG, " Forzando conexión WebSocket inmediata para el dueño");
 
         if (!socketManager.isConnected()) {
             Log.d(TAG, "⚡ Socket no conectado, iniciando conexión...");
@@ -336,10 +336,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 db.collection("reservas").document(idReserva)
                     .update("dueno_viendo_mapa", true)
                     .addOnSuccessListener(aVoid ->
-                        Log.d(TAG, "✅ dueno_viendo_mapa = true actualizado en onCreate")
+                        Log.d(TAG, " dueno_viendo_mapa = true actualizado en onCreate")
                     )
                     .addOnFailureListener(e ->
-                        Log.e(TAG, "❌ Error actualizando dueno_viendo_mapa en onCreate", e)
+                        Log.e(TAG, " Error actualizando dueno_viendo_mapa en onCreate", e)
                     );
             }
         }, 1000);
@@ -450,23 +450,23 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         // ===== WEBSOCKET CONDICIONAL: Indicar que dueño está viendo mapa =====
         // Esto permite al paseador ahorrar batería (no enviar WebSocket si nadie está viendo)
         if (idReserva != null) {
-            Log.d(TAG, "🔍 onResume - Actualizando dueno_viendo_mapa = true para reserva: " + idReserva);
+            Log.d(TAG, " onResume - Actualizando dueno_viendo_mapa = true para reserva: " + idReserva);
             db.collection("reservas").document(idReserva)
                     .update("dueno_viendo_mapa", true)
                     .addOnSuccessListener(aVoid ->
-                        Log.d(TAG, "✅ Dueño viendo mapa actualizado en Firestore - WebSocket debe activarse en paseador")
+                        Log.d(TAG, " Dueño viendo mapa actualizado en Firestore - WebSocket debe activarse en paseador")
                     )
                     .addOnFailureListener(e ->
-                        Log.e(TAG, "❌ ERROR actualizando dueno_viendo_mapa: " + e.getMessage(), e)
+                        Log.e(TAG, " ERROR actualizando dueno_viendo_mapa: " + e.getMessage(), e)
                     );
 
             // ===== VERIFICAR ESTADO DE CONEXIÓN DEL SOCKET ANTES DE UNIRSE =====
             // Evitar intentos fallidos de unirse si el socket no está conectado
             if (socketManager.isConnected()) {
-                Log.d(TAG, "✅ onResume - Socket conectado, uniéndose al paseo: " + idReserva);
+                Log.d(TAG, " onResume - Socket conectado, uniéndose al paseo: " + idReserva);
                 socketManager.joinPaseo(idReserva);
             } else {
-                Log.d(TAG, "⚠️ onResume - Socket desconectado, forzando reconexión inmediata");
+                Log.d(TAG, " onResume - Socket desconectado, forzando reconexión inmediata");
                 // Forzar reconexión del WebSocket
                 if (!socketManager.isConnecting()) {
                     socketManager.connect();
@@ -477,7 +477,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                         Log.d(TAG, "🔄 onResume - Reintentando unirse al paseo tras reconexión");
                         socketManager.joinPaseo(idReserva);
                     } else {
-                        Log.w(TAG, "⚠️ onResume - Socket aún no conectado, se unirá cuando se conecte");
+                        Log.w(TAG, " onResume - Socket aún no conectado, se unirá cuando se conecte");
                     }
                 }, 1500);
             }
@@ -495,7 +495,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             db.collection("reservas").document(idReserva)
                     .update("dueno_viendo_mapa", false)
                     .addOnSuccessListener(aVoid ->
-                        Log.d(TAG, "⏸️ Dueño dejó de ver - WebSocket puede pausarse")
+                        Log.d(TAG, " Dueño dejó de ver - WebSocket puede pausarse")
                     )
                     .addOnFailureListener(e ->
                         Log.w(TAG, "Error actualizando dueno_viendo_mapa", e)
@@ -608,12 +608,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 try {
                     JSONObject data = (JSONObject) args[0];
                     String paseoId = data.getString("paseoId");
-                    Log.d(TAG, "✅ Unido al paseo vía WebSocket: " + paseoId);
+                    Log.d(TAG, " Unido al paseo vía WebSocket: " + paseoId);
 
                     // Feedback visual inmediato al unirse al paseo
                     runOnUiThread(() -> {
                         if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText("✅ Conectado - Esperando ubicación del paseador...");
+                            tvUbicacionEstado.setText(" Conectado - Esperando ubicación del paseador...");
                             tvUbicacionEstado.setTextColor(
                                 ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
                         }
@@ -623,7 +623,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     Log.e(TAG, "Error parseando joined_paseo", e);
                     runOnUiThread(() -> {
                         if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText("⚠️ Error al conectar con el paseo");
+                            tvUbicacionEstado.setText(" Error al conectar con el paseo");
                             tvUbicacionEstado.setTextColor(
                                 ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.red_error));
                         }
@@ -740,7 +740,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     Log.e(TAG, "Error procesando update_location", e);
                     runOnUiThread(() -> {
                         if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText("⚠️ Error procesando ubicación");
+                            tvUbicacionEstado.setText(" Error procesando ubicación");
                             tvUbicacionEstado.setTextColor(
                                 ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.red_error));
                         }
@@ -752,10 +752,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         // Unirse al paseo si está conectado, con reintentos
         if (idReserva != null && !idReserva.isEmpty()) {
             if (socketManager.isConnected()) {
-                Log.d(TAG, "🔌 Socket ya conectado - Uniéndose al paseo inmediatamente");
+                Log.d(TAG, " Socket ya conectado - Uniéndose al paseo inmediatamente");
                 socketManager.joinPaseo(idReserva);
             } else {
-                Log.d(TAG, "⏳ Socket no conectado aún - Se unirá cuando se conecte");
+                Log.d(TAG, " Socket no conectado aún - Se unirá cuando se conecte");
                 // El listener de conexión en setupSocketConnectionListener manejará el reintento
             }
         }
@@ -769,7 +769,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         socketConnectionListener = new SocketManager.OnConnectionListener() {
             @Override
             public void onConnected() {
-                Log.d(TAG, "✅ Socket conectado - Reintentando unirse al paseo");
+                Log.d(TAG, " Socket conectado - Reintentando unirse al paseo");
                 runOnUiThread(() -> {
                     // Si tenemos un paseo activo, reintentar unirse
                     if (idReserva != null && !idReserva.isEmpty()) {
@@ -778,7 +778,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
                         // Actualizar UI con feedback visual mejorado
                         if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText("✅ Reconectado - Esperando ubicación...");
+                            tvUbicacionEstado.setText(" Reconectado - Esperando ubicación...");
                             tvUbicacionEstado.setTextColor(ContextCompat.getColor(
                                 PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
                         }
@@ -787,10 +787,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                         db.collection("reservas").document(idReserva)
                             .update("dueno_viendo_mapa", true)
                             .addOnSuccessListener(aVoid ->
-                                Log.d(TAG, "✅ dueno_viendo_mapa = true actualizado tras reconexión")
+                                Log.d(TAG, " dueno_viendo_mapa = true actualizado tras reconexión")
                             )
                             .addOnFailureListener(e ->
-                                Log.e(TAG, "❌ Error actualizando dueno_viendo_mapa en reconexión", e)
+                                Log.e(TAG, " Error actualizando dueno_viendo_mapa en reconexión", e)
                             );
                     }
                 });
@@ -798,10 +798,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
             @Override
             public void onDisconnected() {
-                Log.d(TAG, "⚠️ Socket desconectado");
+                Log.d(TAG, " Socket desconectado");
                 runOnUiThread(() -> {
                     if (tvUbicacionEstado != null) {
-                        tvUbicacionEstado.setText("⚠️ Desconectado - Intentando reconectar...");
+                        tvUbicacionEstado.setText(" Desconectado - Intentando reconectar...");
                         tvUbicacionEstado.setTextColor(ContextCompat.getColor(
                             PaseoEnCursoDuenoActivity.this, R.color.secondary));
                     }
@@ -810,10 +810,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
             @Override
             public void onError(String message) {
-                Log.e(TAG, "❌ Error de socket: " + message);
+                Log.e(TAG, " Error de socket: " + message);
                 runOnUiThread(() -> {
                     if (tvUbicacionEstado != null) {
-                        tvUbicacionEstado.setText("❌ Error de conexión: " + message);
+                        tvUbicacionEstado.setText(" Error de conexión: " + message);
                         tvUbicacionEstado.setTextColor(ContextCompat.getColor(
                             PaseoEnCursoDuenoActivity.this, R.color.red_error));
                     }
@@ -874,12 +874,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 long timeSinceLastUpdate = System.currentTimeMillis() - lastWebSocketUpdate;
 
                 if (timeSinceLastUpdate > WEBSOCKET_TIMEOUT_MS) {
-                    Log.w(TAG, "⚠️ WebSocket sin actualizaciones por " + (timeSinceLastUpdate / 1000) + "s - Activando fallback a Firestore");
+                    Log.w(TAG, " WebSocket sin actualizaciones por " + (timeSinceLastUpdate / 1000) + "s - Activando fallback a Firestore");
 
                     // Actualizar UI para indicar que estamos usando datos retrasados
                     runOnUiThread(() -> {
                         if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText("⚠️ Datos retrasados - Cargando desde servidor...");
+                            tvUbicacionEstado.setText(" Datos retrasados - Cargando desde servidor...");
                             tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
                         }
                     });
@@ -960,13 +960,13 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                                         }
                                     }
 
-                                    Log.d(TAG, "✅ Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
+                                    Log.d(TAG, " Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
                                 });
                             }
                         }
                     }
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "❌ Error cargando ubicaciones desde Firestore", e));
+                .addOnFailureListener(e -> Log.e(TAG, " Error cargando ubicaciones desde Firestore", e));
     }
 
     private void verificarPermisosYEscuchar() {
@@ -1109,7 +1109,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             // Asegurar que WebSocket está conectado y unido al paseo
             if (socketManager != null) {
                 if (!socketManager.isConnected()) {
-                    Log.d(TAG, "🔌 Paseo EN_CURSO detectado - Conectando WebSocket");
+                    Log.d(TAG, " Paseo EN_CURSO detectado - Conectando WebSocket");
                     socketManager.connect();
                 }
                 Log.d(TAG, "📍 Paseo EN_CURSO - Uniéndose al paseo vía WebSocket");
@@ -1119,10 +1119,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 db.collection("reservas").document(idReserva)
                     .update("dueno_viendo_mapa", true)
                     .addOnSuccessListener(unused ->
-                        Log.d(TAG, "✅ dueno_viendo_mapa = true actualizado (EN_CURSO directo)")
+                        Log.d(TAG, " dueno_viendo_mapa = true actualizado (EN_CURSO directo)")
                     )
                     .addOnFailureListener(e ->
-                        Log.e(TAG, "❌ Error actualizando dueno_viendo_mapa en EN_CURSO", e)
+                        Log.e(TAG, " Error actualizando dueno_viendo_mapa en EN_CURSO", e)
                     );
             }
         }
@@ -1807,7 +1807,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         // ===== PREPARACIÓN ANTICIPADA DE WEBSOCKET =====
         // Conectar y unirse al paseo cuando está en LISTO_PARA_INICIAR
         // para que cuando el paseador inicie, el dueño ya esté conectado
-        Log.d(TAG, "🔌 Estado LISTO_PARA_INICIAR - Preparando conexión WebSocket anticipadamente");
+        Log.d(TAG, " Estado LISTO_PARA_INICIAR - Preparando conexión WebSocket anticipadamente");
         if (socketManager != null) {
             if (!socketManager.isConnected()) {
                 Log.d(TAG, "⚡ Conectando WebSocket anticipadamente para estar listo");
@@ -1824,10 +1824,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     db.collection("reservas").document(idReserva)
                         .update("dueno_viendo_mapa", true)
                         .addOnSuccessListener(aVoid ->
-                            Log.d(TAG, "✅ dueno_viendo_mapa = true (LISTO_PARA_INICIAR)")
+                            Log.d(TAG, " dueno_viendo_mapa = true (LISTO_PARA_INICIAR)")
                         )
                         .addOnFailureListener(e ->
-                            Log.e(TAG, "❌ Error actualizando dueno_viendo_mapa en LISTO_PARA_INICIAR", e)
+                            Log.e(TAG, " Error actualizando dueno_viendo_mapa en LISTO_PARA_INICIAR", e)
                         );
                 }
             }, 1000);

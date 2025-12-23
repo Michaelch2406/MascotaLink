@@ -148,14 +148,23 @@ public class LocationService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d(TAG, "========================================");
+        Log.d(TAG, ">>> LocationService.onCreate() INICIADO");
+        Log.d(TAG, "========================================");
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         // socketManager = SocketManager.getInstance(this); // Injected by Hilt
         // db = FirebaseFirestore.getInstance(); // Injected by Hilt
         // auth = FirebaseAuth.getInstance(); // Injected by Hilt
 
+        Log.d(TAG, ">>> SocketManager inyectado: " + (socketManager != null ? "SI" : "NULL"));
+        Log.d(TAG, ">>> Firestore inyectado: " + (db != null ? "SI" : "NULL"));
+
         createNotificationChannel();
         setupBatteryMonitoring();
         setupSocketConnectionListener();
+
+        Log.d(TAG, ">>> LocationService.onCreate() COMPLETADO");
     }
 
     /**
@@ -165,7 +174,7 @@ public class LocationService extends Service {
         socketConnectionListener = new com.mjc.mascotalink.network.SocketManager.OnConnectionListener() {
             @Override
             public void onConnected() {
-                Log.d(TAG, "✅ Socket conectado - Reintentando unirse al paseo");
+                Log.d(TAG, " Socket conectado - Reintentando unirse al paseo");
                 // Si tenemos un paseo activo, reintentar unirse
                 if (currentReservaId != null && !currentReservaId.isEmpty()) {
                     socketManager.joinPaseo(currentReservaId);
@@ -183,12 +192,12 @@ public class LocationService extends Service {
 
             @Override
             public void onDisconnected() {
-                Log.d(TAG, "⚠️ Socket desconectado");
+                Log.d(TAG, " Socket desconectado");
             }
 
             @Override
             public void onError(String message) {
-                Log.e(TAG, "❌ Error de socket: " + message);
+                Log.e(TAG, " Error de socket: " + message);
             }
         };
 
@@ -233,17 +242,33 @@ public class LocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, ">>> onStartCommand() llamado");
+        Log.d(TAG, ">>> Intent: " + (intent != null ? "PRESENTE" : "NULL"));
+
         if (intent != null) {
             String action = intent.getAction();
+            Log.d(TAG, ">>> Action: " + action);
+
             if (ACTION_START_TRACKING.equals(action)) {
                 String reservaId = intent.getStringExtra(EXTRA_RESERVA_ID);
+                Log.d(TAG, ">>> ReservaId recibido: " + reservaId);
+
                 if (reservaId != null) {
+                    Log.d(TAG, ">>> Llamando a startTracking()...");
                     startTracking(reservaId);
+                } else {
+                    Log.e(TAG, ">>> ERROR: reservaId es NULL");
                 }
             } else if (ACTION_STOP_TRACKING.equals(action)) {
+                Log.d(TAG, ">>> Llamando a stopTracking()...");
                 stopTracking();
+            } else {
+                Log.w(TAG, ">>> Action desconocido: " + action);
             }
+        } else {
+            Log.e(TAG, ">>> ERROR: Intent es NULL");
         }
+
         return START_STICKY;
     }
 
@@ -289,21 +314,29 @@ public class LocationService extends Service {
 
                     if (documentSnapshot != null && documentSnapshot.exists()) {
                         String nuevoEstado = documentSnapshot.getString("estado");
+                        boolean isFromCache = documentSnapshot.getMetadata().isFromCache();
+
+                        Log.d(TAG, " Listener ejecutado - Estado: " + nuevoEstado + ", FromCache: " + isFromCache);
 
                         // Actualizar estado actual
                         if (nuevoEstado != null && !nuevoEstado.equals(currentEstado)) {
-                            Log.d(TAG, "📊 Estado cambió: " + currentEstado + " → " + nuevoEstado);
+                            Log.d(TAG, " Estado cambió: " + currentEstado + " → " + nuevoEstado);
+                            String estadoAnterior = currentEstado;
                             currentEstado = nuevoEstado;
 
-                            // Si el estado cambió a algo diferente de EN_CURSO, detener tracking
-                            if (!"EN_CURSO".equals(nuevoEstado)) {
-                                Log.w(TAG, "⚠️ Paseo ya no está EN_CURSO (estado: " + nuevoEstado + "), deteniendo tracking");
+                            // SOLO detener si:
+                            // 1. Los datos vienen del servidor (NO del cache local)
+                            // 2. Y el estado cambió de EN_CURSO a otro estado
+                            if (!isFromCache && !"EN_CURSO".equals(nuevoEstado) && "EN_CURSO".equals(estadoAnterior)) {
+                                Log.w(TAG, " Paseo cambió de EN_CURSO a " + nuevoEstado + ", deteniendo tracking");
                                 stopTracking();
+                            } else if (isFromCache && !"EN_CURSO".equals(nuevoEstado)) {
+                                Log.d(TAG, " Estado del cache es " + nuevoEstado + " pero ignorando hasta recibir datos del servidor");
                             }
                         } else if (currentEstado == null) {
                             // Primera vez que se obtiene el estado
                             currentEstado = nuevoEstado;
-                            Log.d(TAG, "📊 Estado inicial: " + currentEstado);
+                            Log.d(TAG, " Estado inicial: " + currentEstado + ", FromCache: " + isFromCache);
                         }
 
                         // ===== OPTIMIZACIÓN: Listener para "dueño viendo mapa" =====
@@ -311,12 +344,12 @@ public class LocationService extends Service {
                         boolean estadoAnterior = duenoViendoMapa;
                         duenoViendoMapa = viendo != null ? viendo : true;
 
-                        // 🔍 DEBUG: Siempre mostrar el valor leído
-                        Log.d(TAG, "🔍 dueno_viendo_mapa leído de Firestore: " + viendo + " (será: " + duenoViendoMapa + ")");
+                        //  DEBUG: Siempre mostrar el valor leído
+                        Log.d(TAG, " dueno_viendo_mapa leído de Firestore: " + viendo + " (será: " + duenoViendoMapa + ")");
 
                         if (estadoAnterior != duenoViendoMapa) {
                             if (duenoViendoMapa) {
-                                Log.i(TAG, "👁️ Dueño EMPEZÓ a ver mapa - Activando WebSocket y forzando actualización");
+                                Log.i(TAG, " Dueño EMPEZÓ a ver mapa - Activando WebSocket y forzando actualización");
                                 // Forzar envío inmediato si tenemos ubicación reciente
                                 if (lastLocation != null && socketManager.isConnected()) {
                                     Log.d(TAG, "📡 Forzando envío inmediato de ubicación vía WebSocket");
@@ -466,7 +499,7 @@ public class LocationService extends Service {
 
         // Verificar estado usando variable local (actualizada en tiempo real por el listener)
         if (!"EN_CURSO".equals(currentEstado)) {
-            Log.w(TAG, "⚠️ Ubicación rechazada - estado: " + currentEstado + " (debe ser EN_CURSO)");
+            Log.w(TAG, " Ubicación rechazada - estado: " + currentEstado + " (debe ser EN_CURSO)");
             return;
         }
 
@@ -477,7 +510,7 @@ public class LocationService extends Service {
 
         // ===== VALIDACIÓN 1: Rechazar GPS con precisión muy mala =====
         if (accuracy > MAX_ACCURACY_METERS) {
-            Log.w(TAG, "⚠️ Ubicación rechazada: precisión muy baja (" + (int)accuracy + "m > " + (int)MAX_ACCURACY_METERS + "m)");
+            Log.w(TAG, " Ubicación rechazada: precisión muy baja (" + (int)accuracy + "m > " + (int)MAX_ACCURACY_METERS + "m)");
             return;
         }
 
@@ -488,7 +521,7 @@ public class LocationService extends Service {
 
             // Detectar saltos > 100m en < 2 segundos
             if (distance > MAX_JUMP_METERS && timeDelta < MIN_TIME_BETWEEN_JUMPS_MS) {
-                Log.w(TAG, "⚠️ Ubicación rechazada: salto anormal de " + (int)distance + "m en " + timeDelta + "ms");
+                Log.w(TAG, " Ubicación rechazada: salto anormal de " + (int)distance + "m en " + timeDelta + "ms");
                 return;
             }
 
@@ -529,7 +562,7 @@ public class LocationService extends Service {
 
         // ===== VERIFICAR SI DEBE ENTRAR EN MODO PAUSA =====
         if (!gpsPausado && tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS) {
-            Log.w(TAG, "⏸️ Sin movimiento por " + (tiempoSinMovimiento / 60000) + " minutos - Activando MODO PAUSA (GPS apagado)");
+            Log.w(TAG, " Sin movimiento por " + (tiempoSinMovimiento / 60000) + " minutos - Activando MODO PAUSA (GPS apagado)");
             activarModoPausa();
             return; // No procesar más
         }
@@ -548,11 +581,11 @@ public class LocationService extends Service {
                 Log.d(TAG, "📡 ENVIANDO WebSocket - duenoViendoMapa=" + duenoViendoMapa + ", connected=" + socketManager.isConnected() + ", paseoId=" + currentReservaId);
                 socketManager.updateLocation(currentReservaId, lat, lng, accuracy);
                 lastWebSocketSendTime = now;
-                Log.v(TAG, "✅ WebSocket enviado exitosamente (próximo en " + (intervaloWebSocket / 1000) + "s)");
+                Log.v(TAG, " WebSocket enviado exitosamente (próximo en " + (intervaloWebSocket / 1000) + "s)");
             } else if (!duenoViendoMapa) {
-                Log.d(TAG, "⏸️ WebSocket PAUSADO - duenoViendoMapa=" + duenoViendoMapa + " (ahorro ~10% batería)");
+                Log.d(TAG, " WebSocket PAUSADO - duenoViendoMapa=" + duenoViendoMapa + " (ahorro ~10% batería)");
             } else if (!socketManager.isConnected()) {
-                Log.w(TAG, "⚠️ WebSocket NO enviado - Socket desconectado");
+                Log.w(TAG, " WebSocket NO enviado - Socket desconectado");
             }
         } else {
             Log.v(TAG, "⏭️ WebSocket throttled (esperando " +
@@ -695,7 +728,7 @@ public class LocationService extends Service {
             reservaRef.update("ubicaciones", FieldValue.arrayUnion(batchToSend.toArray()))
                     .addOnSuccessListener(aVoid -> {
                         ubicacionesCount += batchToSend.size();
-                        Log.d(TAG, "✅ Batch enviado: " + batchToSend.size() + " ubicaciones (total: " + ubicacionesCount + ")");
+                        Log.d(TAG, " Batch enviado: " + batchToSend.size() + " ubicaciones (total: " + ubicacionesCount + ")");
                     })
                     .addOnFailureListener(e -> {
                         Log.w(TAG, "Error guardando batch, reintentando individuales", e);
@@ -725,9 +758,9 @@ public class LocationService extends Service {
         batch.commit()
                 .addOnSuccessListener(aVoid -> {
                     ubicacionesCount += ubicaciones.size();
-                    Log.d(TAG, "✅ Batch guardado en subcollection: " + ubicaciones.size() + " puntos (total: " + ubicacionesCount + ")");
+                    Log.d(TAG, " Batch guardado en subcollection: " + ubicaciones.size() + " puntos (total: " + ubicacionesCount + ")");
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "❌ Error guardando en subcollection", e));
+                .addOnFailureListener(e -> Log.e(TAG, " Error guardando en subcollection", e));
     }
 
     /**
@@ -736,7 +769,7 @@ public class LocationService extends Service {
     private void guardarDistanciaAcumulada() {
         // Validación defensiva - prevenir NullPointerException
         if (currentReservaId == null || currentReservaId.isEmpty()) {
-            Log.w(TAG, "⚠️ No se puede guardar distancia - currentReservaId es null o vacío");
+            Log.w(TAG, " No se puede guardar distancia - currentReservaId es null o vacío");
             return;
         }
 
@@ -748,7 +781,7 @@ public class LocationService extends Service {
 
         reservaRef.update(updates)
                 .addOnSuccessListener(aVoid ->
-                    Log.v(TAG, "✅ Distancia guardada: " + String.format("%.2f", distanciaAcumuladaMetros / 1000) + " km")
+                    Log.v(TAG, " Distancia guardada: " + String.format("%.2f", distanciaAcumuladaMetros / 1000) + " km")
                 )
                 .addOnFailureListener(e -> Log.w(TAG, "Error guardando distancia", e));
     }
@@ -764,7 +797,7 @@ public class LocationService extends Service {
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
             gpsPausado = true;
-            Log.i(TAG, "⏸️ GPS APAGADO - Modo pausa activado (ahorro ~95% batería GPS)");
+            Log.i(TAG, " GPS APAGADO - Modo pausa activado (ahorro ~95% batería GPS)");
 
             // Actualizar notificación
             actualizarNotificacion("Paseo en pausa - GPS en espera");
@@ -858,7 +891,7 @@ public class LocationService extends Service {
                             }
                         }).addOnFailureListener(e -> {
                             // RED NO DISPONIBLE - Usar fallback (dead zone)
-                            Log.w(TAG, "⚠️ Red no disponible durante pausa, intentando fallback");
+                            Log.w(TAG, " Red no disponible durante pausa, intentando fallback");
                             Location fallback = obtenerUltimaUbicacionConocida();
                             if (fallback != null) {
                                 Log.d(TAG, "📍 Fallback activado: última ubicación disponible");
@@ -872,7 +905,7 @@ public class LocationService extends Service {
                                     }
                                 }
                             } else {
-                                Log.w(TAG, "⚠️ Sin fallback disponible - última ubicación muy antigua o null");
+                                Log.w(TAG, " Sin fallback disponible - última ubicación muy antigua o null");
                             }
                         });
                     }
@@ -910,7 +943,7 @@ public class LocationService extends Service {
         if (estadoListener != null) {
             estadoListener.remove();
             estadoListener = null;
-            Log.d(TAG, "✅ Listener de estado removido");
+            Log.d(TAG, " Listener de estado removido");
         }
 
         // Enviar batch final antes de detener
@@ -920,7 +953,7 @@ public class LocationService extends Service {
         if (currentReservaId != null && !currentReservaId.isEmpty()) {
             guardarDistanciaAcumulada();
         } else {
-            Log.w(TAG, "⚠️ No se guardó distancia final - currentReservaId es null");
+            Log.w(TAG, " No se guardó distancia final - currentReservaId es null");
         }
 
         if (fusedLocationClient != null && locationCallback != null) {

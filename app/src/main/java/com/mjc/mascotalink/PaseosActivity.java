@@ -409,7 +409,7 @@ public class PaseosActivity extends AppCompatActivity {
         firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
             // FASE 1 - PERFORMANCE: Log de tiempo de query
             long queryTime = System.currentTimeMillis() - startTime;
-            Log.d(TAG, "📊 Query completada en " + queryTime + "ms - Estado: " + estadoActual);
+            Log.d(TAG, " Query completada en " + queryTime + "ms - Estado: " + estadoActual);
 
             if (e != null) {
                 manejarError(e);

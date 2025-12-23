@@ -42,6 +42,7 @@
     <color name="green_500">#4CAF50</color>
     <color name="green_700">#388E3C</color>
     <color name="yellow_600">#FDD835</color>
+    <color name="amber_dark">#F57C00</color>
     <color name="grey_600">#757575</color>
     <color name="orange_500">#FF9800</color>
     <color name="orange_primary">#FB8C00</color>

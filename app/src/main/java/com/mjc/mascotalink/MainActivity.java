@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
                             connectionBanner.setVisibility(android.view.View.VISIBLE);
                             android.widget.TextView bannerText = connectionBanner.findViewById(R.id.connection_banner_text);
                             if (bannerText != null) {
-                                bannerText.setText("⚠️ Sin conexión. Intentando reconectar...");
+                                bannerText.setText(" Sin conexión. Intentando reconectar...");
                             }
                         }
                     });
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                             // Mostrar mensaje de éxito brevemente antes de ocultar
                             android.widget.TextView bannerText = connectionBanner.findViewById(R.id.connection_banner_text);
                             if (bannerText != null) {
-                                bannerText.setText("✅ Conexión restaurada");
+                                bannerText.setText(" Conexión restaurada");
                                 connectionBanner.setBackgroundColor(0xFFD1FAE5); // Verde claro
                             }
 
@@ -162,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
                         if (connectionBanner != null) {
                             android.widget.TextView bannerText = connectionBanner.findViewById(R.id.connection_banner_text);
                             if (bannerText != null) {
-                                bannerText.setText("⚠️ Sin conexión. Toca 'Reintentar' para conectar.");
+                                bannerText.setText(" Sin conexión. Toca 'Reintentar' para conectar.");
                             }
                         }
                     });

@@ -148,7 +148,7 @@ public class CalendarioAdapter extends BaseAdapter {
                 // Si el día está parcialmente bloqueado Y es vista de CLIENTE
                 if (esParcial && !seleccionMultiple && !esVistaPaseador) {
                     android.widget.Toast.makeText(context,
-                        "⚠️ Disponibilidad limitada - Solo algunas horas disponibles",
+                        " Disponibilidad limitada - Solo algunas horas disponibles",
                         android.widget.Toast.LENGTH_SHORT).show();
                 }
 

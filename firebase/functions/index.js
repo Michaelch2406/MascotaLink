@@ -39,7 +39,7 @@ function initializeGemini() {
       maxOutputTokens: 2048,
     }
   });
-  console.log("✅ Gemini AI initialized successfully with model: gemini-2.5-flash-lite (temperature: 0.1)");
+  console.log(" Gemini AI initialized successfully with model: gemini-2.5-flash-lite (temperature: 0.1)");
 }
 
 admin.initializeApp();
@@ -239,11 +239,11 @@ setInterval(cleanExpiredCache, 10 * 60 * 1000);
  * This is a callable function, invoked directly from the Android app.
  */
 exports.recomendarPaseadores = onCall(async (request) => {
-  console.log(`🔍 DEBUG: Función recomendarPaseadores invocada`);
+  console.log(` DEBUG: Función recomendarPaseadores invocada`);
 
   // Inicializar Gemini AI si aún no está inicializado
   initializeGemini();
-  console.log(`🔍 DEBUG: Gemini inicializado. Model existe: ${model ? 'YES' : 'NO'}`);
+  console.log(` DEBUG: Gemini inicializado. Model existe: ${model ? 'YES' : 'NO'}`);
 
   if (!model) {
     console.error("Gemini AI model is not initialized. Check GEMINI_API_KEY.");
@@ -252,7 +252,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
 
   const { userData, petData, userLocation } = request.data;
   const userId = request.auth?.uid;
-  console.log(`🔍 DEBUG: User ID: ${userId}, Datos recibidos: userData=${!!userData}, petData=${!!petData}, userLocation=${!!userLocation}`);
+  console.log(` DEBUG: User ID: ${userId}, Datos recibidos: userData=${!!userData}, petData=${!!petData}, userLocation=${!!userLocation}`);
 
   if (!userId) {
     throw new HttpsError('unauthenticated', 'El usuario no está autenticado.');
@@ -311,15 +311,15 @@ exports.recomendarPaseadores = onCall(async (request) => {
     }
   }
 
-  console.log(`✅ Validación exitosa - Recomendación para usuario ${userId}, mascota ${petData.nombre} (${petData.tamano})`);
-  console.log(`🔍 DEBUG: Iniciando lógica de recomendación...`);
+  console.log(` Validación exitosa - Recomendación para usuario ${userId}, mascota ${petData.nombre} (${petData.tamano})`);
+  console.log(` DEBUG: Iniciando lógica de recomendación...`);
 
   // 🆕 MEJORA #6: Verificar cache antes de llamar a Gemini
-  console.log(`🔍 DEBUG: Verificando cache...`);
+  console.log(` DEBUG: Verificando cache...`);
   const cacheKey = userId;
   const petId = petData.id || petData.nombre; // Identificador de mascota
   const cached = recommendationCache.get(cacheKey);
-  console.log(`🔍 DEBUG: Cache key: ${cacheKey}, Pet ID: ${petId}, Cache hit: ${cached ? 'YES' : 'NO'}`);
+  console.log(` DEBUG: Cache key: ${cacheKey}, Pet ID: ${petId}, Cache hit: ${cached ? 'YES' : 'NO'}`);
 
   if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
     // Verificar que sea para la misma mascota
@@ -336,18 +336,18 @@ exports.recomendarPaseadores = onCall(async (request) => {
     }
   }
 
-  console.log(`🔍 DEBUG: Cache no encontrado, continuando con búsqueda...`);
+  console.log(` DEBUG: Cache no encontrado, continuando con búsqueda...`);
 
   const userLat = userLocation.latitude;
   const userLng = userLocation.longitude;
   const radiusKm = 10; // Search within 10 km radius
-  console.log(`🔍 DEBUG: Ubicación usuario: ${userLat}, ${userLng} - Radio: ${radiusKm}km`);
+  console.log(` DEBUG: Ubicación usuario: ${userLat}, ${userLng} - Radio: ${radiusKm}km`);
 
   let potentialWalkers = [];
 
-  console.log(`🔍 DEBUG: Iniciando bloque try para búsqueda de paseadores...`);
+  console.log(` DEBUG: Iniciando bloque try para búsqueda de paseadores...`);
   try {
-    console.log(`🔍 DEBUG: Ejecutando query a paseadores_search...`);
+    console.log(` DEBUG: Ejecutando query a paseadores_search...`);
     // 1. Fetch potential walkers from paseadores_search collection
     // This collection is denormalized and contains searchable walker data.
     const searchSnapshot = await db.collection("paseadores_search")
@@ -355,7 +355,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
       // Buscar tanto "APROBADO" como "aprobado" (hay inconsistencia en la BD)
       .get();
 
-    console.log(`🔍 DEBUG: Query completada. Documentos encontrados: ${searchSnapshot.size}`);
+    console.log(` DEBUG: Query completada. Documentos encontrados: ${searchSnapshot.size}`);
 
     const walkerIds = [];
     const walkerDataMap = {}; // To store full walker data
@@ -375,32 +375,32 @@ exports.recomendarPaseadores = onCall(async (request) => {
       }
     }
 
-    console.log(`🔍 DEBUG: Total de IDs de paseadores verificados/aprobados: ${walkerIds.length}`);
+    console.log(` DEBUG: Total de IDs de paseadores verificados/aprobados: ${walkerIds.length}`);
 
     if (walkerIds.length === 0) {
-      console.log(`⚠️ No se encontraron paseadores activos y verificados`);
+      console.log(` No se encontraron paseadores activos y verificados`);
       return { recommendations: [], message: "No se encontraron paseadores activos y verificados." };
     }
 
-    console.log(`🔍 DEBUG: Obteniendo datos completos de ${walkerIds.length} paseadores...`);
-    console.log(`🔍 DEBUG: IDs a consultar: ${walkerIds.join(', ')}`);
+    console.log(` DEBUG: Obteniendo datos completos de ${walkerIds.length} paseadores...`);
+    console.log(` DEBUG: IDs a consultar: ${walkerIds.join(', ')}`);
 
     // 2. Fetch full paseador profile data and user display name for prompt
     const fullWalkerPromises = walkerIds.map(id => db.collection("paseadores").doc(id).get());
     const userDisplayPromises = walkerIds.map(id => db.collection("usuarios").doc(id).get());
 
-    console.log(`🔍 DEBUG: Ejecutando queries paralelas a paseadores y usuarios...`);
+    console.log(` DEBUG: Ejecutando queries paralelas a paseadores y usuarios...`);
 
     const [fullWalkerDocs, userDisplayDocs] = await Promise.all([
       Promise.all(fullWalkerPromises),
       Promise.all(userDisplayPromises)
     ]);
 
-    console.log(`🔍 DEBUG: Queries completadas. fullWalkerDocs: ${fullWalkerDocs.length}, userDisplayDocs: ${userDisplayDocs.length}`);
+    console.log(` DEBUG: Queries completadas. fullWalkerDocs: ${fullWalkerDocs.length}, userDisplayDocs: ${userDisplayDocs.length}`);
 
     const paseadoresForAI = [];
 
-    console.log(`🔍 DEBUG: Procesando ${walkerIds.length} paseadores y calculando distancias...`);
+    console.log(` DEBUG: Procesando ${walkerIds.length} paseadores y calculando distancias...`);
 
     for (let i = 0; i < walkerIds.length; i++) {
       const walkerId = walkerIds[i];
@@ -408,7 +408,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
       const fullWalkerData = fullWalkerDocs[i].exists ? fullWalkerDocs[i].data() : {};
       const userData = userDisplayDocs[i].exists ? userDisplayDocs[i].data() : {};
 
-      console.log(`  🔍 Procesando paseador ${i + 1}/${walkerIds.length}: ${walkerId}`);
+      console.log(`   Procesando paseador ${i + 1}/${walkerIds.length}: ${walkerId}`);
 
       // Buscar ubicación en varios lugares posibles
       let walkerLocation = null;
@@ -430,7 +430,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
       }
 
       if (!walkerLocation || !walkerLocation.latitude || !walkerLocation.longitude) {
-        console.log(`    ⚠️ Sin ubicación válida en ningún campo, saltando`);
+        console.log(`     Sin ubicación válida en ningún campo, saltando`);
         continue;
       }
 
@@ -455,24 +455,24 @@ exports.recomendarPaseadores = onCall(async (request) => {
             top_resenas: searchData.top_resenas || [],
             zonas_principales: searchData.zonas_principales || [],
             disponibilidad_general: searchData.disponibilidad_general || "No especificada",
-            // ❌ ELIMINADO: experiencia_general (redundante con anos_experiencia)
+            //  ELIMINADO: experiencia_general (redundante con anos_experiencia)
           });
-          console.log(`    ✅ Agregado a lista de candidatos`);
+          console.log(`     Agregado a lista de candidatos`);
         } else {
-          console.log(`    ❌ Fuera de rango (>${radiusKm}km)`);
+          console.log(`     Fuera de rango (>${radiusKm}km)`);
         }
     }
 
-    console.log(`🔍 DEBUG: Total de paseadores dentro del radio: ${paseadoresForAI.length}`);
+    console.log(` DEBUG: Total de paseadores dentro del radio: ${paseadoresForAI.length}`);
 
     if (paseadoresForAI.length === 0) {
-      console.log(`⚠️ No se encontraron paseadores cerca de la ubicación`);
+      console.log(` No se encontraron paseadores cerca de la ubicación`);
       return { recommendations: [], message: "No se encontraron paseadores aptos cerca de tu ubicación." };
     }
 
     // 🆕 MEJORA #4: Pre-scoring híbrido (distancia + calificación + experiencia)
     // En lugar de solo ordenar por distancia, calculamos un score que combina múltiples factores
-    console.log(`🔍 DEBUG: Calculando pre-score para ${paseadoresForAI.length} candidatos...`);
+    console.log(` DEBUG: Calculando pre-score para ${paseadoresForAI.length} candidatos...`);
 
     paseadoresForAI.forEach(paseador => {
       // Componentes del score (0-100):
@@ -497,15 +497,15 @@ exports.recomendarPaseadores = onCall(async (request) => {
       }
     });
 
-    console.log(`🔍 DEBUG: Pre-scoring completado`);
+    console.log(` DEBUG: Pre-scoring completado`);
 
     // 🆕 MEJORA C: Personalización basada en historial del usuario
     // Consultar reservas anteriores para identificar preferencias
-    console.log("🔍 DEBUG: 🎯 Analizando historial de usuario para personalización...");
+    console.log(" DEBUG: 🎯 Analizando historial de usuario para personalización...");
 
     try {
       const userId = request.auth.uid;
-      console.log(`🔍 DEBUG: Consultando historial de reservas para usuario ${userId}...`);
+      console.log(` DEBUG: Consultando historial de reservas para usuario ${userId}...`);
       const historialSnapshot = await db.collection("reservas")
         .where("dueno_id", "==", userId)
         .where("estado", "==", "completada")
@@ -547,7 +547,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
           caracteristicasPreferidas.distanciaPromedio /= caracteristicasPreferidas.count;
         }
 
-        console.log(`  📊 Historial: ${paseadoresPrevios.size} paseadores únicos, ${caracteristicasPreferidas.count} reservas analizadas`);
+        console.log(`   Historial: ${paseadoresPrevios.size} paseadores únicos, ${caracteristicasPreferidas.count} reservas analizadas`);
         console.log(`  📈 Preferencias detectadas: ${caracteristicasPreferidas.experienciaPromedio.toFixed(1)} años exp, $${caracteristicasPreferidas.precioPromedio.toFixed(0)}/h, ${caracteristicasPreferidas.distanciaPromedio.toFixed(1)}km`);
 
         // Aplicar boosts al pre_score
@@ -607,7 +607,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
         console.log("  ℹ️ Usuario nuevo - no hay historial para personalizar");
       }
     } catch (error) {
-      console.error("⚠️ Error en personalización (continuando sin ella):", error.message);
+      console.error(" Error en personalización (continuando sin ella):", error.message);
       // No fallar la función, solo log del error
     }
 
@@ -626,11 +626,11 @@ exports.recomendarPaseadores = onCall(async (request) => {
       return aceptaTamano;
     });
 
-    console.log(`🔍 DEBUG: Candidatos compatibles con ${tamanoMascota}: ${candidatosCompatibles.length} de ${paseadoresForAI.length}`);
+    console.log(` DEBUG: Candidatos compatibles con ${tamanoMascota}: ${candidatosCompatibles.length} de ${paseadoresForAI.length}`);
 
     // Si no hay candidatos compatibles, devolver mensaje específico
     if (candidatosCompatibles.length === 0) {
-      console.log(`⚠️ No hay paseadores que acepten perros ${tamanoMascota}`);
+      console.log(` No hay paseadores que acepten perros ${tamanoMascota}`);
       return {
         recommendations: [],
         message: `No encontramos paseadores que acepten perros de tamaño ${tamanoMascota} en tu área. Intenta expandir tu búsqueda.`
@@ -640,11 +640,11 @@ exports.recomendarPaseadores = onCall(async (request) => {
     // 🔥 OPTIMIZACIÓN: Limitar a máximo 8 candidatos (reducido para ahorrar tokens/créditos)
     const candidatosParaIA = candidatosCompatibles.slice(0, 8);
 
-    console.log(`🔍 DEBUG: ✅ Top 3 candidatos por pre-score:`);
+    console.log(` DEBUG:  Top 3 candidatos por pre-score:`);
     candidatosParaIA.slice(0, 3).forEach((p, i) => {
       console.log(`  ${i+1}. ${p.nombre} - Score: ${p.pre_score.toFixed(1)} (${p.calificacion_promedio}⭐, ${p.distancia_km}km, ${p.anos_experiencia}años exp)`);
     });
-    console.log(`🔍 DEBUG: Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
+    console.log(` DEBUG: Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
 
     // 🔥 OPTIMIZACIÓN: Skip Gemini en casos obvios para ahorrar créditos
     // Caso 1: Solo hay 1 candidato con score decente (>= 60)
@@ -709,7 +709,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
     }
 
     // Construct the prompt for Gemini AI
-    console.log(`🔍 DEBUG: Construyendo prompt para Gemini AI...`);
+    console.log(` DEBUG: Construyendo prompt para Gemini AI...`);
     const prompt = `Eres un asistente experto en matching de paseadores de perros para la app Walki.
 
 **ESQUEMA DE DATOS:**
@@ -794,14 +794,14 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
 - Si no hay buenos matches (score >= 50), devuelve array vacío: []
 - Los tags deben ser MUY concisos (máx 3 palabras cada uno)`;
 
-    console.log(`🔍 DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
+    console.log(` DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
     const result = await model.generateContent(prompt);
-    console.log(`🔍 DEBUG: ✅ Respuesta de Gemini recibida`);
+    console.log(` DEBUG:  Respuesta de Gemini recibida`);
 
     const response = result.response;
     const text = response.text();
 
-    console.log(`🔍 DEBUG: Respuesta de Gemini AI (raw, primeros 500 chars): ${text.substring(0, 500)}`);
+    console.log(` DEBUG: Respuesta de Gemini AI (raw, primeros 500 chars): ${text.substring(0, 500)}`);
 
     let recommendations = [];
     try {
@@ -837,11 +837,11 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
       }
     });
 
-    console.log(`🔍 DEBUG: Recomendaciones parseadas de Gemini AI:`, JSON.stringify(recommendations, null, 2));
+    console.log(` DEBUG: Recomendaciones parseadas de Gemini AI:`, JSON.stringify(recommendations, null, 2));
 
     // 🆕 OPTIMIZACIÓN: Si Gemini no devuelve matches, usar fallback con el mejor candidato
     if (!recommendations || recommendations.length === 0) {
-      console.log(`⚠️ Gemini no devolvió matches. Activando fallback con mejor candidato disponible...`);
+      console.log(` Gemini no devolvió matches. Activando fallback con mejor candidato disponible...`);
 
       // Tomar el mejor candidato por pre_score
       const mejorCandidato = candidatosParaIA[0]; // Ya está ordenado por pre_score descendente
@@ -862,9 +862,9 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
         };
 
         recommendations = [fallbackRecommendation];
-        console.log(`✅ Fallback activado: ${mejorCandidato.nombre} (score: ${mejorCandidato.pre_score.toFixed(1)})`);
+        console.log(` Fallback activado: ${mejorCandidato.nombre} (score: ${mejorCandidato.pre_score.toFixed(1)})`);
       } else {
-        console.log(`⚠️ No hay candidatos disponibles para fallback`);
+        console.log(` No hay candidatos disponibles para fallback`);
         return { recommendations: [], message: "No se encontraron paseadores aptos cerca de tu ubicación." };
       }
     }
@@ -875,9 +875,9 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
       timestamp: Date.now(),
       petId: petId
     });
-    console.log(`🔍 DEBUG: 💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
+    console.log(` DEBUG: 💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
 
-    console.log(`🔍 DEBUG: ✅✅✅ FUNCIÓN COMPLETADA EXITOSAMENTE - Retornando ${recommendations.length} recomendaciones`);
+    console.log(` DEBUG: ✅✅✅ FUNCIÓN COMPLETADA EXITOSAMENTE - Retornando ${recommendations.length} recomendaciones`);
     return {
       recommendations: recommendations,
       message: recommendations[0]?.is_fallback
@@ -967,8 +967,8 @@ async function sincronizarPaseador(docId) {
     let topResenas = [];
     try {
       const resenasSnapshot = await db.collection("resenas_paseadores")
-        .where("paseadorId", "==", docId) // ✅ CORREGIDO: paseadorId (camelCase)
-        .orderBy("timestamp", "desc") // ✅ CORREGIDO: timestamp (no fecha_creacion)
+        .where("paseadorId", "==", docId) //  CORREGIDO: paseadorId (camelCase)
+        .orderBy("timestamp", "desc") //  CORREGIDO: timestamp (no fecha_creacion)
         .limit(3)
         .get();
 
@@ -981,10 +981,10 @@ async function sincronizarPaseador(docId) {
       });
 
       if (topResenas.length > 0) {
-        console.log(`✅ ${topResenas.length} reseñas encontradas para ${docId}`);
+        console.log(` ${topResenas.length} reseñas encontradas para ${docId}`);
       }
     } catch (error) {
-      console.log(`⚠️ Error obteniendo reseñas para ${docId}: ${error.message}`);
+      console.log(` Error obteniendo reseñas para ${docId}: ${error.message}`);
       console.log(`   Posible causa: Falta índice en Firestore para (paseadorId, timestamp)`);
     }
 
@@ -1028,7 +1028,7 @@ async function sincronizarPaseador(docId) {
           // Resumen más detallado para la IA
           const horaEjemplo = horario[diasDisponibles[0]]?.hora_inicio || "";
           disponibilidadGeneral = `${diasDisponibles.length} días/semana desde ${horaEjemplo}`;
-          console.log(`✅ Disponibilidad: ${disponibilidadGeneral} (${diasDisponibles.join(", ")})`);
+          console.log(` Disponibilidad: ${disponibilidadGeneral} (${diasDisponibles.join(", ")})`);
         } else {
           console.log(`ℹ️ horario_default existe pero sin días disponibles`);
         }
@@ -1046,12 +1046,12 @@ async function sincronizarPaseador(docId) {
           const docAntiguo = disponibilidadSnapshot.docs[0].data();
           if (docAntiguo.dias && Array.isArray(docAntiguo.dias)) {
             disponibilidadGeneral = `${docAntiguo.dias.length} días/semana (formato antiguo)`;
-            console.log(`✅ Disponibilidad antigua: ${disponibilidadGeneral}`);
+            console.log(` Disponibilidad antigua: ${disponibilidadGeneral}`);
           }
         }
       }
     } catch (error) {
-      console.log(`⚠️ Error obteniendo disponibilidad para ${docId}: ${error.message}`);
+      console.log(` Error obteniendo disponibilidad para ${docId}: ${error.message}`);
     }
 
     // Construir objeto denormalizado para paseadores_search
@@ -1070,7 +1070,7 @@ async function sincronizarPaseador(docId) {
       verificacion_estado: paseadorData.verificacion_estado || "pendiente",
 
       // 🆕 Campos adicionales denormalizados para IA
-      motivacion: paseadorData.perfil_profesional?.motivacion || "", // ✅ CORREGIDO: Ruta anidada
+      motivacion: paseadorData.perfil_profesional?.motivacion || "", //  CORREGIDO: Ruta anidada
       top_resenas: topResenas, // Array de {texto, calificacion}
       zonas_principales: zonasPrincipales, // Array de strings
       disponibilidad_general: disponibilidadGeneral, // String resumido
@@ -1241,7 +1241,7 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
         console.log(`⚡ Es el primer día del grupo - enviando notificación (optimizado)`);
       } else {
         // FALLBACK: Lógica antigua para compatibilidad con reservas sin el campo
-        console.log(`⚠️  Usando fallback (reserva sin campo es_primer_dia_grupo)`);
+        console.log(`  Usando fallback (reserva sin campo es_primer_dia_grupo)`);
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         const grupoSnapshot = await db.collection("reservas")
@@ -1511,7 +1511,7 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
         console.log(`⚡ Es el primer día - enviando notificación (optimizado)`);
       } else {
         // FALLBACK: Lógica antigua para compatibilidad
-        console.log(`⚠️  Usando fallback (reserva sin campo es_primer_dia_grupo)`);
+        console.log(`  Usando fallback (reserva sin campo es_primer_dia_grupo)`);
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const grupoSnapshot = await db.collection("reservas")
@@ -1570,7 +1570,7 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
         console.log(`⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
       } else {
         // FALLBACK: Consulta original para reservas antiguas sin el campo
-        console.log(`⚠️ Usando fallback para obtener cantidad de días del grupo`);
+        console.log(` Usando fallback para obtener cantidad de días del grupo`);
         const grupoSnapshot = await db.collection("reservas")
           .where("grupo_reserva_id", "==", grupoReservaId)
           .get();
@@ -2126,7 +2126,7 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
           console.log(`⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
         } else {
           // FALLBACK: Lógica original para reservas antiguas sin el campo
-          console.log(`⚠️ Usando fallback - verificando primer día del grupo`);
+          console.log(` Usando fallback - verificando primer día del grupo`);
           const grupoSnapshot = await db.collection("reservas")
             .where("grupo_reserva_id", "==", grupoReservaId)
             .get();
@@ -2155,7 +2155,7 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
           console.log(`⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
         } else {
           // FALLBACK: Consultar si no existe el campo
-          console.log(`⚠️ Usando fallback - consultando cantidad de días del grupo`);
+          console.log(` Usando fallback - consultando cantidad de días del grupo`);
           const grupoSnapshot = await db.collection("reservas")
             .where("grupo_reserva_id", "==", grupoReservaId)
             .get();
@@ -2335,7 +2335,7 @@ exports.sendReminder5MinBefore = onSchedule("every 5 minutes", async (event) => 
           console.log(`⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
         } else {
           // FALLBACK: Lógica original para reservas antiguas sin el campo
-          console.log(`⚠️ Usando fallback - verificando primer día del grupo`);
+          console.log(` Usando fallback - verificando primer día del grupo`);
           const grupoSnapshot = await db.collection("reservas")
             .where("grupo_reserva_id", "==", grupoReservaId)
             .get();
@@ -2362,7 +2362,7 @@ exports.sendReminder5MinBefore = onSchedule("every 5 minutes", async (event) => 
           console.log(`⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
         } else {
           // FALLBACK: Consultar si no existe el campo
-          console.log(`⚠️ Usando fallback - consultando cantidad de días del grupo`);
+          console.log(` Usando fallback - consultando cantidad de días del grupo`);
           const grupoSnapshot = await db.collection("reservas")
             .where("grupo_reserva_id", "==", grupoReservaId)
             .get();
@@ -2640,7 +2640,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
           console.log(`⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
         } else {
           // FALLBACK: Lógica original para reservas antiguas sin el campo
-          console.log(`⚠️ Usando fallback - verificando primer día del grupo`);
+          console.log(` Usando fallback - verificando primer día del grupo`);
           try {
             const grupoSnapshot = await db.collection("reservas")
               .where("grupo_reserva_id", "==", grupoReservaId)
@@ -3024,7 +3024,7 @@ exports.debugNotifyReady = onRequest(async (req, res) => {
           console.log(`DEBUG: ⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
         } else {
           // FALLBACK: Lógica original para reservas antiguas sin el campo
-          console.log(`DEBUG: ⚠️ Usando fallback - verificando primer día del grupo`);
+          console.log(`DEBUG:  Usando fallback - verificando primer día del grupo`);
           try {
             const grupoSnapshot = await db.collection("reservas")
               .where("grupo_reserva_id", "==", grupoReservaId)
@@ -3396,7 +3396,7 @@ exports.debugNotifyReminder5Min = onRequest(async (req, res) => {
           console.log(`DEBUG: ⚡ Procesando primer día del grupo ${grupoReservaId} (optimizado)`);
         } else {
           // FALLBACK: Lógica original para reservas antiguas sin el campo
-          console.log(`DEBUG: ⚠️ Usando fallback - verificando primer día del grupo`);
+          console.log(`DEBUG:  Usando fallback - verificando primer día del grupo`);
           const grupoSnapshot = await db.collection("reservas")
             .where("grupo_reserva_id", "==", grupoReservaId)
             .get();
@@ -3423,7 +3423,7 @@ exports.debugNotifyReminder5Min = onRequest(async (req, res) => {
           console.log(`DEBUG: ⚡ Cantidad de días obtenida del campo (optimizado): ${cantidadDias}`);
         } else {
           // FALLBACK: Consultar si no existe el campo
-          console.log(`DEBUG: ⚠️ Usando fallback - consultando cantidad de días del grupo`);
+          console.log(`DEBUG:  Usando fallback - consultando cantidad de días del grupo`);
           const grupoSnapshot = await db.collection("reservas")
             .where("grupo_reserva_id", "==", grupoReservaId)
             .get();
@@ -3794,10 +3794,10 @@ exports.migrarPaseadoresSearch = onRequest(async (req, res) => {
       try {
         await sincronizarPaseador(paseadorId);
         migrados++;
-        console.log(`✅ Migrado ${paseadorId} (${migrados}/${paseadorIds.length})`);
+        console.log(` Migrado ${paseadorId} (${migrados}/${paseadorIds.length})`);
       } catch (error) {
         errores++;
-        console.error(`❌ Error migrando ${paseadorId}:`, error.message);
+        console.error(` Error migrando ${paseadorId}:`, error.message);
       }
 
       // Pausa de 100ms entre cada paseador para no saturar Firestore
@@ -3924,12 +3924,12 @@ exports.migrarCampoEsPrimerDia = onRequest(async (req, res) => {
       .get();
 
     if (reservasSnapshot.empty) {
-      console.log("✅ No hay reservas de grupo para migrar");
+      console.log(" No hay reservas de grupo para migrar");
       res.status(200).send({ success: true, message: "No hay reservas para migrar", updated: 0 });
       return;
     }
 
-    console.log(`📊 Encontradas ${reservasSnapshot.size} reservas de grupo`);
+    console.log(` Encontradas ${reservasSnapshot.size} reservas de grupo`);
 
     // Agrupar reservas por grupo_reserva_id
     const grupos = new Map();
@@ -3939,7 +3939,7 @@ exports.migrarCampoEsPrimerDia = onRequest(async (req, res) => {
       const grupoId = data.grupo_reserva_id;
 
       if (!grupoId) {
-        console.warn(`⚠️  Reserva ${doc.id} tiene es_grupo=true pero sin grupo_reserva_id`);
+        console.warn(`  Reserva ${doc.id} tiene es_grupo=true pero sin grupo_reserva_id`);
         return;
       }
 
@@ -4006,7 +4006,7 @@ exports.migrarCampoEsPrimerDia = onRequest(async (req, res) => {
     // Execute all batches in parallel
     await Promise.all(batches);
 
-    console.log(`✅ Migración completada: ${totalUpdates} reservas actualizadas en ${batches.length} batch(es)`);
+    console.log(` Migración completada: ${totalUpdates} reservas actualizadas en ${batches.length} batch(es)`);
 
     res.status(200).send({
       success: true,
@@ -4018,7 +4018,7 @@ exports.migrarCampoEsPrimerDia = onRequest(async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error en migración:", error);
+    console.error(" Error en migración:", error);
     res.status(500).send({
       success: false,
       error: error.message,
