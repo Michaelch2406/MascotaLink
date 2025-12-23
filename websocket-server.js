@@ -454,11 +454,13 @@ io.on('connection', (socket) => {
 
       const lastSave = socket.lastLocationSave || 0;
       if (Date.now() - lastSave > 30000) {
+        // Usar formato comprimido consistente con LocationService
         const ubicacionData = {
-          latitud: latitud,
-          longitud: longitud,
-          accuracy: accuracy || null,
-          timestamp: admin.firestore.Timestamp.fromMillis(timestamp)
+          lat: latitud,
+          lng: longitud,
+          acc: accuracy || 0,
+          speed: 0, // WebSocket no recibe speed, usar 0 por defecto
+          ts: admin.firestore.Timestamp.fromMillis(timestamp)
         };
 
         await db.collection('reservas').doc(paseoId).update({
