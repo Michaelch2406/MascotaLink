@@ -226,12 +226,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         });
 
         initViews();
-        setupMap(); // Initialize Map
         setupToolbar();
-        setupRecyclerView();
-        setupNotesWatcher();
-        setupButtons();
-        cargarRoleYBottomNav();
 
         idReserva = getIntent().getStringExtra("id_reserva");
         if (idReserva == null || idReserva.isEmpty()) {
@@ -249,9 +244,16 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         networkMonitor.setCurrentRoom(idReserva, NetworkMonitorHelper.RoomType.PASEO);
         networkMonitor.register();
 
-        // Luego sincronizar con Firestore en segundo plano
-        escucharReserva();
-        setupLocationUpdates();
+        // Diferir operaciones no críticas para mejorar tiempo de inicio
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            setupMap();
+            setupRecyclerView();
+            setupNotesWatcher();
+            setupButtons();
+            cargarRoleYBottomNav();
+            escucharReserva();
+            setupLocationUpdates();
+        });
     }
 
     @Override

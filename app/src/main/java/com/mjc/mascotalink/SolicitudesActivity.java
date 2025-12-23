@@ -188,10 +188,12 @@ public class SolicitudesActivity extends AppCompatActivity {
         // solicitudesList.clear(); // Opcional: evitar limpiar inmediatamente para reducir parpadeo
 
         // Consultar reservas donde el paseador es el actual y el estado es PENDIENTE_ACEPTACION
+        // Paginación: Limitar a 20 solicitudes más recientes para mejor rendimiento
         Query query = db.collection("reservas")
                 .whereEqualTo("id_paseador", db.collection("usuarios").document(currentUserId))
                 .whereEqualTo("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION)
-                .orderBy("fecha_creacion", Query.Direction.DESCENDING);
+                .orderBy("fecha_creacion", Query.Direction.DESCENDING)
+                .limit(20);
 
         firestoreListener = query.addSnapshotListener((querySnapshot, e) -> {
             if (e != null) {

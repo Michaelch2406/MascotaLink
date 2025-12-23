@@ -150,10 +150,12 @@ public class MensajesActivity extends AppCompatActivity {
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         
         Log.d("Mensajes", "Cargando conversaciones para userId: " + currentUserId + ", role: " + userRole);
-        
+
+        // Paginación: Limitar a 30 conversaciones más recientes
         messagesListener = db.collection("chats")
                 .whereArrayContains("participantes", currentUserId)
                 .orderBy("ultimo_timestamp", Query.Direction.DESCENDING)
+                .limit(30)
                 .addSnapshotListener((snapshot, error) -> {
                     if (progressBar != null) progressBar.setVisibility(View.GONE);
                     if (swipeRefresh != null) swipeRefresh.setRefreshing(false);

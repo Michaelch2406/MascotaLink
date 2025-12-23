@@ -24,7 +24,9 @@ public class FavoritosRepository {
             String userId = currentUser.getUid();
             CollectionReference favoritosRef = db.collection("usuarios").document(userId).collection("favoritos");
 
+            // Paginación: Limitar a 30 favoritos más recientes
             favoritosRef.orderBy("fecha_agregado", Query.Direction.DESCENDING)
+                .limit(30)
                 .addSnapshotListener((queryDocumentSnapshots, e) -> {
                     if (e != null) {
                         // Manejar el error, por ejemplo, logueándolo

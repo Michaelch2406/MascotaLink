@@ -192,7 +192,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         socketManager = SocketManager.getInstance(this);
 
         initViews();
-        
+
         // Manual Toolbar Setup
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
@@ -200,10 +200,12 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
         ivBack.setOnClickListener(v -> finish());
 
-        setupListeners();
-        // setupTabs() will be called after role is determined in setupRoleBasedUI
-        setupResenasRecyclerView();
-        setupAuthListener();
+        // Diferir operaciones no críticas para mejorar tiempo de inicio
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            setupListeners();
+            setupResenasRecyclerView();
+            setupAuthListener();
+        });
 
         paseadorId = getIntent().getStringExtra("paseadorId");
 
@@ -1110,8 +1112,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
                 Map<String, Object> perfil = (Map<String, Object>) paseadorDoc.get("perfil_profesional");
                 if (perfil != null) {
-                    tvDescripcion.setText((String) perfil.get("motivacion"));
-                    videoUrl = MyApplication.getFixedUrl((String) perfil.get("video_presentacion_url"));
+                    String motivacion = perfil.get("motivacion") != null ? (String) perfil.get("motivacion") : "";
+                    tvDescripcion.setText(motivacion);
+                    String videoUrlRaw = perfil.get("video_presentacion_url") != null ? (String) perfil.get("video_presentacion_url") : null;
+                    videoUrl = videoUrlRaw != null ? MyApplication.getFixedUrl(videoUrlRaw) : null;
                     if (!isDestroyed() && !isFinishing() && videoUrl != null && !videoUrl.isEmpty()) {
                         // Usar método manual para cargar thumbnail
                         loadVideoThumbnail(videoUrl, ivVideoThumbnail);

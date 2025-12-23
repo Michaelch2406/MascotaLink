@@ -149,21 +149,20 @@ public class ReservaActivity extends AppCompatActivity {
             bottomNavRole = cachedRole;
         }
 
-        // Inicializar NetworkMonitorHelper para validar conexión antes de pagos
-        setupNetworkMonitor();
-
         initViews();
-        setupListeners();
-        setupBottomNavigation();
-        cargarMascotasUsuario();
-        setupCalendario();
-        setupHorarios();
-
         tvPaseadorNombre.setText(paseadorNombre != null ? paseadorNombre : "Alex");
         tvTarifaValor.setText(String.format(Locale.US, "$%.1f/hora", tarifaPorHora));
 
-        // Auto-seleccionar 1 hora como duración por defecto
-        seleccionarDuracion(60, btn1Hora);
+        // Diferir operaciones no críticas para mejorar tiempo de inicio
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            setupNetworkMonitor();
+            setupListeners();
+            setupBottomNavigation();
+            cargarMascotasUsuario();
+            setupCalendario();
+            setupHorarios();
+            seleccionarDuracion(60, btn1Hora);
+        });
     }
 
     @Override
@@ -295,7 +294,10 @@ public class ReservaActivity extends AppCompatActivity {
         btn2Horas.setOnClickListener(v -> seleccionarDuracion(120, btn2Horas));
         btn3Horas.setOnClickListener(v -> seleccionarDuracion(180, btn3Horas));
         btnPersonalizado.setOnClickListener(v -> mostrarDialogDuracionPersonalizada());
-        btnConfirmarReserva.setOnClickListener(v -> confirmarReserva());
+        btnConfirmarReserva.setOnClickListener(v -> {
+            v.setEnabled(false);
+            confirmarReserva();
+        });
     }
 
     private void setupBottomNavigation() {

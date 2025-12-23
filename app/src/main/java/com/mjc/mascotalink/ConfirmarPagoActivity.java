@@ -150,7 +150,10 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
-        btnProcesarPago.setOnClickListener(v -> procesarPago());
+        btnProcesarPago.setOnClickListener(v -> {
+            v.setEnabled(false);
+            procesarPago();
+        });
         btnCancelar.setOnClickListener(v -> mostrarDialogCancelar());
     }
 
