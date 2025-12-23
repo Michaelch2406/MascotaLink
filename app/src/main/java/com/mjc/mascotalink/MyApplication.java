@@ -26,6 +26,9 @@ public class MyApplication extends Application {
     private static final String TAG = "MyApplication";
     private static Context appContext;
 
+    // ===== OPCIÓN C (HÍBRIDA): Auth State Listener para WebSocket =====
+    private FirebaseAuth.AuthStateListener authStateListener;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -107,8 +110,8 @@ public class MyApplication extends Application {
             Log.d(TAG, NetworkDetector.getNetworkInfo(this));
         }
 
-        // Inicializar WebSocket
-        SocketManager.getInstance(this).connect();
+        // ===== OPCIÓN C (HÍBRIDA): Inicializar WebSocket inteligentemente =====
+        setupWebSocketConnection();
 
         // Reanudar subidas pendientes al arrancar (WorkManager ya las persistió)
         UploadScheduler.retryPendingUploads(this);
@@ -119,6 +122,51 @@ public class MyApplication extends Application {
             FcmTokenSyncWorker.enqueueNow(this);
             UnreadBadgeManager.start(authInstance.getCurrentUser().getUid());
         }
+    }
+
+    /**
+     * OPCIÓN C (HÍBRIDA): Configurar conexión inteligente de WebSocket
+     * - Conecta SOLO si el usuario está autenticado
+     * - Se auto-conecta cuando el usuario inicia sesión
+     * - Se desconecta cuando el usuario cierra sesión
+     * - Mantiene Lazy Connection como fallback de seguridad
+     */
+    private void setupWebSocketConnection() {
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        SocketManager socketManager = SocketManager.getInstance(this);
+
+        // Conectar inmediatamente si ya hay sesión activa
+        if (auth.getCurrentUser() != null) {
+            Log.d(TAG, "✅ Usuario autenticado - Conectando WebSocket al inicio");
+            socketManager.connect();
+        } else {
+            Log.d(TAG, "⏸️ Usuario NO autenticado - WebSocket se conectará al login (Lazy Connection)");
+        }
+
+        // Configurar listener de autenticación para auto-conectar/desconectar
+        authStateListener = firebaseAuth -> {
+            if (firebaseAuth.getCurrentUser() != null) {
+                // Usuario se autenticó → Conectar WebSocket
+                String userId = firebaseAuth.getCurrentUser().getUid();
+                Log.d(TAG, "🔐 Usuario autenticado (" + userId + ") - Conectando WebSocket");
+                socketManager.connect();
+
+                // Sincronizar FCM y badges
+                FcmTokenSyncWorker.enqueueNow(this);
+                UnreadBadgeManager.start(userId);
+            } else {
+                // Usuario cerró sesión → Desconectar WebSocket
+                Log.d(TAG, "🚪 Usuario cerró sesión - Desconectando WebSocket");
+                socketManager.disconnect();
+
+                // Detener badges
+                UnreadBadgeManager.stop();
+            }
+        };
+
+        // Registrar listener
+        auth.addAuthStateListener(authStateListener);
+        Log.d(TAG, "👂 AuthStateListener registrado para WebSocket auto-connect/disconnect");
     }
 
     public static String getCurrentEmulatorHost(Context context) {

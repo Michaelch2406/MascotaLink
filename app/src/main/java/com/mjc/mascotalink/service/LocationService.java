@@ -142,6 +142,9 @@ public class LocationService extends Service {
     private com.google.firebase.firestore.ListenerRegistration estadoListener = null;
     private com.google.firebase.firestore.ListenerRegistration duenoListener = null;
 
+    // ===== LAZY CONNECTION: Callback para reconexión =====
+    private com.mjc.mascotalink.network.SocketManager.OnConnectionListener socketConnectionListener;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -152,6 +155,44 @@ public class LocationService extends Service {
 
         createNotificationChannel();
         setupBatteryMonitoring();
+        setupSocketConnectionListener();
+    }
+
+    /**
+     * LAZY CONNECTION: Configura listener para reconectar cuando socket esté listo
+     */
+    private void setupSocketConnectionListener() {
+        socketConnectionListener = new com.mjc.mascotalink.network.SocketManager.OnConnectionListener() {
+            @Override
+            public void onConnected() {
+                Log.d(TAG, "✅ Socket conectado - Reintentando unirse al paseo");
+                // Si tenemos un paseo activo, reintentar unirse
+                if (currentReservaId != null && !currentReservaId.isEmpty()) {
+                    socketManager.joinPaseo(currentReservaId);
+
+                    // Si tenemos ubicación reciente, enviar inmediatamente
+                    if (lastLocation != null && duenoViendoMapa) {
+                        Log.d(TAG, "📡 Enviando ubicación inmediata tras reconexión");
+                        socketManager.updateLocation(currentReservaId,
+                            lastLocation.getLatitude(),
+                            lastLocation.getLongitude(),
+                            lastLocation.getAccuracy());
+                    }
+                }
+            }
+
+            @Override
+            public void onDisconnected() {
+                Log.d(TAG, "⚠️ Socket desconectado");
+            }
+
+            @Override
+            public void onError(String message) {
+                Log.e(TAG, "❌ Error de socket: " + message);
+            }
+        };
+
+        socketManager.addOnConnectionListener(socketConnectionListener);
     }
 
     /**
@@ -912,6 +953,12 @@ public class LocationService extends Service {
         if (estadoListener != null) {
             estadoListener.remove();
             estadoListener = null;
+        }
+
+        // Remover listener de conexión de socket
+        if (socketConnectionListener != null) {
+            socketManager.removeOnConnectionListener(socketConnectionListener);
+            socketConnectionListener = null;
         }
 
         // Asegurar limpieza de recursos

@@ -68,6 +68,10 @@ public class SocketManager {
     private List<QueuedMessage> offlineMessageQueue = new ArrayList<>();
     private static final int MAX_QUEUE_SIZE = 100;
 
+    // ===== LAZY CONNECTION: Pending operations =====
+    private List<Runnable> pendingOperations = new ArrayList<>();
+    private boolean isConnecting = false;
+
     private SocketManager(Context context) {
         this.context = context.getApplicationContext();
         this.heartbeatHandler = new Handler(Looper.getMainLooper());
@@ -184,8 +188,21 @@ public class SocketManager {
 
     /**
      * Conecta al servidor WebSocket usando Firebase Auth token
+     * LAZY CONNECTION: Se llama automáticamente cuando se necesita
      */
     public void connect() {
+        // Si ya está conectado, no hacer nada
+        if (isConnected()) {
+            Log.d(TAG, "✅ Socket ya conectado, saltando connect()");
+            return;
+        }
+
+        // Si ya está intentando conectar, no duplicar
+        if (isConnecting) {
+            Log.d(TAG, "⏳ Conexión en progreso, esperando...");
+            return;
+        }
+
         // Si ya hay una conexión, desconectar primero para reconectar con nuevo token
         if (socket != null) {
             Log.d(TAG, "Desconectando socket existente para reconectar con nuevo token");
@@ -194,9 +211,11 @@ public class SocketManager {
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            Log.e(TAG, "Usuario no autenticado");
+            Log.e(TAG, "❌ Usuario no autenticado - conexión pospuesta hasta login");
             return;
         }
+
+        isConnecting = true;
 
         user.getIdToken(true).addOnSuccessListener(result -> {
             String token = result.getToken();
@@ -227,9 +246,11 @@ public class SocketManager {
                 socket.connect();
             } catch (URISyntaxException e) {
                 Log.e(TAG, "URL inválida: " + serverUrl, e);
+                isConnecting = false;
             }
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Error al obtener token de Firebase", e);
+            isConnecting = false;
         });
     }
 
@@ -238,20 +259,24 @@ public class SocketManager {
      */
     private void setupBaseEventListeners() {
         socket.on(Socket.EVENT_CONNECT, args -> {
+            isConnecting = false;
             updateConnectionState(true);
             Log.d(TAG, "✅ Socket conectado");
             startHeartbeat();
+            processPendingOperations();
             processOfflineQueue();
             rejoinRooms();
         });
 
         socket.on(Socket.EVENT_DISCONNECT, args -> {
+            isConnecting = false;
             updateConnectionState(false);
             stopHeartbeat();
             Log.d(TAG, "🔌 Socket desconectado");
         });
 
         socket.on(Socket.EVENT_CONNECT_ERROR, args -> {
+            isConnecting = false;
             String message = args.length > 0 ? String.valueOf(args[0]) : "unknown";
             Log.e(TAG, "❌ Error de conexión: " + message);
             notifyError(message);
@@ -295,6 +320,27 @@ public class SocketManager {
             socket = null;
         }
         isConnected = false;
+    }
+
+    /**
+     * Procesa operaciones pendientes cuando se conecta
+     * LAZY CONNECTION: Ejecuta joins, listeners, etc. que estaban esperando conexión
+     */
+    private void processPendingOperations() {
+        if (pendingOperations.isEmpty()) return;
+
+        Log.d(TAG, "📤 Procesando " + pendingOperations.size() + " operaciones pendientes");
+
+        List<Runnable> toExecute = new ArrayList<>(pendingOperations);
+        pendingOperations.clear();
+
+        for (Runnable operation : toExecute) {
+            try {
+                operation.run();
+            } catch (Exception e) {
+                Log.e(TAG, "Error ejecutando operación pendiente", e);
+            }
+        }
     }
 
     /**
@@ -452,11 +498,26 @@ public class SocketManager {
 
     /**
      * Unirse a tracking de paseo
+     * LAZY CONNECTION: Auto-conecta si no está conectado
      */
     public void joinPaseo(String paseoId) {
         if (paseoId == null || paseoId.isEmpty()) return;
         currentPaseoId = paseoId;
-        if (!isConnected) return;
+
+        // LAZY CONNECTION: Si no está conectado, conectar y encolar operación
+        if (!isConnected()) {
+            Log.d(TAG, "🐕 Socket no conectado, encolando joinPaseo(" + paseoId + ")");
+            pendingOperations.add(() -> {
+                if (isConnected()) {
+                    socket.emit("join_paseo", paseoId);
+                    Log.d(TAG, "🐕 [PENDIENTE EJECUTADO] Uniéndose al paseo: " + paseoId);
+                }
+            });
+            // Intentar conectar
+            connect();
+            return;
+        }
+
         socket.emit("join_paseo", paseoId);
         Log.d(TAG, "🐕 Uniéndose al paseo: " + paseoId);
     }
@@ -562,14 +623,19 @@ public class SocketManager {
 
     /**
      * Registrar listener para un evento
+     * LAZY CONNECTION: Auto-conecta si no está conectado
      */
     public void on(String event, Emitter.Listener listener) {
         if (event == null || listener == null) return;
         eventListeners.put(event, listener);
+
+        // LAZY CONNECTION: Si no hay socket, conectar y el listener se registrará en rebindEventListeners()
         if (socket == null) {
-            Log.d(TAG, "Listener en cola (socket no listo): " + event);
+            Log.d(TAG, "👂 Listener en cola (socket no listo): " + event + " - Conectando...");
+            connect();
             return;
         }
+
         socket.on(event, listener);
         Log.d(TAG, "👂 Listener registrado: " + event);
     }

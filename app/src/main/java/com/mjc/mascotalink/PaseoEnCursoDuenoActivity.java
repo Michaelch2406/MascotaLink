@@ -139,6 +139,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     private Handler fallbackHandler = new Handler(Looper.getMainLooper());
     private Runnable fallbackRunnable;
 
+    // ===== LAZY CONNECTION: Callback para reconexión =====
+    private SocketManager.OnConnectionListener socketConnectionListener;
+
     // Cache
 
 
@@ -154,6 +157,9 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         // Inicializar FirebaseQueryOptimizer para lifecycle-aware listeners
         firebaseOptimizer = new FirebaseQueryOptimizer();
+
+        // LAZY CONNECTION: Configurar listener de reconexión
+        setupSocketConnectionListener();
 
         // Inicializar NetworkMonitorHelper para monitoreo robusto de red
         networkMonitor = new NetworkMonitorHelper(this, socketManager, new NetworkMonitorHelper.NetworkCallback() {
@@ -460,6 +466,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             fallbackHandler.removeCallbacks(fallbackRunnable);
         }
 
+        // Limpiar listener de conexión de socket
+        if (socketConnectionListener != null) {
+            socketManager.removeOnConnectionListener(socketConnectionListener);
+            socketConnectionListener = null;
+        }
+
         // Limpiar listeners de WebSocket
         socketManager.off("update_location");
         socketManager.off("joined_paseo");
@@ -620,6 +632,50 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         if (idReserva != null) {
             socketManager.joinPaseo(idReserva);
         }
+    }
+
+    /**
+     * LAZY CONNECTION: Configurar listener para reconectar cuando socket esté listo
+     */
+    private void setupSocketConnectionListener() {
+        socketConnectionListener = new SocketManager.OnConnectionListener() {
+            @Override
+            public void onConnected() {
+                Log.d(TAG, "✅ Socket conectado - Reintentando unirse al paseo");
+                runOnUiThread(() -> {
+                    // Si tenemos un paseo activo, reintentar unirse
+                    if (idReserva != null && !idReserva.isEmpty()) {
+                        socketManager.joinPaseo(idReserva);
+
+                        // Actualizar UI
+                        if (tvUbicacionEstado != null) {
+                            tvUbicacionEstado.setText("Conectado - Esperando ubicación...");
+                            tvUbicacionEstado.setTextColor(ContextCompat.getColor(
+                                PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onDisconnected() {
+                Log.d(TAG, "⚠️ Socket desconectado");
+                runOnUiThread(() -> {
+                    if (tvUbicacionEstado != null) {
+                        tvUbicacionEstado.setText("Desconectado - Reconectando...");
+                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(
+                            PaseoEnCursoDuenoActivity.this, R.color.red_error));
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                Log.e(TAG, "❌ Error de socket: " + message);
+            }
+        };
+
+        socketManager.addOnConnectionListener(socketConnectionListener);
     }
 
     /**
