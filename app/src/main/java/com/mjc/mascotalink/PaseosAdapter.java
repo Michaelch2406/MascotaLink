@@ -132,6 +132,9 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.chipEstado.setText(estado != null ? estado : "DESCONOCIDO");
         establecerColorEstado(holder.chipEstado, estado);
 
+        // 4.1. Información contextual del estado (usar el primer paseo)
+        establecerInfoEstado(holder.tvInfoEstado, primerPaseo);
+
         // 5. Opacidad para historial
         float opacidad = 1.0f;
         if (estado != null && (estado.equals("COMPLETADO") || estado.equals("CANCELADO"))) {
@@ -208,6 +211,9 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.chipEstado.setText(estado != null ? estado : "DESCONOCIDO");
         establecerColorEstado(holder.chipEstado, estado);
 
+        // 4.1. Información contextual del estado
+        establecerInfoEstado(holder.tvInfoEstado, paseo);
+
         // 5. Opacidad para historial
         float opacidad = 1.0f;
         if (estado != null && (estado.equals("COMPLETADO") || estado.equals("CANCELADO"))) {
@@ -280,6 +286,127 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         }
         chip.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(colorFondo));
         chip.setTextColor(0xFFFFFFFF); // Blanco
+    }
+
+    /**
+     * Establece información contextual según el estado del paseo
+     */
+    private void establecerInfoEstado(TextView tvInfoEstado, Paseo paseo) {
+        if (tvInfoEstado == null || paseo == null) return;
+
+        String estado = paseo.getEstado();
+        String infoTexto = null;
+
+        if (estado != null) {
+            switch (estado) {
+                case "PENDIENTE_ACEPTACION":
+                    // Mostrar tiempo desde que se creó la reserva
+                    if (paseo.getFecha_creacion() != null) {
+                        long tiempoTranscurrido = System.currentTimeMillis() - paseo.getFecha_creacion().getTime();
+                        infoTexto = "Solicitado hace " + formatearTiempoTranscurrido(tiempoTranscurrido);
+                    } else {
+                        infoTexto = "Esperando respuesta del paseador";
+                    }
+                    break;
+
+                case "ACEPTADO":
+                    // Mostrar tiempo hasta el inicio
+                    if (paseo.getHora_inicio() != null) {
+                        long tiempoHastaInicio = paseo.getHora_inicio().getTime() - System.currentTimeMillis();
+                        if (tiempoHastaInicio > 0) {
+                            infoTexto = "Comienza en " + formatearTiempoFuturo(tiempoHastaInicio);
+                        } else {
+                            infoTexto = "Ya pasó la hora programada";
+                        }
+                    } else {
+                        infoTexto = "Pendiente de confirmación";
+                    }
+                    break;
+
+                case "CONFIRMADO":
+                    // Mostrar tiempo hasta el inicio con recordatorio
+                    if (paseo.getHora_inicio() != null) {
+                        long tiempoHastaInicio = paseo.getHora_inicio().getTime() - System.currentTimeMillis();
+                        if (tiempoHastaInicio > 0) {
+                            infoTexto = "Inicia en " + formatearTiempoFuturo(tiempoHastaInicio);
+                        } else {
+                            infoTexto = "Ya puedes iniciar el paseo";
+                        }
+                    } else {
+                        infoTexto = "Listo para cuando llegue la hora";
+                    }
+                    break;
+
+                case "LISTO_PARA_INICIAR":
+                    // Mostrar que está listo para comenzar
+                    infoTexto = "Puedes iniciar el paseo ahora";
+                    break;
+
+                case "EN_CURSO":
+                    // Mostrar tiempo transcurrido del paseo
+                    if (paseo.getFecha_inicio_paseo() != null) {
+                        long tiempoTranscurrido = System.currentTimeMillis() - paseo.getFecha_inicio_paseo().getTime();
+                        infoTexto = "En progreso · " + formatearTiempoTranscurrido(tiempoTranscurrido);
+                    } else {
+                        infoTexto = "Paseo en progreso";
+                    }
+                    break;
+
+                // No mostrar info para COMPLETADO y CANCELADO (estados 6 y 7)
+                case "COMPLETADO":
+                case "CANCELADO":
+                default:
+                    tvInfoEstado.setVisibility(View.GONE);
+                    return;
+            }
+        }
+
+        if (infoTexto != null) {
+            tvInfoEstado.setText(infoTexto);
+            tvInfoEstado.setVisibility(View.VISIBLE);
+        } else {
+            tvInfoEstado.setVisibility(View.GONE);
+        }
+    }
+
+    /**
+     * Formatea tiempo transcurrido (ej: "2h 30min", "45min", "hace un momento")
+     */
+    private String formatearTiempoTranscurrido(long milisegundos) {
+        long segundos = milisegundos / 1000;
+        long minutos = segundos / 60;
+        long horas = minutos / 60;
+        long dias = horas / 24;
+
+        if (dias > 0) {
+            return dias + "d " + (horas % 24) + "h";
+        } else if (horas > 0) {
+            return horas + "h " + (minutos % 60) + "min";
+        } else if (minutos > 0) {
+            return minutos + "min";
+        } else {
+            return "hace un momento";
+        }
+    }
+
+    /**
+     * Formatea tiempo futuro (ej: "2h 30min", "45min", "menos de 1min")
+     */
+    private String formatearTiempoFuturo(long milisegundos) {
+        long segundos = milisegundos / 1000;
+        long minutos = segundos / 60;
+        long horas = minutos / 60;
+        long dias = horas / 24;
+
+        if (dias > 0) {
+            return dias + "d " + (horas % 24) + "h";
+        } else if (horas > 0) {
+            return horas + "h " + (minutos % 60) + "min";
+        } else if (minutos > 0) {
+            return minutos + "min";
+        } else {
+            return "menos de 1min";
+        }
     }
 
     /**
@@ -388,6 +515,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         TextView tvDuracion;
         TextView tvCosto;
         Chip chipEstado;
+        TextView tvInfoEstado;
         LinearLayout layoutBotones;
         MaterialButton btnAccion1;
         MaterialButton btnAccion2;
@@ -402,6 +530,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
             tvDuracion = itemView.findViewById(R.id.tv_duracion);
             tvCosto = itemView.findViewById(R.id.tv_costo);
             chipEstado = itemView.findViewById(R.id.chip_estado_paseo);
+            tvInfoEstado = itemView.findViewById(R.id.tv_info_estado);
             layoutBotones = itemView.findViewById(R.id.layout_botones_accion);
             btnAccion1 = itemView.findViewById(R.id.btn_accion_1);
             btnAccion2 = itemView.findViewById(R.id.btn_accion_2);

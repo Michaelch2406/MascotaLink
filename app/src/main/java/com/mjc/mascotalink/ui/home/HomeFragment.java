@@ -261,19 +261,100 @@ public class HomeFragment extends Fragment {
                     });
                     break;
 
-                case "CONFIRMADO":
                 case "LISTO_PARA_INICIAR":
                     layoutStats.setVisibility(View.GONE);
                     desc.setVisibility(View.VISIBLE);
-                    
-                    // Estado: Confirmado (Morado/Azul Oscuro)
-                    header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
-                    titulo.setText("Paseo Confirmado");
+
+                    // Estado: Listo para Iniciar (Naranja vibrante)
+                    header.setBackgroundResource(R.drawable.bg_gradient_orange_card);
+                    titulo.setText("Listo para Iniciar");
                     titulo.setTextColor(getResources().getColor(R.color.white));
-                    desc.setText("El paseador está en camino o listo para iniciar.");
+
+                    String paseadorNombreListo = (String) reservation.get("paseador_nombre");
+                    if (paseadorNombreListo != null && !paseadorNombreListo.isEmpty()) {
+                        desc.setText(paseadorNombreListo + " está listo para iniciar el paseo");
+                    } else {
+                        desc.setText("El paseador está listo para iniciar el paseo");
+                    }
                     desc.setTextColor(getResources().getColor(R.color.white));
-                    
+
+                    btn.setText("Rastrear Paseo");
+                    btn.setTextColor(getResources().getColor(R.color.orange_primary));
+                    icon.setImageResource(R.drawable.ic_location_on);
+                    icon.setColorFilter(getResources().getColor(R.color.white));
+                    badgeLive.setVisibility(View.GONE);
+                    badgeLive.clearAnimation();
+
+                    btn.setOnClickListener(v -> {
+                        Intent intent = new Intent(getContext(), PaseoEnCursoDuenoActivity.class);
+                        intent.putExtra("id_reserva", resId);
+                        startActivity(intent);
+                    });
+                    break;
+
+                case "CONFIRMADO":
+                    layoutStats.setVisibility(View.GONE);
+                    desc.setVisibility(View.VISIBLE);
+
+                    // Estado: Confirmado (Azul)
+                    header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
+                    titulo.setText("Paseo Programado");
+                    titulo.setTextColor(getResources().getColor(R.color.white));
+
+                    // Mostrar fecha y hora del paseo
+                    com.google.firebase.Timestamp horaInicioConf = (com.google.firebase.Timestamp) reservation.get("hora_inicio");
+                    String paseadorNombreConf = (String) reservation.get("paseador_nombre");
+                    if (horaInicioConf != null) {
+                        java.text.SimpleDateFormat sdfFecha = new java.text.SimpleDateFormat("EEE d MMM", java.util.Locale.getDefault());
+                        java.text.SimpleDateFormat sdfHora = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault());
+                        String fechaStr = sdfFecha.format(horaInicioConf.toDate());
+                        String horaStr = sdfHora.format(horaInicioConf.toDate());
+                        desc.setText(fechaStr + " a las " + horaStr + "\n" + (paseadorNombreConf != null ? "Paseador: " + paseadorNombreConf : ""));
+                    } else {
+                        desc.setText("Paseo confirmado - Asegúrate de que tu mascota esté lista");
+                    }
+                    desc.setTextColor(getResources().getColor(R.color.white));
+
                     btn.setText("Ver Detalles");
+                    btn.setTextColor(getResources().getColor(R.color.blue_primary));
+                    icon.setImageResource(R.drawable.ic_calendar);
+                    icon.setColorFilter(getResources().getColor(R.color.white));
+                    badgeLive.setVisibility(View.GONE);
+                    badgeLive.clearAnimation();
+
+                    btn.setOnClickListener(v -> {
+                        Intent intent = new Intent(getContext(), PaseoEnCursoDuenoActivity.class);
+                        intent.putExtra("id_reserva", resId);
+                        startActivity(intent);
+                    });
+                    break;
+
+                case "ACEPTADO":
+                    layoutStats.setVisibility(View.GONE);
+                    desc.setVisibility(View.VISIBLE);
+
+                    // Estado: Aceptado (Azul claro)
+                    header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
+                    titulo.setText("Reserva Aceptada");
+                    titulo.setTextColor(getResources().getColor(R.color.white));
+
+                    // Mostrar paseador y próximo paso
+                    String paseadorNombreAcep = (String) reservation.get("paseador_nombre");
+                    com.google.firebase.Timestamp horaInicioAcep = (com.google.firebase.Timestamp) reservation.get("hora_inicio");
+                    if (horaInicioAcep != null) {
+                        java.text.SimpleDateFormat sdfFecha = new java.text.SimpleDateFormat("EEE d MMM", java.util.Locale.getDefault());
+                        java.text.SimpleDateFormat sdfHora = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault());
+                        String fechaStr = sdfFecha.format(horaInicioAcep.toDate());
+                        String horaStr = sdfHora.format(horaInicioAcep.toDate());
+                        desc.setText(fechaStr + " a las " + horaStr + "\n" + (paseadorNombreAcep != null ? "Paseador: " + paseadorNombreAcep : ""));
+                    } else if (paseadorNombreAcep != null) {
+                        desc.setText(paseadorNombreAcep + " aceptó tu solicitud\nPróximo paso: Confirmar pago");
+                    } else {
+                        desc.setText("Solicitud aceptada\nPróximo paso: Confirmar pago");
+                    }
+                    desc.setTextColor(getResources().getColor(R.color.white));
+
+                    btn.setText("Confirmar Pago");
                     btn.setTextColor(getResources().getColor(R.color.blue_primary));
                     icon.setImageResource(R.drawable.ic_check_circle);
                     icon.setColorFilter(getResources().getColor(R.color.white));
@@ -291,19 +372,30 @@ public class HomeFragment extends Fragment {
                 case "PENDIENTE_ACEPTACION":
                     layoutStats.setVisibility(View.GONE);
                     desc.setVisibility(View.VISIBLE);
-                    
-                    // Estado: Pendiente (Naranja)
-                    header.setBackgroundResource(R.drawable.bg_gradient_orange_card);
+
+                    // Estado: Pendiente (Gris/Neutral)
+                    header.setBackgroundResource(R.drawable.bg_gradient_card);
                     titulo.setText("Solicitud Enviada");
                     titulo.setTextColor(getResources().getColor(R.color.white));
-                    desc.setText("Esperando respuesta del paseador.");
-                    desc.setTextColor(getResources().getColor(R.color.white)); 
-                    
+
+                    // Mostrar hace cuánto se solicitó
+                    com.google.firebase.Timestamp fechaCreacion = (com.google.firebase.Timestamp) reservation.get("fecha_creacion");
+                    String paseadorNombrePend = (String) reservation.get("paseador_nombre");
+                    if (fechaCreacion != null) {
+                        long tiempoTranscurrido = System.currentTimeMillis() - fechaCreacion.toDate().getTime();
+                        String tiempoStr = formatearTiempoSimple(tiempoTranscurrido);
+                        desc.setText("Solicitado hace " + tiempoStr + "\n" +
+                                    (paseadorNombrePend != null ? "Esperando respuesta de " + paseadorNombrePend : "Esperando respuesta del paseador"));
+                    } else {
+                        desc.setText("Esperando respuesta del paseador");
+                    }
+                    desc.setTextColor(getResources().getColor(R.color.white));
+
                     btn.setText("Ver Estado");
-                    btn.setTextColor(getResources().getColor(R.color.orange_primary)); 
+                    btn.setTextColor(getResources().getColor(R.color.text_secondary));
                     icon.setImageResource(R.drawable.ic_access_time);
-                    icon.setColorFilter(getResources().getColor(R.color.white)); 
-                    
+                    icon.setColorFilter(getResources().getColor(R.color.white));
+
                     badgeLive.setVisibility(View.GONE);
                     badgeLive.clearAnimation();
 
@@ -477,16 +569,26 @@ public class HomeFragment extends Fragment {
                 case "LISTO_PARA_INICIAR":
                     layoutStats.setVisibility(View.GONE);
                     desc.setVisibility(View.VISIBLE);
-                    
-                    header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
-                    titulo.setText("Listo para iniciar");
+
+                    // Estado: Listo para Iniciar (Naranja vibrante)
+                    header.setBackgroundResource(R.drawable.bg_gradient_orange_card);
+                    titulo.setText("Listo para Iniciar");
                     titulo.setTextColor(getResources().getColor(R.color.white));
-                    desc.setText("Es hora de encontrarte con la mascota e iniciar el paseo.");
+
+                    String mascotaNombreListo = (String) reservation.get("mascota_nombre");
+                    String duenoNombreListo = (String) reservation.get("dueno_nombre");
+                    if (mascotaNombreListo != null && duenoNombreListo != null) {
+                        desc.setText("Encuentra a " + mascotaNombreListo + " con " + duenoNombreListo + " e inicia el paseo");
+                    } else if (mascotaNombreListo != null) {
+                        desc.setText("Es hora de iniciar el paseo con " + mascotaNombreListo);
+                    } else {
+                        desc.setText("Es hora de encontrarte con la mascota e iniciar el paseo");
+                    }
                     desc.setTextColor(getResources().getColor(R.color.white));
-                    
-                    btn.setText("Ir al Punto de Encuentro");
-                    btn.setTextColor(getResources().getColor(R.color.blue_primary));
-                    icon.setImageResource(R.drawable.ic_location_on);
+
+                    btn.setText("Iniciar Paseo");
+                    btn.setTextColor(getResources().getColor(R.color.orange_primary));
+                    icon.setImageResource(R.drawable.ic_walk);
                     icon.setColorFilter(getResources().getColor(R.color.white));
 
                     btn.setOnClickListener(v -> {
@@ -499,16 +601,71 @@ public class HomeFragment extends Fragment {
                 case "CONFIRMADO":
                     layoutStats.setVisibility(View.GONE);
                     desc.setVisibility(View.VISIBLE);
-                    
+
+                    // Estado: Confirmado (Azul)
                     header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
                     titulo.setText("Próximo Paseo");
                     titulo.setTextColor(getResources().getColor(R.color.white));
-                    desc.setText("Tienes un paseo programado. ¡No lo olvides!");
+
+                    // Mostrar fecha, hora y mascota
+                    com.google.firebase.Timestamp horaInicioPas = (com.google.firebase.Timestamp) reservation.get("hora_inicio");
+                    String mascotaNombrePas = (String) reservation.get("mascota_nombre");
+                    Object costoObj = reservation.get("costo_total");
+                    if (horaInicioPas != null) {
+                        java.text.SimpleDateFormat sdfFecha = new java.text.SimpleDateFormat("EEE d MMM", java.util.Locale.getDefault());
+                        java.text.SimpleDateFormat sdfHora = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault());
+                        String fechaStr = sdfFecha.format(horaInicioPas.toDate());
+                        String horaStr = sdfHora.format(horaInicioPas.toDate());
+                        String costoStr = costoObj != null ? String.format("$%.2f", ((Number) costoObj).doubleValue()) : "";
+                        desc.setText(fechaStr + " a las " + horaStr + "\n" +
+                                   (mascotaNombrePas != null ? "Mascota: " + mascotaNombrePas : "") +
+                                   (costoStr.isEmpty() ? "" : " · " + costoStr));
+                    } else {
+                        desc.setText("Tienes un paseo programado" + (mascotaNombrePas != null ? " con " + mascotaNombrePas : ""));
+                    }
                     desc.setTextColor(getResources().getColor(R.color.white));
-                    
+
                     btn.setText("Ver Detalles");
                     btn.setTextColor(getResources().getColor(R.color.blue_primary));
                     icon.setImageResource(R.drawable.ic_calendar);
+                    icon.setColorFilter(getResources().getColor(R.color.white));
+
+                    btn.setOnClickListener(v -> {
+                        Intent intent = new Intent(getContext(), PaseoEnCursoActivity.class);
+                        intent.putExtra("id_reserva", resId);
+                        startActivity(intent);
+                    });
+                    break;
+
+                case "ACEPTADO":
+                    layoutStats.setVisibility(View.GONE);
+                    desc.setVisibility(View.VISIBLE);
+
+                    // Estado: Aceptado (Azul)
+                    header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
+                    titulo.setText("Reserva Aceptada");
+                    titulo.setTextColor(getResources().getColor(R.color.white));
+
+                    // Mostrar info del próximo paseo
+                    String mascotaNombreAcep = (String) reservation.get("mascota_nombre");
+                    String duenoNombreAcep = (String) reservation.get("dueno_nombre");
+                    com.google.firebase.Timestamp horaInicioAcep = (com.google.firebase.Timestamp) reservation.get("hora_inicio");
+                    if (horaInicioAcep != null && mascotaNombreAcep != null) {
+                        java.text.SimpleDateFormat sdfFecha = new java.text.SimpleDateFormat("EEE d MMM", java.util.Locale.getDefault());
+                        java.text.SimpleDateFormat sdfHora = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault());
+                        String fechaStr = sdfFecha.format(horaInicioAcep.toDate());
+                        String horaStr = sdfHora.format(horaInicioAcep.toDate());
+                        desc.setText(fechaStr + " a las " + horaStr + "\nPaseo con " + mascotaNombreAcep);
+                    } else if (mascotaNombreAcep != null) {
+                        desc.setText("Aceptaste el paseo con " + mascotaNombreAcep + "\nEsperando confirmación del dueño");
+                    } else {
+                        desc.setText("Aceptaste la solicitud\nEsperando confirmación del dueño");
+                    }
+                    desc.setTextColor(getResources().getColor(R.color.white));
+
+                    btn.setText("Ver Detalles");
+                    btn.setTextColor(getResources().getColor(R.color.blue_primary));
+                    icon.setImageResource(R.drawable.ic_check_circle);
                     icon.setColorFilter(getResources().getColor(R.color.white));
 
                     btn.setOnClickListener(v -> {
@@ -522,13 +679,40 @@ public class HomeFragment extends Fragment {
                 case "PENDIENTE_ACEPTACION":
                     layoutStats.setVisibility(View.GONE);
                     desc.setVisibility(View.VISIBLE);
-                    
-                    header.setBackgroundResource(R.drawable.bg_gradient_orange_card); // Naranja Fuerte
+
+                    // Estado: Pendiente (Naranja/Amarillo)
+                    header.setBackgroundResource(R.drawable.bg_gradient_orange_card);
                     titulo.setText("Nueva Solicitud");
                     titulo.setTextColor(getResources().getColor(R.color.white));
-                    desc.setText("¡Tienes una solicitud pendiente! Revísala pronto.");
+
+                    // Mostrar info de la solicitud
+                    String mascotaNombreSol = (String) reservation.get("mascota_nombre");
+                    String duenoNombreSol = (String) reservation.get("dueno_nombre");
+                    Object costoSol = reservation.get("costo_total");
+                    com.google.firebase.Timestamp fechaSol = (com.google.firebase.Timestamp) reservation.get("fecha_creacion");
+
+                    StringBuilder descSol = new StringBuilder();
+                    if (mascotaNombreSol != null && duenoNombreSol != null) {
+                        descSol.append(duenoNombreSol).append(" quiere pasear a ").append(mascotaNombreSol);
+                    } else if (mascotaNombreSol != null) {
+                        descSol.append("Solicitud para pasear a ").append(mascotaNombreSol);
+                    } else {
+                        descSol.append("Tienes una solicitud pendiente");
+                    }
+
+                    if (costoSol != null) {
+                        descSol.append("\nGanancia: $").append(String.format("%.2f", ((Number) costoSol).doubleValue()));
+                    }
+
+                    if (fechaSol != null) {
+                        long tiempoTranscurrido = System.currentTimeMillis() - fechaSol.toDate().getTime();
+                        String tiempoStr = formatearTiempoSimple(tiempoTranscurrido);
+                        descSol.append(" · Hace ").append(tiempoStr);
+                    }
+
+                    desc.setText(descSol.toString());
                     desc.setTextColor(getResources().getColor(R.color.white));
-                    
+
                     btn.setText("Revisar Solicitud");
                     btn.setTextColor(getResources().getColor(R.color.orange_primary));
                     icon.setImageResource(R.drawable.ic_notifications);
@@ -576,6 +760,26 @@ public class HomeFragment extends Fragment {
             icon.setColorFilter(getResources().getColor(R.color.white));
 
             btn.setOnClickListener(v -> startActivity(new Intent(getContext(), SolicitudesActivity.class)));
+        }
+    }
+
+    /**
+     * Formatea tiempo transcurrido de forma simple (ej: "2h 30min", "45min", "unos segundos")
+     */
+    private String formatearTiempoSimple(long milisegundos) {
+        long segundos = milisegundos / 1000;
+        long minutos = segundos / 60;
+        long horas = minutos / 60;
+        long dias = horas / 24;
+
+        if (dias > 0) {
+            return dias + "d " + (horas % 24) + "h";
+        } else if (horas > 0) {
+            return horas + "h " + (minutos % 60) + "min";
+        } else if (minutos > 0) {
+            return minutos + "min";
+        } else {
+            return "unos segundos";
         }
     }
 }

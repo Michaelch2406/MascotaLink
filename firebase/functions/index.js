@@ -2857,19 +2857,36 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
             }
     
             if (!paseadorId) continue;
-    
+
             const paseadorDoc = await db.collection("usuarios").doc(paseadorId).get();
             if (!paseadorDoc.exists) continue;
-    
+
             const fcmToken = paseadorDoc.data().fcmToken;
             if (!fcmToken) continue;
-    
+
+            // Obtener nombre del dueño y mascota
+            const idDueno = getIdValue(reserva.id_dueno);
+            const idMascota = getIdValue(reserva.id_mascota);
+            let nombreDueno = "el dueño";
+            let nombreMascota = "su mascota";
+
+            if (idDueno) {
+              const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+              if (duenoDoc.exists) {
+                nombreDueno = duenoDoc.data().nombre_display || "el dueño";
+              }
+
+              if (idMascota) {
+                nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+              }
+            }
+
             // Enviar notificacion al paseador
             const messagePaseador = {
               token: fcmToken,
               notification: {
-                title: `Paseo Retrasado - ${delay.minutes} minutos`,
-                body: delay.message
+                title: `Paseo Pendiente de ${nombreDueno}`,
+                body: `El paseo con ${nombreDueno} a su mascota ${nombreMascota}, lleva ${delay.minutes} minutos de retraso.`
               },
               data: {
                 tipo: "paseo_retrasado",
@@ -2896,17 +2913,19 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
     
             // Notificar también al dueno para todos los retrasos
 	            if (delay.minutes === 10 || delay.minutes === 20 || delay.minutes === 30) {
-              const idDueno = getIdValue(reserva.id_dueno);
               if (idDueno) {
                 const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
                 if (duenoDoc.exists) {
                   const duenoToken = duenoDoc.data().fcmToken;
                   if (duenoToken) {
+                    // Obtener nombre del paseador
+                    const nombrePaseador = paseadorDoc.exists ? paseadorDoc.data().nombre_display || "el paseador" : "el paseador";
+
                     const messageDueno = {
                       token: duenoToken,
                       notification: {
-                        title: "Paseo Retrasado",
-                        body: `El paseo lleva ${delay.minutes} minutos de retraso. El paseador aun no ha iniciado.`
+                        title: `Paseo Pendiente de ${nombrePaseador}`,
+                        body: `El paseo de tu mascota ${nombreMascota} con el paseador lleva ${delay.minutes} minutos de retraso.`
                       },
                       data: {
                         tipo: "paseo_retrasado_dueno",
@@ -3220,11 +3239,28 @@ exports.debugNotifyDelayed = onRequest(async (req, res) => {
             const fcmToken = paseadorDoc.data().fcmToken;
             if (!fcmToken) continue;
 
+            // Obtener nombre del dueño y mascota
+            const idDueno = getIdValue(reserva.id_dueno);
+            const idMascota = getIdValue(reserva.id_mascota);
+            let nombreDueno = "el dueño";
+            let nombreMascota = "su mascota";
+
+            if (idDueno) {
+              const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
+              if (duenoDoc.exists) {
+                nombreDueno = duenoDoc.data().nombre_display || "el dueño";
+              }
+
+              if (idMascota) {
+                nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+              }
+            }
+
             const messagePaseador = {
               token: fcmToken,
               notification: {
-                title: `Paseo Retrasado - ${delay.minutes} minutos`,
-                body: delay.message
+                title: `Paseo Pendiente de ${nombreDueno}`,
+                body: `El paseo con ${nombreDueno} a su mascota ${nombreMascota}, lleva ${delay.minutes} minutos de retraso.`
               },
               data: {
                 tipo: "paseo_retrasado",
@@ -3250,17 +3286,19 @@ exports.debugNotifyDelayed = onRequest(async (req, res) => {
             });
 
             if (delay.minutes === 10 || delay.minutes === 20 || delay.minutes === 30) {
-              const idDueno = getIdValue(reserva.id_dueno);
               if (idDueno) {
                 const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
                 if (duenoDoc.exists) {
                   const duenoToken = duenoDoc.data().fcmToken;
                   if (duenoToken) {
+                    // Obtener nombre del paseador
+                    const nombrePaseador = paseadorDoc.exists ? paseadorDoc.data().nombre_display || "el paseador" : "el paseador";
+
                     const messageDueno = {
                       token: duenoToken,
                       notification: {
-                        title: "Paseo Retrasado",
-                        body: `El paseo lleva ${delay.minutes} minutos de retraso. El paseador aun no ha iniciado.`
+                        title: `Paseo Pendiente de ${nombrePaseador}`,
+                        body: `El paseo de tu mascota ${nombreMascota} con el paseador lleva ${delay.minutes} minutos de retraso.`
                       },
                       data: {
                         tipo: "paseo_retrasado_dueno",

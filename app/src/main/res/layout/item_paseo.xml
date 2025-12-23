@@ -130,6 +130,22 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/iv_foto_perfil_paseo" />
 
+        <!-- Info contextual del estado -->
+        <TextView
+            android:id="@+id/tv_info_estado"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:visibility="gone"
+            tools:text="Comienza en 2 horas"
+            tools:visibility="visible"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/tv_nombre_secundario"
+            app:layout_constraintTop_toBottomOf="@+id/tv_nombre_secundario" />
+
         <!-- Duration Info - Movido a la derecha -->
         <LinearLayout
             android:id="@+id/ll_duracion_info"
