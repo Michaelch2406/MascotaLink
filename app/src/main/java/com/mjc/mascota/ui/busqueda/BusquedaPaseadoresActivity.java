@@ -295,21 +295,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void setupFilterChips() {
-        chipCalificacionAlta.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            viewModel.setCalificacionMinima(isChecked ? 4.5 : 0);
-        });
-
-        chipExperiencia.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            viewModel.setExperienciaMinima(isChecked ? 3 : 0);
-        });
-
-        chipPrecioBajo.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            viewModel.setPrecioMaximo(isChecked ? 15.0 : 100.0);
-        });
-
-        chipVerificado.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            viewModel.setSoloVerificados(isChecked);
-        });
+        chipCalificacionAlta.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setCalificacionMinima(isChecked ? 4.5 : 0));
+        chipExperiencia.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setExperienciaMinima(isChecked ? 3 : 0));
+        chipPrecioBajo.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setPrecioMaximo(isChecked ? 15.0 : 100.0));
+        chipVerificado.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setSoloVerificados(isChecked));
     }
 
     private void setupRetryButton() {
@@ -697,7 +686,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         adapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
         spinnerOrdenar.setAdapter(adapter);
 
-        Filtros currentFiltros = viewModel.filtros.getValue();
+        Filtros currentFiltros = viewModel.getFiltros().getValue();
         if (currentFiltros != null) {
             String[] ordenValues = getResources().getStringArray(R.array.ordenamiento_busqueda);
             int spinnerPosition = Arrays.asList(ordenValues).indexOf(currentFiltros.getOrden());

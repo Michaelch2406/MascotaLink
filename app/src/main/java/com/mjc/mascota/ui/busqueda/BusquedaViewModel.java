@@ -1,27 +1,30 @@
-
 package com.mjc.mascota.ui.busqueda;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModel;
 
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
+import com.mjc.mascota.modelo.Filtros;
 import com.mjc.mascota.modelo.PaseadorResultado;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.mjc.mascota.modelo.Filtros;
-
-import android.util.Log;
-
-import java.text.Normalizer;
+import java.util.Objects;
 import java.util.regex.Pattern;
+
+import com.mjc.mascota.ui.busqueda.PaseadorRepository;
+import com.mjc.mascota.ui.busqueda.PaseadorSearchResult;
+import com.mjc.mascota.ui.busqueda.UiState;
+
+import androidx.lifecycle.MediatorLiveData;
+import java.util.Objects;
 
 public class BusquedaViewModel extends ViewModel {
 
@@ -31,20 +34,39 @@ public class BusquedaViewModel extends ViewModel {
     private LiveData<UiState<List<PaseadorResultado>>> paseadoresPopularesState;
 
     // --- Lógica de Búsqueda y Paginación ---
-    private final MutableLiveData<UiState<List<PaseadorResultado>>> _searchResults = new MutableLiveData<>();
+    private final MediatorLiveData<UiState<List<PaseadorResultado>>> _searchResults = new MediatorLiveData<>();
     public final LiveData<UiState<List<PaseadorResultado>>> searchResults = _searchResults;
 
-    private final MutableLiveData<Filtros> _filtros = new MutableLiveData<>(new Filtros());
-    public final LiveData<Filtros> filtros = _filtros;
+    private final MutableLiveData<SearchParameters> searchTrigger = new MutableLiveData<>();
+    private LiveData<UiState<PaseadorSearchResult>> currentSearchSource = null;
 
-    private String currentQuery = "";
-    private DocumentSnapshot lastVisibleDocument = null;
     private boolean isLoadingMore = false;
     private boolean isLastPage = false;
+    private DocumentSnapshot lastVisibleDocument = null;
 
-    // --- Lógica de Debounce ---
-    private final Handler debounceHandler = new Handler(Looper.getMainLooper());
-    private Runnable debounceRunnable;
+    // Clase interna para agrupar los parámetros de búsqueda
+    private static class SearchParameters {
+        final String query;
+        final Filtros filtros;
+
+        SearchParameters(String query, Filtros filtros) {
+            this.query = query;
+            this.filtros = filtros;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            SearchParameters that = (SearchParameters) o;
+            return Objects.equals(query, that.query) && Objects.equals(filtros, that.filtros);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(query, filtros);
+        }
+    }
 
     public BusquedaViewModel() {
         this(new PaseadorRepository());
@@ -53,50 +75,44 @@ public class BusquedaViewModel extends ViewModel {
     public BusquedaViewModel(PaseadorRepository repository) {
         this.repository = repository;
         loadPaseadoresPopulares();
+
+        _searchResults.addSource(searchTrigger, params -> {
+            isLastPage = false;
+            lastVisibleDocument = null;
+            isLoadingMore = false;
+            executeSearch(params, false);
+        });
     }
 
-    // --- LiveData Públicos --- //
     public LiveData<UiState<List<PaseadorResultado>>> getPaseadoresPopularesState() {
         return paseadoresPopularesState;
     }
 
+    public LiveData<Filtros> getFiltros() {
+        return repository.getFiltros();
+    }
+
+    public void aplicarFiltros(Filtros nuevosFiltros) {
+        String currentQuery = searchTrigger.getValue() != null ? searchTrigger.getValue().query : "";
+        searchTrigger.setValue(new SearchParameters(currentQuery, nuevosFiltros));
+    }
+
+    public void limpiarFiltros() {
+        String currentQuery = searchTrigger.getValue() != null ? searchTrigger.getValue().query : "";
+        searchTrigger.setValue(new SearchParameters(currentQuery, new Filtros()));
+    }
+
     // --- Acciones de la UI --- //
     public void loadPaseadoresPopulares() {
-        if (paseadoresPopularesState == null) { // Cargar solo una vez
+        if (paseadoresPopularesState == null) {
             paseadoresPopularesState = repository.getPaseadoresPopulares();
         }
     }
 
     public void onSearchQueryChanged(String query) {
-        Log.d(TAG, "onSearchQueryChanged: " + query);
-        debounceHandler.removeCallbacks(debounceRunnable);
-        debounceRunnable = () -> {
-            String normalizedQuery = normalizarTexto(query);
-            
-            // Verificar si hay filtros activos
-            Filtros currentFiltros = _filtros.getValue();
-            boolean hasActiveFilters = currentFiltros != null && (
-                    currentFiltros.getMinCalificacion() > 0 ||
-                    currentFiltros.getExperienciaMinima() > 0 ||
-                    currentFiltros.getMaxPrecio() < 100 || // Default maxPrecio is 100
-                    currentFiltros.isSoloVerificados() ||
-                    (currentFiltros.getTamanosMascota() != null && !currentFiltros.getTamanosMascota().isEmpty()) ||
-                    !currentFiltros.getOrden().equals("Distancia (más cercano)") // Default order
-            );
-
-            if (normalizedQuery.isEmpty()) {
-                if (!hasActiveFilters) {
-                    currentQuery = "";
-                    lastVisibleDocument = null;
-                    isLastPage = true;
-                    _searchResults.setValue(UiState.empty()); // Mostrar estado vacío si no hay query ni filtros
-                    return;
-                }
-                // Si la query es vacía pero hay filtros activos, continuamos con la búsqueda para aplicar los filtros
-            }
-            executeSearch(normalizedQuery, false, _filtros.getValue());
-        };
-        debounceHandler.postDelayed(debounceRunnable, 300); // 300ms de delay
+        String normalizedQuery = normalizarTexto(query);
+        Filtros currentFiltros = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        searchTrigger.setValue(new SearchParameters(normalizedQuery, currentFiltros));
     }
 
     private String normalizarTexto(String texto) {
@@ -105,69 +121,113 @@ public class BusquedaViewModel extends ViewModel {
         Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
         return pattern.matcher(nfdNormalizedString).replaceAll("").toLowerCase();
     }
-
-    public void aplicarFiltros(Filtros nuevosFiltros) {
-        Log.d(TAG, "aplicarFiltros: " + nuevosFiltros.toString());
-        _filtros.setValue(nuevosFiltros);
-        executeSearch(currentQuery, false, nuevosFiltros);
-    }
-
-    public void limpiarFiltros() {
-        Log.d(TAG, "limpiarFiltros");
-        _filtros.setValue(new Filtros());
-        executeSearch(currentQuery, false, new Filtros());
+    
+    private void updateFiltros(Filtros nuevosFiltros) {
+        String currentQuery = searchTrigger.getValue() != null ? searchTrigger.getValue().query : "";
+        searchTrigger.setValue(new SearchParameters(currentQuery, nuevosFiltros));
     }
 
     public void setCalificacionMinima(double calificacion) {
-        Filtros filtrosActuales = _filtros.getValue();
-        if (filtrosActuales != null) {
-            filtrosActuales.setMinCalificacion((float) calificacion);
-            _filtros.setValue(filtrosActuales);
-            executeSearch(currentQuery, false, filtrosActuales);
-        }
+        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        filtrosActuales.setMinCalificacion((float) calificacion);
+        updateFiltros(filtrosActuales);
     }
 
     public void setExperienciaMinima(int experiencia) {
-        Filtros filtrosActuales = _filtros.getValue();
-        if (filtrosActuales != null) {
-            filtrosActuales.setExperienciaMinima(experiencia);
-            _filtros.setValue(filtrosActuales);
-            executeSearch(currentQuery, false, filtrosActuales);
-        }
+        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        filtrosActuales.setExperienciaMinima(experiencia);
+        updateFiltros(filtrosActuales);
     }
 
     public void setPrecioMaximo(double precio) {
-        Filtros filtrosActuales = _filtros.getValue();
-        if (filtrosActuales != null) {
-            filtrosActuales.setMaxPrecio((float) precio);
-            _filtros.setValue(filtrosActuales);
-            executeSearch(currentQuery, false, filtrosActuales);
-        }
+        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        filtrosActuales.setMaxPrecio((float) precio);
+        updateFiltros(filtrosActuales);
     }
 
     public void setSoloVerificados(boolean soloVerificados) {
-        Filtros filtrosActuales = _filtros.getValue();
-        if (filtrosActuales != null) {
-            filtrosActuales.setSoloVerificados(soloVerificados);
-            _filtros.setValue(filtrosActuales);
-            executeSearch(currentQuery, false, filtrosActuales);
-        }
+        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        filtrosActuales.setSoloVerificados(soloVerificados);
+        updateFiltros(filtrosActuales);
     }
 
     public void loadMore() {
-        Log.d(TAG, "loadMore");
         if (isLoadingMore || isLastPage) return;
-        executeSearch(currentQuery, true, _filtros.getValue());
+        SearchParameters currentParams = searchTrigger.getValue();
+        if (currentParams != null) {
+            executeSearch(currentParams, true);
+        }
+    }
+    
+    private void executeSearch(SearchParameters params, final boolean isPaginating) {
+        if (!isPaginating) {
+            _searchResults.setValue(UiState.loading());
+        }
+
+        if (currentSearchSource != null) {
+            _searchResults.removeSource(currentSearchSource);
+        }
+
+        isLoadingMore = true;
+        currentSearchSource = repository.buscarPaseadores(params.query, lastVisibleDocument, params.filtros);
+
+        _searchResults.addSource(currentSearchSource, uiState -> {
+            if (uiState instanceof UiState.Success) {
+                handleSuccess(uiState, isPaginating);
+            } else {
+                handleLoadingOrError(uiState);
+            }
+        });
+    }
+
+    private void handleSuccess(UiState<PaseadorSearchResult> uiState, boolean isPaginating) {
+        PaseadorSearchResult searchResult = ((UiState.Success<PaseadorSearchResult>) uiState).getData();
+        if (searchResult == null) {
+            _searchResults.setValue(UiState.empty());
+            isLastPage = true;
+            isLoadingMore = false;
+            return;
+        }
+
+        lastVisibleDocument = searchResult.lastVisible;
+        List<PaseadorResultado> newResults = searchResult.resultados;
+
+        if (newResults == null || newResults.isEmpty()) {
+            if (!isPaginating) {
+                _searchResults.setValue(UiState.empty());
+            }
+            isLastPage = true;
+        } else {
+            if (newResults.size() < 15) { // Límite de página
+                isLastPage = true;
+            }
+
+            if (isPaginating) {
+                UiState<List<PaseadorResultado>> currentState = _searchResults.getValue();
+                if (currentState instanceof UiState.Success) {
+                    List<PaseadorResultado> currentList = new ArrayList<>(((UiState.Success<List<PaseadorResultado>>) currentState).getData());
+                    currentList.addAll(newResults);
+                    _searchResults.setValue(UiState.success(currentList));
+                }
+            } else {
+                _searchResults.setValue(UiState.success(newResults));
+            }
+        }
+        isLoadingMore = false;
+    }
+
+    private void handleLoadingOrError(UiState<PaseadorSearchResult> uiState) {
+        _searchResults.setValue((UiState) uiState);
+        if (uiState instanceof UiState.Empty) {
+            isLastPage = true;
+        }
+        isLoadingMore = false;
     }
 
     public void toggleFavorito(String paseadorId, boolean isFavorito) {
-        // Llama al repositorio para cambiar el estado de favorito.
-        // La UI se actualizará automáticamente si el repositorio emite nuevos datos,
-        // o se puede forzar una recarga si es necesario.
         repository.toggleFavorito(paseadorId, isFavorito);
     }
 
-    // --- Métodos de Historial de Búsqueda ---
     public List<String> getSearchHistory() {
         return repository.getSearchHistory();
     }
@@ -180,62 +240,9 @@ public class BusquedaViewModel extends ViewModel {
         repository.removeFromSearchHistory(query);
     }
 
-    private void executeSearch(String query, final boolean isPaginating, Filtros filtros) {
-        if (!isPaginating) {
-            currentQuery = query;
-            lastVisibleDocument = null;
-            isLastPage = false;
-            _searchResults.setValue(UiState.loading());
-        }
-
-        isLoadingMore = true;
-
-        repository.buscarPaseadores(query, lastVisibleDocument, filtros).observeForever(new androidx.lifecycle.Observer<UiState<PaseadorSearchResult>>() {
-            @Override
-            public void onChanged(UiState<PaseadorSearchResult> uiState) {
-                if (this == null) return; // Evitar operar sobre observer desvinculado
-
-                if (uiState instanceof UiState.Success) {
-                    PaseadorSearchResult searchResult = ((UiState.Success<PaseadorSearchResult>) uiState).getData();
-                    if (searchResult == null) return;
-
-                    lastVisibleDocument = searchResult.lastVisible;
-                    List<PaseadorResultado> newResults = searchResult.resultados;
-
-                    if (newResults == null || newResults.size() < 15) {
-                        isLastPage = true;
-                    }
-
-                    if (isPaginating) {
-                        UiState<List<PaseadorResultado>> currentState = _searchResults.getValue();
-                        if (currentState instanceof UiState.Success) {
-                            List<PaseadorResultado> currentList = new ArrayList<>(((UiState.Success<List<PaseadorResultado>>) currentState).getData());
-                            currentList.addAll(newResults);
-                            _searchResults.postValue(UiState.success(currentList));
-                        }
-                    } else {
-                        _searchResults.postValue(UiState.success(newResults));
-                    }
-
-                } else if (uiState instanceof UiState.Empty) {
-                    if (!isPaginating) {
-                        _searchResults.postValue(UiState.empty());
-                    }
-                    isLastPage = true;
-                } else if (uiState instanceof UiState.Error) {
-                    _searchResults.postValue(UiState.error(((UiState.Error<PaseadorSearchResult>) uiState).getMessage()));
-                }
-                isLoadingMore = false;
-                // Desvincular el observer para evitar fugas de memoria y ejecuciones múltiples
-                repository.buscarPaseadores(query, lastVisibleDocument, filtros).removeObserver(this);
-            }
-        });
-    }
-
     @Override
     protected void onCleared() {
         super.onCleared();
-        // Cuando el ViewModel se destruye, limpiar todos los listeners del repositorio
         repository.cleanupListeners();
     }
 }

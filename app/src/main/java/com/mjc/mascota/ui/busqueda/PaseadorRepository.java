@@ -44,6 +44,52 @@ public class PaseadorRepository {
             return size() > 20;
         }
     };
+    private final MutableLiveData<Filtros> _filtros = new MutableLiveData<>(new Filtros());
+
+    // --- Filtros ---
+    public LiveData<Filtros> getFiltros() {
+        return _filtros;
+    }
+
+    public void setFiltros(Filtros filtros) {
+        _filtros.postValue(filtros);
+    }
+    
+    public void limpiarFiltros() {
+        _filtros.postValue(new Filtros());
+    }
+
+    public void setCalificacionMinima(double calificacion) {
+        Filtros current = _filtros.getValue();
+        if (current != null) {
+            current.setMinCalificacion((float) calificacion);
+            _filtros.postValue(current);
+        }
+    }
+
+    public void setExperienciaMinima(int experiencia) {
+        Filtros current = _filtros.getValue();
+        if (current != null) {
+            current.setExperienciaMinima(experiencia);
+            _filtros.postValue(current);
+        }
+    }
+
+    public void setPrecioMaximo(double precio) {
+        Filtros current = _filtros.getValue();
+        if (current != null) {
+            current.setMaxPrecio((float) precio);
+            _filtros.postValue(current);
+        }
+    }
+
+    public void setSoloVerificados(boolean soloVerificados) {
+        Filtros current = _filtros.getValue();
+        if (current != null) {
+            current.setSoloVerificados(soloVerificados);
+            _filtros.postValue(current);
+        }
+    }
 
     public LiveData<UiState<List<PaseadorResultado>>> getPaseadoresPopulares() {
         MutableLiveData<UiState<List<PaseadorResultado>>> liveData = new MutableLiveData<>();
