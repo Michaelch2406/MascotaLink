@@ -433,13 +433,28 @@ public class LocationService extends Service {
                              lastLocation.getAccuracy() : 50f;
         boolean precisionBaja = lastAccuracy > 100f;
 
-        if (isLowBattery) {
-            // Modo ahorro de batería: menos frecuente, menos precisión
-            interval = 15000; // 15 segundos
-            minInterval = 10000; // 10 segundos
-            minDistance = 20; // 20 metros
+        // NUEVO: Modo ultra-ahorro cuando dueño NO está viendo el mapa
+        if (!duenoViendoMapa && !isLowBattery) {
+            // Solo guardar en Firestore cada 30s, sin WebSocket
+            interval = 30000; // 30 segundos
+            minInterval = 20000; // 20 segundos
+            minDistance = 30; // 30 metros
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
-            Log.d(TAG, "GPS en modo AHORRO DE BATERÍA (15s)");
+            Log.d(TAG, "GPS en modo ULTRA-AHORRO (30s, dueño no viendo - ahorro ~40%)");
+        } else if (isLowBattery) {
+            // Modo ahorro de batería: menos frecuente, menos precisión
+            interval = 20000; // 20 segundos (antes 15s)
+            minInterval = 15000; // 15 segundos
+            minDistance = 25; // 25 metros
+            priority = Priority.PRIORITY_LOW_POWER;
+            Log.d(TAG, "GPS en modo AHORRO DE BATERÍA (20s, LOW_POWER)");
+        } else if (gpsPausado) {
+            // NUEVO: Modo pausa - solo verificar cada minuto si hay movimiento
+            interval = 60000; // 60 segundos
+            minInterval = 45000; // 45 segundos
+            minDistance = 50; // 50 metros para detectar movimiento
+            priority = Priority.PRIORITY_LOW_POWER;
+            Log.d(TAG, "GPS en modo PAUSA (60s, esperando movimiento)");
         } else if (precisionBaja) {
             // Si tenemos baja precisión, reducir frecuencia para ahorrar batería
             interval = 12000; // 12 segundos
@@ -449,19 +464,25 @@ public class LocationService extends Service {
             Log.d(TAG, "GPS en modo PRECISIÓN BAJA (12s, accuracy: " + (int)lastAccuracy + "m)");
         } else if (currentSpeed < SPEED_THRESHOLD_MPS) {
             // Usuario casi detenido: reducir frecuencia
-            interval = 10000; // 10 segundos
-            minInterval = 7000; // 7 segundos
-            minDistance = 10; // 10 metros
+            interval = 12000; // 12 segundos (antes 10s)
+            minInterval = 8000; // 8 segundos
+            minDistance = 12; // 12 metros
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
-            Log.d(TAG, "GPS en modo DETENIDO (10s, baja velocidad)");
+            Log.d(TAG, "GPS en modo DETENIDO (12s, baja velocidad)");
+        } else if (currentSpeed > 3.0f) {
+            // NUEVO: Modo alta velocidad (corriendo/bicicleta) - más frecuente
+            interval = 5000; // 5 segundos
+            minInterval = 3000; // 3 segundos
+            minDistance = 5; // 5 metros
+            priority = Priority.PRIORITY_HIGH_ACCURACY;
+            Log.d(TAG, "GPS en modo ALTA VELOCIDAD (5s, HIGH_ACCURACY - " + String.format("%.1f", currentSpeed * 3.6) + " km/h)");
         } else {
-            // OPTIMIZACIÓN: Cambio de 5s → 8s y HIGH_ACCURACY → BALANCED
-            // Ahorro de batería: ~18% manteniendo precisión
-            interval = 8000; // 8 segundos (antes: 5s)
-            minInterval = 5000; // 5 segundos (antes: 3s)
-            minDistance = 8; // 8 metros (antes: 5m)
-            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY; // Antes: HIGH_ACCURACY
-            Log.d(TAG, "GPS en modo MOVIMIENTO OPTIMIZADO (8s, BALANCED - ahorro batería ~18%)");
+            // Modo normal caminando
+            interval = 8000; // 8 segundos
+            minInterval = 5000; // 5 segundos
+            minDistance = 8; // 8 metros
+            priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
+            Log.d(TAG, "GPS en modo CAMINANDO (8s, BALANCED)");
         }
 
         return new LocationRequest.Builder(priority, interval)

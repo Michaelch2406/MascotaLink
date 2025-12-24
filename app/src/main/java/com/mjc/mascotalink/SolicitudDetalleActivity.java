@@ -55,6 +55,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private Button btnVerPerfil;
     private Button btnRechazar;
     private Button btnAceptar;
+    private com.google.android.material.button.MaterialButton btnCalendar;
     private BottomNavigationView bottomNav;
     private String bottomNavRole = "PASEADOR";
     private int bottomNavSelectedItem = R.id.menu_search;
@@ -66,6 +67,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private Date horaInicio;
     private int duracionMinutos;
     private String estadoReserva;
+    private String direccionRecogida; // Dirección para el calendario
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,10 +121,41 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         btnVerPerfil = findViewById(R.id.btn_ver_perfil);
         btnRechazar = findViewById(R.id.btn_rechazar);
         btnAceptar = findViewById(R.id.btn_aceptar);
+        btnCalendar = findViewById(R.id.btn_calendar);
         bottomNav = findViewById(R.id.bottom_nav);
 
         // Botón atrás
         ivBack.setOnClickListener(v -> finish());
+
+        // Botón Calendario
+        btnCalendar.setOnClickListener(v -> {
+            if (fecha == null || horaInicio == null) return;
+            
+            String nombreMascota = tvMascotaNombre.getText().toString();
+            String nombreDueno = tvDuenoNombre.getText().toString();
+            
+            // Usar dirección real si existe, o genérica
+            String direccionFinal = (direccionRecogida != null && !direccionRecogida.isEmpty()) 
+                    ? direccionRecogida : "Ubicación del cliente";
+            
+            try {
+                Toast.makeText(this, "Abriendo calendario...", Toast.LENGTH_SHORT).show();
+                com.mjc.mascotalink.utils.GoogleCalendarHelper.addWalkToCalendarForWalker(
+                        this,
+                        nombreMascota,
+                        nombreDueno,
+                        direccionFinal,
+                        new Timestamp(horaInicio),
+                        null,
+                        idReserva,
+                        duracionMinutos,
+                        tvNotas.getText().toString()
+                );
+            } catch (Exception e) {
+                Log.e(TAG, "Error al abrir calendario", e);
+                Toast.makeText(this, "Error al abrir la app de calendario: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
 
         // Botón Ver Perfil (Dueño)
         btnVerPerfil.setOnClickListener(v -> {
@@ -217,6 +250,11 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         return;
                     }
 
+                    
+                    // Obtener dirección de recogida
+                    direccionRecogida = reservaDoc.getString("direccion_recogida");
+                    if (direccionRecogida == null) direccionRecogida = "";
+
                     // Obtener datos de la reserva
                     DocumentReference duenoRef = reservaDoc.getDocumentReference("id_dueno");
                     if (duenoRef != null) {
@@ -271,6 +309,10 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
      * Carga datos para reservas SEMANAL o MENSUAL (1 documento que representa múltiples días)
      */
     private void cargarReservaSemanalMensual(DocumentSnapshot reservaDoc, int cantidadDias) {
+        // Obtener dirección de recogida
+        direccionRecogida = reservaDoc.getString("direccion_recogida");
+        if (direccionRecogida == null) direccionRecogida = "";
+
         // Obtener datos de la reserva
         DocumentReference duenoRef = reservaDoc.getDocumentReference("id_dueno");
         if (duenoRef != null) {
@@ -347,6 +389,9 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                             reservas.get(cantidadDias - 1).getTimestamp("fecha").toDate() : new Date();
 
                     // Obtener datos comunes (todos comparten dueño, mascota, hora, duración)
+                    direccionRecogida = primerReserva.getString("direccion_recogida");
+                    if (direccionRecogida == null) direccionRecogida = "";
+
                     DocumentReference duenoRef = primerReserva.getDocumentReference("id_dueno");
                     if (duenoRef != null) {
                         idDueno = duenoRef.getId();
@@ -401,8 +446,35 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private void actualizarBotonesPorEstado() {
         boolean puedeAceptar = ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_ACEPTADO);
         boolean puedeRechazar = ReservaEstadoValidator.canTransition(estadoReserva, ReservaEstadoValidator.ESTADO_RECHAZADO);
+        
         actualizarBoton(btnAceptar, puedeAceptar);
         actualizarBoton(btnRechazar, puedeRechazar);
+
+        // CORRECCIÓN: Asegurar que el botón de perfil siempre esté habilitado al actualizar la UI
+        if (btnVerPerfil != null) {
+            btnVerPerfil.setEnabled(true);
+        }
+
+        // Mostrar botón calendario si está aceptada o confirmada
+        if (ReservaEstadoValidator.ESTADO_ACEPTADO.equals(estadoReserva) || 
+            ReservaEstadoValidator.ESTADO_CONFIRMADO.equals(estadoReserva)) {
+            if (btnCalendar != null) {
+                btnCalendar.setVisibility(View.VISIBLE);
+                btnCalendar.setEnabled(true); // Asegurar habilitado
+            }
+            // Ocultar botones de decisión si ya está decidido
+            btnAceptar.setVisibility(View.GONE);
+            btnRechazar.setVisibility(View.GONE);
+        } else {
+            if (btnCalendar != null) {
+                btnCalendar.setVisibility(View.GONE);
+            }
+            // Asegurar que sean visibles si es pendiente
+            if (ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION.equals(estadoReserva)) {
+                btnAceptar.setVisibility(View.VISIBLE);
+                btnRechazar.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     private void actualizarBoton(Button boton, boolean habilitado) {
@@ -670,8 +742,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         Toast.makeText(this, "¡Solicitud aceptada!", Toast.LENGTH_SHORT).show();
                         estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
                         actualizarBotonesPorEstado();
-                        // Volver a SolicitudesActivity después de 1 segundo
-                        finishWithDelay();
+                        // NO cerramos la actividad para permitir agregar al calendario
                     },
                     e -> {
                         Log.e(TAG, "Error al aceptar solicitud después de reintentos", e);
@@ -716,8 +787,7 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         Toast.makeText(this, "¡" + cantidadReservas + " reservas aceptadas!", Toast.LENGTH_SHORT).show();
                         estadoReserva = ReservaEstadoValidator.ESTADO_ACEPTADO;
                         actualizarBotonesPorEstado();
-                        // Volver a SolicitudesActivity después de 1 segundo
-                        finishWithDelay();
+                        // NO cerramos la actividad para permitir agregar al calendario
                     }).addOnFailureListener(e -> {
                         Log.e(TAG, "Error al aceptar grupo de reservas", e);
                         Toast.makeText(this, "Error al aceptar las reservas. Verifica tu conexión.", Toast.LENGTH_LONG).show();

@@ -71,6 +71,14 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     private int intentosFallidos = 0;
     private static final int MAX_INTENTOS = 3;
 
+    // Variables para Google Calendar
+    private Timestamp horaInicioTimestamp;
+    private Timestamp horaFinTimestamp;
+    private int duracionMinutos = 60;
+    private boolean esGrupoReserva = false;
+    private String grupoReservaIdActual;
+    private int cantidadDiasGrupo = 1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -199,6 +207,17 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         Timestamp horaTimestamp = documentSnapshot.getTimestamp("hora_inicio");
         if (horaTimestamp != null) {
             horaReserva = new SimpleDateFormat("h:mm a", Locale.US).format(horaTimestamp.toDate());
+            horaInicioTimestamp = horaTimestamp;
+        }
+
+        Timestamp horaFinTs = documentSnapshot.getTimestamp("hora_fin");
+        if (horaFinTs != null) {
+            horaFinTimestamp = horaFinTs;
+        }
+
+        Long duracion = documentSnapshot.getLong("duracion");
+        if (duracion != null) {
+            duracionMinutos = duracion.intValue();
         }
 
         estadoReserva = documentSnapshot.getString("estado");
@@ -277,7 +296,23 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                     Timestamp horaTimestamp = primerReserva.getTimestamp("hora_inicio");
                     if (horaTimestamp != null) {
                         horaReserva = new SimpleDateFormat("h:mm a", Locale.US).format(horaTimestamp.toDate());
+                        horaInicioTimestamp = horaTimestamp;
                     }
+
+                    Timestamp horaFinTs = primerReserva.getTimestamp("hora_fin");
+                    if (horaFinTs != null) {
+                        horaFinTimestamp = horaFinTs;
+                    }
+
+                    Long duracion = primerReserva.getLong("duracion");
+                    if (duracion != null) {
+                        duracionMinutos = duracion.intValue();
+                    }
+
+                    // Guardar datos del grupo para el calendario
+                    esGrupoReserva = true;
+                    grupoReservaIdActual = grupoReservaId;
+                    cantidadDiasGrupo = cantidadReservas;
 
                     // Usar estado de la primera reserva (todas deberían tener el mismo estado)
                     estadoReserva = primerReserva.getString("estado");
@@ -611,13 +646,8 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
             }
             
             Toast.makeText(this, "Pago procesado exitosamente!", Toast.LENGTH_LONG).show();
-            
-            new Handler().postDelayed(() -> {
-                Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-            }, 1000);
+
+            mostrarDialogoAgregarCalendario();
             
         }).addOnFailureListener(e -> {
             manejarFalloPago("Error en transacción de pago: " + e.getMessage());
@@ -720,6 +750,62 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     callback.onValidationComplete(false, "Error de red al validar la reserva.");
                 });
+    }
+
+    private void mostrarDialogoAgregarCalendario() {
+        if (!com.mjc.mascotalink.utils.GoogleCalendarHelper.isCalendarAvailable(this)) {
+            navegarAPaseos();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Agregar al Calendario")
+                .setMessage("¿Deseas agregar este paseo a tu calendario para recibir recordatorios?")
+                .setPositiveButton("Sí, agregar", (dialog, which) -> {
+                    agregarAlCalendario();
+                    new Handler().postDelayed(this::navegarAPaseos, 500);
+                })
+                .setNegativeButton("No, gracias", (dialog, which) -> navegarAPaseos())
+                .setCancelable(false)
+                .show();
+    }
+
+    private void agregarAlCalendario() {
+        if (horaInicioTimestamp == null) {
+            Log.w(TAG, "No se puede agregar al calendario: hora de inicio no disponible");
+            return;
+        }
+
+        if (esGrupoReserva && grupoReservaIdActual != null && cantidadDiasGrupo > 1) {
+            com.mjc.mascotalink.utils.GoogleCalendarHelper.addRecurringWalksToCalendar(
+                    this,
+                    mascotaNombre != null ? mascotaNombre : "Mi mascota",
+                    paseadorNombre != null ? paseadorNombre : "Paseador",
+                    direccionRecogida != null ? direccionRecogida : "",
+                    horaInicioTimestamp,
+                    duracionMinutos,
+                    cantidadDiasGrupo,
+                    grupoReservaIdActual
+            );
+        } else {
+            com.mjc.mascotalink.utils.GoogleCalendarHelper.addWalkToCalendar(
+                    this,
+                    mascotaNombre != null ? mascotaNombre : "Mi mascota",
+                    paseadorNombre != null ? paseadorNombre : "Paseador",
+                    direccionRecogida != null ? direccionRecogida : "",
+                    horaInicioTimestamp,
+                    horaFinTimestamp,
+                    reservaId,
+                    duracionMinutos
+            );
+        }
+    }
+
+    private void navegarAPaseos() {
+        Intent intent = new Intent(ConfirmarPagoActivity.this, PaseosActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 }
 

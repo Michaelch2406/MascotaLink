@@ -21,6 +21,7 @@ public class NotificacionesPreferences {
     private static final String KEY_MENSAJES_ENABLED = "notificaciones_mensajes";
     private static final String KEY_PASEOS_ENABLED = "notificaciones_paseos";
     private static final String KEY_PAGOS_ENABLED = "notificaciones_pagos";
+    private static final String KEY_PASEADOR_CERCA_ENABLED = "notificaciones_paseador_cerca";
 
     private final SharedPreferences preferences;
     private final Context context;
@@ -86,6 +87,27 @@ public class NotificacionesPreferences {
         saveToFirestore();
     }
 
+    public boolean isPaseadorCercaEnabled() {
+        return preferences.getBoolean(KEY_PASEADOR_CERCA_ENABLED, true);
+    }
+
+    public void setPaseadorCercaEnabled(boolean enabled) {
+        preferences.edit().putBoolean(KEY_PASEADOR_CERCA_ENABLED, enabled).apply();
+        savePaseadorCercaToFirestore(enabled);
+    }
+
+    private void savePaseadorCercaToFirestore(boolean enabled) {
+        String userId = getCurrentUserId();
+        if (userId == null) return;
+
+        FirebaseFirestore.getInstance()
+                .collection("duenos")
+                .document(userId)
+                .update("notificaciones_paseador_cerca", enabled)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Paseador cerca preference saved"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error saving paseador cerca preference", e));
+    }
+
     // FCM Topics
     private void subscribeToTopics() {
         FirebaseMessaging messaging = FirebaseMessaging.getInstance();
@@ -120,6 +142,7 @@ public class NotificacionesPreferences {
         preferences.put("notificaciones_mensajes", isMensajesEnabled());
         preferences.put("notificaciones_paseos", isPaseosEnabled());
         preferences.put("notificaciones_pagos", isPagosEnabled());
+        preferences.put("notificaciones_paseador_cerca", isPaseadorCercaEnabled());
 
         FirebaseFirestore.getInstance()
                 .collection("usuarios")
@@ -150,6 +173,7 @@ public class NotificacionesPreferences {
                             editor.putBoolean(KEY_MENSAJES_ENABLED, (Boolean) prefs.getOrDefault("notificaciones_mensajes", true));
                             editor.putBoolean(KEY_PASEOS_ENABLED, (Boolean) prefs.getOrDefault("notificaciones_paseos", true));
                             editor.putBoolean(KEY_PAGOS_ENABLED, (Boolean) prefs.getOrDefault("notificaciones_pagos", true));
+                            editor.putBoolean(KEY_PASEADOR_CERCA_ENABLED, (Boolean) prefs.getOrDefault("notificaciones_paseador_cerca", true));
                             editor.apply();
                         }
                     }

@@ -97,6 +97,7 @@ public class ReservaActivity extends AppCompatActivity {
     private String modoFechaActual = "DIAS_ESPECIFICOS";
     private boolean tabPorMesActivo = false;
     private String notasAdicionalesMascota = "";
+    private String direccionUsuario = ""; // Dirección del dueño para la reserva
 
 
     @Override
@@ -158,6 +159,7 @@ public class ReservaActivity extends AppCompatActivity {
             setupNetworkMonitor();
             setupListeners();
             setupBottomNavigation();
+            cargarDireccionUsuario(); // Cargar dirección del dueño
             cargarMascotasUsuario();
             setupCalendario();
             setupHorarios();
@@ -305,6 +307,20 @@ public class ReservaActivity extends AppCompatActivity {
             return;
         }
         BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
+    }
+
+    private void cargarDireccionUsuario() {
+        if (currentUserId == null) return;
+        db.collection("usuarios").document(currentUserId).get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    String dir = documentSnapshot.getString("direccion");
+                    if (dir != null && !dir.isEmpty()) {
+                        direccionUsuario = dir;
+                    }
+                }
+            })
+            .addOnFailureListener(e -> Log.e(TAG, "Error cargando dirección usuario", e));
     }
 
     private void cargarMascotasUsuario() {
@@ -1533,6 +1549,7 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("notas", notasAdicionalesMascota);
         reserva.put("reminderSent", false);
         reserva.put("timeZone", java.util.TimeZone.getDefault().getID());
+        reserva.put("direccion_recogida", direccionUsuario); // Guardar dirección
 
         // Campos para reservas agrupadas
         if (esGrupo && grupoId != null) {
@@ -1631,6 +1648,7 @@ public class ReservaActivity extends AppCompatActivity {
             reserva.put("notas", notasAdicionalesMascota);
             reserva.put("reminderSent", false);
             reserva.put("timeZone", java.util.TimeZone.getDefault().getID());
+            reserva.put("direccion_recogida", direccionUsuario); // Guardar dirección
 
             // Campos de grupo
             reserva.put("grupo_reserva_id", grupoId);

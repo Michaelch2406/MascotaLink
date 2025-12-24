@@ -182,6 +182,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 case "OPEN_CURRENT_WALK_OWNER":
                     intent = new Intent(this, PaseoEnCursoDuenoActivity.class);
                     break;
+                case "OPEN_WALKER_PROFILE":
+                    if (!prefs.isPaseadorCercaEnabled()) {
+                        Log.d(TAG, "Notificaciones de paseador cerca deshabilitadas.");
+                        return;
+                    }
+                    intent = new Intent(this, PerfilPaseadorActivity.class);
+                    if (data != null && data.containsKey("paseador_id")) {
+                        intent.putExtra("paseador_id", data.get("paseador_id"));
+                    }
+                    break;
+                case "OPEN_SEARCH_ACTIVITY":
+                    if (!prefs.isPaseadorCercaEnabled()) {
+                        Log.d(TAG, "Notificaciones de paseadores zona deshabilitadas.");
+                        return;
+                    }
+                    intent = new Intent(this, com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity.class);
+                    break;
                 default:
                     intent = new Intent(this, MainActivity.class);
                     break;

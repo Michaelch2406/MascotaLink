@@ -4063,3 +4063,653 @@ initializeSocketServer(io, db);
 exports.websocket = onRequest((req, res) => {
   httpServer.emit("request", req, res);
 });
+
+// ========================================
+// NOTIFICACIONES: PASEADOR CERCA DE TU ZONA
+// ========================================
+
+/**
+ * Notifica a dueños cuando un paseador verificado está disponible cerca de su ubicación.
+ * Se ejecuta cuando un paseador actualiza su ubicación o disponibilidad.
+ */
+exports.notifyNearbyWalkerAvailable = onDocumentUpdated("paseadores/{paseadorId}", async (event) => {
+  const beforeData = event.data.before.data();
+  const afterData = event.data.after.data();
+  const paseadorId = event.params.paseadorId;
+
+  // Solo procesar si el paseador está verificado y acepta solicitudes
+  const estadoVerificacion = afterData.verificacion_estado || "";
+  if (estadoVerificacion.toLowerCase() !== "aprobado" && estadoVerificacion.toLowerCase() !== "verificado") {
+    return null;
+  }
+
+  // Verificar si cambió la ubicación o el estado de disponibilidad
+  const ubicacionAntes = beforeData.ubicacion_actual;
+  const ubicacionDespues = afterData.ubicacion_actual;
+  const aceptaSolicitudesAntes = beforeData.acepta_solicitudes;
+  const aceptaSolicitudesDespues = afterData.acepta_solicitudes;
+
+  // Solo notificar si:
+  // 1. El paseador acaba de activar "acepta_solicitudes"
+  // 2. O si actualizó su ubicación mientras acepta solicitudes
+  const acabaDeActivar = !aceptaSolicitudesAntes && aceptaSolicitudesDespues;
+  const ubicacionCambio = ubicacionDespues &&
+    (!ubicacionAntes ||
+     ubicacionAntes.latitude !== ubicacionDespues.latitude ||
+     ubicacionAntes.longitude !== ubicacionDespues.longitude);
+
+  if (!acabaDeActivar && !(aceptaSolicitudesDespues && ubicacionCambio)) {
+    return null;
+  }
+
+  if (!ubicacionDespues || !ubicacionDespues.latitude || !ubicacionDespues.longitude) {
+    console.log(`Paseador ${paseadorId} no tiene ubicación válida`);
+    return null;
+  }
+
+  const paseadorLat = ubicacionDespues.latitude;
+  const paseadorLng = ubicacionDespues.longitude;
+  const radioKm = 3; // Radio de búsqueda en kilómetros
+
+  console.log(`Buscando dueños cerca de paseador ${paseadorId} en radio de ${radioKm}km`);
+
+  try {
+    // Obtener datos del paseador para la notificación
+    const paseadorNombre = afterData.nombre_display || afterData.nombre || "Un paseador";
+    const calificacion = afterData.calificacion_promedio || 0;
+    const calificacionStr = calificacion > 0 ? ` (${calificacion.toFixed(1)}★)` : "";
+
+    // Buscar dueños con ubicación guardada
+    // NOTA: Firestore no permite geoqueries nativas complejas sin librerías externas.
+    // Filtramos por flag de notificaciones y calculamos distancia en memoria.
+    // Esto es aceptable para un volumen moderado de usuarios.
+    const duenosSnapshot = await db.collection("duenos")
+      .where("notificaciones_paseador_cerca", "==", true)
+      .get();
+
+    if (duenosSnapshot.empty) {
+      console.log("No hay dueños con notificaciones de paseador cerca activadas");
+      return null;
+    }
+
+    const notificaciones = [];
+    const ahora = Date.now();
+    const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 horas entre notificaciones del mismo paseador
+
+    for (const duenoDoc of duenosSnapshot.docs) {
+      const duenoData = duenoDoc.data();
+      const duenoId = duenoDoc.id;
+
+      // Verificar que no sea el mismo usuario (si aplica)
+      if (duenoId === paseadorId) continue;
+
+      // Verificar ubicación del dueño
+      const ubicacionDueno = duenoData.ubicacion || duenoData.direccion_ubicacion;
+      if (!ubicacionDueno || !ubicacionDueno.latitude || !ubicacionDueno.longitude) {
+        continue;
+      }
+
+      // Calcular distancia
+      const distancia = calculateDistance(
+        paseadorLat, paseadorLng,
+        ubicacionDueno.latitude, ubicacionDueno.longitude
+      );
+
+      if (distancia > radioKm) {
+        continue;
+      }
+
+      // Verificar cooldown para evitar spam
+      const ultimaNotificacion = duenoData.ultima_notificacion_paseador_cerca || {};
+      const ultimaDelPaseador = ultimaNotificacion[paseadorId];
+      if (ultimaDelPaseador && (ahora - ultimaDelPaseador) < COOLDOWN_MS) {
+        console.log(`Cooldown activo para dueño ${duenoId} y paseador ${paseadorId}`);
+        continue;
+      }
+
+      // Obtener FCM token del usuario
+      const usuarioDoc = await db.collection("usuarios").doc(duenoId).get();
+      if (!usuarioDoc.exists) continue;
+
+      const fcmToken = usuarioDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      const distanciaStr = distancia < 1
+        ? `a ${Math.round(distancia * 1000)}m`
+        : `a ${distancia.toFixed(1)}km`;
+
+      notificaciones.push({
+        token: fcmToken,
+        notification: {
+          title: "Paseador disponible cerca",
+          body: `${paseadorNombre}${calificacionStr} está disponible ${distanciaStr} de ti`,
+        },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
+        },
+        data: {
+          tipo: "paseador_cerca",
+          paseador_id: paseadorId,
+          click_action: "OPEN_WALKER_PROFILE", // Debe ser manejado en Android
+        },
+        duenoId: duenoId,
+      });
+    }
+
+    if (notificaciones.length === 0) {
+      console.log("No hay dueños cercanos para notificar");
+      return null;
+    }
+
+    console.log(`Enviando ${notificaciones.length} notificaciones de paseador cerca`);
+
+    // Enviar notificaciones
+    const response = await admin.messaging().sendEach(
+      notificaciones.map(n => ({
+        token: n.token,
+        notification: n.notification,
+        data: n.data,
+        android: n.android
+      }))
+    );
+
+    // Actualizar timestamps de última notificación
+    const batch = db.batch();
+    for (let i = 0; i < response.responses.length; i++) {
+      if (response.responses[i].success) {
+        const duenoRef = db.collection("duenos").doc(notificaciones[i].duenoId);
+        // Usar notación de punto para actualizar campo anidado en el mapa
+        batch.update(duenoRef, {
+          [`ultima_notificacion_paseador_cerca.${paseadorId}`]: ahora,
+        });
+      }
+    }
+    await batch.commit();
+
+    console.log(`Notificaciones enviadas: ${response.successCount} exitosas, ${response.failureCount} fallidas`);
+    return null;
+
+  } catch (error) {
+    console.error("Error en notifyNearbyWalkerAvailable:", error);
+    return null;
+  }
+});
+
+/**
+ * Función programada para notificar a dueños sobre paseadores disponibles en su zona.
+ * Se ejecuta cada hora durante horarios de alta demanda (8am, 12pm, 5pm).
+ */
+exports.notifyNearbyWalkersScheduled = onSchedule({
+    schedule: "0 8,12,17 * * *",
+    timeZone: "America/Guayaquil"
+}, async (event) => {
+  console.log("Ejecutando búsqueda programada de paseadores cercanos");
+
+  try {
+    // Obtener paseadores verificados y disponibles
+    // Nota: "aprobado" o "APROBADO" según consistencia de BD
+    const paseadoresSnapshot = await db.collection("paseadores")
+      .where("acepta_solicitudes", "==", true)
+      .get(); // Filtrar verificacion_estado en memoria para soportar case-insensitive
+
+    if (paseadoresSnapshot.empty) {
+      console.log("No hay paseadores disponibles");
+      return null;
+    }
+
+    // Obtener dueños con notificaciones activadas
+    const duenosSnapshot = await db.collection("duenos")
+      .where("notificaciones_paseador_cerca", "==", true)
+      .get();
+
+    if (duenosSnapshot.empty) {
+      console.log("No hay dueños con notificaciones activadas");
+      return null;
+    }
+
+    const radioKm = 5; // Radio más amplio para notificaciones programadas
+    const notificacionesPorDueno = new Map();
+    const ahora = Date.now();
+    const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 horas para notificaciones programadas generales
+
+    // Para cada dueño, encontrar paseadores cercanos
+    for (const duenoDoc of duenosSnapshot.docs) {
+      const duenoData = duenoDoc.data();
+      const duenoId = duenoDoc.id;
+
+      const ubicacionDueno = duenoData.ubicacion || duenoData.direccion_ubicacion;
+      if (!ubicacionDueno || !ubicacionDueno.latitude || !ubicacionDueno.longitude) {
+        continue;
+      }
+
+      // Verificar cooldown general
+      const ultimaNotificacionGeneral = duenoData.ultima_notificacion_paseadores_zona;
+      if (ultimaNotificacionGeneral && (ahora - ultimaNotificacionGeneral) < COOLDOWN_MS) {
+        continue;
+      }
+
+      let paseadoresCercanos = 0;
+      let mejorCalificacion = 0;
+
+      for (const paseadorDoc of paseadoresSnapshot.docs) {
+        const paseadorData = paseadorDoc.data();
+
+        // Verificar estado (case insensitive)
+        const estado = paseadorData.verificacion_estado || "";
+        if (estado.toLowerCase() !== "aprobado" && estado.toLowerCase() !== "verificado") {
+            continue;
+        }
+
+        if (paseadorDoc.id === duenoId) continue;
+
+        const ubicacionPaseador = paseadorData.ubicacion_actual || paseadorData.ubicacion_principal?.geopoint;
+        if (!ubicacionPaseador || !ubicacionPaseador.latitude || !ubicacionPaseador.longitude) {
+          continue;
+        }
+
+        const distancia = calculateDistance(
+          ubicacionDueno.latitude, ubicacionDueno.longitude,
+          ubicacionPaseador.latitude, ubicacionPaseador.longitude
+        );
+
+        if (distancia <= radioKm) {
+          paseadoresCercanos++;
+          const cal = paseadorData.calificacion_promedio || 0;
+          if (cal > mejorCalificacion) {
+            mejorCalificacion = cal;
+          }
+        }
+      }
+
+      if (paseadoresCercanos > 0) {
+        notificacionesPorDueno.set(duenoId, {
+          cantidad: paseadoresCercanos,
+          mejorCalificacion: mejorCalificacion,
+        });
+      }
+    }
+
+    if (notificacionesPorDueno.size === 0) {
+      console.log("No hay dueños con paseadores cercanos");
+      return null;
+    }
+
+    // Enviar notificaciones
+    const mensajes = [];
+    for (const [duenoId, info] of notificacionesPorDueno) {
+      const usuarioDoc = await db.collection("usuarios").doc(duenoId).get();
+      if (!usuarioDoc.exists) continue;
+
+      const fcmToken = usuarioDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      const calStr = info.mejorCalificacion > 0
+        ? ` (hasta ${info.mejorCalificacion.toFixed(1)}★)`
+        : "";
+
+      mensajes.push({
+        token: fcmToken,
+        notification: {
+          title: "Paseadores disponibles en tu zona",
+          body: `Hay ${info.cantidad} paseador${info.cantidad > 1 ? 'es' : ''} disponible${info.cantidad > 1 ? 's' : ''} cerca de ti${calStr}`,
+        },
+        android: {
+            notification: {
+                icon: 'walki_logo_secundario'
+            }
+        },
+        data: {
+          tipo: "paseadores_zona",
+          click_action: "OPEN_SEARCH_ACTIVITY",
+        },
+        duenoId: duenoId,
+      });
+    }
+
+    if (mensajes.length === 0) {
+      return null;
+    }
+
+    const response = await admin.messaging().sendEach(
+      mensajes.map(m => ({
+        token: m.token,
+        notification: m.notification,
+        data: m.data,
+        android: m.android
+      }))
+    );
+
+    // Actualizar timestamps
+    const batch = db.batch();
+    for (let i = 0; i < response.responses.length; i++) {
+      if (response.responses[i].success) {
+        const duenoRef = db.collection("duenos").doc(mensajes[i].duenoId);
+        batch.update(duenoRef, {
+          ultima_notificacion_paseadores_zona: ahora,
+        });
+      }
+    }
+    await batch.commit();
+
+    console.log(`Notificaciones programadas: ${response.successCount} exitosas, ${response.failureCount} fallidas`);
+    return null;
+
+  } catch (error) {
+    console.error("Error en notifyNearbyWalkersScheduled:", error);
+    return null;
+  }
+});
+
+// ========================================
+// NOTIFICACIONES: PASEADOR CERCA DE TU ZONA
+// ========================================
+
+/**
+ * Notifica a dueños cuando un paseador verificado está disponible cerca de su ubicación.
+ * Se ejecuta cuando un paseador actualiza su ubicación o disponibilidad.
+ */
+exports.notifyNearbyWalkerAvailable = onDocumentUpdated("paseadores/{paseadorId}", async (event) => {
+  const beforeData = event.data.before.data();
+  const afterData = event.data.after.data();
+  const paseadorId = event.params.paseadorId;
+
+  // Solo procesar si el paseador está verificado y acepta solicitudes
+  if (afterData.verificacion_estado !== "aprobado") {
+    return null;
+  }
+
+  // Verificar si cambió la ubicación o el estado de disponibilidad
+  const ubicacionAntes = beforeData.ubicacion_actual;
+  const ubicacionDespues = afterData.ubicacion_actual;
+  const aceptaSolicitudesAntes = beforeData.acepta_solicitudes;
+  const aceptaSolicitudesDespues = afterData.acepta_solicitudes;
+
+  // Solo notificar si:
+  // 1. El paseador acaba de activar "acepta_solicitudes"
+  // 2. O si actualizó su ubicación mientras acepta solicitudes
+  const acabaDeActivar = !aceptaSolicitudesAntes && aceptaSolicitudesDespues;
+  const ubicacionCambio = ubicacionDespues &&
+    (!ubicacionAntes ||
+     ubicacionAntes.latitude !== ubicacionDespues.latitude ||
+     ubicacionAntes.longitude !== ubicacionDespues.longitude);
+
+  if (!acabaDeActivar && !(aceptaSolicitudesDespues && ubicacionCambio)) {
+    return null;
+  }
+
+  if (!ubicacionDespues || !ubicacionDespues.latitude || !ubicacionDespues.longitude) {
+    console.log(`Paseador ${paseadorId} no tiene ubicación válida`);
+    return null;
+  }
+
+  const paseadorLat = ubicacionDespues.latitude;
+  const paseadorLng = ubicacionDespues.longitude;
+  const radioKm = 3; // Radio de búsqueda en kilómetros
+
+  console.log(`Buscando dueños cerca de paseador ${paseadorId} en radio de ${radioKm}km`);
+
+  try {
+    // Obtener datos del paseador para la notificación
+    const paseadorNombre = afterData.nombre_display || afterData.nombre || "Un paseador";
+    const calificacion = afterData.calificacion_promedio || 0;
+    const calificacionStr = calificacion > 0 ? ` (${calificacion.toFixed(1)}★)` : "";
+
+    // Buscar dueños con ubicación guardada
+    const duenosSnapshot = await db.collection("duenos")
+      .where("notificaciones_paseador_cerca", "==", true)
+      .get();
+
+    if (duenosSnapshot.empty) {
+      console.log("No hay dueños con notificaciones de paseador cerca activadas");
+      return null;
+    }
+
+    const notificaciones = [];
+    const ahora = Date.now();
+    const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 horas entre notificaciones del mismo paseador
+
+    for (const duenoDoc of duenosSnapshot.docs) {
+      const duenoData = duenoDoc.data();
+      const duenoId = duenoDoc.id;
+
+      // Verificar que no sea el mismo usuario
+      if (duenoId === paseadorId) continue;
+
+      // Verificar ubicación del dueño
+      const ubicacionDueno = duenoData.ubicacion || duenoData.direccion_ubicacion;
+      if (!ubicacionDueno || !ubicacionDueno.latitude || !ubicacionDueno.longitude) {
+        continue;
+      }
+
+      // Calcular distancia
+      const distancia = calculateDistance(
+        paseadorLat, paseadorLng,
+        ubicacionDueno.latitude, ubicacionDueno.longitude
+      );
+
+      if (distancia > radioKm) {
+        continue;
+      }
+
+      // Verificar cooldown para evitar spam
+      const ultimaNotificacion = duenoData.ultima_notificacion_paseador_cerca || {};
+      const ultimaDelPaseador = ultimaNotificacion[paseadorId];
+      if (ultimaDelPaseador && (ahora - ultimaDelPaseador) < COOLDOWN_MS) {
+        console.log(`Cooldown activo para dueño ${duenoId} y paseador ${paseadorId}`);
+        continue;
+      }
+
+      // Obtener FCM token del usuario
+      const usuarioDoc = await db.collection("usuarios").doc(duenoId).get();
+      if (!usuarioDoc.exists) continue;
+
+      const fcmToken = usuarioDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      const distanciaStr = distancia < 1
+        ? `a ${Math.round(distancia * 1000)}m`
+        : `a ${distancia.toFixed(1)}km`;
+
+      notificaciones.push({
+        token: fcmToken,
+        notification: {
+          title: "Paseador disponible cerca",
+          body: `${paseadorNombre}${calificacionStr} está disponible ${distanciaStr} de ti`,
+        },
+        data: {
+          tipo: "paseador_cerca",
+          paseador_id: paseadorId,
+          click_action: "OPEN_WALKER_PROFILE",
+        },
+        duenoId: duenoId,
+      });
+    }
+
+    if (notificaciones.length === 0) {
+      console.log("No hay dueños cercanos para notificar");
+      return null;
+    }
+
+    console.log(`Enviando ${notificaciones.length} notificaciones de paseador cerca`);
+
+    // Enviar notificaciones
+    const response = await admin.messaging().sendEach(
+      notificaciones.map(n => ({
+        token: n.token,
+        notification: n.notification,
+        data: n.data,
+      }))
+    );
+
+    // Actualizar timestamps de última notificación
+    const batch = db.batch();
+    for (let i = 0; i < response.responses.length; i++) {
+      if (response.responses[i].success) {
+        const duenoRef = db.collection("duenos").doc(notificaciones[i].duenoId);
+        batch.update(duenoRef, {
+          [`ultima_notificacion_paseador_cerca.${paseadorId}`]: ahora,
+        });
+      }
+    }
+    await batch.commit();
+
+    console.log(`Notificaciones enviadas: ${response.successCount} exitosas, ${response.failureCount} fallidas`);
+    return null;
+
+  } catch (error) {
+    console.error("Error en notifyNearbyWalkerAvailable:", error);
+    return null;
+  }
+});
+
+/**
+ * Función programada para notificar a dueños sobre paseadores disponibles en su zona.
+ * Se ejecuta cada hora durante horarios de alta demanda.
+ */
+exports.notifyNearbyWalkersScheduled = onSchedule("0 8,12,17 * * *", async (event) => {
+  console.log("Ejecutando búsqueda programada de paseadores cercanos");
+
+  try {
+    // Obtener paseadores verificados y disponibles
+    const paseadoresSnapshot = await db.collection("paseadores")
+      .where("verificacion_estado", "==", "aprobado")
+      .where("acepta_solicitudes", "==", true)
+      .get();
+
+    if (paseadoresSnapshot.empty) {
+      console.log("No hay paseadores disponibles");
+      return null;
+    }
+
+    // Obtener dueños con notificaciones activadas
+    const duenosSnapshot = await db.collection("duenos")
+      .where("notificaciones_paseador_cerca", "==", true)
+      .get();
+
+    if (duenosSnapshot.empty) {
+      console.log("No hay dueños con notificaciones activadas");
+      return null;
+    }
+
+    const radioKm = 5;
+    const notificacionesPorDueno = new Map();
+    const ahora = Date.now();
+    const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 horas para notificaciones programadas
+
+    // Para cada dueño, encontrar paseadores cercanos
+    for (const duenoDoc of duenosSnapshot.docs) {
+      const duenoData = duenoDoc.data();
+      const duenoId = duenoDoc.id;
+
+      const ubicacionDueno = duenoData.ubicacion || duenoData.direccion_ubicacion;
+      if (!ubicacionDueno || !ubicacionDueno.latitude || !ubicacionDueno.longitude) {
+        continue;
+      }
+
+      // Verificar cooldown general
+      const ultimaNotificacionGeneral = duenoData.ultima_notificacion_paseadores_zona;
+      if (ultimaNotificacionGeneral && (ahora - ultimaNotificacionGeneral) < COOLDOWN_MS) {
+        continue;
+      }
+
+      let paseadoresCercanos = 0;
+      let mejorCalificacion = 0;
+
+      for (const paseadorDoc of paseadoresSnapshot.docs) {
+        const paseadorData = paseadorDoc.data();
+
+        if (paseadorDoc.id === duenoId) continue;
+
+        const ubicacionPaseador = paseadorData.ubicacion_actual;
+        if (!ubicacionPaseador || !ubicacionPaseador.latitude || !ubicacionPaseador.longitude) {
+          continue;
+        }
+
+        const distancia = calculateDistance(
+          ubicacionDueno.latitude, ubicacionDueno.longitude,
+          ubicacionPaseador.latitude, ubicacionPaseador.longitude
+        );
+
+        if (distancia <= radioKm) {
+          paseadoresCercanos++;
+          const cal = paseadorData.calificacion_promedio || 0;
+          if (cal > mejorCalificacion) {
+            mejorCalificacion = cal;
+          }
+        }
+      }
+
+      if (paseadoresCercanos > 0) {
+        notificacionesPorDueno.set(duenoId, {
+          cantidad: paseadoresCercanos,
+          mejorCalificacion: mejorCalificacion,
+        });
+      }
+    }
+
+    if (notificacionesPorDueno.size === 0) {
+      console.log("No hay dueños con paseadores cercanos");
+      return null;
+    }
+
+    // Enviar notificaciones
+    const mensajes = [];
+    for (const [duenoId, info] of notificacionesPorDueno) {
+      const usuarioDoc = await db.collection("usuarios").doc(duenoId).get();
+      if (!usuarioDoc.exists) continue;
+
+      const fcmToken = usuarioDoc.data().fcmToken;
+      if (!fcmToken) continue;
+
+      const calStr = info.mejorCalificacion > 0
+        ? ` (hasta ${info.mejorCalificacion.toFixed(1)}★)`
+        : "";
+
+      mensajes.push({
+        token: fcmToken,
+        notification: {
+          title: "Paseadores disponibles en tu zona",
+          body: `Hay ${info.cantidad} paseador${info.cantidad > 1 ? 'es' : ''} disponible${info.cantidad > 1 ? 's' : ''} cerca de ti${calStr}`,
+        },
+        data: {
+          tipo: "paseadores_zona",
+          click_action: "OPEN_SEARCH_ACTIVITY",
+        },
+        duenoId: duenoId,
+      });
+    }
+
+    if (mensajes.length === 0) {
+      return null;
+    }
+
+    const response = await admin.messaging().sendEach(
+      mensajes.map(m => ({
+        token: m.token,
+        notification: m.notification,
+        data: m.data,
+      }))
+    );
+
+    // Actualizar timestamps
+    const batch = db.batch();
+    for (let i = 0; i < response.responses.length; i++) {
+      if (response.responses[i].success) {
+        const duenoRef = db.collection("duenos").doc(mensajes[i].duenoId);
+        batch.update(duenoRef, {
+          ultima_notificacion_paseadores_zona: ahora,
+        });
+      }
+    }
+    await batch.commit();
+
+    console.log(`Notificaciones programadas: ${response.successCount} exitosas, ${response.failureCount} fallidas`);
+    return null;
+
+  } catch (error) {
+    console.error("Error en notifyNearbyWalkersScheduled:", error);
+    return null;
+  }
+});

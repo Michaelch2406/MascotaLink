@@ -71,6 +71,21 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/license.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/notice.txt"
+            excludes += "META-INF/ASL2.0"
+            excludes += "META-INF/*.kotlin_module"
+        }
+    }
 }
 
 dependencies {
@@ -102,6 +117,10 @@ dependencies {
     // ML Kit vía Google Play services (evita incluir .so en el APK)
     implementation libs.play.services.mlkit.face
     implementation libs.play.services.mlkit.text
+
+    // ========== GOOGLE CALENDAR ==========
+    implementation libs.google.api.client
+    implementation libs.google.calendar
 
     // ========== CAMERAX ==========
     implementation libs.camerax.core
