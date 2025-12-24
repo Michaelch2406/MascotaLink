@@ -237,6 +237,11 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         } else if (duenoObj instanceof String) {
             idDueno = (String) duenoObj;
         }
+        
+        // Obtener dirección de recogida desde Firestore si no vino en el intent
+        if (direccionRecogida == null || direccionRecogida.isEmpty()) {
+            direccionRecogida = documentSnapshot.getString("direccion_recogida");
+        }
 
         // Cargar nombres del paseador y mascota
         cargarNombrePaseadorYMascota(documentSnapshot);
@@ -254,6 +259,11 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         // Fallback: solo una reserva
                         cargarReservaIndividual(primerReserva);
                         return;
+                    }
+
+                    // Obtener dirección de recogida
+                    if (direccionRecogida == null || direccionRecogida.isEmpty()) {
+                        direccionRecogida = primerReserva.getString("direccion_recogida");
                     }
 
                     int cantidadReservas = querySnapshot.size();
@@ -763,7 +773,8 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                 .setMessage("¿Deseas agregar este paseo a tu calendario para recibir recordatorios?")
                 .setPositiveButton("Sí, agregar", (dialog, which) -> {
                     agregarAlCalendario();
-                    new Handler().postDelayed(this::navegarAPaseos, 500);
+                    // Aumentar delay a 2 segundos para dar tiempo a que se abra el calendario
+                    new Handler().postDelayed(this::navegarAPaseos, 2000);
                 })
                 .setNegativeButton("No, gracias", (dialog, which) -> navegarAPaseos())
                 .setCancelable(false)
@@ -772,32 +783,40 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
 
     private void agregarAlCalendario() {
         if (horaInicioTimestamp == null) {
+            Toast.makeText(this, "No se puede agregar: fecha no disponible", Toast.LENGTH_SHORT).show();
             Log.w(TAG, "No se puede agregar al calendario: hora de inicio no disponible");
             return;
         }
 
-        if (esGrupoReserva && grupoReservaIdActual != null && cantidadDiasGrupo > 1) {
-            com.mjc.mascotalink.utils.GoogleCalendarHelper.addRecurringWalksToCalendar(
-                    this,
-                    mascotaNombre != null ? mascotaNombre : "Mi mascota",
-                    paseadorNombre != null ? paseadorNombre : "Paseador",
-                    direccionRecogida != null ? direccionRecogida : "",
-                    horaInicioTimestamp,
-                    duracionMinutos,
-                    cantidadDiasGrupo,
-                    grupoReservaIdActual
-            );
-        } else {
-            com.mjc.mascotalink.utils.GoogleCalendarHelper.addWalkToCalendar(
-                    this,
-                    mascotaNombre != null ? mascotaNombre : "Mi mascota",
-                    paseadorNombre != null ? paseadorNombre : "Paseador",
-                    direccionRecogida != null ? direccionRecogida : "",
-                    horaInicioTimestamp,
-                    horaFinTimestamp,
-                    reservaId,
-                    duracionMinutos
-            );
+        Toast.makeText(this, "Abriendo calendario...", Toast.LENGTH_SHORT).show();
+
+        try {
+            if (esGrupoReserva && grupoReservaIdActual != null && cantidadDiasGrupo > 1) {
+                com.mjc.mascotalink.utils.GoogleCalendarHelper.addRecurringWalksToCalendar(
+                        this,
+                        mascotaNombre != null ? mascotaNombre : "Mi mascota",
+                        paseadorNombre != null ? paseadorNombre : "Paseador",
+                        direccionRecogida != null ? direccionRecogida : "Ubicación del paseo",
+                        horaInicioTimestamp,
+                        duracionMinutos,
+                        cantidadDiasGrupo,
+                        grupoReservaIdActual
+                );
+            } else {
+                com.mjc.mascotalink.utils.GoogleCalendarHelper.addWalkToCalendar(
+                        this,
+                        mascotaNombre != null ? mascotaNombre : "Mi mascota",
+                        paseadorNombre != null ? paseadorNombre : "Paseador",
+                        direccionRecogida != null ? direccionRecogida : "Ubicación del paseo",
+                        horaInicioTimestamp,
+                        horaFinTimestamp,
+                        reservaId,
+                        duracionMinutos
+                );
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error crítico al abrir calendario", e);
+            Toast.makeText(this, "Error al abrir la app de calendario", Toast.LENGTH_SHORT).show();
         }
     }
 

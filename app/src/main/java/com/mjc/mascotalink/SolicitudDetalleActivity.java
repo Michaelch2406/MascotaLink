@@ -151,6 +151,10 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         duracionMinutos,
                         tvNotas.getText().toString()
                 );
+                
+                // CERRAR LA PANTALLA después de lanzar el calendario
+                finishWithDelay();
+                
             } catch (Exception e) {
                 Log.e(TAG, "Error al abrir calendario", e);
                 Toast.makeText(this, "Error al abrir la app de calendario: " + e.getMessage(), Toast.LENGTH_LONG).show();
