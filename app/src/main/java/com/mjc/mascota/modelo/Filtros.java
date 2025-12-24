@@ -10,6 +10,8 @@ public class Filtros {
     private float minCalificacion;
     private float maxDistancia;
     private List<String> tamanosMascota;
+    private int experienciaMinima;
+    private boolean soloVerificados;
 
     public Filtros() {
         // Valores por defecto
@@ -19,6 +21,8 @@ public class Filtros {
         this.minCalificacion = 0;
         this.maxDistancia = 50;
         this.tamanosMascota = null;
+        this.experienciaMinima = 0;
+        this.soloVerificados = false;
     }
 
     // Getters y Setters
@@ -69,5 +73,21 @@ public class Filtros {
 
     public void setTamanosMascota(List<String> tamanosMascota) {
         this.tamanosMascota = tamanosMascota;
+    }
+
+    public int getExperienciaMinima() {
+        return experienciaMinima;
+    }
+
+    public void setExperienciaMinima(int experienciaMinima) {
+        this.experienciaMinima = experienciaMinima;
+    }
+
+    public boolean isSoloVerificados() {
+        return soloVerificados;
+    }
+
+    public void setSoloVerificados(boolean soloVerificados) {
+        this.soloVerificados = soloVerificados;
     }
 }

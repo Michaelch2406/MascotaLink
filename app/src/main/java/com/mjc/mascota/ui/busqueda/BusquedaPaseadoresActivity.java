@@ -167,6 +167,12 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private String userRole = FirestoreConstants.ROLE_DUENO;
     private Context glideContext;
 
+    // Chips de filtro rápido
+    private com.google.android.material.chip.Chip chipCalificacionAlta;
+    private com.google.android.material.chip.Chip chipExperiencia;
+    private com.google.android.material.chip.Chip chipPrecioBajo;
+    private com.google.android.material.chip.Chip chipVerificado;
+
     // Map Interaction Constants & Views
     private static final int MAP_HEIGHT_COLLAPSED_DP = 250;
     private static final int MAP_HEIGHT_EXPANDED_DP = 500;
@@ -241,6 +247,12 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         // Map Views
         mapContainer = findViewById(R.id.map_container);
+
+        // Chips initialization
+        chipCalificacionAlta = findViewById(R.id.chip_calificacion_alta);
+        chipExperiencia = findViewById(R.id.chip_experiencia);
+        chipPrecioBajo = findViewById(R.id.chip_precio_bajo);
+        chipVerificado = findViewById(R.id.chip_verificado);
         viewMapOverlay = findViewById(R.id.view_map_overlay);
         fabRefreshMap = findViewById(R.id.fab_refresh_map);
 
@@ -251,6 +263,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private void setupUIComponents() {
         setupFabRefreshMap();
         setupBuscarConIA();
+        setupFilterChips();
         setupRecyclerViews();
         setupSearch();
         setupPullToRefresh();
@@ -278,6 +291,24 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             Log.d(TAG, "Botón Buscar con IA presionado");
             RecomendacionIADialogFragment dialog = new RecomendacionIADialogFragment();
             dialog.show(getSupportFragmentManager(), "RecomendacionIADialog");
+        });
+    }
+
+    private void setupFilterChips() {
+        chipCalificacionAlta.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setCalificacionMinima(isChecked ? 4.5 : 0);
+        });
+
+        chipExperiencia.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setExperienciaMinima(isChecked ? 3 : 0);
+        });
+
+        chipPrecioBajo.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setPrecioMaximo(isChecked ? 15.0 : 100.0);
+        });
+
+        chipVerificado.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setSoloVerificados(isChecked);
         });
     }
 
@@ -749,7 +780,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     @SuppressWarnings("unchecked")
     private void setupObservers() {
         viewModel.getPaseadoresPopularesState().observe(this, uiState -> {
-            if (uiState instanceof UiState.Success) {
+            if (uiState instanceof UiState.Loading) {
+                recyclerViewPopulares.setAdapter(new PaseadorPopularSkeletonAdapter(5));
+            } else if (uiState instanceof UiState.Success) {
+                recyclerViewPopulares.setAdapter(popularesAdapter);
                 popularesAdapter.submitList(((UiState.Success<java.util.List<PaseadorResultado>>) uiState).getData());
             }
         });
@@ -772,21 +806,24 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
       }
 
     private void showSuccessSearchResults(java.util.List<PaseadorResultado> data) {
-        progressBar.setVisibility(View.GONE);
-        contentScrollView.setVisibility(View.GONE);
+        recyclerViewResultados.setAdapter(resultadosAdapter);
         recyclerViewResultados.setVisibility(View.VISIBLE);
+        contentScrollView.setVisibility(View.GONE);
         emptyStateView.setVisibility(View.GONE);
         errorStateView.setVisibility(View.GONE);
+        progressBar.setVisibility(View.GONE); // Ocultar progress bar
         resultadosAdapter.submitList(data);
         setupPresenceForResults(data);
     }
 
     private void showLoading() {
-        progressBar.setVisibility(View.VISIBLE);
-        contentScrollView.setVisibility(View.GONE);
-        recyclerViewResultados.setVisibility(View.GONE);
+        recyclerViewResultados.setAdapter(new PaseadorResultadoSkeletonAdapter(5)); // Usar skeleton
+        recyclerViewResultados.setVisibility(View.VISIBLE);
+        recyclerViewPopulares.setAdapter(new PaseadorPopularSkeletonAdapter(5)); // Skeleton para populares
+        contentScrollView.setVisibility(View.VISIBLE);
         emptyStateView.setVisibility(View.GONE);
         errorStateView.setVisibility(View.GONE);
+        progressBar.setVisibility(View.GONE); // Ocultar el viejo progress bar
     }
 
     private void showSuccess(java.util.List<PaseadorResultado> data) {
