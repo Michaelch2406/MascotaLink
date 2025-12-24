@@ -31,8 +31,19 @@ public class PaseadorRepository {
     private static final String TAG = "PaseadorRepository";
     private static final String POPULARES_CACHE_PREF = "paseadores_populares_cache";
     private static final String POPULARES_CACHE_KEY = "populares_json";
+    private static final String SEARCH_CACHE_PREF = "paseadores_search_cache";
+    private static final String SEARCH_HISTORY_KEY = "search_history";
+    private static final int MAX_SEARCH_HISTORY = 10;
+    private static final long SEARCH_CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutos
+
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final List<ListenerRegistration> listeners = new ArrayList<>();
+    private final java.util.Map<String, CachedSearchResult> searchCache = new java.util.LinkedHashMap<String, CachedSearchResult>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<String, CachedSearchResult> eldest) {
+            return size() > 20;
+        }
+    };
 
     public LiveData<UiState<List<PaseadorResultado>>> getPaseadoresPopulares() {
         MutableLiveData<UiState<List<PaseadorResultado>>> liveData = new MutableLiveData<>();
@@ -258,6 +269,16 @@ public class PaseadorRepository {
 
     public LiveData<UiState<PaseadorSearchResult>> buscarPaseadores(String query, DocumentSnapshot lastVisible, Filtros filtros) {
         MutableLiveData<UiState<PaseadorSearchResult>> liveData = new MutableLiveData<>();
+
+        if (lastVisible == null) {
+            List<PaseadorResultado> cached = getCachedResults(query, filtros);
+            if (cached != null && !cached.isEmpty()) {
+                Log.d(TAG, "Retornando resultados cacheados para: " + query);
+                liveData.setValue(new UiState.Success<>(new PaseadorSearchResult(new ArrayList<>(cached), null)));
+                return liveData;
+            }
+        }
+
         liveData.setValue(new UiState.Loading<>());
 
         com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
@@ -266,8 +287,24 @@ public class PaseadorRepository {
         Query firestoreQuery = buildSearchQuery(query, filtros, lastVisible);
         Task<QuerySnapshot> busquedaTask = firestoreQuery.get();
 
-        Tasks.whenAllSuccess(favoritosTask, busquedaTask).addOnSuccessListener(results ->
-            processSearchResults(results, liveData))
+        final String queryFinal = query;
+        final Filtros filtrosFinal = filtros;
+
+        Tasks.whenAllSuccess(favoritosTask, busquedaTask).addOnSuccessListener(results -> {
+            processSearchResults(results, liveData);
+
+            if (lastVisible == null && queryFinal != null && !queryFinal.isEmpty()) {
+                saveSearchToHistory(queryFinal);
+            }
+
+            UiState<PaseadorSearchResult> state = liveData.getValue();
+            if (state instanceof UiState.Success && lastVisible == null) {
+                PaseadorSearchResult searchResult = ((UiState.Success<PaseadorSearchResult>) state).getData();
+                if (searchResult != null && searchResult.resultados != null) {
+                    cacheSearchResults(queryFinal, filtrosFinal, searchResult.resultados);
+                }
+            }
+        })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Error en la búsqueda de paseadores para query: " + query, e);
                 liveData.setValue(new UiState.Error<>("Error al realizar la búsqueda."));
@@ -558,5 +595,130 @@ public class PaseadorRepository {
         favoritoData.put(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO, paseadorDoc.getDouble(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO));
         favoritoData.put(FirestoreConstants.FIELD_PRECIO_HORA, paseadorDoc.getDouble(FirestoreConstants.FIELD_PRECIO_HORA));
         return favoritoData;
+    }
+
+    // --- Cache de Búsquedas Recientes --- //
+
+    private static class CachedSearchResult {
+        final List<PaseadorResultado> resultados;
+        final long timestamp;
+
+        CachedSearchResult(List<PaseadorResultado> resultados) {
+            this.resultados = resultados;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > SEARCH_CACHE_EXPIRY_MS;
+        }
+    }
+
+    private String buildCacheKey(String query, Filtros filtros) {
+        StringBuilder key = new StringBuilder(query != null ? query.toLowerCase() : "");
+        if (filtros != null) {
+            key.append("_").append(filtros.getMinCalificacion());
+            key.append("_").append(filtros.getMinPrecio());
+            key.append("_").append(filtros.getMaxPrecio());
+            key.append("_").append(filtros.getOrden() != null ? filtros.getOrden() : "");
+            if (filtros.getTamanosMascota() != null) {
+                key.append("_").append(String.join(",", filtros.getTamanosMascota()));
+            }
+        }
+        return key.toString();
+    }
+
+    public List<PaseadorResultado> getCachedResults(String query, Filtros filtros) {
+        String cacheKey = buildCacheKey(query, filtros);
+        CachedSearchResult cached = searchCache.get(cacheKey);
+        if (cached != null && !cached.isExpired()) {
+            Log.d(TAG, "Cache hit para: " + cacheKey);
+            return cached.resultados;
+        }
+        return null;
+    }
+
+    private void cacheSearchResults(String query, Filtros filtros, List<PaseadorResultado> resultados) {
+        if (resultados == null || resultados.isEmpty()) return;
+        String cacheKey = buildCacheKey(query, filtros);
+        searchCache.put(cacheKey, new CachedSearchResult(new ArrayList<>(resultados)));
+        Log.d(TAG, "Cacheando resultados para: " + cacheKey);
+    }
+
+    public void clearSearchCache() {
+        searchCache.clear();
+        Log.d(TAG, "Cache de búsquedas limpiado");
+    }
+
+    // --- Historial de Búsquedas --- //
+
+    public void saveSearchToHistory(String query) {
+        if (query == null || query.trim().isEmpty()) return;
+        try {
+            SharedPreferences prefs = MyApplication.getAppContext().getSharedPreferences(SEARCH_CACHE_PREF, android.content.Context.MODE_PRIVATE);
+            String raw = prefs.getString(SEARCH_HISTORY_KEY, "[]");
+            JSONArray history = new JSONArray(raw);
+
+            // Remover si ya existe
+            for (int i = history.length() - 1; i >= 0; i--) {
+                if (query.equalsIgnoreCase(history.getString(i))) {
+                    history.remove(i);
+                }
+            }
+
+            // Agregar al inicio
+            JSONArray newHistory = new JSONArray();
+            newHistory.put(query.trim());
+            for (int i = 0; i < Math.min(history.length(), MAX_SEARCH_HISTORY - 1); i++) {
+                newHistory.put(history.getString(i));
+            }
+
+            prefs.edit().putString(SEARCH_HISTORY_KEY, newHistory.toString()).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "Error guardando historial de búsqueda", e);
+        }
+    }
+
+    public List<String> getSearchHistory() {
+        List<String> history = new ArrayList<>();
+        try {
+            SharedPreferences prefs = MyApplication.getAppContext().getSharedPreferences(SEARCH_CACHE_PREF, android.content.Context.MODE_PRIVATE);
+            String raw = prefs.getString(SEARCH_HISTORY_KEY, "[]");
+            JSONArray array = new JSONArray(raw);
+            for (int i = 0; i < array.length(); i++) {
+                history.add(array.getString(i));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error leyendo historial de búsqueda", e);
+        }
+        return history;
+    }
+
+    public void clearSearchHistory() {
+        try {
+            SharedPreferences prefs = MyApplication.getAppContext().getSharedPreferences(SEARCH_CACHE_PREF, android.content.Context.MODE_PRIVATE);
+            prefs.edit().remove(SEARCH_HISTORY_KEY).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "Error limpiando historial", e);
+        }
+    }
+
+    public void removeFromSearchHistory(String query) {
+        if (query == null) return;
+        try {
+            SharedPreferences prefs = MyApplication.getAppContext().getSharedPreferences(SEARCH_CACHE_PREF, android.content.Context.MODE_PRIVATE);
+            String raw = prefs.getString(SEARCH_HISTORY_KEY, "[]");
+            JSONArray history = new JSONArray(raw);
+            JSONArray newHistory = new JSONArray();
+
+            for (int i = 0; i < history.length(); i++) {
+                if (!query.equalsIgnoreCase(history.getString(i))) {
+                    newHistory.put(history.getString(i));
+                }
+            }
+
+            prefs.edit().putString(SEARCH_HISTORY_KEY, newHistory.toString()).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "Error removiendo del historial", e);
+        }
     }
 }

@@ -581,7 +581,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         searchRunnable = () -> {
             String query = searchAutocomplete.getText().toString();
             viewModel.onSearchQueryChanged(query);
-            saveSearchQuery(query);
+            // El Repositorio ya guarda en el historial automáticamente al buscar, 
+            // no es necesario llamarlo aquí manualmente.
         };
 
         searchAutocomplete.addTextChangedListener(new TextWatcher() {
@@ -606,6 +607,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                 } else {
                      // Si está vacío, limpiar resultados inmediatamente
                      viewModel.onSearchQueryChanged("");
+                     // Actualizar el adaptador del historial para mostrar cambios recientes
+                     setupSearchHistory();
                 }
 
                 if (query.isEmpty()) {
@@ -626,33 +629,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void setupSearchHistory() {
-        Set<String> history = getSearchHistory();
-        searchHistoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(history));
+        List<String> history = viewModel.getSearchHistory();
+        searchHistoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, history);
         searchAutocomplete.setAdapter(searchHistoryAdapter);
-    }
-
-    private Set<String> getSearchHistory() {
-        return getSharedPreferences(SEARCH_HISTORY_PREFS, MODE_PRIVATE)
-                .getStringSet(SEARCH_HISTORY_KEY, new HashSet<>());
-    }
-
-    private void saveSearchQuery(String query) {
-        if (query == null || query.trim().isEmpty()) return;
-
-        Set<String> history = getSearchHistory();
-        Set<String> newHistory = new HashSet<>(history);
-        newHistory.add(query.trim());
-
-        getSharedPreferences(SEARCH_HISTORY_PREFS, MODE_PRIVATE)
-                .edit()
-                .putStringSet(SEARCH_HISTORY_KEY, newHistory)
-                .apply();
-
-        if (searchHistoryAdapter != null) {
-            searchHistoryAdapter.clear();
-            searchHistoryAdapter.addAll(newHistory);
-            searchHistoryAdapter.notifyDataSetChanged();
-        }
     }
 
     private void setupPullToRefresh() {
