@@ -1459,20 +1459,21 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatId}/mensajes/{mensa
       sender_name: remitName,
       sender_photo_url: remitPhoto,
     },
-    android: { 
+    android: {
       priority: "high",
       notification: {
         sound: "default",
         icon: "walki_logo_secundario",
+        tag: `chat_${chatId}` // Agrupa mensajes del mismo chat
         // color: "#00AAFF" // Opcional: color de acento de tu app
       }
     },
-    apns: { 
-      payload: { 
-        aps: { 
-          sound: "default" 
-        } 
-      } 
+    apns: {
+      payload: {
+        aps: {
+          sound: "default"
+        }
+      }
     },
   };
 
@@ -1822,8 +1823,8 @@ exports.onPaseoUpdate = onDocumentUpdated("reservas/{reservaId}", async (event) 
     title = "¡Nueva foto del paseo!";
     body = `${nombrePaseador} ha añadido una nueva foto.`;
   } else if (hasNewNote) {
-    title = "Nueva nota del paseador";
-    body = `${nombrePaseador} dice: "${newNotas}"`;
+    title = "Nota del paseador";
+    body = `${nombrePaseador}: ${newNotas}`;
   }
 
   const message = {
@@ -1834,12 +1835,15 @@ exports.onPaseoUpdate = onDocumentUpdated("reservas/{reservaId}", async (event) 
     },
     android: {
       notification: {
-        icon: 'walki_logo_secundario'
+        icon: 'walki_logo_secundario',
+        tag: `walker_note_${idPaseador}_${reservaId}`
       }
     },
     data: {
       click_action: "OPEN_CURRENT_WALK_OWNER",
       reservaId: reservaId,
+      walkerName: nombrePaseador,
+      note: newNotas
     },
   };
 
