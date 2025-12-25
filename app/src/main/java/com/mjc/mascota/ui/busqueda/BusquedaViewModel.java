@@ -128,27 +128,35 @@ public class BusquedaViewModel extends ViewModel {
     }
 
     public void setCalificacionMinima(double calificacion) {
-        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        Filtros filtrosActuales = getFiltrosActualesCopia();
         filtrosActuales.setMinCalificacion((float) calificacion);
         updateFiltros(filtrosActuales);
     }
 
     public void setExperienciaMinima(int experiencia) {
-        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        Filtros filtrosActuales = getFiltrosActualesCopia();
         filtrosActuales.setExperienciaMinima(experiencia);
         updateFiltros(filtrosActuales);
     }
 
     public void setPrecioMaximo(double precio) {
-        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
+        Filtros filtrosActuales = getFiltrosActualesCopia();
         filtrosActuales.setMaxPrecio((float) precio);
         updateFiltros(filtrosActuales);
     }
 
-    public void setSoloVerificados(boolean soloVerificados) {
-        Filtros filtrosActuales = searchTrigger.getValue() != null ? searchTrigger.getValue().filtros : new Filtros();
-        filtrosActuales.setSoloVerificados(soloVerificados);
+    public void setSoloEnLinea(boolean soloEnLinea) {
+        Filtros filtrosActuales = getFiltrosActualesCopia();
+        filtrosActuales.setSoloEnLinea(soloEnLinea);
         updateFiltros(filtrosActuales);
+    }
+
+    // Helper para crear una COPIA de los filtros actuales (evita modificar el mismo objeto)
+    private Filtros getFiltrosActualesCopia() {
+        if (searchTrigger.getValue() != null && searchTrigger.getValue().filtros != null) {
+            return searchTrigger.getValue().filtros.copy();
+        }
+        return new Filtros();
     }
 
     public void loadMore() {

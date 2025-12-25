@@ -83,10 +83,10 @@ public class PaseadorRepository {
         }
     }
 
-    public void setSoloVerificados(boolean soloVerificados) {
+    public void setSoloEnLinea(boolean soloEnLinea) {
         Filtros current = _filtros.getValue();
         if (current != null) {
-            current.setSoloVerificados(soloVerificados);
+            current.setSoloEnLinea(soloEnLinea);
             _filtros.postValue(current);
         }
     }
@@ -100,31 +100,55 @@ public class PaseadorRepository {
             liveData.setValue(new UiState.Success<>(cached));
         }
 
-        Query query = db.collection(FirestoreConstants.COLLECTION_USUARIOS)
-                .whereEqualTo(FirestoreConstants.FIELD_ROL, FirestoreConstants.ROLE_PASEADOR)
+        // OPTIMIZACIÓN: Usar paseadores_search directamente (1 sola consulta)
+        // En vez de usuarios + paseadores + zonasServicio (22 consultas)
+        Query query = db.collection("paseadores_search")
                 .whereEqualTo(FirestoreConstants.FIELD_ACTIVO, true)
+                .whereEqualTo(FirestoreConstants.FIELD_VERIFICACION_ESTADO, FirestoreConstants.STATUS_APROBADO)
                 .orderBy(FirestoreConstants.FIELD_NOMBRE_DISPLAY)
                 .limit(10);
 
-        ListenerRegistration listener = query.addSnapshotListener((value, error) -> {
-            if (error != null) {
-                Log.e(TAG, "Error al obtener IDs de paseadores populares", error);
+        // OPTIMIZACIÓN: Usar .get() en vez de snapshot listener para reducir consumo de batería
+        query.get().addOnCompleteListener(task -> {
+            if (!task.isSuccessful()) {
+                Log.e(TAG, "Error al obtener paseadores populares", task.getException());
                 liveData.setValue(new UiState.Error<>("Error al cargar los paseadores populares."));
                 return;
             }
 
+            QuerySnapshot value = task.getResult();
             if (value == null || value.isEmpty()) {
                 liveData.setValue(new UiState.Empty<>());
             } else {
-                combineUserDataWithPaseadorData(value).observeForever(state -> {
-                    liveData.setValue(state);
-                    if (state instanceof UiState.Success) {
-                        cachePopulares(((UiState.Success<List<PaseadorResultado>>) state).getData());
+                // Obtener favoritos del usuario actual
+                com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+                Task<QuerySnapshot> favoritosTask = getFavoritosTask(currentUser);
+
+                favoritosTask.addOnSuccessListener(favoritosSnapshot -> {
+                    java.util.Set<String> favoritosIds = extractFavoritosIds(favoritosSnapshot);
+
+                    // Construir resultados directamente desde paseadores_search
+                    ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+                    for (DocumentSnapshot doc : value.getDocuments()) {
+                        PaseadorResultado resultado = buildSearchResultado(doc, favoritosIds);
+                        resultados.add(resultado);
                     }
+
+                    liveData.setValue(new UiState.Success<>(resultados));
+                    cachePopulares(resultados);
+                }).addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al obtener favoritos", e);
+                    // Continuar sin favoritos
+                    ArrayList<PaseadorResultado> resultados = new ArrayList<>();
+                    for (DocumentSnapshot doc : value.getDocuments()) {
+                        PaseadorResultado resultado = buildSearchResultado(doc, new java.util.HashSet<>());
+                        resultados.add(resultado);
+                    }
+                    liveData.setValue(new UiState.Success<>(resultados));
                 });
             }
         });
-        listeners.add(listener);
+
         return liveData;
     }
 
@@ -401,6 +425,9 @@ public class PaseadorRepository {
         if (filtros.getMaxPrecio() < 100) {
             query = query.whereLessThanOrEqualTo(FirestoreConstants.FIELD_TARIFA_POR_HORA, filtros.getMaxPrecio());
         }
+        if (filtros.isSoloEnLinea()) {
+            query = query.whereEqualTo(FirestoreConstants.FIELD_ESTADO, FirestoreConstants.STATUS_ONLINE);
+        }
         if (filtros.getTamanosMascota() != null && !filtros.getTamanosMascota().isEmpty()) {
             query = query.whereArrayContainsAny(FirestoreConstants.FIELD_TIPOS_PERRO_ACEPTADOS, filtros.getTamanosMascota());
         }
@@ -474,31 +501,32 @@ public class PaseadorRepository {
         resultado.setTarifaPorHora(tarifa);
 
         resultado.setAnosExperiencia(getLongSafely(doc, FirestoreConstants.FIELD_ANOS_EXPERIENCIA, 0L).intValue());
-        resultado.setZonaPrincipal(FirestoreConstants.DEFAULT_ZONE);
+
+        // OPTIMIZACIÓN: Extraer zona principal de zonas_principales (ya está en paseadores_search)
+        String zonaPrincipal = FirestoreConstants.DEFAULT_ZONE;
+        Object zonasObj = doc.get("zonas_principales");
+        if (zonasObj instanceof java.util.List) {
+            java.util.List<?> zonasList = (java.util.List<?>) zonasObj;
+            if (!zonasList.isEmpty() && zonasList.get(0) instanceof String) {
+                zonaPrincipal = (String) zonasList.get(0);
+            }
+        }
+        resultado.setZonaPrincipal(zonaPrincipal);
+
         resultado.setFavorito(favoritosIds.contains(doc.getId()));
-        resultado.setEnLinea(false);
+
+        // OPTIMIZACIÓN: Obtener estado de presencia de paseadores_search si existe
+        String estadoPresencia = getStringSafely(doc, FirestoreConstants.FIELD_ESTADO, null);
+        resultado.setEnLinea(FirestoreConstants.STATUS_ONLINE.equalsIgnoreCase(estadoPresencia));
 
         return resultado;
     }
 
     private void addDetailTasks(String docId, java.util.Map<String, Integer> indexMap,
                                ArrayList<PaseadorResultado> resultados, java.util.List<Task<?>> detailTasks) {
-        Task<DocumentSnapshot> paseadorTask = db.collection(FirestoreConstants.COLLECTION_PASEADORES)
-                .document(docId).get()
-                .addOnSuccessListener(pDoc -> updatePaseadorDetails(pDoc, docId, indexMap, resultados));
-        detailTasks.add(paseadorTask);
-
-        Task<DocumentSnapshot> usuarioTask = db.collection(FirestoreConstants.COLLECTION_USUARIOS)
-                .document(docId).get()
-                .addOnSuccessListener(uDoc -> updateOnlineStatus(uDoc, docId, indexMap, resultados));
-        detailTasks.add(usuarioTask);
-
-        Task<QuerySnapshot> zonasTask = db.collection(FirestoreConstants.COLLECTION_PASEADORES)
-                .document(docId)
-                .collection(FirestoreConstants.COLLECTION_ZONAS_SERVICIO)
-                .limit(1).get()
-                .addOnSuccessListener(zonas -> updateZona(zonas, docId, indexMap, resultados));
-        detailTasks.add(zonasTask);
+        // OPTIMIZACIÓN COMPLETA: Ya no se necesitan consultas adicionales
+        // Todos los datos (incluyendo estado en línea) ya están en paseadores_search
+        // Este método se mantiene por compatibilidad pero no agrega tareas
     }
 
     private void updatePaseadorDetails(DocumentSnapshot pDoc, String docId,

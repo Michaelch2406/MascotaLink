@@ -150,6 +150,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
 
+    // OPTIMIZACIÓN: Handler para debounce en filtros (evitar búsquedas múltiples)
+    private final Handler filterHandler = new Handler(Looper.getMainLooper());
+    private Runnable filterRunnable;
+    private static final long FILTER_DELAY_MS = 500; // 500ms de debounce
+
     // Vistas de la UI
     private ProgressBar progressBar;
     private View emptyStateView;
@@ -171,7 +176,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private com.google.android.material.chip.Chip chipCalificacionAlta;
     private com.google.android.material.chip.Chip chipExperiencia;
     private com.google.android.material.chip.Chip chipPrecioBajo;
-    private com.google.android.material.chip.Chip chipVerificado;
+    private com.google.android.material.chip.Chip chipEnLinea; // Cambio: Filtro por paseadores en línea
 
     // Map Interaction Constants & Views
     private static final int MAP_HEIGHT_COLLAPSED_DP = 250;
@@ -252,7 +257,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         chipCalificacionAlta = findViewById(R.id.chip_calificacion_alta);
         chipExperiencia = findViewById(R.id.chip_experiencia);
         chipPrecioBajo = findViewById(R.id.chip_precio_bajo);
-        chipVerificado = findViewById(R.id.chip_verificado);
+        chipEnLinea = findViewById(R.id.chip_en_linea); // Cambio: chip para filtrar por paseadores en línea
         viewMapOverlay = findViewById(R.id.view_map_overlay);
         fabRefreshMap = findViewById(R.id.fab_refresh_map);
 
@@ -295,10 +300,53 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void setupFilterChips() {
-        chipCalificacionAlta.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setCalificacionMinima(isChecked ? 4.5 : 0));
-        chipExperiencia.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setExperienciaMinima(isChecked ? 3 : 0));
-        chipPrecioBajo.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setPrecioMaximo(isChecked ? 15.0 : 100.0));
-        chipVerificado.setOnCheckedChangeListener((buttonView, isChecked) -> viewModel.setSoloVerificados(isChecked));
+        // OPTIMIZACIÓN: Usar debounce para evitar búsquedas múltiples cuando se seleccionan varios filtros
+        filterRunnable = () -> {
+            // Los filtros ya están aplicados en el ViewModel, solo necesitamos ejecutar la búsqueda
+            String currentQuery = searchAutocomplete != null ? searchAutocomplete.getText().toString() : "";
+            viewModel.onSearchQueryChanged(currentQuery);
+        };
+
+        chipCalificacionAlta.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setCalificacionMinima(isChecked ? 4.5 : 0);
+            triggerFilterSearch();
+        });
+
+        chipExperiencia.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setExperienciaMinima(isChecked ? 3 : 0);
+            triggerFilterSearch();
+        });
+
+        chipPrecioBajo.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setPrecioMaximo(isChecked ? 15.0 : 100.0);
+            triggerFilterSearch();
+        });
+
+        chipEnLinea.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            viewModel.setSoloEnLinea(isChecked);
+            triggerFilterSearch();
+        });
+    }
+
+    // OPTIMIZACIÓN: Método helper para trigger de búsqueda con debounce
+    private void triggerFilterSearch() {
+        filterHandler.removeCallbacks(filterRunnable);
+
+        // Si no hay filtros activos y el query está vacío, volver al estado base
+        if (!areFiltersActive() && isQueryEmpty()) {
+            showBaseState();
+            return;
+        }
+
+        filterHandler.postDelayed(filterRunnable, FILTER_DELAY_MS);
+    }
+
+    // Verifica si algún chip de filtro está activo
+    private boolean areFiltersActive() {
+        return chipCalificacionAlta.isChecked() ||
+               chipExperiencia.isChecked() ||
+               chipPrecioBajo.isChecked() ||
+               chipEnLinea.isChecked();
     }
 
     private void setupRetryButton() {
@@ -349,6 +397,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
         mapDebounceHandler.removeCallbacksAndMessages(null);
         searchHandler.removeCallbacksAndMessages(null);
+        filterHandler.removeCallbacksAndMessages(null); // OPTIMIZACIÓN: Limpiar filterHandler
         periodicRefreshHandler.removeCallbacksAndMessages(null);
         locationTimeoutHandler.removeCallbacks(locationTimeoutRunnable);
         cachedPaseadorMarkers.clear();
@@ -679,62 +728,116 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         RangeSlider sliderDistancia = dialogView.findViewById(R.id.slider_distancia);
         RangeSlider sliderPrecio = dialogView.findViewById(R.id.slider_precio);
         RatingBar ratingBar = dialogView.findViewById(R.id.rating_bar_calificacion);
-        ChipGroup chipGroup = dialogView.findViewById(R.id.chip_group_tamano_mascota);
+        com.google.android.material.chip.Chip chipPequeno = dialogView.findViewById(R.id.chip_pequeno);
+        com.google.android.material.chip.Chip chipMediano = dialogView.findViewById(R.id.chip_mediano);
+        com.google.android.material.chip.Chip chipGrande = dialogView.findViewById(R.id.chip_grande);
 
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.ordenamiento_busqueda, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
         spinnerOrdenar.setAdapter(adapter);
 
+        // Cargar valores actuales de los filtros
         Filtros currentFiltros = viewModel.getFiltros().getValue();
         if (currentFiltros != null) {
+            // Ordenamiento
             String[] ordenValues = getResources().getStringArray(R.array.ordenamiento_busqueda);
             int spinnerPosition = Arrays.asList(ordenValues).indexOf(currentFiltros.getOrden());
-            spinnerOrdenar.setSelection(spinnerPosition);
+            if (spinnerPosition >= 0) {
+                spinnerOrdenar.setSelection(spinnerPosition);
+            }
 
+            // Distancia (solo valor máximo)
             sliderDistancia.setValues(0f, currentFiltros.getMaxDistancia());
-            sliderPrecio.setValues(0f, currentFiltros.getMinPrecio(), currentFiltros.getMaxPrecio());
 
+            // Precio (rango mín-máx)
+            sliderPrecio.setValues(currentFiltros.getMinPrecio(), currentFiltros.getMaxPrecio());
+
+            // Calificación
             ratingBar.setRating(currentFiltros.getMinCalificacion());
 
-            if (currentFiltros.getTamanosMascota() != null) {
+            // Tamaños de mascota
+            if (currentFiltros.getTamanosMascota() != null && !currentFiltros.getTamanosMascota().isEmpty()) {
                 for (String tamano : currentFiltros.getTamanosMascota()) {
-                    if (tamano.equals("Peque??o")) dialogView.findViewById(R.id.chip_pequeno).performClick();
-                    if (tamano.equals("Mediano")) dialogView.findViewById(R.id.chip_mediano).performClick();
-                    if (tamano.equals("Grande")) dialogView.findViewById(R.id.chip_grande).performClick();
+                    if (tamano.equals("Pequeño")) chipPequeno.setChecked(true);
+                    if (tamano.equals("Mediano")) chipMediano.setChecked(true);
+                    if (tamano.equals("Grande")) chipGrande.setChecked(true);
                 }
             }
         }
 
         final AlertDialog dialog = builder.create();
 
+        // Botón Aplicar Filtros
         dialogView.findViewById(R.id.button_aplicar_filtros).setOnClickListener(v -> {
             Filtros nuevosFiltros = new Filtros();
+
+            // Obtener valores del diálogo
             nuevosFiltros.setOrden(spinnerOrdenar.getSelectedItem().toString());
             nuevosFiltros.setMaxDistancia(sliderDistancia.getValues().get(1));
             nuevosFiltros.setMinPrecio(sliderPrecio.getValues().get(0));
             nuevosFiltros.setMaxPrecio(sliderPrecio.getValues().get(1));
             nuevosFiltros.setMinCalificacion(ratingBar.getRating());
 
+            // Tamaños de mascota
             List<String> tamanos = new ArrayList<>();
-            if (((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_pequeno)).isChecked()) tamanos.add("Peque??o");
-            if (((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_mediano)).isChecked()) tamanos.add("Mediano");
-            if (((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_grande)).isChecked()) tamanos.add("Grande");
-            nuevosFiltros.setTamanosMascota(tamanos);
+            if (chipPequeno.isChecked()) tamanos.add("Pequeño");
+            if (chipMediano.isChecked()) tamanos.add("Mediano");
+            if (chipGrande.isChecked()) tamanos.add("Grande");
+            nuevosFiltros.setTamanosMascota(tamanos.isEmpty() ? null : tamanos);
+
+            // Mantener valores de chips de filtro rápido
+            nuevosFiltros.setExperienciaMinima(chipExperiencia.isChecked() ? 3 : 0);
+            nuevosFiltros.setSoloEnLinea(chipEnLinea.isChecked());
+
+            // Sincronizar chip de calificación rápida
+            if (ratingBar.getRating() >= 4.5f && !chipCalificacionAlta.isChecked()) {
+                chipCalificacionAlta.setChecked(true);
+            } else if (ratingBar.getRating() < 4.5f && chipCalificacionAlta.isChecked()) {
+                chipCalificacionAlta.setChecked(false);
+            }
+
+            // Sincronizar chip de precio bajo
+            if (sliderPrecio.getValues().get(1) <= 15f && !chipPrecioBajo.isChecked()) {
+                chipPrecioBajo.setChecked(true);
+            } else if (sliderPrecio.getValues().get(1) > 15f && chipPrecioBajo.isChecked()) {
+                chipPrecioBajo.setChecked(false);
+            }
 
             viewModel.aplicarFiltros(nuevosFiltros);
             dialog.dismiss();
+
+            Toast.makeText(this, "Filtros aplicados", Toast.LENGTH_SHORT).show();
         });
 
+        // Botón Limpiar Filtros
         dialogView.findViewById(R.id.button_limpiar_filtros).setOnClickListener(v -> {
+            // Limpiar filtros en ViewModel
             viewModel.limpiarFiltros();
+
+            // Limpiar chips de filtro rápido
+            chipCalificacionAlta.setChecked(false);
+            chipExperiencia.setChecked(false);
+            chipPrecioBajo.setChecked(false);
+            chipEnLinea.setChecked(false);
+
+            // Limpiar UI del diálogo
             spinnerOrdenar.setSelection(0);
             sliderDistancia.setValues(0f, 50f);
             sliderPrecio.setValues(0f, 100f);
             ratingBar.setRating(0);
-            ((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_pequeno)).setChecked(false);
-            ((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_mediano)).setChecked(false);
-            ((com.google.android.material.chip.Chip)dialogView.findViewById(R.id.chip_grande)).setChecked(false);
+            chipPequeno.setChecked(false);
+            chipMediano.setChecked(false);
+            chipGrande.setChecked(false);
+
+            // Cerrar diálogo y volver al estado base si no hay búsqueda activa
+            dialog.dismiss();
+
+            if (isQueryEmpty()) {
+                showBaseState();
+            }
+
+            Toast.makeText(this, "Filtros limpiados", Toast.LENGTH_SHORT).show();
         });
 
         dialog.show();
@@ -770,9 +873,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private void setupObservers() {
         viewModel.getPaseadoresPopularesState().observe(this, uiState -> {
             if (uiState instanceof UiState.Loading) {
-                recyclerViewPopulares.setAdapter(new PaseadorPopularSkeletonAdapter(5));
+                // El adapter ya está configurado, solo mostramos lista vacía mientras carga
+                popularesAdapter.submitList(null);
             } else if (uiState instanceof UiState.Success) {
-                recyclerViewPopulares.setAdapter(popularesAdapter);
                 popularesAdapter.submitList(((UiState.Success<java.util.List<PaseadorResultado>>) uiState).getData());
             }
         });
@@ -795,7 +898,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
       }
 
     private void showSuccessSearchResults(java.util.List<PaseadorResultado> data) {
-        recyclerViewResultados.setAdapter(resultadosAdapter);
+        // El adapter ya está configurado en setupRecyclerViews()
         recyclerViewResultados.setVisibility(View.VISIBLE);
         contentScrollView.setVisibility(View.GONE);
         emptyStateView.setVisibility(View.GONE);
@@ -806,13 +909,13 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void showLoading() {
-        recyclerViewResultados.setAdapter(new PaseadorResultadoSkeletonAdapter(5)); // Usar skeleton
+        // No cambiar el adapter, solo mostrar estado de carga
+        resultadosAdapter.submitList(null); // Vaciar lista mientras carga
         recyclerViewResultados.setVisibility(View.VISIBLE);
-        recyclerViewPopulares.setAdapter(new PaseadorPopularSkeletonAdapter(5)); // Skeleton para populares
         contentScrollView.setVisibility(View.VISIBLE);
         emptyStateView.setVisibility(View.GONE);
         errorStateView.setVisibility(View.GONE);
-        progressBar.setVisibility(View.GONE); // Ocultar el viejo progress bar
+        progressBar.setVisibility(View.VISIBLE); // Mostrar progress bar mientras carga
     }
 
     private void showSuccess(java.util.List<PaseadorResultado> data) {
@@ -1367,10 +1470,11 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         List<GeoQueryBounds> bounds = GeoFireUtils.getGeoHashQueryBounds(center, radiusMeters);
         List<Task<QuerySnapshot>> geoTasks = new ArrayList<>();
 
+        // OPTIMIZACIÓN: Usar paseadores_search en vez de usuarios para reducir consultas
         for (GeoQueryBounds b : bounds) {
-            Query q = firestore.collection(FirestoreConstants.COLLECTION_USUARIOS)
-                    .whereEqualTo(FirestoreConstants.FIELD_ROL, FirestoreConstants.ROLE_PASEADOR)
+            Query q = firestore.collection("paseadores_search")
                     .whereEqualTo(FirestoreConstants.FIELD_ACTIVO, true)
+                    .whereEqualTo(FirestoreConstants.FIELD_VERIFICACION_ESTADO, FirestoreConstants.STATUS_APROBADO)
                     .orderBy(FirestoreConstants.FIELD_UBICACION_GEOHASH)
                     .startAt(b.startHash)
                     .endAt(b.endHash)
@@ -1390,7 +1494,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
                 for (DocumentSnapshot doc : task.getResult()) {
                     if (!seenPaseadores.add(doc.getId())) continue; // evitar duplicados
-                    if (!isUsuarioEnLinea(doc)) continue;
+
+                    // OPTIMIZACIÓN: Ya no verificamos isUsuarioEnLinea porque el filtro está en la consulta
+                    String estado = doc.getString(FirestoreConstants.FIELD_ESTADO);
+                    if (!FirestoreConstants.STATUS_ONLINE.equalsIgnoreCase(estado)) continue;
 
                     LatLng ubicacionActual = extraerLatLng(doc.get(FirestoreConstants.FIELD_UBICACION_ACTUAL));
                     String geohash = doc.getString(FirestoreConstants.FIELD_UBICACION_GEOHASH);
@@ -1404,7 +1511,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                             new GeoLocation(ubicacionActual.latitude, ubicacionActual.longitude), center);
 
                     if (distanceMeters <= radiusMeters) {
-                        paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(doc, ubicacionUsuario));
+                        // OPTIMIZACIÓN: Construir marcador directamente desde paseadores_search
+                        paseadorMarkerTasks.add(buildPaseadorMarkerFromSearchDoc(doc, ubicacionUsuario));
                     }
                 }
             }
@@ -1449,22 +1557,23 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void cargarPaseadoresCercanosFallback(LatLng ubicacionUsuario) {
         FirebaseFirestore firestore = FirebaseFirestore.getInstance();
-        firestore.collection(FirestoreConstants.COLLECTION_USUARIOS)
-                .whereEqualTo(FirestoreConstants.FIELD_ROL, FirestoreConstants.ROLE_PASEADOR)
+        // OPTIMIZACIÓN: Usar paseadores_search en vez de usuarios
+        firestore.collection("paseadores_search")
                 .whereEqualTo(FirestoreConstants.FIELD_ACTIVO, true)
+                .whereEqualTo(FirestoreConstants.FIELD_VERIFICACION_ESTADO, FirestoreConstants.STATUS_APROBADO)
                 .limit(50)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (!task.isSuccessful() || task.getResult() == null) {
-                        Log.w(TAG, "Fallback: error al obtener usuarios", task.getException());
+                        Log.w(TAG, "Fallback: error al obtener paseadores", task.getException());
                         if (progressBar != null) progressBar.setVisibility(View.GONE);
                         return;
                     }
 
                     List<Task<PaseadorMarker>> paseadorMarkerTasks = new ArrayList<>();
                     for (DocumentSnapshot doc : task.getResult()) {
-                        // Relaxed check: Show all active walkers in fallback too
-                        paseadorMarkerTasks.add(buildPaseadorMarkerFromUser(doc, ubicacionUsuario));
+                        // OPTIMIZACIÓN: Construir marcador directamente desde paseadores_search
+                        paseadorMarkerTasks.add(buildPaseadorMarkerFromSearchDoc(doc, ubicacionUsuario));
                     }
 
                     if (paseadorMarkerTasks.isEmpty()) {
@@ -1595,6 +1704,58 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     
                     return crearMarcador(userId, userDoc, ubicacionFinal, ubicacionUsuario, false);
                 });
+    }
+
+    /**
+     * OPTIMIZACIÓN: Construye PaseadorMarker directamente desde paseadores_search
+     * sin consultas adicionales (todo está desnormalizado)
+     */
+    private Task<PaseadorMarker> buildPaseadorMarkerFromSearchDoc(DocumentSnapshot searchDoc, LatLng ubicacionUsuario) {
+        String userId = searchDoc.getId();
+        LatLng ubicacionPaseador = extraerLatLng(searchDoc.get(FirestoreConstants.FIELD_UBICACION_ACTUAL));
+
+        if (ubicacionPaseador == null) {
+            return Tasks.forResult(null);
+        }
+
+        // Calcular distancia
+        float[] results = new float[1];
+        Location.distanceBetween(ubicacionUsuario.latitude, ubicacionUsuario.longitude,
+                ubicacionPaseador.latitude, ubicacionPaseador.longitude, results);
+        double distanciaKm = results[0] / 1000;
+
+        // Todos los datos ya están en paseadores_search (sin consultas adicionales)
+        String nombre = searchDoc.getString(FirestoreConstants.FIELD_NOMBRE_DISPLAY);
+        String fotoUrl = searchDoc.getString(FirestoreConstants.FIELD_FOTO_PERFIL);
+        Double calificacion = searchDoc.getDouble(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO);
+        Boolean aceptaSolicitudes = searchDoc.getBoolean(FirestoreConstants.FIELD_ACEPTA_SOLICITUDES);
+        Boolean enPaseo = searchDoc.getBoolean(FirestoreConstants.FIELD_EN_PASEO);
+
+        // Preload imagen en caché
+        if (fotoUrl != null && !fotoUrl.isEmpty()) {
+            Glide.with(getApplicationContext())
+                    .load(MyApplication.getFixedUrl(fotoUrl))
+                    .override(120, 120) // OPTIMIZACIÓN: Tamaño reducido
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .preload();
+        }
+
+        // Determinar disponibilidad
+        boolean disponible = (aceptaSolicitudes != null && aceptaSolicitudes);
+        boolean enPaseoActual = (enPaseo != null && enPaseo);
+
+        PaseadorMarker marker = new PaseadorMarker(
+                userId,
+                nombre,
+                ubicacionPaseador,
+                calificacion != null ? calificacion : 0.0,
+                fotoUrl,
+                disponible,
+                distanciaKm,
+                enPaseoActual
+        );
+
+        return Tasks.forResult(marker);
     }
 
     private Task<PaseadorMarker> crearMarcador(String userId, DocumentSnapshot userDoc, LatLng ubicacionPaseador, LatLng ubicacionUsuario, boolean esRealtime) {
@@ -1839,45 +2000,8 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private static final int MARKER_IMAGE_SIZE = 120;
 
-    private BitmapDescriptor crearMarkerIconPersonalizado(PaseadorMarker paseador) {
-        try {
-            Context glideCtx = glideContext != null ? glideContext : getApplicationContext();
-            Bitmap bitmap = Glide.with(glideCtx)
-                    .asBitmap()
-                    .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
-                    .apply(RequestOptions.circleCropTransform())
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .submit(MARKER_IMAGE_SIZE, MARKER_IMAGE_SIZE)
-                    .get(5, TimeUnit.SECONDS);
-
-            Bitmap finalBitmap = Bitmap.createBitmap(MARKER_IMAGE_SIZE, MARKER_IMAGE_SIZE + 30, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(finalBitmap);
-
-            canvas.drawBitmap(bitmap, 0, 0, null);
-
-            String ratingText = String.format(Locale.getDefault(), "%.1f", paseador.getCalificacion());
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(Color.parseColor("#8BC34A"));
-            paint.setTextSize(30);
-            paint.setColor(Color.WHITE);
-            paint.setTextAlign(Paint.Align.CENTER);
-
-            Rect textBounds = new Rect();
-            paint.getTextBounds(ratingText, 0, ratingText.length(), textBounds);
-            float x = finalBitmap.getWidth() / 2f;
-            float y = finalBitmap.getHeight() - 10;
-            canvas.drawText(ratingText, x, y - textBounds.exactCenterY(), paint);
-
-            return BitmapDescriptorFactory.fromBitmap(finalBitmap);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            Log.e(TAG, "Error al cargar imagen para marcador: " + e.getMessage());
-            return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
-        } catch (ExecutionException | TimeoutException e) {
-            Log.e(TAG, "Error al cargar imagen para marcador: " + e.getMessage());
-            return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
-        }
-    }
+    // MÉTODO ELIMINADO: crearMarkerIconPersonalizado (era bloqueante con .get(5, SECONDS))
+    // Se usa la implementación asíncrona en PaseadorClusterRenderer.onBeforeClusterItemRendered
 
     private void centrarMapaEnPaseador(String paseadorId, LatLng ubicacion) {
         if (mMap != null) {

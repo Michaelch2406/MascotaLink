@@ -116,12 +116,17 @@
                 app:chipStrokeWidth="1dp"/>
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chip_verificado"
+                android:id="@+id/chip_en_linea"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="✓ Verificado"
+                android:text="En línea"
                 android:textSize="13sp"
+                app:chipIcon="@drawable/ic_online_dot"
+                app:chipIconVisible="true"
+                app:chipIconSize="8dp"
+                app:chipIconTint="@null"
+                app:checkedIconVisible="false"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeColor="@color/primary"
                 app:chipStrokeWidth="1dp"/>

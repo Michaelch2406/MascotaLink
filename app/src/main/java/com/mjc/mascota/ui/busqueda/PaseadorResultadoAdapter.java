@@ -38,9 +38,14 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
 
         @Override
         public boolean areContentsTheSame(@NonNull PaseadorResultado oldItem, @NonNull PaseadorResultado newItem) {
+            // OPTIMIZACIÓN: Comparar TODOS los campos para detectar cambios correctamente
             return oldItem.getNombre().equals(newItem.getNombre())
                     && Objects.equals(oldItem.getFotoUrl(), newItem.getFotoUrl())
                     && oldItem.getCalificacion() == newItem.getCalificacion()
+                    && oldItem.getTarifaPorHora() == newItem.getTarifaPorHora()
+                    && Objects.equals(oldItem.getZonaPrincipal(), newItem.getZonaPrincipal())
+                    && oldItem.getTotalResenas() == newItem.getTotalResenas()
+                    && oldItem.getAnosExperiencia() == newItem.getAnosExperiencia()
                     && oldItem.isFavorito() == newItem.isFavorito()
                     && oldItem.isEnLinea() == newItem.isEnLinea();
         }
@@ -108,6 +113,7 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
 
             Glide.with(context)
                     .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
+                    .override(120, 120) // OPTIMIZACIÓN: Solo cargar tamaño necesario (reduce ~98% de ancho de banda)
                     .placeholder(R.drawable.ic_user_placeholder)
                     .error(R.drawable.ic_user_placeholder)
                     .circleCrop()

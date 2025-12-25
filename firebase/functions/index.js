@@ -1069,6 +1069,17 @@ async function sincronizarPaseador(docId) {
       anos_experiencia: anosExperiencia, // Calculado, NO duplicar experiencia_general
       verificacion_estado: paseadorData.verificacion_estado || "pendiente",
 
+      // 🆕 OPTIMIZACIÓN: Estado de presencia (en línea/fuera de línea)
+      estado: userData.estado || "offline",
+
+      // 🆕 OPTIMIZACIÓN: Campos de geolocalización para consultas de mapa
+      ubicacion_actual: userData.ubicacion_actual || null,
+      ubicacion_geohash: userData.ubicacion_geohash || null,
+
+      // 🆕 OPTIMIZACIÓN: Campos de disponibilidad para mapa
+      acepta_solicitudes: userData.acepta_solicitudes !== undefined ? userData.acepta_solicitudes : true,
+      en_paseo: userData.en_paseo || false,
+
       // 🆕 Campos adicionales denormalizados para IA
       motivacion: paseadorData.perfil_profesional?.motivacion || "", //  CORREGIDO: Ruta anidada
       top_resenas: topResenas, // Array de {texto, calificacion}

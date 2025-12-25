@@ -58,6 +58,7 @@ public class PaseadorInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
             if (paseador.getFotoUrl() != null && !paseador.getFotoUrl().isEmpty()) {
                 Glide.with(mContext)
                         .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
+                        .override(120, 120) // OPTIMIZACIÓN: Solo cargar tamaño necesario
                         .transform(new CircleCrop())
                         .placeholder(R.drawable.ic_person) // Placeholder si la imagen no carga
                         .into(ivPaseadorPhoto);

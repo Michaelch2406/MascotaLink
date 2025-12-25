@@ -78,6 +78,7 @@ public class PaseadorPopularAdapter extends ListAdapter<PaseadorResultado, Pasea
 
             Glide.with(itemView.getContext())
                     .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))
+                    .override(120, 120) // OPTIMIZACIÓN: Solo cargar tamaño necesario
                     .placeholder(R.drawable.ic_user_placeholder)
                     .error(R.drawable.ic_user_placeholder)
                     .circleCrop()

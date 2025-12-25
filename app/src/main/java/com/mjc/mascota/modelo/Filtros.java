@@ -11,7 +11,7 @@ public class Filtros {
     private float maxDistancia;
     private List<String> tamanosMascota;
     private int experienciaMinima;
-    private boolean soloVerificados;
+    private boolean soloEnLinea; // Cambio: Filtrar solo paseadores en línea (más útil que verificados)
 
     public Filtros() {
         // Valores por defecto
@@ -22,7 +22,21 @@ public class Filtros {
         this.maxDistancia = 50;
         this.tamanosMascota = null;
         this.experienciaMinima = 0;
-        this.soloVerificados = false;
+        this.soloEnLinea = false;
+    }
+
+    // Método para crear una copia de los filtros (evita modificar el mismo objeto)
+    public Filtros copy() {
+        Filtros copia = new Filtros();
+        copia.orden = this.orden;
+        copia.minPrecio = this.minPrecio;
+        copia.maxPrecio = this.maxPrecio;
+        copia.minCalificacion = this.minCalificacion;
+        copia.maxDistancia = this.maxDistancia;
+        copia.tamanosMascota = this.tamanosMascota;
+        copia.experienciaMinima = this.experienciaMinima;
+        copia.soloEnLinea = this.soloEnLinea;
+        return copia;
     }
 
     // Getters y Setters
@@ -83,11 +97,11 @@ public class Filtros {
         this.experienciaMinima = experienciaMinima;
     }
 
-    public boolean isSoloVerificados() {
-        return soloVerificados;
+    public boolean isSoloEnLinea() {
+        return soloEnLinea;
     }
 
-    public void setSoloVerificados(boolean soloVerificados) {
-        this.soloVerificados = soloVerificados;
+    public void setSoloEnLinea(boolean soloEnLinea) {
+        this.soloEnLinea = soloEnLinea;
     }
 }
