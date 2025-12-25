@@ -28,6 +28,33 @@
       ]
     },
     {
+      "collectionGroup": "paseadores_search",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activo", "order": "ASCENDING" },
+        { "fieldPath": "verificacion_estado", "order": "ASCENDING" },
+        { "fieldPath": "tarifa_por_hora", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "paseadores_search",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activo", "order": "ASCENDING" },
+        { "fieldPath": "verificacion_estado", "order": "ASCENDING" },
+        { "fieldPath": "tarifa_por_hora", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "paseadores_search",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activo", "order": "ASCENDING" },
+        { "fieldPath": "verificacion_estado", "order": "ASCENDING" },
+        { "fieldPath": "calificacion_promedio", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "chats",
       "queryScope": "COLLECTION",
       "fields": [

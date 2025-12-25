@@ -143,6 +143,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     // Cache para los marcadores de paseadores en el mapa
     private final ConcurrentHashMap<String, PaseadorMarker> cachedPaseadorMarkers = new ConcurrentHashMap<>();
 
+    // TextWatcher para el campo de búsqueda
+    private TextWatcher searchTextWatcher;
+
     // Current search results for presence monitoring
     private java.util.List<PaseadorResultado> currentSearchResults = new ArrayList<>();
 
@@ -654,7 +657,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             // no es necesario llamarlo aquí manualmente.
         };
 
-        searchAutocomplete.addTextChangedListener(new TextWatcher() {
+        searchTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -666,7 +669,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             @Override
             public void afterTextChanged(Editable s) {
                 String query = s.toString();
-                
+
                 // Limpiar siempre la búsqueda anterior pendiente para evitar ejecuciones dobles
                 searchHandler.removeCallbacks(searchRunnable);
 
@@ -688,7 +691,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
                     contentScrollView.setVisibility(View.GONE);
                 }
             }
-        });
+        };
+
+        searchAutocomplete.addTextChangedListener(searchTextWatcher);
 
         searchAutocomplete.setOnItemClickListener((parent, view, position, id) -> {
             String query = (String) parent.getItemAtPosition(position);
@@ -705,16 +710,21 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void setupPullToRefresh() {
         swipeRefreshLayout.setOnRefreshListener(() -> {
-            if (searchAutocomplete != null) {
-                searchAutocomplete.setText(""); // Limpiar texto visualmente
+            // Solo recargar los datos actuales sin cambiar de vista
+
+            // Recargar paseadores populares
+            viewModel.loadPaseadoresPopulares();
+
+            // Recargar mapa si está visible
+            if (mMap != null && contentScrollView.getVisibility() == View.VISIBLE) {
+                LatLng center = mMap.getCameraPosition().target;
+                cargarPaseadoresCercanos(center, currentSearchRadiusKm);
             }
-            viewModel.onSearchQueryChanged(""); // Forzar b??squeda vac??a al ViewModel
-            
-            // Restaurar visibilidad manualmente por seguridad
-            recyclerViewResultados.setVisibility(View.GONE);
-            contentScrollView.setVisibility(View.VISIBLE);
-            
+
+            // Detener el indicador de refresh
             swipeRefreshLayout.setRefreshing(false);
+
+            Toast.makeText(this, "Actualizado", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -750,8 +760,14 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             // Distancia (solo valor máximo)
             sliderDistancia.setValues(0f, currentFiltros.getMaxDistancia());
 
-            // Precio (rango mín-máx)
-            sliderPrecio.setValues(currentFiltros.getMinPrecio(), currentFiltros.getMaxPrecio());
+            // Precio (rango mín-máx) - Asegurar que min != max
+            float minPrecio = currentFiltros.getMinPrecio();
+            float maxPrecio = currentFiltros.getMaxPrecio();
+            if (minPrecio >= maxPrecio) {
+                minPrecio = 0f;
+                maxPrecio = 100f;
+            }
+            sliderPrecio.setValues(minPrecio, maxPrecio);
 
             // Calificación
             ratingBar.setRating(currentFiltros.getMinCalificacion());
@@ -812,14 +828,25 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         // Botón Limpiar Filtros
         dialogView.findViewById(R.id.button_limpiar_filtros).setOnClickListener(v -> {
-            // Limpiar filtros en ViewModel
-            viewModel.limpiarFiltros();
+            // Cancelar cualquier búsqueda pendiente del debounce
+            if (filterHandler != null) {
+                filterHandler.removeCallbacks(filterRunnable);
+            }
+
+            // Remover temporalmente listeners de chips para evitar búsquedas
+            chipCalificacionAlta.setOnCheckedChangeListener(null);
+            chipExperiencia.setOnCheckedChangeListener(null);
+            chipPrecioBajo.setOnCheckedChangeListener(null);
+            chipEnLinea.setOnCheckedChangeListener(null);
 
             // Limpiar chips de filtro rápido
             chipCalificacionAlta.setChecked(false);
             chipExperiencia.setChecked(false);
             chipPrecioBajo.setChecked(false);
             chipEnLinea.setChecked(false);
+
+            // Restaurar listeners de chips
+            setupFilterChips();
 
             // Limpiar UI del diálogo
             spinnerOrdenar.setSelection(0);
@@ -830,12 +857,22 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
             chipMediano.setChecked(false);
             chipGrande.setChecked(false);
 
-            // Cerrar diálogo y volver al estado base si no hay búsqueda activa
+            // Limpiar texto de búsqueda sin disparar listener
+            if (searchAutocomplete != null && searchTextWatcher != null) {
+                // Remover TextWatcher temporalmente para evitar búsqueda
+                searchAutocomplete.removeTextChangedListener(searchTextWatcher);
+                searchAutocomplete.setText("");
+                // Restaurar TextWatcher
+                searchAutocomplete.addTextChangedListener(searchTextWatcher);
+            }
+
+            // Cerrar diálogo
             dialog.dismiss();
 
-            if (isQueryEmpty()) {
-                showBaseState();
-            }
+            // Volver al estado base (mostrar mapa, populares, botón IA)
+            // NO llamar a viewModel.limpiarFiltros() porque ejecuta búsqueda
+            // Los filtros ya están limpios en la UI
+            showBaseState();
 
             Toast.makeText(this, "Filtros limpiados", Toast.LENGTH_SHORT).show();
         });

@@ -444,12 +444,20 @@ public class PaseadorRepository {
         }
 
         switch (orden) {
+            case "Distancia (más cercano)":
+                // Ordenar por nombre como fallback ya que distancia exacta requiere ubicación del usuario
+                // TODO: Implementar ordenamiento por distancia calculada en el cliente
+                return query.orderBy(FirestoreConstants.FIELD_NOMBRE_DISPLAY, Query.Direction.ASCENDING);
+
             case "Precio (menor a mayor)":
                 return query.orderBy(FirestoreConstants.FIELD_TARIFA_POR_HORA, Query.Direction.ASCENDING);
+
             case "Precio (mayor a menor)":
                 return query.orderBy(FirestoreConstants.FIELD_TARIFA_POR_HORA, Query.Direction.DESCENDING);
+
             case "Calificación (mejor a peor)":
                 return query.orderBy(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO, Query.Direction.DESCENDING);
+
             default:
                 if (searchQuery == null || searchQuery.isEmpty()) {
                     return query.orderBy(FirestoreConstants.FIELD_NOMBRE_DISPLAY, Query.Direction.ASCENDING);

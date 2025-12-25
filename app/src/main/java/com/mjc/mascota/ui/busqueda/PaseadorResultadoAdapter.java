@@ -90,6 +90,7 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
         private final TextView tarifaTextView;
         private final ImageView favoritoButton; // Changed from ImageButton
         private final TextView badgeEnLinea;
+        private final TextView experienciaTextView;
 
         public PaseadorViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -101,6 +102,7 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
             tarifaTextView = itemView.findViewById(R.id.tv_precio);
             favoritoButton = itemView.findViewById(R.id.btn_favorito);
             badgeEnLinea = itemView.findViewById(R.id.badge_en_linea);
+            experienciaTextView = itemView.findViewById(R.id.tv_experiencia);
         }
 
         public void bind(PaseadorResultado paseador, OnItemClickListener itemListener, OnFavoritoToggleListener favListener) {
@@ -110,6 +112,11 @@ public class PaseadorResultadoAdapter extends ListAdapter<PaseadorResultado, Pas
             tarifaTextView.setText(String.format(Locale.getDefault(), "$%.2f", paseador.getTarifaPorHora()));
             calificacionTextView.setText(String.format(Locale.getDefault(), "%.1f", paseador.getCalificacion()));
             totalResenasTextView.setText(String.format(Locale.getDefault(), "(%d)", paseador.getTotalResenas()));
+
+            // Actualizar años de experiencia
+            int anos = paseador.getAnosExperiencia();
+            String experienciaTexto = anos == 1 ? "1 año de experiencia" : anos + " años de experiencia";
+            experienciaTextView.setText(experienciaTexto);
 
             Glide.with(context)
                     .load(MyApplication.getFixedUrl(paseador.getFotoUrl()))

@@ -998,10 +998,17 @@ async function sincronizarPaseador(docId) {
 
       zonasPrincipales = zonasSnapshot.docs.map(doc => {
         const data = doc.data();
-        return data.nombre || data.zona || doc.id;
-      });
+        // Intentar obtener el nombre legible de la zona en orden de prioridad
+        return data.nombre || data.zona || data.direccion || data.barrio || "Zona no especificada";
+      }).filter(zona => zona && zona !== "Zona no especificada");
+
+      // Si no se encontraron zonas válidas, agregar un valor por defecto
+      if (zonasPrincipales.length === 0) {
+        zonasPrincipales = ["Zona no especificada"];
+      }
     } catch (error) {
       console.log(`No se pudieron obtener zonas para ${docId}:`, error.message);
+      zonasPrincipales = ["Zona no especificada"];
     }
 
     // 🆕 DENORMALIZACIÓN: Disponibilidad general simplificada
@@ -1065,7 +1072,17 @@ async function sincronizarPaseador(docId) {
       calificacion_promedio: paseadorData.calificacion_promedio || 0,
       num_servicios_completados: paseadorData.num_servicios_completados || 0,
       precio_hora: paseadorData.precio_hora || 0,
-      tipos_perro_aceptados: paseadorData.manejo_perros?.tamanos || [],
+      tarifa_por_hora: paseadorData.precio_hora || 0, // Alias para ordenamiento
+      tipos_perro_aceptados: (paseadorData.manejo_perros?.tamanos || []).map(t => {
+        // Normalizar tamaños para que coincidan con los del filtro
+        if (typeof t === 'string') {
+          const normalized = t.toLowerCase().trim();
+          if (normalized.includes('peque') || normalized === 'pequeño' || normalized === 'pequeno') return 'Pequeño';
+          if (normalized.includes('median') || normalized === 'mediano') return 'Mediano';
+          if (normalized.includes('grande') || normalized === 'grand') return 'Grande';
+        }
+        return t;
+      }),
       anos_experiencia: anosExperiencia, // Calculado, NO duplicar experiencia_general
       verificacion_estado: paseadorData.verificacion_estado || "pendiente",
 
