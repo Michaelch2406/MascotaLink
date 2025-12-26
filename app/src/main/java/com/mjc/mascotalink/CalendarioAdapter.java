@@ -113,11 +113,18 @@ public class CalendarioAdapter extends BaseAdapter {
                 tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_parcial));
                 tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
                 tvDia.setEnabled(true);
-            } else if (isDisponible || (diasDisponibles.isEmpty() && esVistaPaseador) || seleccionMultiple) {
+            } else if (isDisponible) {
                 // Día disponible: fondo verde claro, texto negro
+                tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_disponible));
+                tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
+                tvDia.setEnabled(true);
+            } else if (diasDisponibles.isEmpty() && esVistaPaseador) {
                 // Si diasDisponibles está vacío Y es vista paseador, mostrar todos como disponibles (backward compatibility)
-                // Si es selección múltiple (DialogBloquearDias), permitir seleccionar cualquier día futuro
-                // En vista de cliente (ReservaActivity), SOLO mostrar días que estén explícitamente en diasDisponibles
+                tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_disponible));
+                tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
+                tvDia.setEnabled(true);
+            } else if (seleccionMultiple && esVistaPaseador) {
+                // Si es selección múltiple Y es vista paseador (DialogBloquearDias), permitir seleccionar cualquier día futuro
                 tvDia.setBackgroundColor(context.getResources().getColor(R.color.calendario_disponible));
                 tvDia.setTextColor(context.getResources().getColor(android.R.color.black));
                 tvDia.setEnabled(true);

@@ -154,17 +154,16 @@ public class ReservaActivity extends AppCompatActivity {
         tvPaseadorNombre.setText(paseadorNombre != null ? paseadorNombre : "Alex");
         tvTarifaValor.setText(String.format(Locale.US, "$%.1f/hora", tarifaPorHora));
 
-        // Diferir operaciones no críticas para mejorar tiempo de inicio
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-            setupNetworkMonitor();
-            setupListeners();
-            setupBottomNavigation();
-            cargarDireccionUsuario(); // Cargar dirección del dueño
-            cargarMascotasUsuario();
-            setupCalendario();
-            setupHorarios();
-            seleccionarDuracion(60, btn1Hora);
-        });
+        // Setup inmediato de componentes UI
+        setupNetworkMonitor();
+        setupListeners();
+        setupBottomNavigation();
+        setupCalendario();
+        setupHorarios();
+        seleccionarDuracion(60, btn1Hora);
+
+        // Cargar datos de Firebase en paralelo
+        cargarDatosIniciales();
     }
 
     @Override
@@ -307,6 +306,64 @@ public class ReservaActivity extends AppCompatActivity {
             return;
         }
         BottomNavManager.setupBottomNav(this, bottomNav, bottomNavRole, bottomNavSelectedItem);
+    }
+
+    private void cargarDatosIniciales() {
+        if (currentUserId == null) return;
+
+        // Ejecutar ambas cargas en paralelo usando Tasks de Firebase
+        com.google.android.gms.tasks.Task<DocumentSnapshot> taskDireccion =
+            db.collection("usuarios").document(currentUserId).get();
+
+        com.google.android.gms.tasks.Task<com.google.firebase.firestore.QuerySnapshot> taskMascotas =
+            db.collection("duenos").document(currentUserId)
+                .collection("mascotas")
+                .whereEqualTo("activo", true)
+                .get();
+
+        // Procesar resultados de dirección cuando complete
+        taskDireccion.addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                String dir = documentSnapshot.getString("direccion");
+                if (dir != null && !dir.isEmpty()) {
+                    direccionUsuario = dir;
+                }
+            }
+        }).addOnFailureListener(e -> Log.e(TAG, "Error cargando dirección usuario", e));
+
+        // Procesar resultados de mascotas cuando complete
+        taskMascotas.addOnSuccessListener(querySnapshot -> {
+            mascotaList.clear();
+            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                MascotaSelectorAdapter.Mascota mascota = new MascotaSelectorAdapter.Mascota();
+                mascota.setId(doc.getId());
+                mascota.setNombre(doc.getString("nombre"));
+                mascota.setFotoUrl(doc.getString("foto_principal_url"));
+                mascota.setActivo(Boolean.TRUE.equals(doc.getBoolean("activo")));
+                mascotaList.add(mascota);
+            }
+
+            if (mascotaList.isEmpty()) {
+                rvMascotas.setVisibility(View.GONE);
+                btnAgregarMascota.setVisibility(View.VISIBLE);
+            } else {
+                rvMascotas.setVisibility(View.VISIBLE);
+                btnAgregarMascota.setVisibility(View.GONE);
+                setupMascotasRecyclerView();
+
+                if (mascotaList.size() == 1) {
+                    mascotaSeleccionada = mascotaList.get(0);
+                    tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
+                    cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
+                    if (mascotaAdapter != null) {
+                        mascotaAdapter.setSelectedPosition(0);
+                    }
+                    verificarCamposCompletos();
+                }
+            }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Error al cargar mascotas", Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void cargarDireccionUsuario() {
@@ -779,8 +836,12 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void cargarEstadosDisponibilidadDelMes() {
-        if (paseadorId == null) return;
+        if (paseadorId == null) {
+            Log.e(TAG, "cargarEstadosDisponibilidadDelMes: paseadorId es NULL");
+            return;
+        }
 
+        Log.d(TAG, "Cargando estados de disponibilidad para paseador: " + paseadorId);
         Set<Date> diasDisponibles = new HashSet<>();
         Set<Date> diasBloqueados = new HashSet<>();
         Set<Date> diasParciales = new HashSet<>();
@@ -790,21 +851,20 @@ public class ReservaActivity extends AppCompatActivity {
                 .collection("disponibilidad").document("horario_default")
                 .get()
                 .addOnSuccessListener(horarioDoc -> {
-                    // Marcar días disponibles según horario estándar
                     if (horarioDoc.exists()) {
+                        Log.d(TAG, "Horario default encontrado, marcando días disponibles");
                         marcarDiasDisponiblesSegunHorario(horarioDoc, diasDisponibles);
+                        Log.d(TAG, "Días disponibles marcados: " + diasDisponibles.size());
                     } else {
-                        // Si no existe horario_default, usar patrón por defecto: Lunes a Viernes
                         Log.w(TAG, "No se encontró horario_default, usando patrón Lunes-Viernes");
                         marcarDiasDisponiblesPatronDefecto(diasDisponibles);
+                        Log.d(TAG, "Días disponibles (patrón): " + diasDisponibles.size());
                     }
 
-                    // PASO 2: Cargar bloqueos del mes
                     cargarBloqueosDelMesReserva(diasDisponibles, diasBloqueados, diasParciales);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error cargando horario default", e);
-                    // Si falla, usar patrón por defecto y cargar bloqueos
                     marcarDiasDisponiblesPatronDefecto(diasDisponibles);
                     cargarBloqueosDelMesReserva(diasDisponibles, diasBloqueados, diasParciales);
                 });
@@ -900,11 +960,18 @@ public class ReservaActivity extends AppCompatActivity {
                     }
 
                     // Actualizar calendario con estados
+                    Log.d(TAG, "Actualizando calendario - Disponibles: " + diasDisponibles.size() +
+                            ", Bloqueados: " + diasBloqueados.size() +
+                            ", Parciales: " + diasParciales.size());
+
                     if (calendarioAdapter != null) {
                         calendarioAdapter.setDiasDisponibles(diasDisponibles);
                         calendarioAdapter.setDiasBloqueados(diasBloqueados);
                         calendarioAdapter.setDiasParciales(diasParciales);
                         calendarioAdapter.notifyDataSetChanged();
+                        Log.d(TAG, "Calendario actualizado correctamente");
+                    } else {
+                        Log.e(TAG, "calendarioAdapter es NULL, no se puede actualizar");
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -926,6 +993,23 @@ public class ReservaActivity extends AppCompatActivity {
     private void cambiarMes(int offset) {
         currentMonth.add(Calendar.MONTH, offset);
         actualizarCalendario();
+
+        // Recrear listener de bloqueos para el nuevo mes
+        recrearBloqueosListener();
+    }
+
+    private void recrearBloqueosListener() {
+        // Remover el último listener de bloqueos
+        if (!realtimeListeners.isEmpty()) {
+            ListenerRegistration lastListener = realtimeListeners.get(realtimeListeners.size() - 1);
+            if (lastListener != null) {
+                lastListener.remove();
+                realtimeListeners.remove(lastListener);
+            }
+        }
+
+        // Crear nuevo listener con el rango del mes actual
+        setupBloqueosListener();
     }
 
     private void mostrarFechaSeleccionada(Date date) {
@@ -992,36 +1076,65 @@ public class ReservaActivity extends AppCompatActivity {
         boolean isToday = selectedCal.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
                 selectedCal.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR);
 
-        // Validar disponibilidad para cada horario usando DisponibilidadHelper
+        // Marcar todos como no disponibles inicialmente para evitar mostrar disponibilidad falsa
         for (HorarioSelectorAdapter.Horario horario : horarioList) {
             if (horario == null) continue;
-            // Primero verificar si es hora pasada
+
             if (isToday && (horario.getHora() < today.get(Calendar.HOUR_OF_DAY) ||
                     (horario.getHora() == today.get(Calendar.HOUR_OF_DAY) &&
                             horario.getMinutos() <= today.get(Calendar.MINUTE)))) {
                 horario.setDisponible(false);
                 horario.setDisponibilidadEstado("NO_DISPONIBLE");
-                continue;
-            }
-
-            // Validar disponibilidad del paseador
-            if (duracionMinutos > 0) {
-                validarDisponibilidadHorario(horario);
             } else {
-                // Si no hay duración seleccionada, marcar como pendiente de validación
-                horario.setDisponible(true);
-                horario.setDisponibilidadEstado("PENDIENTE");
+                horario.setDisponible(false);
+                horario.setDisponibilidadEstado("VALIDANDO");
             }
         }
 
         if (horarioAdapter != null) {
             horarioAdapter.notifyDataSetChanged();
+        }
 
-            // Scroll automático a la primera hora disponible
-            scrollToFirstAvailableTime();
+        if (duracionMinutos > 0) {
+            final int[] totalHorarios = {0};
+            for (HorarioSelectorAdapter.Horario horario : horarioList) {
+                if (horario != null && "VALIDANDO".equals(horario.getDisponibilidadEstado())) {
+                    totalHorarios[0]++;
+                }
+            }
 
-            // Auto-avanzar al siguiente día si no hay horarios disponibles
-            autoAvanzarSiNoHayDisponibilidad();
+            final int[] horariosValidados = {0};
+
+            for (HorarioSelectorAdapter.Horario horario : horarioList) {
+                if (horario == null || !"VALIDANDO".equals(horario.getDisponibilidadEstado())) continue;
+
+                validarDisponibilidadHorarioConCallback(horario, () -> {
+                    horariosValidados[0]++;
+                    if (horariosValidados[0] >= totalHorarios[0]) {
+                        if (horarioAdapter != null) {
+                            horarioAdapter.notifyDataSetChanged();
+                        }
+                        scrollToFirstAvailableTime();
+
+                        // Solo auto-avanzar en modo PUNTUAL de un solo día
+                        if (modoFechaActual.equals("DIAS_ESPECIFICOS") &&
+                            calendarioAdapter != null &&
+                            calendarioAdapter.getFechasSeleccionadas().size() == 1) {
+                            autoAvanzarSiNoHayDisponibilidad();
+                        }
+                    }
+                });
+            }
+        } else {
+            for (HorarioSelectorAdapter.Horario horario : horarioList) {
+                if (horario != null && "VALIDANDO".equals(horario.getDisponibilidadEstado())) {
+                    horario.setDisponible(true);
+                    horario.setDisponibilidadEstado("PENDIENTE");
+                }
+            }
+            if (horarioAdapter != null) {
+                horarioAdapter.notifyDataSetChanged();
+            }
         }
     }
 
@@ -1070,12 +1183,15 @@ public class ReservaActivity extends AppCompatActivity {
 
     /**
      * Auto-avanza al siguiente día si no hay horarios disponibles
-     * Máximo 14 días hacia adelante para evitar loops infinitos
+     * Solo para modo PUNTUAL de un solo día. Máximo 14 días hacia adelante.
      */
     private void autoAvanzarSiNoHayDisponibilidad() {
         if (horarioList == null || horarioList.isEmpty() || fechaSeleccionada == null) return;
 
-        // Verificar si HAY al menos una hora disponible
+        // Solo ejecutar para reservas de un solo día (no múltiples días ni semana/mes)
+        if (!modoFechaActual.equals("DIAS_ESPECIFICOS")) return;
+        if (calendarioAdapter != null && calendarioAdapter.getFechasSeleccionadas().size() > 1) return;
+
         boolean hayAlgunaHoraDisponible = false;
         for (HorarioSelectorAdapter.Horario horario : horarioList) {
             if (horario != null && horario.isDisponible()) {
@@ -1125,10 +1241,8 @@ public class ReservaActivity extends AppCompatActivity {
     private void validarDisponibilidadHorario(HorarioSelectorAdapter.Horario horario) {
         if (horario == null || fechaSeleccionada == null || paseadorId == null) return;
 
-        // Calcular hora de inicio y fin
         String horaInicio = String.format(Locale.US, "%02d:%02d", horario.getHora(), horario.getMinutos());
 
-        // Calcular hora de fin basada en la duración
         Calendar calFin = Calendar.getInstance();
         calFin.setTime(fechaSeleccionada);
         calFin.set(Calendar.HOUR_OF_DAY, horario.getHora());
@@ -1139,7 +1253,6 @@ public class ReservaActivity extends AppCompatActivity {
             calFin.get(Calendar.HOUR_OF_DAY),
             calFin.get(Calendar.MINUTE));
 
-        // Validar con DisponibilidadHelper
         disponibilidadHelper.esPaseadorDisponible(paseadorId, fechaSeleccionada, horaInicio, horaFin)
             .addOnSuccessListener(resultado -> {
                 if (resultado.disponible) {
@@ -1157,9 +1270,53 @@ public class ReservaActivity extends AppCompatActivity {
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Error validando disponibilidad para horario: " + horaInicio, e);
-                // En caso de error, marcar como disponible para no bloquear la UI
                 horario.setDisponible(true);
                 horario.setDisponibilidadEstado("DISPONIBLE");
+            });
+    }
+
+    private void validarDisponibilidadHorarioConCallback(HorarioSelectorAdapter.Horario horario, Runnable callback) {
+        if (horario == null || fechaSeleccionada == null || paseadorId == null) {
+            if (callback != null) callback.run();
+            return;
+        }
+
+        String horaInicio = String.format(Locale.US, "%02d:%02d", horario.getHora(), horario.getMinutos());
+
+        Calendar calFin = Calendar.getInstance();
+        calFin.setTime(fechaSeleccionada);
+        calFin.set(Calendar.HOUR_OF_DAY, horario.getHora());
+        calFin.set(Calendar.MINUTE, horario.getMinutos());
+        calFin.add(Calendar.MINUTE, duracionMinutos);
+
+        String horaFin = String.format(Locale.US, "%02d:%02d",
+            calFin.get(Calendar.HOUR_OF_DAY),
+            calFin.get(Calendar.MINUTE));
+
+        disponibilidadHelper.esPaseadorDisponible(paseadorId, fechaSeleccionada, horaInicio, horaFin)
+            .addOnSuccessListener(resultado -> {
+                if (resultado.disponible) {
+                    horario.setDisponible(true);
+                    horario.setDisponibilidadEstado("DISPONIBLE");
+                } else {
+                    horario.setDisponible(false);
+                    horario.setDisponibilidadEstado("NO_DISPONIBLE");
+                    horario.setRazonNoDisponible(resultado.razon);
+                }
+
+                if (callback != null) {
+                    callback.run();
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error validando disponibilidad para horario: " + horaInicio, e);
+                horario.setDisponible(false);
+                horario.setDisponibilidadEstado("NO_DISPONIBLE");
+                horario.setRazonNoDisponible("Error de validación");
+
+                if (callback != null) {
+                    callback.run();
+                }
             });
     }
 
@@ -1583,53 +1740,43 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     /**
-     * Crea múltiples reservas vinculadas para días específicos múltiples
+     * Crea múltiples reservas vinculadas para días específicos múltiples usando WriteBatch.
+     * Garantiza atomicidad: o se crean todas las reservas o ninguna.
      */
     private void crearReservasAgrupadas(double costoTotalReal, double tarifaConfirmada, Date horaInicio) {
         Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
         int cantidadDias = fechasSeleccionadas.size();
 
-        // Generar un ID único para el grupo
         String grupoId = java.util.UUID.randomUUID().toString();
-
-        // Calcular el costo por día (dividir el costo total entre los días)
         double costoPorDia = costoTotalReal / cantidadDias;
 
         Log.d(TAG, "Creando grupo de " + cantidadDias + " reservas con ID: " + grupoId);
         Log.d(TAG, "Costo total: $" + costoTotalReal + " | Costo por día: $" + costoPorDia);
 
-        // Convertir Set a List para iterar de forma ordenada
         List<Date> fechasList = new java.util.ArrayList<>(fechasSeleccionadas);
-        java.util.Collections.sort(fechasList); // Ordenar por fecha
+        java.util.Collections.sort(fechasList);
 
-        // Contador para saber cuándo completamos todas
-        final int[] reservasCreadas = {0};
-        final String[] primerReservaId = {null};
+        com.google.firebase.firestore.WriteBatch batch = db.batch();
+        List<com.google.firebase.firestore.DocumentReference> reservaRefs = new ArrayList<>();
 
-        // Cambiar a loop con índice para saber cuál es el primer día
         for (int indiceFecha = 0; indiceFecha < fechasList.size(); indiceFecha++) {
             Date fecha = fechasList.get(indiceFecha);
 
-            // Crear hora de inicio específica para esta fecha
-            // CRÍTICO: Limpiar calendario primero para evitar problemas de timezone/DST
             Calendar cal = Calendar.getInstance();
             cal.setTime(fecha);
 
-            // Obtener solo año, mes, día de la fecha seleccionada
             int year = cal.get(Calendar.YEAR);
             int month = cal.get(Calendar.MONTH);
             int day = cal.get(Calendar.DAY_OF_MONTH);
 
-            // Crear nuevo calendario limpio con la hora correcta
             Calendar calLimpio = Calendar.getInstance();
             calLimpio.clear();
             calLimpio.set(year, month, day, horarioSeleccionado.getHora(), horarioSeleccionado.getMinutos(), 0);
             calLimpio.set(Calendar.MILLISECOND, 0);
             Date horaInicioEspecifica = calLimpio.getTime();
 
-            // ⚡ OPTIMIZACIÓN: Campos denormalizados para eliminar queries en Firebase Functions
-            boolean esPrimerDiaGrupo = (indiceFecha == 0);  // true solo para el primer día
-            int cantidadDiasGrupo = fechasList.size();      // mismo valor para todas las reservas del grupo
+            boolean esPrimerDiaGrupo = (indiceFecha == 0);
+            int cantidadDiasGrupo = fechasList.size();
 
             Map<String, Object> reserva = new HashMap<>();
             reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
@@ -1638,9 +1785,9 @@ public class ReservaActivity extends AppCompatActivity {
             reserva.put("fecha", new Timestamp(fecha));
             reserva.put("hora_inicio", new Timestamp(horaInicioEspecifica));
             reserva.put("duracion_minutos", duracionMinutos);
-            reserva.put("costo_total", costoPorDia); // Costo dividido por día
+            reserva.put("costo_total", costoPorDia);
             reserva.put("estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
-            reserva.put("tipo_reserva", "PUNTUAL"); // Cada día es PUNTUAL individual
+            reserva.put("tipo_reserva", "PUNTUAL");
             reserva.put("fecha_creacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
             reserva.put("tarifa_confirmada", tarifaConfirmada);
             reserva.put("id_pago", null);
@@ -1648,49 +1795,37 @@ public class ReservaActivity extends AppCompatActivity {
             reserva.put("notas", notasAdicionalesMascota);
             reserva.put("reminderSent", false);
             reserva.put("timeZone", java.util.TimeZone.getDefault().getID());
-            reserva.put("direccion_recogida", direccionUsuario); // Guardar dirección
-
-            // Campos de grupo
+            reserva.put("direccion_recogida", direccionUsuario);
             reserva.put("grupo_reserva_id", grupoId);
             reserva.put("es_grupo", true);
-
-            // ⚡ CAMPOS OPTIMIZADOS (ahorro de ~$28k/año en queries Firestore)
             reserva.put("es_primer_dia_grupo", esPrimerDiaGrupo);
             reserva.put("cantidad_dias_grupo", cantidadDiasGrupo);
 
-            // Crear la reserva
-            db.collection("reservas").add(reserva)
-                .addOnSuccessListener(documentReference -> {
-                    reservasCreadas[0]++;
-                    if (primerReservaId[0] == null) {
-                        primerReservaId[0] = documentReference.getId();
-                    }
-
-                    Log.d(TAG, "Reserva " + reservasCreadas[0] + "/" + cantidadDias + " creada: " + documentReference.getId());
-
-                    // Cuando se crean todas las reservas
-                    if (reservasCreadas[0] == cantidadDias) {
-                        runOnUiThread(() -> {
-                            Toast.makeText(this, "Reservas creadas exitosamente (" + cantidadDias + " días)", Toast.LENGTH_SHORT).show();
-
-                            Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
-                            intent.putExtra("reserva_id", primerReservaId[0]);
-                            intent.putExtra("grupo_reserva_id", grupoId);
-                            intent.putExtra("reserva_estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            finish();
-                        });
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al crear una de las reservas del grupo", e);
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Error al crear algunas reservas. Verifica tu conexión.", Toast.LENGTH_LONG).show();
-                        btnConfirmarReserva.setEnabled(true);
-                    });
-                });
+            com.google.firebase.firestore.DocumentReference newReservaRef = db.collection("reservas").document();
+            batch.set(newReservaRef, reserva);
+            reservaRefs.add(newReservaRef);
         }
+
+        batch.commit()
+            .addOnSuccessListener(aVoid -> {
+                String primerReservaId = reservaRefs.get(0).getId();
+                Log.d(TAG, "Todas las reservas del grupo fueron creadas exitosamente");
+
+                Toast.makeText(this, "Reservas creadas exitosamente (" + cantidadDias + " días)", Toast.LENGTH_SHORT).show();
+
+                Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
+                intent.putExtra("reserva_id", primerReservaId);
+                intent.putExtra("grupo_reserva_id", grupoId);
+                intent.putExtra("reserva_estado", ReservaEstadoValidator.ESTADO_PENDIENTE_ACEPTACION);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error al crear reservas del grupo. Rollback automático.", e);
+                Toast.makeText(this, "Error al crear reservas. Verifica tu conexión e intenta nuevamente.", Toast.LENGTH_LONG).show();
+                btnConfirmarReserva.setEnabled(true);
+            });
     }
 
     private boolean validarDatosReserva() {
@@ -1822,15 +1957,18 @@ public class ReservaActivity extends AppCompatActivity {
         removeRealtimeListeners();
     }
 
+    private android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable debounceRunnable;
+
     private void setupRealtimeListeners() {
         if (paseadorId == null) return;
 
-        // Listener 1: Escuchar cambios en acepta_solicitudes del paseador
-        ListenerRegistration aceptaSolicitudesListener = db.collection("usuarios")
+        // Listener consolidado para estado del paseador y horario por defecto
+        ListenerRegistration paseadorListener = db.collection("usuarios")
                 .document(paseadorId)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) {
-                        Log.w(TAG, "Error listening to acepta_solicitudes", e);
+                        Log.w(TAG, "Error listening to paseador", e);
                         return;
                     }
 
@@ -1839,61 +1977,20 @@ public class ReservaActivity extends AppCompatActivity {
                         boolean acepta = aceptaSolicitudes == null || aceptaSolicitudes;
 
                         if (!acepta) {
-                            // El paseador ya no acepta solicitudes
                             Toast.makeText(ReservaActivity.this,
                                     "El paseador ha pausado la aceptación de solicitudes",
                                     Toast.LENGTH_SHORT).show();
                             btnConfirmarReserva.setEnabled(false);
                         } else {
-                            // El paseador vuelve a aceptar solicitudes
                             if (fechaSeleccionada != null && horarioSeleccionado != null) {
-                                cargarHorariosDisponibles();
-                                verificarCamposCompletos();
+                                debouncedReloadHorarios();
                             }
                         }
                     }
                 });
-        realtimeListeners.add(aceptaSolicitudesListener);
+        realtimeListeners.add(paseadorListener);
 
-        // Listener 2: Escuchar cambios en bloqueos del paseador
-        ListenerRegistration bloqueosListener = db.collection("paseadores")
-                .document(paseadorId)
-                .collection("disponibilidad")
-                .document("bloqueos")
-                .collection("items")
-                .addSnapshotListener((snapshot, e) -> {
-                    if (e != null) {
-                        Log.w(TAG, "Error listening to bloqueos", e);
-                        return;
-                    }
-
-                    // Si hay cambios en bloqueos, recalcular horarios disponibles
-                    if (fechaSeleccionada != null && snapshot != null) {
-                        cargarHorariosDisponibles();
-                    }
-                });
-        realtimeListeners.add(bloqueosListener);
-
-        // Listener 3: Escuchar cambios en horarios especiales del paseador
-        ListenerRegistration horariosEspecialesListener = db.collection("paseadores")
-                .document(paseadorId)
-                .collection("disponibilidad")
-                .document("horarios_especiales")
-                .collection("items")
-                .addSnapshotListener((snapshot, e) -> {
-                    if (e != null) {
-                        Log.w(TAG, "Error listening to horarios_especiales", e);
-                        return;
-                    }
-
-                    // Si hay cambios en horarios especiales, recalcular horarios disponibles
-                    if (fechaSeleccionada != null && snapshot != null) {
-                        cargarHorariosDisponibles();
-                    }
-                });
-        realtimeListeners.add(horariosEspecialesListener);
-
-        // Listener 4: Escuchar cambios en horario por defecto
+        // Listener para horario por defecto
         ListenerRegistration horarioDefaultListener = db.collection("paseadores")
                 .document(paseadorId)
                 .collection("disponibilidad")
@@ -1904,12 +2001,68 @@ public class ReservaActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Si hay cambios en horario por defecto, recalcular horarios disponibles
                     if (fechaSeleccionada != null && snapshot != null) {
-                        cargarHorariosDisponibles();
+                        debouncedReloadHorarios();
+                        cargarEstadosDisponibilidadDelMes();
                     }
                 });
         realtimeListeners.add(horarioDefaultListener);
+
+        // Listener filtrado para bloqueos del mes actual
+        setupBloqueosListener();
+    }
+
+    private void setupBloqueosListener() {
+        if (paseadorId == null || currentMonth == null) return;
+
+        Calendar inicioMes = (Calendar) currentMonth.clone();
+        inicioMes.set(Calendar.DAY_OF_MONTH, 1);
+        inicioMes.set(Calendar.HOUR_OF_DAY, 0);
+        inicioMes.set(Calendar.MINUTE, 0);
+        inicioMes.set(Calendar.SECOND, 0);
+
+        Calendar finMes = (Calendar) currentMonth.clone();
+        finMes.set(Calendar.DAY_OF_MONTH, currentMonth.getActualMaximum(Calendar.DAY_OF_MONTH));
+        finMes.set(Calendar.HOUR_OF_DAY, 23);
+        finMes.set(Calendar.MINUTE, 59);
+        finMes.set(Calendar.SECOND, 59);
+
+        Timestamp inicioRango = new Timestamp(inicioMes.getTime());
+        Timestamp finRango = new Timestamp(finMes.getTime());
+
+        ListenerRegistration bloqueosListener = db.collection("paseadores")
+                .document(paseadorId)
+                .collection("disponibilidad")
+                .document("bloqueos")
+                .collection("items")
+                .whereGreaterThanOrEqualTo("fecha", inicioRango)
+                .whereLessThanOrEqualTo("fecha", finRango)
+                .whereEqualTo("activo", true)
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Error listening to bloqueos", e);
+                        return;
+                    }
+
+                    if (fechaSeleccionada != null && snapshot != null) {
+                        debouncedReloadHorarios();
+                        cargarEstadosDisponibilidadDelMes();
+                    }
+                });
+        realtimeListeners.add(bloqueosListener);
+    }
+
+    private void debouncedReloadHorarios() {
+        if (debounceRunnable != null) {
+            debounceHandler.removeCallbacks(debounceRunnable);
+        }
+
+        debounceRunnable = () -> {
+            cargarHorariosDisponibles();
+            verificarCamposCompletos();
+        };
+
+        debounceHandler.postDelayed(debounceRunnable, 300);
     }
 
     private void removeRealtimeListeners() {
