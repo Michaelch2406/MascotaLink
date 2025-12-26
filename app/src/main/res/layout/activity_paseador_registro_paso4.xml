@@ -44,20 +44,23 @@
                 android:text="Muestra tu experiencia con fotos o videos de paseos anteriores. También, completa un cuestionario para demostrar tus conocimientos sobre el cuidado de mascotas."/>
 
             <!-- Sección Sobre Ti -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
+            <TextView
+                style="@style/TextAppearance.Mascota.Label"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:hint="Cuéntanos tu experiencia general">
+                android:text="Años de experiencia como paseador" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_experiencia_general"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textMultiLine"
-                    android:minLines="3" />
-            </com.google.android.material.textfield.TextInputLayout>
+            <Spinner
+                android:id="@+id/spinner_anos_experiencia"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/spinner_background"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"

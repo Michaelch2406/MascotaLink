@@ -1,7 +1,6 @@
 package com.mjc.mascotalink;
 
 import android.app.Activity;
-import android.app.DatePickerDialog;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -11,10 +10,13 @@ import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.MediaController;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
@@ -51,12 +53,16 @@ import java.util.Map;
 
 public class EditarPerfilPaseadorActivity extends AppCompatActivity {
 
+    private static final String TAG = "EditarPerfilPaseador";
+    private boolean isLoadingData = false; // Flag para evitar validación durante carga de datos
+
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
     private String currentUserId, cedula;
 
-    private EditText etNombre, etApellido, etEmail, etTelefono, etDomicilio, etMotivacion, etInicioExperienciaPicker;
+    private EditText etNombre, etApellido, etEmail, etTelefono, etDomicilio, etMotivacion;
+    private Spinner spinnerAnosExperiencia;
     private VideoView video_preview;
     private ProgressBar video_progress;
     private Button btnGuardarCambios, btnSubirVideo, btnGrabarVideo;
@@ -64,7 +70,6 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
     private com.google.android.material.imageview.ShapeableImageView ivAvatarPaseador;
 
     private Uri videoUri, newVideoUri, newAvatarUri;
-    private Calendar inicioExperienciaCalendar;
 
     private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -91,9 +96,9 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
 
         initViews();
         setupToolbar();
+        setupListeners(); // Configurar listeners ANTES de cargar datos
         loadPaseadorData();
-        setupListeners();
-        validateFields(); // Initial validation
+        // NO validar aquí - validateFields() se llama después de cargar todos los datos
     }
 
     private void initViews() {
@@ -103,7 +108,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         etTelefono = findViewById(R.id.et_telefono);
         etDomicilio = findViewById(R.id.et_domicilio);
         etMotivacion = findViewById(R.id.et_motivacion);
-        etInicioExperienciaPicker = findViewById(R.id.et_inicio_experiencia_picker);
+        spinnerAnosExperiencia = findViewById(R.id.spinner_anos_experiencia);
         btnGuardarCambios = findViewById(R.id.btn_guardar_cambios);
 
         video_preview = findViewById(R.id.video_preview);
@@ -112,10 +117,16 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         btnGrabarVideo = findViewById(R.id.btn_grabar_video);
 
         cgTiposPerros = findViewById(R.id.cg_tipos_perros);
-        inicioExperienciaCalendar = Calendar.getInstance();
         ivAvatarPaseador = findViewById(R.id.iv_avatar_paseador);
 
+        // Configurar el adapter del spinner
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.anos_experiencia, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerAnosExperiencia.setAdapter(adapter);
 
+        // Establecer una selección inicial para que el spinner funcione
+        spinnerAnosExperiencia.setSelection(0);
     }
 
     private void setupToolbar() {
@@ -129,6 +140,8 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             finish();
             return;
         }
+
+        isLoadingData = true; // Marcar que estamos cargando datos
 
         db.collection("usuarios").document(currentUserId).get().addOnSuccessListener(userDoc -> {
             if (userDoc.exists()) {
@@ -147,7 +160,8 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                             .into(ivAvatarPaseador);
                 }
 
-                validateFields();
+                // NO validar aquí, esperar a que se carguen TODOS los datos
+                // validateFields() se llama después de cargar datos de paseadores
             }
         });
 
@@ -157,19 +171,20 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                 if (perfilProfesional != null) {
                     etMotivacion.setText((String) perfilProfesional.get("motivacion"));
 
-                    String inicioExpStr = (String) perfilProfesional.get("experiencia_general");
-                    if (inicioExpStr != null && !inicioExpStr.isEmpty()) {
-                        try {
-                            SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", new Locale("es", "ES"));
-                            Date date = sdf.parse(inicioExpStr);
-                            if (date != null) {
-                                inicioExperienciaCalendar.setTime(date);
-                                updateInicioExperienciaLabel();
-                            }
-                        } catch (java.text.ParseException e) {
-                            e.printStackTrace();
+                    // Cargar años de experiencia
+                    Object anosExpObj = perfilProfesional.get("anos_experiencia");
+                    int anosExperiencia = 0;
+                    if (anosExpObj != null) {
+                        if (anosExpObj instanceof Long) {
+                            anosExperiencia = ((Long) anosExpObj).intValue();
+                        } else if (anosExpObj instanceof Integer) {
+                            anosExperiencia = (Integer) anosExpObj;
                         }
                     }
+
+                    // Convertir el número a la posición del spinner
+                    int position = convertirNumeroAPosicion(anosExperiencia);
+                    spinnerAnosExperiencia.setSelection(position);
 
                     String videoUrl = (String) perfilProfesional.get("video_presentacion_url");
                     if (videoUrl != null && !videoUrl.isEmpty()) {
@@ -197,8 +212,15 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
                         }
                     }
                 }
+
+                // Terminar la carga de datos y validar
+                isLoadingData = false;
                 validateFields();
             }
+        }).addOnFailureListener(e -> {
+            // En caso de error al cargar datos de paseador, aún validar
+            isLoadingData = false;
+            validateFields();
         });
 
 
@@ -246,6 +268,19 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
 
         cgTiposPerros.setOnCheckedStateChangeListener((group, checkedIds) -> validateFields());
 
+        // Listener para el spinner de años de experiencia
+        spinnerAnosExperiencia.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                validateFields();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // No hacer nada
+            }
+        });
+
         btnSubirVideo.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
             videoPickerLauncher.launch(intent);
@@ -261,7 +296,6 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             videoRecorderLauncher.launch(intent);
         });
 
-        etInicioExperienciaPicker.setOnClickListener(v -> showDatePickerDialog());
         ivAvatarPaseador.setOnClickListener(v -> openImagePicker());
 
 
@@ -274,12 +308,17 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
     }
 
     private void validateFields() {
+        // No validar si estamos cargando datos desde Firebase
+        if (isLoadingData) {
+            return;
+        }
+
         boolean isValid = !etNombre.getText().toString().trim().isEmpty() &&
                 !etApellido.getText().toString().trim().isEmpty() &&
                 !etTelefono.getText().toString().trim().isEmpty() &&
                 !etDomicilio.getText().toString().trim().isEmpty() &&
                 !etMotivacion.getText().toString().trim().isEmpty() &&
-                !etInicioExperienciaPicker.getText().toString().trim().isEmpty() &&
+                spinnerAnosExperiencia.getSelectedItem() != null &&
                 cgTiposPerros.getCheckedChipIds().size() > 0;
 
         btnGuardarCambios.setEnabled(isValid);
@@ -290,26 +329,42 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         }
     }
 
-    private void showDatePickerDialog() {
-        DatePickerDialog.OnDateSetListener dateSetListener = (view, year, month, dayOfMonth) -> {
-            inicioExperienciaCalendar.set(Calendar.YEAR, year);
-            inicioExperienciaCalendar.set(Calendar.MONTH, month);
-            inicioExperienciaCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-            updateInicioExperienciaLabel();
-            validateFields();
-        };
+    /**
+     * Convierte el texto seleccionado del spinner a un número
+     * Ej: "5 años" -> 5, "Más de 10 años" -> 11
+     */
+    private int convertirTextoANumero(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return 0;
+        }
 
-        new DatePickerDialog(this,
-                dateSetListener,
-                inicioExperienciaCalendar.get(Calendar.YEAR),
-                inicioExperienciaCalendar.get(Calendar.MONTH),
-                inicioExperienciaCalendar.get(Calendar.DAY_OF_MONTH)).show();
+        if (texto.equals("Menos de 1 año")) {
+            return 0;
+        } else if (texto.equals("Más de 10 años")) {
+            return 11;
+        } else {
+            // Extraer el número del texto (ej: "5 años" -> 5)
+            String[] partes = texto.split(" ");
+            try {
+                return Integer.parseInt(partes[0]);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
     }
 
-    private void updateInicioExperienciaLabel() {
-        String myFormat = "MMMM yyyy";
-        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, new Locale("es", "ES"));
-        etInicioExperienciaPicker.setText(sdf.format(inicioExperienciaCalendar.getTime()));
+    /**
+     * Convierte un número de años a la posición del spinner
+     * Ej: 0 -> 0 ("Menos de 1 año"), 5 -> 5 ("5 años"), 11 -> 11 ("Más de 10 años")
+     */
+    private int convertirNumeroAPosicion(int numero) {
+        if (numero == 0) {
+            return 0; // "Menos de 1 año"
+        } else if (numero >= 1 && numero <= 10) {
+            return numero; // "1 año", "2 años", ..., "10 años"
+        } else {
+            return 11; // "Más de 10 años"
+        }
     }
 
     private void savePaseadorData() {
@@ -373,10 +428,9 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         Map<String, Object> paseadorUpdates = new HashMap<>();
         paseadorUpdates.put("perfil_profesional.motivacion", etMotivacion.getText().toString().trim());
 
-        String myFormat = "MMMM yyyy";
-        SimpleDateFormat sdf = new SimpleDateFormat(myFormat, new Locale("es", "ES"));
-        String fechaFormateada = sdf.format(inicioExperienciaCalendar.getTime());
-        paseadorUpdates.put("perfil_profesional.experiencia_general", fechaFormateada);
+        // Guardar años de experiencia como número
+        int anosExperiencia = convertirTextoANumero((String) spinnerAnosExperiencia.getSelectedItem());
+        paseadorUpdates.put("perfil_profesional.anos_experiencia", anosExperiencia);
 
         List<String> tamanosList = new ArrayList<>();
         for (int id : cgTiposPerros.getCheckedChipIds()) {

@@ -244,31 +244,24 @@
                         android:text="Grabar Nuevo" />
                 </LinearLayout>
     
-                <!-- Inicio de Experiencia -->
+                <!-- Años de Experiencia -->
                 <TextView
                     style="@style/TextAppearance.Mascota.Label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="Inicio de experiencia" />
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_inicio_experiencia"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:text="Años de experiencia como paseador" />
+
+                <Spinner
+                    android:id="@+id/spinner_anos_experiencia"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    app:endIconMode="custom"
-                    app:endIconTint="@color/gray_dark">
-    
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/et_inicio_experiencia_picker"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:cursorVisible="false"
-                        android:focusable="false"
-                        android:hint="Selecciona una fecha" />
-                </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_height="56dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/spinner_background"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp" />
     
                 <!-- Tipos de perros -->
                 <TextView
@@ -290,28 +283,21 @@
                         style="@style/Widget.MaterialComponents.Chip.Choice"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Pequeños" />
+                        android:text="Pequeño" />
     
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_medianos"
                         style="@style/Widget.MaterialComponents.Chip.Choice"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Medianos" />
+                        android:text="Mediano" />
     
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_grandes"
                         style="@style/Widget.MaterialComponents.Chip.Choice"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Grandes" />
-    
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_gigantes"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Gigantes" />
+                        android:text="Grande" />
     
                 </com.google.android.material.chip.ChipGroup>
     

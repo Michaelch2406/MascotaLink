@@ -8,9 +8,12 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,7 +44,8 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private final ArrayList<Uri> localUris = new ArrayList<>();
     private ImageView img1, img2, img3;
     private ImageView ivQuizCompletedCheck;
-    private EditText etExperiencia, etMotivacion;
+    private Spinner spinnerAnosExperiencia;
+    private EditText etMotivacion;
     private Button btnQuiz, btnGuardar;
     private TextView tvValidationMessages;
 
@@ -88,8 +92,17 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         btnQuiz = findViewById(R.id.btn_comenzar_quiz);
         btnGuardar = findViewById(R.id.btn_guardar_continuar);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
-        etExperiencia = findViewById(R.id.et_experiencia_general);
+        spinnerAnosExperiencia = findViewById(R.id.spinner_anos_experiencia);
         etMotivacion = findViewById(R.id.et_motivacion);
+
+        // Configurar el adapter del spinner
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.anos_experiencia, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerAnosExperiencia.setAdapter(adapter);
+
+        // Establecer una selección inicial para que el spinner funcione
+        spinnerAnosExperiencia.setSelection(0);
     }
 
     private void setupListeners() {
@@ -98,6 +111,21 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         btnQuiz.setOnClickListener(v -> iniciarCuestionario());
         btnGuardar.setOnClickListener(v -> guardarYContinuar());
 
+        // Listener para el spinner de años de experiencia
+        spinnerAnosExperiencia.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                saveState();
+                verificarCompletitudPaso4();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // No hacer nada
+            }
+        });
+
+        // TextWatcher para motivación
         TextWatcher textWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -110,7 +138,6 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
             }
         };
 
-        etExperiencia.addTextChangedListener(textWatcher);
         etMotivacion.addTextChangedListener(textWatcher);
     }
 
@@ -210,10 +237,10 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private void verificarCompletitudPaso4() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         boolean quizAprobado = prefs.getBoolean("quiz_aprobado", false);
-        String experiencia = etExperiencia.getText().toString().trim();
+        int experienciaPosition = spinnerAnosExperiencia.getSelectedItemPosition();
         String motivacion = etMotivacion.getText().toString().trim();
 
-        Log.d(TAG, "verificarCompletitudPaso4: quizAprobado=" + quizAprobado + ", experiencia=" + experiencia + ", motivacion=" + motivacion);
+        Log.d(TAG, "verificarCompletitudPaso4: quizAprobado=" + quizAprobado + ", experienciaPosition=" + experienciaPosition + ", motivacion=" + motivacion);
 
         List<String> faltantes = new ArrayList<>();
         if (localUris.isEmpty()) {
@@ -222,8 +249,8 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         if (!quizAprobado) {
             faltantes.add("• Completa y aprueba el cuestionario de conocimientos.");
         }
-        if (etExperiencia.getText().toString().trim().isEmpty()) {
-            faltantes.add("• Ingresa tu experiencia general.");
+        if (spinnerAnosExperiencia.getSelectedItem() == null) {
+            faltantes.add("• Selecciona tus años de experiencia.");
         }
         if (etMotivacion.getText().toString().trim().isEmpty()) {
             faltantes.add("• Ingresa tu motivación.");
@@ -269,14 +296,50 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
         List<String> uriStrings = localUris.stream().map(Uri::toString).collect(Collectors.toList());
         editor.putString("galeria_paseos_uris", String.join(",", uriStrings));
-        editor.putString("experiencia_general", etExperiencia.getText().toString());
+
+        // Guardar la posición del spinner y convertir a número
+        int position = spinnerAnosExperiencia.getSelectedItemPosition();
+        editor.putInt("anos_experiencia_position", position);
+
+        // Convertir el texto seleccionado a número y guardarlo
+        int anosExperiencia = convertirTextoANumero((String) spinnerAnosExperiencia.getSelectedItem());
+        editor.putInt("anos_experiencia", anosExperiencia);
+
         editor.putString("motivacion", etMotivacion.getText().toString());
         editor.apply();
     }
 
+    /**
+     * Convierte el texto seleccionado del spinner a un número
+     * Ej: "5 años" -> 5, "Más de 10 años" -> 11
+     */
+    private int convertirTextoANumero(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return 0;
+        }
+
+        if (texto.equals("Menos de 1 año")) {
+            return 0;
+        } else if (texto.equals("Más de 10 años")) {
+            return 11;
+        } else {
+            // Extraer el número del texto (ej: "5 años" -> 5)
+            String[] partes = texto.split(" ");
+            try {
+                return Integer.parseInt(partes[0]);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+    }
+
     private void loadState() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        etExperiencia.setText(prefs.getString("experiencia_general", ""));
+
+        // Cargar la posición guardada del spinner
+        int savedPosition = prefs.getInt("anos_experiencia_position", 0);
+        spinnerAnosExperiencia.setSelection(savedPosition);
+
         etMotivacion.setText(prefs.getString("motivacion", ""));
         String uriString = prefs.getString("galeria_paseos_uris", "");
         if (!uriString.isEmpty()) {

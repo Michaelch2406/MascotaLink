@@ -26,6 +26,21 @@
         <item>Todos los días</item>
     </string-array>
 
+    <string-array name="anos_experiencia">
+        <item>Menos de 1 año</item>
+        <item>1 año</item>
+        <item>2 años</item>
+        <item>3 años</item>
+        <item>4 años</item>
+        <item>5 años</item>
+        <item>6 años</item>
+        <item>7 años</item>
+        <item>8 años</item>
+        <item>9 años</item>
+        <item>10 años</item>
+        <item>Más de 10 años</item>
+    </string-array>
+
     <string-array name="bancos">
         <item>Banco Pichincha</item>
         <item>Banco del Pacífico</item>

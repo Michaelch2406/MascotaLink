@@ -954,13 +954,21 @@ async function sincronizarPaseador(docId) {
 
     const paseadorData = paseadorDoc.data();
 
-    // Calcular años de experiencia desde experiencia_general (MANTENER en /paseadores/)
+    // Obtener años de experiencia directamente del campo numérico
     let anosExperiencia = 0;
-    if (paseadorData.experiencia_general && typeof paseadorData.experiencia_general === 'string') {
-      const match = paseadorData.experiencia_general.match(/\d+/);
-      if (match) {
-        anosExperiencia = parseInt(match[0], 10);
+    if (paseadorData.perfil_profesional?.anos_experiencia !== undefined) {
+      anosExperiencia = parseInt(paseadorData.perfil_profesional.anos_experiencia, 10) || 0;
+      console.log(`📊 Años de experiencia obtenidos directamente para ${docId}: ${anosExperiencia}`);
+    } else {
+      // Fallback: intentar extraer de experiencia_general (para datos antiguos)
+      const experienciaGeneral = paseadorData.perfil_profesional?.experiencia_general || paseadorData.experiencia_general;
+      if (experienciaGeneral && typeof experienciaGeneral === 'string') {
+        const match = experienciaGeneral.match(/\d+/);
+        if (match) {
+          anosExperiencia = parseInt(match[0], 10);
+        }
       }
+      console.log(`📊 Años de experiencia calculados (fallback) para ${docId}: ${anosExperiencia} (de: "${experienciaGeneral}")`);
     }
 
     // 🆕 DENORMALIZACIÓN: Obtener top 3 reseñas recientes
@@ -996,10 +1004,28 @@ async function sincronizarPaseador(docId) {
         .limit(5)
         .get();
 
+      // Función helper para verificar si un string parece ser un ID/geohash
+      const esIdOGeohash = (str) => {
+        if (!str || typeof str !== 'string') return true;
+        // Si tiene menos de 3 caracteres o no tiene espacios y es alfanumérico, probablemente es un ID
+        if (str.length < 3) return true;
+        // Si no tiene espacios y solo contiene letras/números, probablemente es un ID
+        if (!/\s/.test(str) && /^[a-zA-Z0-9]+$/.test(str)) return true;
+        return false;
+      };
+
       zonasPrincipales = zonasSnapshot.docs.map(doc => {
         const data = doc.data();
         // Intentar obtener el nombre legible de la zona en orden de prioridad
-        return data.nombre || data.zona || data.direccion || data.barrio || "Zona no especificada";
+        let zona = data.nombre || data.zona || data.direccion || data.barrio || data.ciudad || data.sector || null;
+
+        // Verificar que no sea un ID/geohash
+        if (zona && esIdOGeohash(zona)) {
+          console.log(`⚠️ Zona descartada (parece ID): "${zona}" para paseador ${docId}`);
+          return null;
+        }
+
+        return zona || "Zona no especificada";
       }).filter(zona => zona && zona !== "Zona no especificada");
 
       // Si no se encontraron zonas válidas, agregar un valor por defecto

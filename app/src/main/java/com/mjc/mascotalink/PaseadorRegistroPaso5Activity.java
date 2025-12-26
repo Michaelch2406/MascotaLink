@@ -537,7 +537,8 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
 
         // Sub-mapa: perfil_profesional
         Map<String, Object> perfilProfesional = new HashMap<>();
-        perfilProfesional.put("experiencia_general", prefs.getString("experiencia_general", ""));
+        // Guardar años de experiencia como número en lugar de texto
+        perfilProfesional.put("anos_experiencia", prefs.getInt("anos_experiencia", 0));
         perfilProfesional.put("motivacion", prefs.getString("motivacion", ""));
         perfilProfesional.put("video_presentacion_url", urls.get("video_presentacion_url"));
         perfilProfesional.put("galeria_paseos_urls", urls.get("galeria_paseos_urls"));
