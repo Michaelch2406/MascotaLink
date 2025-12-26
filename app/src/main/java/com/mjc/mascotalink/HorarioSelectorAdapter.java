@@ -82,13 +82,24 @@ public class HorarioSelectorAdapter extends RecyclerView.Adapter<HorarioSelector
     }
 
     public void setSelectedPosition(int position) {
+        int previousPosition = this.selectedPosition;
         this.selectedPosition = position;
-        notifyDataSetChanged();
+
+        if (previousPosition != -1 && previousPosition < horarioList.size()) {
+            notifyItemChanged(previousPosition);
+        }
+        if (position != -1 && position < horarioList.size()) {
+            notifyItemChanged(position);
+        }
     }
 
     public void resetSelection() {
-        selectedPosition = -1;
-        notifyDataSetChanged();
+        int previousPosition = this.selectedPosition;
+        this.selectedPosition = -1;
+
+        if (previousPosition != -1 && previousPosition < horarioList.size()) {
+            notifyItemChanged(previousPosition);
+        }
     }
 
     static class HorarioViewHolder extends RecyclerView.ViewHolder {

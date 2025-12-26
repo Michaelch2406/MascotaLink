@@ -311,6 +311,9 @@ public class ReservaActivity extends AppCompatActivity {
     private void cargarDatosIniciales() {
         if (currentUserId == null) return;
 
+        // Mostrar sección de mascotas con transparencia mientras carga
+        rvMascotas.setAlpha(0.3f);
+
         // Ejecutar ambas cargas en paralelo usando Tasks de Firebase
         com.google.android.gms.tasks.Task<DocumentSnapshot> taskDireccion =
             db.collection("usuarios").document(currentUserId).get();
@@ -346,10 +349,15 @@ public class ReservaActivity extends AppCompatActivity {
             if (mascotaList.isEmpty()) {
                 rvMascotas.setVisibility(View.GONE);
                 btnAgregarMascota.setVisibility(View.VISIBLE);
+                btnAgregarMascota.setAlpha(0f);
+                btnAgregarMascota.animate().alpha(1f).setDuration(300).start();
             } else {
                 rvMascotas.setVisibility(View.VISIBLE);
                 btnAgregarMascota.setVisibility(View.GONE);
                 setupMascotasRecyclerView();
+
+                // Animación fade in después de cargar
+                rvMascotas.animate().alpha(1f).setDuration(300).start();
 
                 if (mascotaList.size() == 1) {
                     mascotaSeleccionada = mascotaList.get(0);
@@ -362,6 +370,7 @@ public class ReservaActivity extends AppCompatActivity {
                 }
             }
         }).addOnFailureListener(e -> {
+            rvMascotas.animate().alpha(1f).setDuration(300).start();
             Toast.makeText(this, "Error al cargar mascotas", Toast.LENGTH_SHORT).show();
         });
     }
@@ -426,17 +435,15 @@ public class ReservaActivity extends AppCompatActivity {
     private void setupMascotasRecyclerView() {
         LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         rvMascotas.setLayoutManager(layoutManager);
-        
+
         // Optimización para scrolling suave
-        // rvMascotas.setHasFixedSize(true); // Eliminado para resolver InvalidSetHasFixedSize
+        rvMascotas.setHasFixedSize(true);
         rvMascotas.setItemViewCacheSize(20);
-        rvMascotas.setDrawingCacheEnabled(true);
-        rvMascotas.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
-        
+
         // Agregar espaciado consistente entre items (12dp)
         int spacingInPixels = (int) (12 * getResources().getDisplayMetrics().density);
         rvMascotas.addItemDecoration(new HorizontalSpaceItemDecoration(spacingInPixels));
-        
+
         mascotaAdapter = new MascotaSelectorAdapter(this, mascotaList, (mascota, position) -> {
             mascotaSeleccionada = mascota;
             tvMascotaNombre.setText(mascota.getNombre());
@@ -1095,6 +1102,9 @@ public class ReservaActivity extends AppCompatActivity {
             horarioAdapter.notifyDataSetChanged();
         }
 
+        // Mostrar horarios con transparencia mientras validan
+        rvHorarios.setAlpha(0.3f);
+
         if (duracionMinutos > 0) {
             final int[] totalHorarios = {0};
             for (HorarioSelectorAdapter.Horario horario : horarioList) {
@@ -1114,6 +1124,10 @@ public class ReservaActivity extends AppCompatActivity {
                         if (horarioAdapter != null) {
                             horarioAdapter.notifyDataSetChanged();
                         }
+
+                        // Animación fade in después de validar todos los horarios
+                        rvHorarios.animate().alpha(1f).setDuration(300).start();
+
                         scrollToFirstAvailableTime();
 
                         // Solo auto-avanzar en modo PUNTUAL de un solo día
@@ -1135,6 +1149,9 @@ public class ReservaActivity extends AppCompatActivity {
             if (horarioAdapter != null) {
                 horarioAdapter.notifyDataSetChanged();
             }
+
+            // Animación fade in
+            rvHorarios.animate().alpha(1f).setDuration(300).start();
         }
     }
 

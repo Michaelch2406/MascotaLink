@@ -74,8 +74,15 @@ public class MascotaSelectorAdapter extends RecyclerView.Adapter<MascotaSelector
     }
 
     public void setSelectedPosition(int position) {
+        int previousPosition = this.selectedPosition;
         this.selectedPosition = position;
-        notifyDataSetChanged();
+
+        if (previousPosition != -1) {
+            notifyItemChanged(previousPosition);
+        }
+        if (position != -1) {
+            notifyItemChanged(position);
+        }
     }
 
     static class MascotaViewHolder extends RecyclerView.ViewHolder {
