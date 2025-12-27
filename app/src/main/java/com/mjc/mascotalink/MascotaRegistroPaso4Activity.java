@@ -234,10 +234,20 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
     }
 
     private void mostrarMensajeExito() {
-        Intent intent = new Intent(this, MascotaRegistradaActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
-        finish();
+        boolean fromReserva = getIntent().getBooleanExtra("FROM_RESERVA", false);
+
+        if (fromReserva) {
+            Toast.makeText(this, "Mascota registrada exitosamente", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(this, ReservaActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+            finish();
+        } else {
+            Intent intent = new Intent(this, MascotaRegistradaActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+        }
     }
 
     private void mostrarErrorDialog(String mensaje) {

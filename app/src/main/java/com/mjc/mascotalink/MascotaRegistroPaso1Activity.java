@@ -259,6 +259,10 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     private void collectDataAndProceed() {
         Intent intent = new Intent(this, MascotaRegistroPaso2Activity.class);
 
+        if (getIntent().hasExtra("FROM_RESERVA")) {
+            intent.putExtra("FROM_RESERVA", getIntent().getBooleanExtra("FROM_RESERVA", false));
+        }
+
         // Basic Info
         intent.putExtra("nombre", nombreTextField.getEditText().getText().toString().trim());
         intent.putExtra("raza", razaAutoComplete.getText().toString());

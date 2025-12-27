@@ -169,6 +169,7 @@ public class ReservaActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         setupBottomNavigation();
+        recargarMascotas();
     }
 
     private void initViews() {
@@ -361,6 +362,33 @@ public class ReservaActivity extends AppCompatActivity {
         });
     }
 
+    private void recargarMascotas() {
+        if (currentUserId == null) return;
+
+        db.collection("duenos").document(currentUserId)
+                .collection("mascotas")
+                .whereEqualTo("activo", true)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    mascotaList.clear();
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        MascotaSelectorAdapter.Mascota mascota = new MascotaSelectorAdapter.Mascota();
+                        mascota.setId(doc.getId());
+                        mascota.setNombre(doc.getString("nombre"));
+                        mascota.setFotoUrl(doc.getString("foto_principal_url"));
+                        mascota.setActivo(Boolean.TRUE.equals(doc.getBoolean("activo")));
+                        mascotaList.add(mascota);
+                    }
+
+                    if (mascotaAdapter != null) {
+                        mascotaAdapter.notifyDataSetChanged();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al recargar mascotas", e);
+                });
+    }
+
     private void cargarDireccionUsuario() {
         if (currentUserId == null) return;
         db.collection("usuarios").document(currentUserId).get()
@@ -433,7 +461,9 @@ public class ReservaActivity extends AppCompatActivity {
 
             @Override
             public void onAddMascotaClicked() {
-                startActivity(new Intent(ReservaActivity.this, MascotaRegistroPaso1Activity.class));
+                Intent intent = new Intent(ReservaActivity.this, MascotaRegistroPaso1Activity.class);
+                intent.putExtra("FROM_RESERVA", true);
+                startActivity(intent);
             }
         });
         rvMascotas.setAdapter(mascotaAdapter);
