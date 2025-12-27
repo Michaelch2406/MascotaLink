@@ -59,7 +59,6 @@ public class ReservaActivity extends AppCompatActivity {
     // Views
     private ImageView ivBack;
     private RecyclerView rvMascotas, rvHorarios;
-    private View btnAgregarMascota;
     private Button btnConfirmarReserva;
     private ChipGroup chipGroupFecha;
     private ImageView ivMesAnterior, ivMesSiguiente;
@@ -181,7 +180,6 @@ public class ReservaActivity extends AppCompatActivity {
 
         ivBack = findViewById(R.id.iv_back);
         rvMascotas = findViewById(R.id.rv_mascotas);
-        btnAgregarMascota = findViewById(R.id.btn_agregar_mascota);
         chipGroupFecha = findViewById(R.id.chip_group_fecha);
         ivMesAnterior = findViewById(R.id.iv_mes_anterior);
         ivMesSiguiente = findViewById(R.id.iv_mes_siguiente);
@@ -212,7 +210,7 @@ public class ReservaActivity extends AppCompatActivity {
         btnConfirmarReserva = findViewById(R.id.btn_confirmar_reserva);
         bottomNav = findViewById(R.id.bottom_nav);
 
-        if (ivBack == null || rvMascotas == null || btnAgregarMascota == null || chipGroupFecha == null ||
+        if (ivBack == null || rvMascotas == null || chipGroupFecha == null ||
             ivMesAnterior == null || ivMesSiguiente == null || tvMesAnio == null || gvCalendario == null ||
             calendarioContainer == null || tvFechaSeleccionada == null || rvHorarios == null || llDisponibilidad == null ||
             tvDisponibilidad == null || tabPorHoras == null || tabPorMes == null || tvDuracionTitulo == null ||
@@ -221,7 +219,7 @@ public class ReservaActivity extends AppCompatActivity {
             tvDuracionValor == null || tvTotalValor == null || tvPaseadorNombre == null ||
             tvMascotaNombre == null || tvDetalleFecha == null || tvDetalleHora == null ||
             tvDetalleDuracion == null || btnConfirmarReserva == null || bottomNav == null) {
-            
+
             throw new IllegalStateException("Error de inicialización: Una o más vistas no se encontraron en el layout. " +
                     "Verifica que los IDs en activity_reserva.xml coincidan con los usados en ReservaActivity.java.");
         }
@@ -233,9 +231,6 @@ public class ReservaActivity extends AppCompatActivity {
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
-        btnAgregarMascota.setOnClickListener(v -> {
-            startActivity(new Intent(ReservaActivity.this, MascotaRegistroPaso1Activity.class));
-        });
 
         chipGroupFecha.setOnCheckedChangeListener((group, checkedId) -> {
             // --- FIX INICIO: Lógica para llamar a los métodos de vista de calendario ---
@@ -346,28 +341,19 @@ public class ReservaActivity extends AppCompatActivity {
                 mascotaList.add(mascota);
             }
 
-            if (mascotaList.isEmpty()) {
-                rvMascotas.setVisibility(View.GONE);
-                btnAgregarMascota.setVisibility(View.VISIBLE);
-                btnAgregarMascota.setAlpha(0f);
-                btnAgregarMascota.animate().alpha(1f).setDuration(300).start();
-            } else {
-                rvMascotas.setVisibility(View.VISIBLE);
-                btnAgregarMascota.setVisibility(View.GONE);
-                setupMascotasRecyclerView();
+            rvMascotas.setVisibility(View.VISIBLE);
+            setupMascotasRecyclerView();
 
-                // Animación fade in después de cargar
-                rvMascotas.animate().alpha(1f).setDuration(300).start();
+            rvMascotas.animate().alpha(1f).setDuration(300).start();
 
-                if (mascotaList.size() == 1) {
-                    mascotaSeleccionada = mascotaList.get(0);
-                    tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
-                    cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
-                    if (mascotaAdapter != null) {
-                        mascotaAdapter.setSelectedPosition(0);
-                    }
-                    verificarCamposCompletos();
+            if (mascotaList.size() == 1) {
+                mascotaSeleccionada = mascotaList.get(0);
+                tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
+                cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
+                if (mascotaAdapter != null) {
+                    mascotaAdapter.setSelectedPosition(0);
                 }
+                verificarCamposCompletos();
             }
         }).addOnFailureListener(e -> {
             rvMascotas.animate().alpha(1f).setDuration(300).start();
@@ -406,25 +392,17 @@ public class ReservaActivity extends AppCompatActivity {
                         mascotaList.add(mascota);
                     }
 
-                    if (mascotaList.isEmpty()) {
-                        rvMascotas.setVisibility(View.GONE);
-                        btnAgregarMascota.setVisibility(View.VISIBLE);
-                    } else {
-                        rvMascotas.setVisibility(View.VISIBLE);
-                        btnAgregarMascota.setVisibility(View.GONE);
-                        setupMascotasRecyclerView();
+                    rvMascotas.setVisibility(View.VISIBLE);
+                    setupMascotasRecyclerView();
 
-                        // Auto-seleccionar si solo hay 1 mascota
-                        if (mascotaList.size() == 1) {
-                            mascotaSeleccionada = mascotaList.get(0);
-                            tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
-                            cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
-                            // Marcar visualmente en el adapter
-                            if (mascotaAdapter != null) {
-                                mascotaAdapter.setSelectedPosition(0);
-                            }
-                            verificarCamposCompletos();
+                    if (mascotaList.size() == 1) {
+                        mascotaSeleccionada = mascotaList.get(0);
+                        tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
+                        cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
+                        if (mascotaAdapter != null) {
+                            mascotaAdapter.setSelectedPosition(0);
                         }
+                        verificarCamposCompletos();
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -444,11 +422,19 @@ public class ReservaActivity extends AppCompatActivity {
         int spacingInPixels = (int) (12 * getResources().getDisplayMetrics().density);
         rvMascotas.addItemDecoration(new HorizontalSpaceItemDecoration(spacingInPixels));
 
-        mascotaAdapter = new MascotaSelectorAdapter(this, mascotaList, (mascota, position) -> {
-            mascotaSeleccionada = mascota;
-            tvMascotaNombre.setText(mascota.getNombre());
-            cargarNotasAdicionalesMascota(mascota.getId());
-            verificarCamposCompletos();
+        mascotaAdapter = new MascotaSelectorAdapter(this, mascotaList, new MascotaSelectorAdapter.OnMascotaSelectedListener() {
+            @Override
+            public void onMascotaSelected(MascotaSelectorAdapter.Mascota mascota, int position) {
+                mascotaSeleccionada = mascota;
+                tvMascotaNombre.setText(mascota.getNombre());
+                cargarNotasAdicionalesMascota(mascota.getId());
+                verificarCamposCompletos();
+            }
+
+            @Override
+            public void onAddMascotaClicked() {
+                startActivity(new Intent(ReservaActivity.this, MascotaRegistroPaso1Activity.class));
+            }
         });
         rvMascotas.setAdapter(mascotaAdapter);
     }
