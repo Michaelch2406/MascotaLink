@@ -20,6 +20,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.mjc.mascotalink.utils.PaseoDiffCallback;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
+import com.mjc.mascotalink.views.OverlappingAvatarsView;
 import com.mjc.mascotalink.Paseo;
 import com.mjc.mascotalink.MyApplication;
 
@@ -114,9 +115,28 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
 
         if (userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
             holder.tvNombreSecundario.setText("Dueño: " + (primerPaseo.getDuenoNombre() != null ? primerPaseo.getDuenoNombre() : "Desconocido"));
-            cargarImagen(holder.ivFotoPerfil, primerPaseo.getMascotaFoto(), R.drawable.ic_pet_placeholder);
+
+            // Mostrar avatares superpuestos si hay múltiples mascotas
+            List<String> mascotasFotos = primerPaseo.getMascotasFotos();
+            Integer numeroMascotas = primerPaseo.getNumeroMascotas();
+
+            if (mascotasFotos != null && mascotasFotos.size() > 1) {
+                holder.overlappingAvatars.setVisibility(View.VISIBLE);
+                holder.ivFotoPerfil.setVisibility(View.GONE);
+                holder.overlappingAvatars.setImageUrls(mascotasFotos);
+            } else if (numeroMascotas != null && numeroMascotas > 1) {
+                holder.overlappingAvatars.setVisibility(View.VISIBLE);
+                holder.ivFotoPerfil.setVisibility(View.GONE);
+                holder.overlappingAvatars.setPlaceholders(numeroMascotas);
+            } else {
+                holder.overlappingAvatars.setVisibility(View.GONE);
+                holder.ivFotoPerfil.setVisibility(View.VISIBLE);
+                cargarImagen(holder.ivFotoPerfil, primerPaseo.getMascotaFoto(), R.drawable.ic_pet_placeholder);
+            }
         } else {
             holder.tvNombreSecundario.setText("Paseador: " + (primerPaseo.getPaseadorNombre() != null ? primerPaseo.getPaseadorNombre() : "No asignado"));
+            holder.overlappingAvatars.setVisibility(View.GONE);
+            holder.ivFotoPerfil.setVisibility(View.VISIBLE);
             cargarImagen(holder.ivFotoPerfil, primerPaseo.getPaseadorFoto(), R.drawable.ic_person);
         }
 
@@ -190,12 +210,32 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         if (userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
             // Si soy Paseador, veo el nombre del Dueño
             holder.tvNombreSecundario.setText("Dueño: " + (paseo.getDuenoNombre() != null ? paseo.getDuenoNombre() : "Desconocido"));
-            // Y veo la foto de la Mascota (o del dueño si prefieres, pero mascota es mejor visualmente)
-            cargarImagen(holder.ivFotoPerfil, paseo.getMascotaFoto(), R.drawable.ic_pet_placeholder);
+
+            // Mostrar avatares superpuestos si hay múltiples mascotas
+            List<String> mascotasFotos = paseo.getMascotasFotos();
+            Integer numeroMascotas = paseo.getNumeroMascotas();
+
+            if (mascotasFotos != null && mascotasFotos.size() > 1) {
+                // Múltiples mascotas: usar overlapping avatars
+                holder.overlappingAvatars.setVisibility(View.VISIBLE);
+                holder.ivFotoPerfil.setVisibility(View.GONE);
+                holder.overlappingAvatars.setImageUrls(mascotasFotos);
+            } else if (numeroMascotas != null && numeroMascotas > 1) {
+                // Múltiples mascotas pero sin fotos: mostrar placeholders
+                holder.overlappingAvatars.setVisibility(View.VISIBLE);
+                holder.ivFotoPerfil.setVisibility(View.GONE);
+                holder.overlappingAvatars.setPlaceholders(numeroMascotas);
+            } else {
+                // Una sola mascota: mostrar foto normal
+                holder.overlappingAvatars.setVisibility(View.GONE);
+                holder.ivFotoPerfil.setVisibility(View.VISIBLE);
+                cargarImagen(holder.ivFotoPerfil, paseo.getMascotaFoto(), R.drawable.ic_pet_placeholder);
+            }
         } else {
-            // Si soy Dueño, veo el nombre del Paseador
+            // Si soy Dueño, veo el nombre del Paseador y su foto
             holder.tvNombreSecundario.setText("Paseador: " + (paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "No asignado"));
-            // Y veo la foto del Paseador (importante para identificar quién viene)
+            holder.overlappingAvatars.setVisibility(View.GONE);
+            holder.ivFotoPerfil.setVisibility(View.VISIBLE);
             cargarImagen(holder.ivFotoPerfil, paseo.getPaseadorFoto(), R.drawable.ic_person);
         }
 
@@ -512,6 +552,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         TextView tvNombrePrincipal;
         TextView tvNombreSecundario;
         ShapeableImageView ivFotoPerfil;
+        OverlappingAvatarsView overlappingAvatars;
         TextView tvDuracion;
         TextView tvCosto;
         Chip chipEstado;
@@ -527,6 +568,7 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
             tvNombrePrincipal = itemView.findViewById(R.id.tv_nombre_principal);
             tvNombreSecundario = itemView.findViewById(R.id.tv_nombre_secundario);
             ivFotoPerfil = itemView.findViewById(R.id.iv_foto_perfil_paseo);
+            overlappingAvatars = itemView.findViewById(R.id.overlapping_avatars);
             tvDuracion = itemView.findViewById(R.id.tv_duracion);
             tvCosto = itemView.findViewById(R.id.tv_costo);
             chipEstado = itemView.findViewById(R.id.chip_estado_paseo);

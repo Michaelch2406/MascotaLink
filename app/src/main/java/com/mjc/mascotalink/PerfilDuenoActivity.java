@@ -536,15 +536,32 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     
     private void cargarMascotas() {
         if (mascotasListener != null) mascotasListener.remove();
+        Log.d(TAG, "cargarMascotas: Iniciando carga para duenoId: " + duenoId);
+
         mascotasListener = db.collection("duenos").document(duenoId).collection("mascotas")
                 .whereEqualTo("activo", true)  // Solo mostrar mascotas activas
                 .addSnapshotListener((value, e) -> {
-                    if (e != null) return;
+                    if (e != null) {
+                        Log.e(TAG, "cargarMascotas: Error en query", e);
+                        return;
+                    }
+
+                    Log.d(TAG, "cargarMascotas: Query ejecutado");
+                    Log.d(TAG, "cargarMascotas: Documentos recibidos: " + (value != null ? value.size() : 0));
 
                     petList.clear();
                     if (value != null && !value.isEmpty()) {
                         tvMascotasRegistradas.setText(value.size() + " Mascotas");
+                        Log.d(TAG, "cargarMascotas: Procesando " + value.size() + " mascotas");
+
+                        int index = 0;
                         for (QueryDocumentSnapshot doc : value) {
+                            Log.d(TAG, "cargarMascotas: Mascota " + index + " - ID: " + doc.getId());
+                            Log.d(TAG, "  - nombre: " + doc.getString("nombre"));
+                            Log.d(TAG, "  - raza: " + doc.getString("raza"));
+                            Log.d(TAG, "  - activo: " + doc.getBoolean("activo"));
+                            Log.d(TAG, "  - foto_principal_url: " + doc.getString("foto_principal_url"));
+
                             Pet pet = new Pet();
                             pet.setId(doc.getId());
                             pet.setName(doc.getString("nombre"));
@@ -552,12 +569,18 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                             pet.setAvatarUrl(MyApplication.getFixedUrl(doc.getString("foto_principal_url")));
                             pet.setOwnerId(duenoId);
                             petList.add(pet);
+                            index++;
                         }
+
+                        Log.d(TAG, "cargarMascotas: petList.size() después de agregar: " + petList.size());
                         btnVerTodasMascotas.setVisibility(value.size() > 3 ? View.VISIBLE : View.GONE);
                     } else {
+                        Log.d(TAG, "cargarMascotas: No se encontraron mascotas activas");
                         tvMascotasRegistradas.setText("0 Mascotas");
                         btnVerTodasMascotas.setVisibility(View.GONE);
                     }
+
+                    Log.d(TAG, "cargarMascotas: Llamando notifyDataSetChanged() con " + petList.size() + " items");
                     mascotaAdapter.notifyDataSetChanged();
                 });
     }

@@ -224,7 +224,10 @@ public class SolicitudesActivity extends AppCompatActivity {
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
 
                 // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+                @SuppressWarnings("unchecked")
                 List<String> mascotasNombres = (List<String>) doc.get("mascotas_nombres");
+                @SuppressWarnings("unchecked")
+                List<String> mascotasFotos = (List<String>) doc.get("mascotas_fotos");
                 String idMascota = doc.getString("id_mascota");
 
                 solicitudesTemporales.add(solicitud);
@@ -237,6 +240,10 @@ public class SolicitudesActivity extends AppCompatActivity {
                     if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
                         solicitud.setMascotasNombres(mascotasNombres);
                         solicitud.setNumeroMascotas(mascotasNombres.size());
+                        // Cargar fotos de mascotas si están disponibles
+                        if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
+                            solicitud.setMascotasFotos(mascotasFotos);
+                        }
                         tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
                     } else if (idMascota != null && !idMascota.isEmpty()) {
                         // Formato antiguo: query para obtener nombre de mascota
@@ -465,6 +472,9 @@ public class SolicitudesActivity extends AppCompatActivity {
         private String duenoFotoUrl;
         private String mascotaRaza;
         private String mascotaNombre;
+        private List<String> mascotasNombres;
+        private List<String> mascotasFotos;
+        private Integer numeroMascotas;
 
         public Solicitud() {}
 
@@ -495,5 +505,14 @@ public class SolicitudesActivity extends AppCompatActivity {
 
         public String getMascotaNombre() { return mascotaNombre; }
         public void setMascotaNombre(String mascotaNombre) { this.mascotaNombre = mascotaNombre; }
+
+        public List<String> getMascotasNombres() { return mascotasNombres; }
+        public void setMascotasNombres(List<String> mascotasNombres) { this.mascotasNombres = mascotasNombres; }
+
+        public List<String> getMascotasFotos() { return mascotasFotos; }
+        public void setMascotasFotos(List<String> mascotasFotos) { this.mascotasFotos = mascotasFotos; }
+
+        public Integer getNumeroMascotas() { return numeroMascotas; }
+        public void setNumeroMascotas(Integer numeroMascotas) { this.numeroMascotas = numeroMascotas; }
     }
 }

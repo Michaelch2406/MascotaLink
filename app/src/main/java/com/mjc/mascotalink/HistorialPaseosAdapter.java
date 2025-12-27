@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.android.material.chip.Chip;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
+import com.mjc.mascotalink.views.OverlappingAvatarsView;
 import com.mjc.mascotalink.MyApplication;
 
 import java.util.List;
@@ -101,23 +102,55 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
         holder.tvNombre.setText(nombreMostrar);
         holder.tvSubtitulo.setText(subTitulo);
         holder.tvFecha.setText(paseo.getFechaFormateada());
-        
+
         String duracion = paseo.getDuracion_minutos() + " min";
         holder.tvDuracion.setText(duracion);
-        
+
         String costo = String.format(Locale.US, "$%.2f", paseo.getCosto_total());
         holder.tvCosto.setText(costo);
 
-        // Cargar imagen
-        if (fotoUrl != null && !fotoUrl.isEmpty()) {
-            Glide.with(context)
-                    .load(MyApplication.getFixedUrl(fotoUrl))
-                    .placeholder(R.drawable.ic_pet_placeholder) // Fallback genérico
-                    .error(R.drawable.ic_pet_placeholder)
-                    .centerCrop()
-                    .into(holder.ivAvatar);
+        // Cargar imagen(es) - overlapping avatars para múltiples mascotas
+        if ("PASEADOR".equalsIgnoreCase(userRole)) {
+            // Paseador ve las mascotas - usar overlapping avatars si hay múltiples
+            List<String> mascotasFotos = paseo.getMascotasFotos();
+            Integer numeroMascotas = paseo.getNumeroMascotas();
+
+            if (mascotasFotos != null && mascotasFotos.size() > 1) {
+                holder.overlappingAvatars.setVisibility(View.VISIBLE);
+                holder.ivAvatar.setVisibility(View.GONE);
+                holder.overlappingAvatars.setImageUrls(mascotasFotos);
+            } else if (numeroMascotas != null && numeroMascotas > 1) {
+                holder.overlappingAvatars.setVisibility(View.VISIBLE);
+                holder.ivAvatar.setVisibility(View.GONE);
+                holder.overlappingAvatars.setPlaceholders(numeroMascotas);
+            } else {
+                holder.overlappingAvatars.setVisibility(View.GONE);
+                holder.ivAvatar.setVisibility(View.VISIBLE);
+                if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                    Glide.with(context)
+                            .load(MyApplication.getFixedUrl(fotoUrl))
+                            .placeholder(R.drawable.ic_pet_placeholder)
+                            .error(R.drawable.ic_pet_placeholder)
+                            .centerCrop()
+                            .into(holder.ivAvatar);
+                } else {
+                    holder.ivAvatar.setImageResource(R.drawable.ic_pet_placeholder);
+                }
+            }
         } else {
-            holder.ivAvatar.setImageResource(R.drawable.ic_pet_placeholder);
+            // Dueño ve al paseador - siempre foto única
+            holder.overlappingAvatars.setVisibility(View.GONE);
+            holder.ivAvatar.setVisibility(View.VISIBLE);
+            if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                Glide.with(context)
+                        .load(MyApplication.getFixedUrl(fotoUrl))
+                        .placeholder(R.drawable.ic_pet_placeholder)
+                        .error(R.drawable.ic_pet_placeholder)
+                        .centerCrop()
+                        .into(holder.ivAvatar);
+            } else {
+                holder.ivAvatar.setImageResource(R.drawable.ic_pet_placeholder);
+            }
         }
 
         // Configurar estado visual
@@ -168,6 +201,7 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
         TextView tvNombre, tvSubtitulo, tvFecha, tvDuracion, tvCosto;
         Chip chipEstado;
         ImageView ivAvatar;
+        OverlappingAvatarsView overlappingAvatars;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -178,6 +212,7 @@ public class HistorialPaseosAdapter extends RecyclerView.Adapter<HistorialPaseos
             tvDuracion = itemView.findViewById(R.id.tv_duracion);
             tvCosto = itemView.findViewById(R.id.tv_costo);
             ivAvatar = itemView.findViewById(R.id.iv_avatar);
+            overlappingAvatars = itemView.findViewById(R.id.overlapping_avatars);
         }
     }
 }

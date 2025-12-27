@@ -1696,7 +1696,11 @@ public class ReservaActivity extends AppCompatActivity {
                     }
                 }
 
-                final double costoTotalReal = precioHoraReal * horas * diasCalculo;
+                // CRÍTICO: Incluir número de mascotas en el cálculo del costo
+                int numeroMascotas = mascotasSeleccionadas != null ? mascotasSeleccionadas.size() : 1;
+                if (numeroMascotas == 0) numeroMascotas = 1;
+
+                final double costoTotalReal = precioHoraReal * horas * diasCalculo * numeroMascotas;
 
                 // 2. Validar disponibilidad (Crucial para evitar overbooking)
                 validarDisponibilidadYCrear(costoTotalReal, precioHoraReal);
@@ -1757,15 +1761,18 @@ public class ReservaActivity extends AppCompatActivity {
                                         Date fecha, String grupoId, boolean esGrupo) {
         List<String> mascotasIds = new ArrayList<>();
         List<String> mascotasNombres = new ArrayList<>();
+        List<String> mascotasFotos = new ArrayList<>();
         for (MascotaSelectorAdapter.Mascota m : mascotasSeleccionadas) {
             mascotasIds.add(m.getId());
             mascotasNombres.add(m.getNombre());
+            mascotasFotos.add(m.getFotoUrl());
         }
 
         Map<String, Object> reserva = new HashMap<>();
         reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
         reserva.put("mascotas", mascotasIds);
         reserva.put("mascotas_nombres", mascotasNombres);
+        reserva.put("mascotas_fotos", mascotasFotos);
         reserva.put("numero_mascotas", mascotasSeleccionadas.size());
         reserva.put("id_paseador", db.collection("usuarios").document(paseadorId));
         reserva.put("fecha", new Timestamp(fecha));
@@ -1855,15 +1862,18 @@ public class ReservaActivity extends AppCompatActivity {
 
             List<String> mascotasIds = new ArrayList<>();
             List<String> mascotasNombres = new ArrayList<>();
+            List<String> mascotasFotos = new ArrayList<>();
             for (MascotaSelectorAdapter.Mascota m : mascotasSeleccionadas) {
                 mascotasIds.add(m.getId());
                 mascotasNombres.add(m.getNombre());
+                mascotasFotos.add(m.getFotoUrl());
             }
 
             Map<String, Object> reserva = new HashMap<>();
             reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
             reserva.put("mascotas", mascotasIds);
             reserva.put("mascotas_nombres", mascotasNombres);
+            reserva.put("mascotas_fotos", mascotasFotos);
             reserva.put("numero_mascotas", mascotasSeleccionadas.size());
             reserva.put("id_paseador", db.collection("usuarios").document(paseadorId));
             reserva.put("fecha", new Timestamp(fecha));

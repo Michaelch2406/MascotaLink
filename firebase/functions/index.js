@@ -110,6 +110,31 @@ async function obtenerNombreMascota(duenoId, mascotaId) {
   return "tu mascota";
 }
 
+/**
+ * Formatea nombres de mascotas para notificaciones
+ * Soporta múltiples mascotas con formato legible
+ * @param {Array<string>} mascotasNombres - Array de nombres de mascotas
+ * @returns {string} Nombres formateados ("Max", "Max y Mia", "Max, Mia y 1 más")
+ */
+function formatearNombresMascotas(mascotasNombres) {
+  if (!mascotasNombres || mascotasNombres.length === 0) {
+    return "tus mascotas";
+  }
+
+  if (mascotasNombres.length === 1) {
+    return mascotasNombres[0];  // "Max"
+  }
+
+  if (mascotasNombres.length === 2) {
+    return mascotasNombres.join(" y ");  // "Max y Mia"
+  }
+
+  // 3 o más: "Max, Mia y 1 más"
+  const primeros = mascotasNombres.slice(0, 2).join(", ");
+  const restantes = mascotasNombres.length - 2;
+  return `${primeros} y ${restantes} más`;
+}
+
 async function commitBatchedUpdates(updateEntries, { batchSize = 450 } = {}) {
   if (!updateEntries || updateEntries.length === 0) return 0;
 
@@ -1357,8 +1382,17 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
     const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
     const nombreDueno = duenoDoc.exists ? duenoDoc.data().nombre_display : "Dueño";
 
-    // Fetch pet's name
-    const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+    // Fetch pet names (soporta múltiples mascotas)
+    let nombresMascotas;
+    const mascotasNombres = newReservation.mascotas_nombres;
+    if (mascotasNombres && mascotasNombres.length > 0) {
+      // Nuevo formato: múltiples mascotas
+      nombresMascotas = formatearNombresMascotas(mascotasNombres);
+    } else {
+      // Fallback para reservas antiguas con una sola mascota
+      const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+      nombresMascotas = nombreMascota;
+    }
 
     // Construir mensaje según si es grupo o individual
     let notificationBody;
@@ -1380,15 +1414,15 @@ exports.onNewReservation = onDocumentCreated("reservas/{reservaId}", async (even
       const hora = formatTime(newReservation.hora_inicio);
 
       if (cantidadDias > 1) {
-        notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombreMascota} - ${cantidadDias} días (${fechaInicio} - ${fechaFin}) a las ${hora}.`;
+        notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombresMascotas} - ${cantidadDias} días (${fechaInicio} - ${fechaFin}) a las ${hora}.`;
       } else {
-        notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombreMascota} el ${fechaInicio} a las ${hora}.`;
+        notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombresMascotas} el ${fechaInicio} a las ${hora}.`;
       }
     } else {
       // Reserva individual
       const fecha = formatDate(newReservation.fecha);
       const hora = formatTime(newReservation.hora_inicio);
-      notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombreMascota} el ${fecha} a las ${hora}.`;
+      notificationBody = `${nombreDueno} ha solicitado un paseo para ${nombresMascotas} el ${fecha} a las ${hora}.`;
     }
 
     if (paseadorToken) {
@@ -1611,8 +1645,17 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
     const paseadorDoc = await db.collection("usuarios").doc(idPaseador).get();
     const nombrePaseador = paseadorDoc.exists ? paseadorDoc.data().nombre_display : "Paseador";
 
-    // Fetch pet's name
-    const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+    // Fetch pet names (soporta múltiples mascotas)
+    let nombresMascotas;
+    const mascotasNombres = newValue.mascotas_nombres;
+    if (mascotasNombres && mascotasNombres.length > 0) {
+      // Nuevo formato: múltiples mascotas
+      nombresMascotas = formatearNombresMascotas(mascotasNombres);
+    } else {
+      // Fallback para reservas antiguas con una sola mascota
+      const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+      nombresMascotas = nombreMascota;
+    }
 
     // Construir mensaje según si es grupo o individual
     let notificationBody;
@@ -1633,12 +1676,12 @@ exports.onReservationAccepted = onDocumentUpdated("reservas/{reservaId}", async 
       }
 
       if (cantidadDias > 1) {
-        notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota} - ${cantidadDias} días.`;
+        notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombresMascotas} - ${cantidadDias} días.`;
       } else {
-        notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota}.`;
+        notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombresMascotas}.`;
       }
     } else {
-      notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombreMascota}.`;
+      notificationBody = `El paseador ${nombrePaseador} ha aceptado tu solicitud para ${nombresMascotas}.`;
     }
 
     if (duenoToken) {
@@ -1692,15 +1735,24 @@ exports.onWalkStarted = onDocumentUpdated("reservas/{reservaId}", async (event) 
     const paseadorDoc = await db.collection("usuarios").doc(idPaseador).get();
     const nombrePaseador = paseadorDoc.exists ? paseadorDoc.data().nombre_display : "Paseador";
 
-    // Fetch pet's name
-    const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+    // Fetch pet names (soporta múltiples mascotas)
+    let nombresMascotas;
+    const mascotasNombres = newValue.mascotas_nombres;
+    if (mascotasNombres && mascotasNombres.length > 0) {
+      // Nuevo formato: múltiples mascotas
+      nombresMascotas = formatearNombresMascotas(mascotasNombres);
+    } else {
+      // Fallback para reservas antiguas con una sola mascota
+      const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+      nombresMascotas = nombreMascota;
+    }
 
     if (duenoToken) {
       const message = {
         token: duenoToken,
         notification: {
           title: "¡Tu paseo ha iniciado!",
-          body: `El paseo de ${nombreMascota} con ${nombrePaseador} ha comenzado.`,
+          body: `El paseo de ${nombresMascotas} con ${nombrePaseador} ha comenzado.`,
         },
         android: {
             notification: {
@@ -1746,15 +1798,24 @@ exports.onReservationCancelled = onDocumentUpdated("reservas/{reservaId}", async
     const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
     const nombreDueno = duenoDoc.exists ? duenoDoc.data().nombre_display : "Dueño";
 
-    // Fetch pet's name (same logic as before)
-    const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+    // Fetch pet names (soporta múltiples mascotas)
+    let nombresMascotas;
+    const mascotasNombres = newValue.mascotas_nombres;
+    if (mascotasNombres && mascotasNombres.length > 0) {
+      // Nuevo formato: múltiples mascotas
+      nombresMascotas = formatearNombresMascotas(mascotasNombres);
+    } else {
+      // Fallback para reservas antiguas con una sola mascota
+      const nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+      nombresMascotas = nombreMascota;
+    }
 
     if (paseadorToken) {
       const message = {
         token: paseadorToken,
         notification: {
           title: "Solicitud cancelada",
-          body: `${nombreDueno} ha cancelado la solicitud de paseo para ${nombreMascota}.`,
+          body: `${nombreDueno} ha cancelado la solicitud de paseo para ${nombresMascotas}.`,
         },
         android: {
             notification: {
@@ -2007,7 +2068,17 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
 
       const nombreDueno = dueno ? dueno.nombre_display : "Dueño";
       const nombrePaseador = paseador ? paseador.nombre_display : "Paseador";
-      const nombreMascota = pet ? pet.nombre : "tu mascota";
+
+      // Fetch pet names (soporta múltiples mascotas)
+      let nombresMascotas;
+      const mascotasNombres = reserva.mascotas_nombres;
+      if (mascotasNombres && mascotasNombres.length > 0) {
+        // Nuevo formato: múltiples mascotas
+        nombresMascotas = formatearNombresMascotas(mascotasNombres);
+      } else {
+        // Fallback para reservas antiguas con una sola mascota
+        nombresMascotas = pet ? pet.nombre : "tu mascota";
+      }
 
       // Reminder for Owner
       if (dueno && dueno.fcmToken) {
@@ -2015,7 +2086,7 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
           token: dueno.fcmToken,
           notification: {
             title: "Recordatorio de paseo",
-            body: `Tu paseo con ${nombrePaseador} para ${nombreMascota} es en 1 hora.`,
+            body: `Tu paseo con ${nombrePaseador} para ${nombresMascotas} es en 1 hora.`,
           },
           data: {
             click_action: "OPEN_WALKS_ACTIVITY",
@@ -2030,7 +2101,7 @@ exports.checkWalkReminders = onSchedule("every 60 minutes", async (event) => {
           token: paseador.fcmToken,
           notification: {
             title: "Recordatorio de paseo",
-            body: `Tienes un paseo programado con ${nombreDueno} para ${nombreMascota} en 1 hora.`,
+            body: `Tienes un paseo programado con ${nombreDueno} para ${nombresMascotas} en 1 hora.`,
           },
           data: {
             click_action: "OPEN_REQUESTS_ACTIVITY",
@@ -2290,11 +2361,18 @@ exports.sendReminder15MinBefore = onSchedule("every 1 minutes", async (event) =>
         if (duenoDoc.exists) {
           const duenoToken = duenoDoc.data().fcmToken;
           if (duenoToken) {
+            // Obtener nombres de mascotas
+            let nombresMascotas = "tus mascotas";
+            const mascotasNombres = reserva.mascotas_nombres;
+            if (mascotasNombres && mascotasNombres.length > 0) {
+              nombresMascotas = formatearNombresMascotas(mascotasNombres);
+            }
+
             let duenoNotificationBody;
             if (cantidadDias > 1) {
-              duenoNotificationBody = `El paseo de tu mascota comienza en 15 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
+              duenoNotificationBody = `El paseo de ${nombresMascotas} comienza en 15 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
             } else {
-              duenoNotificationBody = `El paseo de tu mascota comienza en 15 minutos (${horaFormateada}).`;
+              duenoNotificationBody = `El paseo de ${nombresMascotas} comienza en 15 minutos (${horaFormateada}).`;
             }
 
             const messageDueno = {
@@ -2497,11 +2575,18 @@ exports.sendReminder5MinBefore = onSchedule("every 5 minutes", async (event) => 
         if (duenoDoc.exists) {
           const duenoToken = duenoDoc.data().fcmToken;
           if (duenoToken) {
+            // Obtener nombres de mascotas
+            let nombresMascotas = "tus mascotas";
+            const mascotasNombres = reserva.mascotas_nombres;
+            if (mascotasNombres && mascotasNombres.length > 0) {
+              nombresMascotas = formatearNombresMascotas(mascotasNombres);
+            }
+
             let duenoNotificationBody;
             if (cantidadDias > 1) {
-              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
+              duenoNotificationBody = `El paseo de ${nombresMascotas} comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
             } else {
-              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}).`;
+              duenoNotificationBody = `El paseo de ${nombresMascotas} comienza en 5 minutos (${horaFormateada}).`;
             }
 
             const messageDueno = {
@@ -2746,18 +2831,28 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
 
       const idDueno = getIdValue(reserva.id_dueno);
       const idMascota = reserva.id_mascota;
-      let nombreMascota = "la mascota";
 
-      if (idMascota && idDueno) {
-        try {
-          const mascotaDoc = await db.collection("duenos").doc(idDueno)
-            .collection("mascotas").doc(idMascota).get();
-          if (mascotaDoc.exists) {
-            nombreMascota = mascotaDoc.data().nombre || nombreMascota;
+      // Obtener nombres de mascotas (soporta múltiples)
+      let nombresMascotas;
+      const mascotasNombres = reserva.mascotas_nombres;
+      if (mascotasNombres && mascotasNombres.length > 0) {
+        // Nuevo formato: múltiples mascotas
+        nombresMascotas = formatearNombresMascotas(mascotasNombres);
+      } else {
+        // Fallback para reservas antiguas con una sola mascota
+        let nombreMascota = "la mascota";
+        if (idMascota && idDueno) {
+          try {
+            const mascotaDoc = await db.collection("duenos").doc(idDueno)
+              .collection("mascotas").doc(idMascota).get();
+            if (mascotaDoc.exists) {
+              nombreMascota = mascotaDoc.data().nombre || nombreMascota;
+            }
+          } catch (err) {
+            console.error("Error fetching mascota:", err);
           }
-        } catch (err) {
-          console.error("Error fetching mascota:", err);
         }
+        nombresMascotas = nombreMascota;
       }
 
       // Formatear hora
@@ -2768,7 +2863,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
         token: fcmToken,
         notification: {
           title: "Ya puedes iniciar el paseo",
-          body: `Tu paseo con ${nombreMascota} esta programado para las ${horaFormateada}. Ya puedes iniciar cuando llegues.`
+          body: `Tu paseo con ${nombresMascotas} esta programado para las ${horaFormateada}. Ya puedes iniciar cuando llegues.`
         },
         data: {
           tipo: "ventana_inicio",
@@ -2802,7 +2897,7 @@ exports.notifyWalkReadyWindow = onSchedule("every 1 minutes", async (event) => {
               token: duenoToken,
               notification: {
                 title: "El paseo está por comenzar",
-                body: `El paseo de ${nombreMascota} está programado para las ${horaFormateada}. El paseador ya puede iniciarlo.`
+                body: `El paseo de ${nombresMascotas} está programado para las ${horaFormateada}. El paseador ya puede iniciarlo.`
               },
               data: {
                 tipo: "ventana_inicio_dueno",
@@ -2926,16 +3021,26 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
             const idDueno = getIdValue(reserva.id_dueno);
             const idMascota = getIdValue(reserva.id_mascota);
             let nombreDueno = "el dueño";
-            let nombreMascota = "su mascota";
+
+            // Obtener nombres de mascotas (soporta múltiples)
+            let nombresMascotas;
+            const mascotasNombres = reserva.mascotas_nombres;
+            if (mascotasNombres && mascotasNombres.length > 0) {
+              // Nuevo formato: múltiples mascotas
+              nombresMascotas = formatearNombresMascotas(mascotasNombres);
+            } else {
+              // Fallback para reservas antiguas con una sola mascota
+              let nombreMascota = "sus mascotas";
+              if (idDueno && idMascota) {
+                nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
+              }
+              nombresMascotas = nombreMascota;
+            }
 
             if (idDueno) {
               const duenoDoc = await db.collection("usuarios").doc(idDueno).get();
               if (duenoDoc.exists) {
                 nombreDueno = duenoDoc.data().nombre_display || "el dueño";
-              }
-
-              if (idMascota) {
-                nombreMascota = await obtenerNombreMascota(idDueno, idMascota);
               }
             }
 
@@ -2944,7 +3049,7 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
               token: fcmToken,
               notification: {
                 title: `Paseo Pendiente de ${nombreDueno}`,
-                body: `El paseo con ${nombreDueno} a su mascota ${nombreMascota}, lleva ${delay.minutes} minutos de retraso.`
+                body: `El paseo con ${nombreDueno} para ${nombresMascotas}, lleva ${delay.minutes} minutos de retraso.`
               },
               data: {
                 tipo: "paseo_retrasado",
@@ -2961,14 +3066,14 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
 	                }
 	              }
 	            };
-    
+
 	            entries.push({
 	              docId: doc.id,
 	              ref: doc.ref,
 	              update: { [delay.field]: true },
 	              message: messagePaseador
 	            });
-    
+
             // Notificar también al dueno para todos los retrasos
 	            if (delay.minutes === 10 || delay.minutes === 20 || delay.minutes === 30) {
               if (idDueno) {
@@ -2983,7 +3088,7 @@ exports.notifyDelayedWalks = onSchedule("every 5 minutes", async (event) => {
                       token: duenoToken,
                       notification: {
                         title: `Paseo Pendiente de ${nombrePaseador}`,
-                        body: `El paseo de tu mascota ${nombreMascota} con el paseador lleva ${delay.minutes} minutos de retraso.`
+                        body: `El paseo de ${nombresMascotas} con el paseador lleva ${delay.minutes} minutos de retraso.`
                       },
                       data: {
                         tipo: "paseo_retrasado_dueno",
@@ -3553,11 +3658,18 @@ exports.debugNotifyReminder5Min = onRequest(async (req, res) => {
         if (duenoDoc.exists) {
           const duenoToken = duenoDoc.data().fcmToken;
           if (duenoToken) {
+            // Obtener nombres de mascotas
+            let nombresMascotas = "tus mascotas";
+            const mascotasNombres = reserva.mascotas_nombres;
+            if (mascotasNombres && mascotasNombres.length > 0) {
+              nombresMascotas = formatearNombresMascotas(mascotasNombres);
+            }
+
             let duenoNotificationBody;
             if (cantidadDias > 1) {
-              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
+              duenoNotificationBody = `El paseo de ${nombresMascotas} comienza en 5 minutos (${horaFormateada}). Primer día de ${cantidadDias} días.`;
             } else {
-              duenoNotificationBody = `El paseo de tu mascota comienza en 5 minutos (${horaFormateada}).`;
+              duenoNotificationBody = `El paseo de ${nombresMascotas} comienza en 5 minutos (${horaFormateada}).`;
             }
 
             const messageDueno = {

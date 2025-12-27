@@ -76,16 +76,32 @@
             app:layout_constraintTop_toBottomOf="@id/ll_fecha_hora" />
 
         <!-- Content: Avatar & Info -->
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/iv_foto_perfil_paseo"
-            android:layout_width="56dp"
+        <!-- FrameLayout contenedor para ambos tipos de avatar -->
+        <FrameLayout
+            android:id="@+id/avatar_container"
+            android:layout_width="wrap_content"
             android:layout_height="56dp"
+            android:minWidth="56dp"
             android:layout_marginTop="16dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/ic_user_placeholder"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/divider_top"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+            app:layout_constraintTop_toBottomOf="@id/divider_top">
+
+            <!-- Single avatar (for paseador or single pet) -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/iv_foto_perfil_paseo"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_user_placeholder"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+
+            <!-- Overlapping avatars (for multiple pets) -->
+            <com.mjc.mascotalink.views.OverlappingAvatarsView
+                android:id="@+id/overlapping_avatars"
+                android:layout_width="wrap_content"
+                android:layout_height="56dp"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <TextView
             android:id="@+id/tv_nombre_principal"
@@ -97,9 +113,11 @@
             android:textColor="@color/black"
             android:textSize="16sp"
             android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintEnd_toStartOf="@+id/chip_estado_paseo"
-            app:layout_constraintStart_toEndOf="@+id/iv_foto_perfil_paseo"
-            app:layout_constraintTop_toTopOf="@+id/iv_foto_perfil_paseo" />
+            app:layout_constraintStart_toEndOf="@+id/avatar_container"
+            app:layout_constraintTop_toTopOf="@+id/avatar_container" />
 
         <TextView
             android:id="@+id/tv_nombre_secundario"
@@ -110,6 +128,8 @@
             android:text="Rol: Nombre Secundario"
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintEnd_toStartOf="@+id/ll_duracion_info"
             app:layout_constraintStart_toStartOf="@+id/tv_nombre_principal"
             app:layout_constraintTop_toBottomOf="@+id/tv_nombre_principal" />
@@ -139,6 +159,8 @@
             android:layout_marginEnd="8dp"
             android:textColor="@color/text_secondary"
             android:textSize="11sp"
+            android:maxLines="2"
+            android:ellipsize="end"
             android:visibility="gone"
             tools:text="Comienza en 2 horas"
             tools:visibility="visible"
@@ -146,7 +168,7 @@
             app:layout_constraintStart_toStartOf="@+id/tv_nombre_secundario"
             app:layout_constraintTop_toBottomOf="@+id/tv_nombre_secundario" />
 
-        <!-- Duration Info - Movido a la derecha -->
+        <!-- Duration Info - Alineado al bottom del contenedor de avatar -->
         <LinearLayout
             android:id="@+id/ll_duracion_info"
             android:layout_width="wrap_content"
@@ -154,8 +176,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/chip_estado_paseo"
-            app:layout_constraintBottom_toBottomOf="@+id/iv_foto_perfil_paseo">
+            app:layout_constraintBottom_toBottomOf="@+id/avatar_container">
 
             <ImageView
                 android:layout_width="14dp"
@@ -173,6 +194,14 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Barrier para asegurar que los botones estén debajo de todo el contenido -->
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/barrier_content_bottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="avatar_container,tv_info_estado,ll_duracion_info" />
+
         <!-- Actions Area -->
         <LinearLayout
             android:id="@+id/layout_botones_accion"
@@ -182,7 +211,7 @@
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/iv_foto_perfil_paseo">
+            app:layout_constraintTop_toBottomOf="@+id/barrier_content_bottom">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_accion_1"

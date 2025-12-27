@@ -20,6 +20,7 @@ public class Paseo implements Serializable {
     // Campos para múltiples mascotas (nuevo formato)
     private List<String> mascotas;
     @PropertyName("mascotas_nombres") private List<String> mascotasNombres;
+    @PropertyName("mascotas_fotos") private List<String> mascotasFotos;
     @PropertyName("numero_mascotas") private Integer numeroMascotas;
 
     private transient DocumentReference id_dueno;
@@ -94,6 +95,8 @@ public class Paseo implements Serializable {
     public void setMascotas(List<String> mascotas) { this.mascotas = mascotas; }
     public List<String> getMascotasNombres() { return mascotasNombres; }
     public void setMascotasNombres(List<String> mascotasNombres) { this.mascotasNombres = mascotasNombres; }
+    public List<String> getMascotasFotos() { return mascotasFotos; }
+    public void setMascotasFotos(List<String> mascotasFotos) { this.mascotasFotos = mascotasFotos; }
     public Integer getNumeroMascotas() { return numeroMascotas; }
     public void setNumeroMascotas(Integer numeroMascotas) { this.numeroMascotas = numeroMascotas; }
 

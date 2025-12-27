@@ -2,6 +2,7 @@ package com.mjc.mascotalink;
 
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,12 +17,14 @@ import java.util.List;
 
 public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdapter.ViewHolder> {
 
+    private static final String TAG = "MascotaPerfilAdapter";
     private final Context context;
     private final List<Pet> petList;
 
     public MascotaPerfilAdapter(Context context, List<Pet> petList) {
         this.context = context;
         this.petList = petList;
+        Log.d(TAG, "Constructor: petList.size() = " + petList.size());
     }
 
     @NonNull
@@ -34,6 +37,8 @@ public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdap
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Pet pet = petList.get(position);
+        Log.d(TAG, "onBindViewHolder: Posición " + position + " - " + pet.getName());
+
         holder.tvNombre.setText(pet.getName());
         holder.tvRaza.setText(pet.getBreed()); // Assuming Pet class has getBreed()
 
@@ -55,6 +60,7 @@ public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdap
 
     @Override
     public int getItemCount() {
+        Log.d(TAG, "getItemCount: retornando " + petList.size());
         return petList.size();
     }
 

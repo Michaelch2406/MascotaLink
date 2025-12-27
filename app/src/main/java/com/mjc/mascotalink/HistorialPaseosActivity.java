@@ -222,6 +222,8 @@ public class HistorialPaseosActivity extends AppCompatActivity {
                 // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
                 @SuppressWarnings("unchecked")
                 List<String> mascotasNombres = (List<String>) doc.get("mascotas_nombres");
+                @SuppressWarnings("unchecked")
+                List<String> mascotasFotos = (List<String>) doc.get("mascotas_fotos");
 
                 // Asegurar ID Mascota (formato antiguo)
                 if (paseo.getIdMascota() == null && doc.contains("id_mascota")) {
@@ -232,6 +234,11 @@ public class HistorialPaseosActivity extends AppCompatActivity {
                 if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
                     String nombresConcatenados = String.join(", ", mascotasNombres);
                     paseo.setMascotaNombre(nombresConcatenados);
+                }
+
+                // Cargar fotos de mascotas si están disponibles
+                if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
+                    paseo.setMascotasFotos(mascotasFotos);
                 }
 
                 paseosTemp.add(paseo);

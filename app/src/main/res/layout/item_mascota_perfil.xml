@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="16dp"
@@ -17,24 +17,28 @@
         android:scaleType="centerCrop"/>
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:orientation="vertical"
-        android:paddingStart="12dp">
+        android:paddingStart="12dp"
+        android:maxWidth="200dp">
         <TextView
             android:id="@+id/tv_mascota_nombre"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textStyle="bold"
             android:textColor="#111827"
-            android:text="Max"/>
+            android:text="Max"
+            android:maxLines="1"
+            android:ellipsize="end"/>
         <TextView
             android:id="@+id/tv_mascota_raza"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#6B7280"
-            android:text="Golden Retriever"/>
+            android:text="Golden Retriever"
+            android:maxLines="1"
+            android:ellipsize="end"/>
     </LinearLayout>
 
 </LinearLayout>

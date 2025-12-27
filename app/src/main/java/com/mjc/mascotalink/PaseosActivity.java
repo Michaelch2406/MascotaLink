@@ -489,8 +489,15 @@ public class PaseosActivity extends AppCompatActivity {
                 // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
                 @SuppressWarnings("unchecked")
                 List<String> mascotasNombres = (List<String>) doc.get("mascotas_nombres");
+                @SuppressWarnings("unchecked")
+                List<String> mascotasFotos = (List<String>) doc.get("mascotas_fotos");
                 String mascotaId = doc.getString("id_mascota");
                 paseo.setIdMascota(mascotaId);
+
+                // Cargar fotos de mascotas si están disponibles
+                if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
+                    paseo.setMascotasFotos(mascotasFotos);
+                }
 
                 // Verificar si el paseo CONFIRMADO debe transicionar a LISTO_PARA_INICIAR
                 verificarYTransicionarPaseo(doc.getId(), paseo.getEstado(), paseo.getHora_inicio());
@@ -581,6 +588,23 @@ public class PaseosActivity extends AppCompatActivity {
                     // Firebase Function se encarga de CONFIRMADO -> LISTO_PARA_INICIAR
                     // El paseador debe iniciar manualmente usando el boton "Comenzar Paseo"
 
+                    // Cargar datos de múltiples mascotas del documento
+                    @SuppressWarnings("unchecked")
+                    List<String> mascotasNombres = (List<String>) doc.get("mascotas_nombres");
+                    @SuppressWarnings("unchecked")
+                    List<String> mascotasFotos = (List<String>) doc.get("mascotas_fotos");
+
+                    // Si hay múltiples mascotas, concatenar nombres
+                    if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                        String nombresConcatenados = String.join(", ", mascotasNombres);
+                        paseo.setMascotaNombre(nombresConcatenados);
+                    }
+
+                    // Cargar fotos de mascotas si están disponibles
+                    if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
+                        paseo.setMascotasFotos(mascotasFotos);
+                    }
+
                     DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(resultIndex++);
                     DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(resultIndex++);
                     DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(resultIndex++);
@@ -592,17 +616,20 @@ public class PaseosActivity extends AppCompatActivity {
                     if (duenoDoc != null && duenoDoc.exists()) {
                         paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
                     }
-                    // Solo actualizar nombre de mascota si es formato antiguo (una sola)
-                    // Si es formato nuevo, ya tiene los nombres concatenados de la carga inmediata
+
+                    // Solo actualizar nombre de mascota si es formato antiguo (una sola mascota)
+                    // Y NO se han cargado nombres de múltiples mascotas arriba
                     if (mascotaDoc != null && mascotaDoc.exists()) {
-                        // Verificar si ya tiene nombres de múltiples mascotas
-                        String nombreActual = paseo.getMascotaNombre();
-                        if (nombreActual == null || nombreActual.equals("...")) {
+                        // Verificar si NO tiene múltiples mascotas (formato antiguo)
+                        if (mascotasNombres == null || mascotasNombres.isEmpty()) {
                             paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
                             paseo.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
                         }
-                    } else if (paseo.getMascotaNombre() == null || paseo.getMascotaNombre().equals("...")) {
-                        paseo.setMascotaNombre("Mascota no encontrada");
+                    } else if (paseo.getMascotaNombre() == null || paseo.getMascotaNombre().isEmpty()) {
+                        // Solo mostrar error si NO es formato nuevo (múltiples mascotas)
+                        if (mascotasNombres == null || mascotasNombres.isEmpty()) {
+                            paseo.setMascotaNombre("Mascota no encontrada");
+                        }
                     }
                     nuevosPaseosConDetalles.add(paseo);
                 }
