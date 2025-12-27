@@ -63,8 +63,13 @@ public class SolicitudesAdapter extends RecyclerView.Adapter<SolicitudesAdapter.
         }
 
         // Nombre de mascota (usamos nombre, no raza) y dueño
-        holder.tvNombreMascota.setText(solicitud.getMascotaNombre() != null ? solicitud.getMascotaNombre() : "Mascota");
-        holder.tvNombreDueno.setText(solicitud.getDuenoNombre() != null ? solicitud.getDuenoNombre() : "Usuario desconocido");
+        String nombreMascota = solicitud.getMascotaNombre() != null ? solicitud.getMascotaNombre() : "Mascota";
+        android.util.Log.d("SolicitudesAdapter", "Nombre mascota: '" + nombreMascota + "' (length: " + nombreMascota.length() + ")");
+        holder.tvNombreMascota.setText(nombreMascota);
+
+        String nombreDueno = solicitud.getDuenoNombre() != null ? solicitud.getDuenoNombre() : "Usuario desconocido";
+        android.util.Log.d("SolicitudesAdapter", "Nombre dueño: '" + nombreDueno + "' (length: " + nombreDueno.length() + ")");
+        holder.tvNombreDueno.setText(nombreDueno);
 
         // Fecha y hora en campos separados
         holder.tvFecha.setText(solicitud.getFechaCreacion() != null ? formatearFecha(solicitud.getFechaCreacion()) : "Fecha no disponible");

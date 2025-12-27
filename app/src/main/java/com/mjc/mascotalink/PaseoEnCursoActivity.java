@@ -137,6 +137,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private TextView tvEstado;
     private TextView tvUbicacionEstado;
     private com.google.android.material.imageview.ShapeableImageView ivFotoMascota;
+    private com.mjc.mascotalink.views.OverlappingAvatarsView overlappingAvatars;
     private TextInputEditText etNotas;
     private RecyclerView rvFotos;
     private com.google.android.material.floatingactionbutton.FloatingActionButton btnContactar;
@@ -286,6 +287,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         tvUbicacionEstado = findViewById(R.id.tv_ubicacion_estado);
         tvDistancia = findViewById(R.id.tv_distancia); // Initialize
         ivFotoMascota = findViewById(R.id.iv_foto_mascota);
+        overlappingAvatars = findViewById(R.id.overlapping_avatars);
         etNotas = findViewById(R.id.et_notas);
         rvFotos = findViewById(R.id.rv_fotos);
         btnContactar = findViewById(R.id.btn_contactar);
@@ -473,15 +475,37 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         // Cargar info de la mascota - soportar ambos formatos
         @SuppressWarnings("unchecked")
         List<String> mascotasNombres = (List<String>) snapshot.get("mascotas_nombres");
+        @SuppressWarnings("unchecked")
+        List<String> mascotasFotos = (List<String>) snapshot.get("mascotas_fotos");
         String mascotaId = snapshot.getString("id_mascota");
 
         if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
-            // Formato nuevo: múltiples mascotas con nombres precargados
+            // Formato nuevo: múltiples mascotas
             nombreMascota = String.join(", ", mascotasNombres);
             tvNombreMascota.setText(nombreMascota);
-            ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+
+            // Mostrar avatares superpuestos si hay fotos
+            if (mascotasFotos != null && mascotasFotos.size() > 1) {
+                overlappingAvatars.setVisibility(View.VISIBLE);
+                ivFotoMascota.setVisibility(View.GONE);
+                overlappingAvatars.setImageUrls(mascotasFotos);
+            } else if (mascotasFotos != null && mascotasFotos.size() == 1) {
+                overlappingAvatars.setVisibility(View.GONE);
+                ivFotoMascota.setVisibility(View.VISIBLE);
+                Glide.with(this)
+                        .load(MyApplication.getFixedUrl(mascotasFotos.get(0)))
+                        .placeholder(R.drawable.ic_pet_placeholder)
+                        .error(R.drawable.ic_pet_placeholder)
+                        .into(ivFotoMascota);
+            } else {
+                overlappingAvatars.setVisibility(View.GONE);
+                ivFotoMascota.setVisibility(View.VISIBLE);
+                ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+            }
         } else if (mascotaId != null && !mascotaId.isEmpty()) {
             // Formato antiguo: una sola mascota
+            overlappingAvatars.setVisibility(View.GONE);
+            ivFotoMascota.setVisibility(View.VISIBLE);
             mascotaIdActual = mascotaId;
             cargarDatosMascota(mascotaId);
         }
@@ -837,18 +861,40 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         // Cargar info de la mascota - soportar ambos formatos
         @SuppressWarnings("unchecked")
         List<String> mascotasNombresListener = (List<String>) snapshot.get("mascotas_nombres");
+        @SuppressWarnings("unchecked")
+        List<String> mascotasFotosListener = (List<String>) snapshot.get("mascotas_fotos");
         String mascotaId = snapshot.getString("id_mascota");
 
         if (mascotasNombresListener != null && !mascotasNombresListener.isEmpty()) {
-            // Formato nuevo: múltiples mascotas con nombres precargados
+            // Formato nuevo: múltiples mascotas
             String nuevosNombres = String.join(", ", mascotasNombresListener);
             if (nombreMascota == null || !nuevosNombres.equals(nombreMascota)) {
                 nombreMascota = nuevosNombres;
                 tvNombreMascota.setText(nombreMascota);
-                ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+
+                // Mostrar avatares superpuestos si hay fotos
+                if (mascotasFotosListener != null && mascotasFotosListener.size() > 1) {
+                    overlappingAvatars.setVisibility(View.VISIBLE);
+                    ivFotoMascota.setVisibility(View.GONE);
+                    overlappingAvatars.setImageUrls(mascotasFotosListener);
+                } else if (mascotasFotosListener != null && mascotasFotosListener.size() == 1) {
+                    overlappingAvatars.setVisibility(View.GONE);
+                    ivFotoMascota.setVisibility(View.VISIBLE);
+                    Glide.with(this)
+                            .load(MyApplication.getFixedUrl(mascotasFotosListener.get(0)))
+                            .placeholder(R.drawable.ic_pet_placeholder)
+                            .error(R.drawable.ic_pet_placeholder)
+                            .into(ivFotoMascota);
+                } else {
+                    overlappingAvatars.setVisibility(View.GONE);
+                    ivFotoMascota.setVisibility(View.VISIBLE);
+                    ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+                }
             }
         } else if (mascotaId != null && !mascotaId.isEmpty() && !mascotaId.equals(mascotaIdActual)) {
             // Formato antiguo: una sola mascota
+            overlappingAvatars.setVisibility(View.GONE);
+            ivFotoMascota.setVisibility(View.VISIBLE);
             mascotaIdActual = mascotaId;
             cargarDatosMascota(mascotaId);
         }

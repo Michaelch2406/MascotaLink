@@ -110,12 +110,14 @@
                 android:background="#E5E7EB"
                 android:layout_marginBottom="24dp" />
 
-            <!-- Sección B: Información de la mascota -->
+            <!-- Sección B: Información de la mascota (Una sola mascota) -->
             <LinearLayout
+                android:id="@+id/layout_mascota_individual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="24dp"
+                android:visibility="visible">
 
                 <!-- Mascota -->
                 <LinearLayout
@@ -253,6 +255,34 @@
 
             </LinearLayout>
 
+            <!-- Sección B: Múltiples mascotas (RecyclerView) -->
+            <LinearLayout
+                android:id="@+id/layout_mascotas_multiples"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="24dp"
+                android:visibility="gone">
+
+                <!-- Título -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mascotas en esta reserva:"
+                    android:textColor="#000000"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- RecyclerView para las cards de mascotas -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_mascotas"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"/>
+
+            </LinearLayout>
+
             <!-- Divisor -->
             <View
                 android:layout_width="match_parent"
@@ -262,6 +292,7 @@
 
             <!-- Sección C: Notas del dueño -->
             <LinearLayout
+                android:id="@+id/layout_notas_reserva"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"

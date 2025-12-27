@@ -230,6 +230,8 @@ public class SolicitudesActivity extends AppCompatActivity {
                 List<String> mascotasFotos = (List<String>) doc.get("mascotas_fotos");
                 String idMascota = doc.getString("id_mascota");
 
+                Log.d(TAG, "📋 Reserva " + doc.getId() + ": mascotasNombres=" + mascotasNombres + ", mascotasFotos=" + mascotasFotos);
+
                 solicitudesTemporales.add(solicitud);
 
                 // Preparar tareas para obtener datos relacionados
@@ -283,6 +285,7 @@ public class SolicitudesActivity extends AppCompatActivity {
                     if (solicitud.getMascotasNombres() != null && !solicitud.getMascotasNombres().isEmpty()) {
                         // Formato nuevo: múltiples mascotas
                         String nombresConcatenados = String.join(", ", solicitud.getMascotasNombres());
+                        Log.d(TAG, "✅ Concatenando nombres: " + solicitud.getMascotasNombres() + " → '" + nombresConcatenados + "'");
                         solicitud.setMascotaNombre(nombresConcatenados);
                         // Para UI: si son múltiples, no mostramos foto individual
                     } else if (mascotaDoc != null && mascotaDoc.exists()) {

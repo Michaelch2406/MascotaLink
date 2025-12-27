@@ -67,14 +67,29 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <!-- Foto Mascota -->
-                        <com.google.android.material.imageview.ShapeableImageView
-                            android:id="@+id/iv_foto_mascota"
-                            android:layout_width="56dp"
+                        <!-- Contenedor de fotos de mascotas -->
+                        <FrameLayout
+                            android:id="@+id/avatar_container"
+                            android:layout_width="wrap_content"
                             android:layout_height="56dp"
-                            android:scaleType="centerCrop"
-                            app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
-                            tools:src="@drawable/ic_pet_placeholder" />
+                            android:minWidth="56dp">
+
+                            <!-- Foto Mascota Individual -->
+                            <com.google.android.material.imageview.ShapeableImageView
+                                android:id="@+id/iv_foto_mascota"
+                                android:layout_width="56dp"
+                                android:layout_height="56dp"
+                                android:scaleType="centerCrop"
+                                app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
+                                tools:src="@drawable/ic_pet_placeholder" />
+
+                            <!-- Avatares superpuestos para múltiples mascotas -->
+                            <com.mjc.mascotalink.views.OverlappingAvatarsView
+                                android:id="@+id/overlapping_avatars"
+                                android:layout_width="wrap_content"
+                                android:layout_height="56dp"
+                                android:visibility="gone" />
+                        </FrameLayout>
 
                         <!-- Datos Mascota -->
                         <LinearLayout

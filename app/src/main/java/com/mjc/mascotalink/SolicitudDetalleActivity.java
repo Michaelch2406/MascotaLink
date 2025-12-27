@@ -7,10 +7,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -30,6 +33,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -61,6 +65,13 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private BottomNavigationView bottomNav;
     private String bottomNavRole = "PASEADOR";
     private int bottomNavSelectedItem = R.id.menu_search;
+
+    // Views para múltiples mascotas
+    private LinearLayout layoutMascotaIndividual;
+    private LinearLayout layoutMascotasMultiples;
+    private RecyclerView rvMascotas;
+    private MascotaDetalleAdapter mascotasAdapter;
+    private List<MascotaDetalleAdapter.MascotaDetalle> mascotasDetalleList;
 
     // Datos
     private String idDueno;
@@ -127,6 +138,17 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         btnAceptar = findViewById(R.id.btn_aceptar);
         btnCalendar = findViewById(R.id.btn_calendar);
         bottomNav = findViewById(R.id.bottom_nav);
+
+        // Inicializar views para múltiples mascotas
+        layoutMascotaIndividual = findViewById(R.id.layout_mascota_individual);
+        layoutMascotasMultiples = findViewById(R.id.layout_mascotas_multiples);
+        rvMascotas = findViewById(R.id.rv_mascotas);
+
+        // Configurar RecyclerView
+        mascotasDetalleList = new ArrayList<>();
+        mascotasAdapter = new MascotaDetalleAdapter(this, mascotasDetalleList);
+        rvMascotas.setLayoutManager(new LinearLayoutManager(this));
+        rvMascotas.setAdapter(mascotasAdapter);
 
         // Botón atrás
         ivBack.setOnClickListener(v -> finish());
@@ -336,13 +358,9 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     // Cargar datos de la mascota
                     if (idDueno != null) {
                         if (mascotasIds != null && !mascotasIds.isEmpty()) {
-                            // Formato nuevo: mostrar nombres directamente si están disponibles
-                            if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
-                                mostrarDatosMultiplesMascotas(mascotasNombres);
-                            } else {
-                                // Si no hay nombres precargados, cargar desde Firestore
-                                cargarDatosMultiplesMascotas(idDueno, mascotasIds);
-                            }
+                            // Formato nuevo: cargar datos completos desde Firestore
+                            Log.d(TAG, "Cargando múltiples mascotas. IDs: " + mascotasIds.size());
+                            cargarDatosMultiplesMascotas(idDueno, mascotasIds);
                         } else if (idMascota != null && !idMascota.isEmpty()) {
                             // Formato antiguo: una sola mascota
                             cargarDatosMascota(idDueno, idMascota);
@@ -432,13 +450,9 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         // Cargar datos de la mascota
         if (idDueno != null) {
             if (mascotasIds != null && !mascotasIds.isEmpty()) {
-                // Formato nuevo: mostrar nombres directamente si están disponibles
-                if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
-                    mostrarDatosMultiplesMascotas(mascotasNombres);
-                } else {
-                    // Si no hay nombres precargados, cargar desde Firestore
-                    cargarDatosMultiplesMascotas(idDueno, mascotasIds);
-                }
+                // Formato nuevo: cargar datos completos desde Firestore
+                Log.d(TAG, "Cargando múltiples mascotas. IDs: " + mascotasIds.size());
+                cargarDatosMultiplesMascotas(idDueno, mascotasIds);
             } else if (idMascota != null && !idMascota.isEmpty()) {
                 // Formato antiguo: una sola mascota
                 cargarDatosMascota(idDueno, idMascota);
@@ -529,13 +543,9 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     // Cargar datos de la mascota
                     if (idDueno != null) {
                         if (mascotasIds != null && !mascotasIds.isEmpty()) {
-                            // Formato nuevo: mostrar nombres directamente si están disponibles
-                            if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
-                                mostrarDatosMultiplesMascotas(mascotasNombres);
-                            } else {
-                                // Si no hay nombres precargados, cargar desde Firestore
-                                cargarDatosMultiplesMascotas(idDueno, mascotasIds);
-                            }
+                            // Formato nuevo: cargar datos completos desde Firestore
+                            Log.d(TAG, "Cargando múltiples mascotas. IDs: " + mascotasIds.size());
+                            cargarDatosMultiplesMascotas(idDueno, mascotasIds);
                         } else if (idMascota != null && !idMascota.isEmpty()) {
                             // Formato antiguo: una sola mascota
                             cargarDatosMascota(idDueno, idMascota);
@@ -672,44 +682,44 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     }
 
     /**
-     * Muestra los nombres de múltiples mascotas concatenados
-     */
-    private void mostrarDatosMultiplesMascotas(List<String> nombres) {
-        if (nombres == null || nombres.isEmpty()) {
-            tvMascotaNombre.setText("Mascotas");
-            tvMascotaRaza.setText("Múltiples mascotas");
-            tvMascotaEdad.setText("Ver detalles individuales");
-            tvMascotaPeso.setText("Ver detalles individuales");
-            return;
-        }
-
-        String nombresConcatenados = String.join(", ", nombres);
-        tvMascotaNombre.setText(nombresConcatenados);
-        tvMascotaRaza.setText("Múltiples mascotas (" + nombres.size() + ")");
-        tvMascotaEdad.setText("Ver detalles individuales");
-        tvMascotaPeso.setText("Ver detalles individuales");
-    }
-
-    /**
-     * Carga datos de múltiples mascotas desde Firestore y los muestra
+     * Carga datos completos de múltiples mascotas desde Firestore y los muestra en cards
      */
     private void cargarDatosMultiplesMascotas(String duenoId, List<String> mascotasIds) {
+        Log.d(TAG, "cargarDatosMultiplesMascotas - duenoId: " + duenoId + ", mascotasIds: " + (mascotasIds != null ? mascotasIds.size() : "null"));
+
         if (mascotasIds == null || mascotasIds.isEmpty()) {
-            mostrarDatosMultiplesMascotas(null);
+            Log.d(TAG, "mascotasIds es null o vacío");
+            layoutMascotaIndividual.setVisibility(View.VISIBLE);
+            layoutMascotasMultiples.setVisibility(View.GONE);
             return;
         }
 
         // Si solo hay una mascota, usar el método tradicional
         if (mascotasIds.size() == 1) {
+            Log.d(TAG, "Solo hay 1 mascota, usando layout individual");
+            layoutMascotaIndividual.setVisibility(View.VISIBLE);
+            layoutMascotasMultiples.setVisibility(View.GONE);
             cargarDatosMascota(duenoId, mascotasIds.get(0));
             return;
         }
 
-        // Cargar nombres de todas las mascotas
-        List<String> nombres = new ArrayList<>();
+        // Mostrar layout de múltiples mascotas
+        Log.d(TAG, "Hay " + mascotasIds.size() + " mascotas, mostrando layout múltiple");
+        layoutMascotaIndividual.setVisibility(View.GONE);
+        layoutMascotasMultiples.setVisibility(View.VISIBLE);
+
+        // Ocultar el campo de notas de la reserva (cada mascota tiene sus propias notas en las cards)
+        View notasSection = findViewById(R.id.layout_notas_reserva);
+        if (notasSection != null) {
+            notasSection.setVisibility(View.GONE);
+        }
+
+        // Cargar datos completos de todas las mascotas
+        List<MascotaDetalleAdapter.MascotaDetalle> mascotasTemp = new ArrayList<>();
         final int[] contador = {0}; // Para rastrear cuántas se han cargado
 
         for (String mascotaId : mascotasIds) {
+            Log.d(TAG, "Cargando mascota con ID: " + mascotaId);
             db.collection("duenos").document(duenoId)
                     .collection("mascotas").document(mascotaId)
                     .get()
@@ -717,14 +727,39 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         contador[0]++;
                         if (mascotaDoc.exists()) {
                             String nombre = mascotaDoc.getString("nombre");
-                            if (nombre != null && !nombre.isEmpty()) {
-                                nombres.add(nombre);
+                            String raza = mascotaDoc.getString("raza");
+                            Double peso = mascotaDoc.getDouble("peso");
+
+                            // Calcular edad en años desde fecha_nacimiento
+                            Integer edadAnios = null;
+                            com.google.firebase.Timestamp fechaNacimiento = mascotaDoc.getTimestamp("fecha_nacimiento");
+                            if (fechaNacimiento != null) {
+                                long edadMeses = calcularEdadEnMeses(fechaNacimiento.toDate());
+                                edadAnios = (int) (edadMeses / 12);
                             }
+
+                            // Obtener notas desde el mapa anidado instrucciones
+                            String notas = null;
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> instrucciones = (Map<String, Object>) mascotaDoc.get("instrucciones");
+                            if (instrucciones != null) {
+                                notas = (String) instrucciones.get("notas_adicionales");
+                            }
+
+                            Log.d(TAG, "Mascota cargada: " + nombre + ", raza: " + raza + ", edad: " + edadAnios + " años, notas: " + (notas != null ? notas.substring(0, Math.min(notas.length(), 20)) : "null"));
+
+                            MascotaDetalleAdapter.MascotaDetalle detalle = new MascotaDetalleAdapter.MascotaDetalle(
+                                    nombre, raza, edadAnios, peso, notas
+                            );
+                            mascotasTemp.add(detalle);
+                        } else {
+                            Log.e(TAG, "Documento de mascota no existe: " + mascotaId);
                         }
 
-                        // Cuando se hayan cargado todas, mostrar
+                        // Cuando se hayan cargado todas, actualizar adapter
                         if (contador[0] == mascotasIds.size()) {
-                            mostrarDatosMultiplesMascotas(nombres);
+                            Log.d(TAG, "Todas las mascotas cargadas (" + mascotasTemp.size() + "), actualizando adapter");
+                            mascotasAdapter.updateList(mascotasTemp);
                         }
                     })
                     .addOnFailureListener(e -> {
@@ -732,7 +767,8 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         contador[0]++;
                         // Aunque falle, seguir con el proceso
                         if (contador[0] == mascotasIds.size()) {
-                            mostrarDatosMultiplesMascotas(nombres);
+                            Log.d(TAG, "Todas las mascotas procesadas (con errores), actualizando adapter con " + mascotasTemp.size() + " items");
+                            mascotasAdapter.updateList(mascotasTemp);
                         }
                     });
         }
@@ -990,5 +1026,22 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
      */
     private void finishWithDelay() {
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::finish, 1000);
+    }
+
+    /**
+     * Calcula la edad en meses a partir de una fecha de nacimiento
+     */
+    private long calcularEdadEnMeses(Date fechaNacimiento) {
+        if (fechaNacimiento == null) return 0;
+
+        Calendar birthDate = Calendar.getInstance();
+        birthDate.setTime(fechaNacimiento);
+
+        Calendar today = Calendar.getInstance();
+
+        int years = today.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR);
+        int months = today.get(Calendar.MONTH) - birthDate.get(Calendar.MONTH);
+
+        return years * 12L + months;
     }
 }

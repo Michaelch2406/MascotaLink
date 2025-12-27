@@ -38,6 +38,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
+                android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -54,7 +55,7 @@
 
                 <TextView
                     android:id="@+id/tv_nombre_dueno"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
@@ -67,6 +68,8 @@
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxWidth="90dp"
                 android:gravity="end"
                 android:orientation="vertical">
 
@@ -84,16 +87,14 @@
             android:id="@+id/chip_estado"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="32dp"
             android:text="Pendiente"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textColor="@color/white"
             app:chipBackgroundColor="@color/blue_primary"
-            app:chipMinHeight="32dp"
-            app:textStartPadding="8dp"
-            app:textEndPadding="8dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+            app:chipMinHeight="28dp"
+            app:textStartPadding="4dp"
+            app:textEndPadding="4dp"
             android:clickable="false"/>
             </LinearLayout>
         </LinearLayout>

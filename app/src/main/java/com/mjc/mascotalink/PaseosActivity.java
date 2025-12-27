@@ -508,8 +508,10 @@ public class PaseosActivity extends AppCompatActivity {
                 // Si hay nombres precargados de múltiples mascotas, usarlos directamente
                 if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
                     String nombresConcatenados = String.join(", ", mascotasNombres);
+                    Log.d(TAG, "🔵 PaseosActivity - Concatenando: " + mascotasNombres + " → '" + nombresConcatenados + "'");
                     paseo.setMascotaNombre(nombresConcatenados);
                 } else if (paseo.getMascotaNombre() == null) {
+                    Log.d(TAG, "⚠️ PaseosActivity - Poniendo '...' porque mascotaNombre es null");
                     paseo.setMascotaNombre("...");
                 }
 
@@ -597,6 +599,7 @@ public class PaseosActivity extends AppCompatActivity {
                     // Si hay múltiples mascotas, concatenar nombres
                     if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
                         String nombresConcatenados = String.join(", ", mascotasNombres);
+                        Log.d(TAG, "🟢 PaseosActivity Fase2 - Concatenando: " + mascotasNombres + " → '" + nombresConcatenados + "'");
                         paseo.setMascotaNombre(nombresConcatenados);
                     }
 

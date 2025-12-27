@@ -347,7 +347,8 @@ public class ReservaActivity extends AppCompatActivity {
 
             rvMascotas.animate().alpha(1f).setDuration(300).start();
 
-            if (mascotaList.size() == 1) {
+            // Autoseleccionar la primera mascota siempre que haya al menos una
+            if (!mascotaList.isEmpty()) {
                 mascotasSeleccionadas = new ArrayList<>();
                 mascotasSeleccionadas.add(mascotaList.get(0));
                 tvMascotaNombre.setText(mascotaList.get(0).getNombre());
@@ -423,7 +424,8 @@ public class ReservaActivity extends AppCompatActivity {
                     rvMascotas.setVisibility(View.VISIBLE);
                     setupMascotasRecyclerView();
 
-                    if (mascotaList.size() == 1) {
+                    // Autoseleccionar la primera mascota siempre que haya al menos una
+                    if (!mascotaList.isEmpty()) {
                         mascotasSeleccionadas = new ArrayList<>();
                         mascotasSeleccionadas.add(mascotaList.get(0));
                         tvMascotaNombre.setText(mascotaList.get(0).getNombre());
@@ -1605,7 +1607,11 @@ public class ReservaActivity extends AppCompatActivity {
             diasCalculo = 30; // 30 días consecutivos
         }
 
-        double costoEstimado = tarifaPorHora * horas * diasCalculo;
+        // CRÍTICO: Incluir número de mascotas en el cálculo del costo del diálogo
+        int numeroMascotas = mascotasSeleccionadas != null ? mascotasSeleccionadas.size() : 1;
+        if (numeroMascotas == 0) numeroMascotas = 1;
+
+        double costoEstimado = tarifaPorHora * horas * diasCalculo * numeroMascotas;
 
         // Construir mensaje
         StringBuilder mensaje = new StringBuilder();
