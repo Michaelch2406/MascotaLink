@@ -485,6 +485,10 @@ public class PaseosActivity extends AppCompatActivity {
                 Paseo paseo = doc.toObject(Paseo.class);
                 if (paseo == null) continue;
                 paseo.setReservaId(doc.getId());
+
+                // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+                @SuppressWarnings("unchecked")
+                List<String> mascotasNombres = (List<String>) doc.get("mascotas_nombres");
                 String mascotaId = doc.getString("id_mascota");
                 paseo.setIdMascota(mascotaId);
 
@@ -493,7 +497,14 @@ public class PaseosActivity extends AppCompatActivity {
 
                 // Placeholders visuales mientras carga el detalle
                 if (paseo.getPaseadorNombre() == null) paseo.setPaseadorNombre("Cargando...");
-                if (paseo.getMascotaNombre() == null) paseo.setMascotaNombre("...");
+
+                // Si hay nombres precargados de múltiples mascotas, usarlos directamente
+                if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                    String nombresConcatenados = String.join(", ", mascotasNombres);
+                    paseo.setMascotaNombre(nombresConcatenados);
+                } else if (paseo.getMascotaNombre() == null) {
+                    paseo.setMascotaNombre("...");
+                }
 
                 paseosTemporales.add(paseo);
 
@@ -504,10 +515,17 @@ public class PaseosActivity extends AppCompatActivity {
 
                 tareas.add(paseadorRef != null ? paseadorRef.get() : Tasks.forResult(null));
                 tareas.add(duenoRef != null ? duenoRef.get() : Tasks.forResult(null));
-                if (duenoRef != null && currentMascotaId != null && !currentMascotaId.isEmpty()) {
-                    tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas")
-                            .document(currentMascotaId).get());
+
+                // Solo cargar mascota si es formato antiguo (una sola mascota)
+                if (mascotasNombres == null || mascotasNombres.isEmpty()) {
+                    if (duenoRef != null && currentMascotaId != null && !currentMascotaId.isEmpty()) {
+                        tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas")
+                                .document(currentMascotaId).get());
+                    } else {
+                        tareas.add(Tasks.forResult(null));
+                    }
                 } else {
+                    // Formato nuevo: ya tenemos los nombres, no necesitamos cargar
                     tareas.add(Tasks.forResult(null));
                 }
             }
@@ -574,10 +592,16 @@ public class PaseosActivity extends AppCompatActivity {
                     if (duenoDoc != null && duenoDoc.exists()) {
                         paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
                     }
+                    // Solo actualizar nombre de mascota si es formato antiguo (una sola)
+                    // Si es formato nuevo, ya tiene los nombres concatenados de la carga inmediata
                     if (mascotaDoc != null && mascotaDoc.exists()) {
-                        paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
-                        paseo.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
-                    } else {
+                        // Verificar si ya tiene nombres de múltiples mascotas
+                        String nombreActual = paseo.getMascotaNombre();
+                        if (nombreActual == null || nombreActual.equals("...")) {
+                            paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
+                            paseo.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                        }
+                    } else if (paseo.getMascotaNombre() == null || paseo.getMascotaNombre().equals("...")) {
                         paseo.setMascotaNombre("Mascota no encontrada");
                     }
                     nuevosPaseosConDetalles.add(paseo);

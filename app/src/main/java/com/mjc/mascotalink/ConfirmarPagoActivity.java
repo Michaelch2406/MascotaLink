@@ -28,6 +28,7 @@ import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -379,9 +380,18 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                     });
         }
 
-        // Cargar nombre de la mascota
+        // Cargar nombre de la mascota - soportar ambos formatos
+        @SuppressWarnings("unchecked")
+        List<String> mascotasNombres = (List<String>) reservaSnapshot.get("mascotas_nombres");
         String idMascota = reservaSnapshot.getString("id_mascota");
-        if (idMascota != null && idDueno != null) {
+
+        if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+            // Formato nuevo: múltiples mascotas con nombres precargados
+            mascotaNombre = String.join(", ", mascotasNombres);
+            mostrarDatos();
+            actualizarEstadoUI();
+        } else if (idMascota != null && idDueno != null) {
+            // Formato antiguo: una sola mascota, cargar nombre desde Firestore
             // Intentar primero en la colección del dueño
             db.collection("duenos").document(idDueno)
                     .collection("mascotas").document(idMascota)
@@ -413,7 +423,7 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         mostrarDatos();
                     });
         } else {
-            // Si no hay ID de mascota, solo mostrar con datos actuales
+            // Si no hay datos de mascota, solo mostrar con datos actuales
             mostrarDatos();
             actualizarEstadoUI();
         }

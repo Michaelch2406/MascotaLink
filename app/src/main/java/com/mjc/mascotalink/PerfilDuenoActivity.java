@@ -537,9 +537,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void cargarMascotas() {
         if (mascotasListener != null) mascotasListener.remove();
         mascotasListener = db.collection("duenos").document(duenoId).collection("mascotas")
+                .whereEqualTo("activo", true)  // Solo mostrar mascotas activas
                 .addSnapshotListener((value, e) -> {
                     if (e != null) return;
-                    
+
                     petList.clear();
                     if (value != null && !value.isEmpty()) {
                         tvMascotasRegistradas.setText(value.size() + " Mascotas");

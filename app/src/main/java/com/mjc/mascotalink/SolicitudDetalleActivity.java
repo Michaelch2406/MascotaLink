@@ -25,8 +25,10 @@ import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.utils.ReservaEstadoValidator;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -62,7 +64,9 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
 
     // Datos
     private String idDueno;
-    private String idMascota; // Make idMascota a field
+    private String idMascota; // Backward compatibility - single pet
+    private List<String> mascotasIds; // New format - multiple pets
+    private List<String> mascotasNombres; // New format - multiple pet names
     private Date fecha;
     private Date horaInicio;
     private int duracionMinutos;
@@ -180,21 +184,39 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                 Toast.makeText(this, "Error: ID de reserva no disponible.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            
+
             // Re-fetch the document to get the most accurate data just before launching the intent
             db.collection("reservas").document(idReserva).get().addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {
                     DocumentReference duenoRef = documentSnapshot.getDocumentReference("id_dueno");
+
+                    // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+                    @SuppressWarnings("unchecked")
+                    List<String> mascotasFromDoc = (List<String>) documentSnapshot.get("mascotas");
                     String mascotaIdFromDoc = documentSnapshot.getString("id_mascota");
 
-                    if (duenoRef != null && mascotaIdFromDoc != null && !mascotaIdFromDoc.isEmpty()) {
+                    // Si tiene múltiples mascotas, no permitir ver perfil individual
+                    if (mascotasFromDoc != null && mascotasFromDoc.size() > 1) {
+                        Toast.makeText(this, "Esta reserva incluye múltiples mascotas. No se puede ver perfil individual.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    // Determinar el ID de la mascota a mostrar
+                    String finalMascotaId = null;
+                    if (mascotasFromDoc != null && !mascotasFromDoc.isEmpty()) {
+                        finalMascotaId = mascotasFromDoc.get(0); // Primera mascota del array
+                    } else if (mascotaIdFromDoc != null && !mascotaIdFromDoc.isEmpty()) {
+                        finalMascotaId = mascotaIdFromDoc; // Formato antiguo
+                    }
+
+                    if (duenoRef != null && finalMascotaId != null && !finalMascotaId.isEmpty()) {
                         String duenoIdFromDoc = duenoRef.getId();
-                        
-                        Log.d(TAG, "Lanzando PerfilMascotaActivity con dueno_id: " + duenoIdFromDoc + " y mascota_id: " + mascotaIdFromDoc);
-                        
+
+                        Log.d(TAG, "Lanzando PerfilMascotaActivity con dueno_id: " + duenoIdFromDoc + " y mascota_id: " + finalMascotaId);
+
                         Intent intent = new Intent(SolicitudDetalleActivity.this, PerfilMascotaActivity.class);
                         intent.putExtra("dueno_id", duenoIdFromDoc);
-                        intent.putExtra("mascota_id", mascotaIdFromDoc);
+                        intent.putExtra("mascota_id", finalMascotaId);
                         startActivity(intent);
                     } else {
                         Toast.makeText(this, "No se pudo abrir el perfil de la mascota. Datos incompletos en la reserva.", Toast.LENGTH_SHORT).show();
@@ -272,7 +294,25 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     Long duracion = reservaDoc.getLong("duracion_minutos");
                     duracionMinutos = duracion != null ? duracion.intValue() : 60; // Default 60 min
 
-                    idMascota = reservaDoc.getString("id_mascota");
+                    // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+                    @SuppressWarnings("unchecked")
+                    List<String> mascotasIdsFromDoc = (List<String>) reservaDoc.get("mascotas");
+                    @SuppressWarnings("unchecked")
+                    List<String> mascotasNombresFromDoc = (List<String>) reservaDoc.get("mascotas_nombres");
+                    String idMascotaFromDoc = reservaDoc.getString("id_mascota");
+
+                    if (mascotasIdsFromDoc != null && !mascotasIdsFromDoc.isEmpty()) {
+                        // Formato nuevo: múltiples mascotas
+                        mascotasIds = mascotasIdsFromDoc;
+                        mascotasNombres = mascotasNombresFromDoc;
+                        idMascota = null; // Clear old format
+                    } else if (idMascotaFromDoc != null && !idMascotaFromDoc.isEmpty()) {
+                        // Formato antiguo: una sola mascota
+                        idMascota = idMascotaFromDoc;
+                        mascotasIds = null;
+                        mascotasNombres = null;
+                    }
+
                     String notas = reservaDoc.getString("notas");
                     estadoReserva = reservaDoc.getString("estado");
                     actualizarBotonesPorEstado();
@@ -294,8 +334,19 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     }
 
                     // Cargar datos de la mascota
-                    if (idDueno != null && idMascota != null && !idMascota.isEmpty()) {
-                        cargarDatosMascota(idDueno, idMascota);
+                    if (idDueno != null) {
+                        if (mascotasIds != null && !mascotasIds.isEmpty()) {
+                            // Formato nuevo: mostrar nombres directamente si están disponibles
+                            if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                                mostrarDatosMultiplesMascotas(mascotasNombres);
+                            } else {
+                                // Si no hay nombres precargados, cargar desde Firestore
+                                cargarDatosMultiplesMascotas(idDueno, mascotasIds);
+                            }
+                        } else if (idMascota != null && !idMascota.isEmpty()) {
+                            // Formato antiguo: una sola mascota
+                            cargarDatosMascota(idDueno, idMascota);
+                        }
                     }
 
                 })
@@ -338,7 +389,25 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         Long duracion = reservaDoc.getLong("duracion_minutos");
         duracionMinutos = duracion != null ? duracion.intValue() : 60;
 
-        idMascota = reservaDoc.getString("id_mascota");
+        // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+        @SuppressWarnings("unchecked")
+        List<String> mascotasIdsFromDoc = (List<String>) reservaDoc.get("mascotas");
+        @SuppressWarnings("unchecked")
+        List<String> mascotasNombresFromDoc = (List<String>) reservaDoc.get("mascotas_nombres");
+        String idMascotaFromDoc = reservaDoc.getString("id_mascota");
+
+        if (mascotasIdsFromDoc != null && !mascotasIdsFromDoc.isEmpty()) {
+            // Formato nuevo: múltiples mascotas
+            mascotasIds = mascotasIdsFromDoc;
+            mascotasNombres = mascotasNombresFromDoc;
+            idMascota = null;
+        } else if (idMascotaFromDoc != null && !idMascotaFromDoc.isEmpty()) {
+            // Formato antiguo: una sola mascota
+            idMascota = idMascotaFromDoc;
+            mascotasIds = null;
+            mascotasNombres = null;
+        }
+
         String notas = reservaDoc.getString("notas");
         estadoReserva = reservaDoc.getString("estado");
         actualizarBotonesPorEstado();
@@ -361,8 +430,19 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         }
 
         // Cargar datos de la mascota
-        if (idDueno != null && idMascota != null && !idMascota.isEmpty()) {
-            cargarDatosMascota(idDueno, idMascota);
+        if (idDueno != null) {
+            if (mascotasIds != null && !mascotasIds.isEmpty()) {
+                // Formato nuevo: mostrar nombres directamente si están disponibles
+                if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                    mostrarDatosMultiplesMascotas(mascotasNombres);
+                } else {
+                    // Si no hay nombres precargados, cargar desde Firestore
+                    cargarDatosMultiplesMascotas(idDueno, mascotasIds);
+                }
+            } else if (idMascota != null && !idMascota.isEmpty()) {
+                // Formato antiguo: una sola mascota
+                cargarDatosMascota(idDueno, idMascota);
+            }
         }
     }
 
@@ -407,7 +487,25 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     Long duracion = primerReserva.getLong("duracion_minutos");
                     duracionMinutos = duracion != null ? duracion.intValue() : 60;
 
-                    idMascota = primerReserva.getString("id_mascota");
+                    // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+                    @SuppressWarnings("unchecked")
+                    List<String> mascotasIdsFromDoc = (List<String>) primerReserva.get("mascotas");
+                    @SuppressWarnings("unchecked")
+                    List<String> mascotasNombresFromDoc = (List<String>) primerReserva.get("mascotas_nombres");
+                    String idMascotaFromDoc = primerReserva.getString("id_mascota");
+
+                    if (mascotasIdsFromDoc != null && !mascotasIdsFromDoc.isEmpty()) {
+                        // Formato nuevo: múltiples mascotas
+                        mascotasIds = mascotasIdsFromDoc;
+                        mascotasNombres = mascotasNombresFromDoc;
+                        idMascota = null;
+                    } else if (idMascotaFromDoc != null && !idMascotaFromDoc.isEmpty()) {
+                        // Formato antiguo: una sola mascota
+                        idMascota = idMascotaFromDoc;
+                        mascotasIds = null;
+                        mascotasNombres = null;
+                    }
+
                     String notas = primerReserva.getString("notas");
                     estadoReserva = primerReserva.getString("estado");
                     actualizarBotonesPorEstado();
@@ -429,8 +527,19 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     }
 
                     // Cargar datos de la mascota
-                    if (idDueno != null && idMascota != null && !idMascota.isEmpty()) {
-                        cargarDatosMascota(idDueno, idMascota);
+                    if (idDueno != null) {
+                        if (mascotasIds != null && !mascotasIds.isEmpty()) {
+                            // Formato nuevo: mostrar nombres directamente si están disponibles
+                            if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                                mostrarDatosMultiplesMascotas(mascotasNombres);
+                            } else {
+                                // Si no hay nombres precargados, cargar desde Firestore
+                                cargarDatosMultiplesMascotas(idDueno, mascotasIds);
+                            }
+                        } else if (idMascota != null && !idMascota.isEmpty()) {
+                            // Formato antiguo: una sola mascota
+                            cargarDatosMascota(idDueno, idMascota);
+                        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -560,6 +669,73 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     tvMascotaEdad.setText("Error al cargar");
                     tvMascotaPeso.setText("Error al cargar");
                 });
+    }
+
+    /**
+     * Muestra los nombres de múltiples mascotas concatenados
+     */
+    private void mostrarDatosMultiplesMascotas(List<String> nombres) {
+        if (nombres == null || nombres.isEmpty()) {
+            tvMascotaNombre.setText("Mascotas");
+            tvMascotaRaza.setText("Múltiples mascotas");
+            tvMascotaEdad.setText("Ver detalles individuales");
+            tvMascotaPeso.setText("Ver detalles individuales");
+            return;
+        }
+
+        String nombresConcatenados = String.join(", ", nombres);
+        tvMascotaNombre.setText(nombresConcatenados);
+        tvMascotaRaza.setText("Múltiples mascotas (" + nombres.size() + ")");
+        tvMascotaEdad.setText("Ver detalles individuales");
+        tvMascotaPeso.setText("Ver detalles individuales");
+    }
+
+    /**
+     * Carga datos de múltiples mascotas desde Firestore y los muestra
+     */
+    private void cargarDatosMultiplesMascotas(String duenoId, List<String> mascotasIds) {
+        if (mascotasIds == null || mascotasIds.isEmpty()) {
+            mostrarDatosMultiplesMascotas(null);
+            return;
+        }
+
+        // Si solo hay una mascota, usar el método tradicional
+        if (mascotasIds.size() == 1) {
+            cargarDatosMascota(duenoId, mascotasIds.get(0));
+            return;
+        }
+
+        // Cargar nombres de todas las mascotas
+        List<String> nombres = new ArrayList<>();
+        final int[] contador = {0}; // Para rastrear cuántas se han cargado
+
+        for (String mascotaId : mascotasIds) {
+            db.collection("duenos").document(duenoId)
+                    .collection("mascotas").document(mascotaId)
+                    .get()
+                    .addOnSuccessListener(mascotaDoc -> {
+                        contador[0]++;
+                        if (mascotaDoc.exists()) {
+                            String nombre = mascotaDoc.getString("nombre");
+                            if (nombre != null && !nombre.isEmpty()) {
+                                nombres.add(nombre);
+                            }
+                        }
+
+                        // Cuando se hayan cargado todas, mostrar
+                        if (contador[0] == mascotasIds.size()) {
+                            mostrarDatosMultiplesMascotas(nombres);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al cargar mascota: " + mascotaId, e);
+                        contador[0]++;
+                        // Aunque falle, seguir con el proceso
+                        if (contador[0] == mascotasIds.size()) {
+                            mostrarDatosMultiplesMascotas(nombres);
+                        }
+                    });
+        }
     }
 
     private String formatearFechaHorario(Date fecha, Date horaInicio, int duracionMinutos) {

@@ -16,6 +16,12 @@ public class Paseo implements Serializable {
     private String reservaId;
     private String paseadorNombre, paseadorFoto, duenoNombre, mascotaNombre, mascotaFoto;
     @PropertyName("id_mascota") private String idMascota;
+
+    // Campos para múltiples mascotas (nuevo formato)
+    private List<String> mascotas;
+    @PropertyName("mascotas_nombres") private List<String> mascotasNombres;
+    @PropertyName("numero_mascotas") private Integer numeroMascotas;
+
     private transient DocumentReference id_dueno;
     private transient DocumentReference id_paseador;
     private Date fecha;
@@ -83,6 +89,14 @@ public class Paseo implements Serializable {
     public void setMascotaNombre(String n) { this.mascotaNombre = n; }
     public String getMascotaFoto() { return mascotaFoto; }
     public void setMascotaFoto(String f) { this.mascotaFoto = f; }
+
+    public List<String> getMascotas() { return mascotas; }
+    public void setMascotas(List<String> mascotas) { this.mascotas = mascotas; }
+    public List<String> getMascotasNombres() { return mascotasNombres; }
+    public void setMascotasNombres(List<String> mascotasNombres) { this.mascotasNombres = mascotasNombres; }
+    public Integer getNumeroMascotas() { return numeroMascotas; }
+    public void setNumeroMascotas(Integer numeroMascotas) { this.numeroMascotas = numeroMascotas; }
+
     public String getRazonCancelacion() { return razonCancelacion; }
     public void setRazonCancelacion(String razonCancelacion) { this.razonCancelacion = razonCancelacion; }
     public String getTimeZone() { return timeZone; }

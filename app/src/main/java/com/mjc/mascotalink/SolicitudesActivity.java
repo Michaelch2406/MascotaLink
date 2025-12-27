@@ -222,6 +222,9 @@ public class SolicitudesActivity extends AppCompatActivity {
                 solicitud.setReservaId(doc.getId());
 
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
+
+                // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+                List<String> mascotasNombres = (List<String>) doc.get("mascotas_nombres");
                 String idMascota = doc.getString("id_mascota");
 
                 solicitudesTemporales.add(solicitud);
@@ -229,7 +232,14 @@ public class SolicitudesActivity extends AppCompatActivity {
                 // Preparar tareas para obtener datos relacionados
                 if (duenoRef != null) {
                     tareas.add(duenoRef.get());
-                    if (idMascota != null && !idMascota.isEmpty()) {
+
+                    // Si tiene el formato nuevo con nombres, no necesitamos query adicional
+                    if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                        solicitud.setMascotasNombres(mascotasNombres);
+                        solicitud.setNumeroMascotas(mascotasNombres.size());
+                        tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
+                    } else if (idMascota != null && !idMascota.isEmpty()) {
+                        // Formato antiguo: query para obtener nombre de mascota
                         tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas").document(idMascota).get());
                     } else {
                         tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
@@ -263,7 +273,13 @@ public class SolicitudesActivity extends AppCompatActivity {
                     }
 
                     // Setear datos de la mascota en el objeto Paseo
-                    if (mascotaDoc != null && mascotaDoc.exists()) {
+                    if (solicitud.getMascotasNombres() != null && !solicitud.getMascotasNombres().isEmpty()) {
+                        // Formato nuevo: múltiples mascotas
+                        String nombresConcatenados = String.join(", ", solicitud.getMascotasNombres());
+                        solicitud.setMascotaNombre(nombresConcatenados);
+                        // Para UI: si son múltiples, no mostramos foto individual
+                    } else if (mascotaDoc != null && mascotaDoc.exists()) {
+                        // Formato antiguo: una sola mascota
                         solicitud.setMascotaNombre(mascotaDoc.getString("nombre"));
                         solicitud.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
                     } else {

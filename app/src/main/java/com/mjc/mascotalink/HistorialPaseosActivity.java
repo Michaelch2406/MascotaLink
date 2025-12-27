@@ -218,25 +218,41 @@ public class HistorialPaseosActivity extends AppCompatActivity {
                 Paseo paseo = doc.toObject(Paseo.class);
                 if (paseo == null) continue;
                 paseo.setReservaId(doc.getId());
-                
-                // Asegurar ID Mascota
+
+                // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+                @SuppressWarnings("unchecked")
+                List<String> mascotasNombres = (List<String>) doc.get("mascotas_nombres");
+
+                // Asegurar ID Mascota (formato antiguo)
                 if (paseo.getIdMascota() == null && doc.contains("id_mascota")) {
                      paseo.setIdMascota(doc.getString("id_mascota"));
                 }
-                
+
+                // Si hay nombres precargados de múltiples mascotas, usarlos directamente
+                if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                    String nombresConcatenados = String.join(", ", mascotasNombres);
+                    paseo.setMascotaNombre(nombresConcatenados);
+                }
+
                 paseosTemp.add(paseo);
 
                 // Referencias para obtener nombres/fotos
                 DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
-                
+
                 tareas.add(paseadorRef != null ? paseadorRef.get() : Tasks.forResult(null));
                 tareas.add(duenoRef != null ? duenoRef.get() : Tasks.forResult(null));
-                
-                if (duenoRef != null && paseo.getIdMascota() != null) {
-                    tareas.add(db.collection("duenos").document(duenoRef.getId())
-                            .collection("mascotas").document(paseo.getIdMascota()).get());
+
+                // Solo cargar mascota si es formato antiguo (una sola mascota)
+                if (mascotasNombres == null || mascotasNombres.isEmpty()) {
+                    if (duenoRef != null && paseo.getIdMascota() != null) {
+                        tareas.add(db.collection("duenos").document(duenoRef.getId())
+                                .collection("mascotas").document(paseo.getIdMascota()).get());
+                    } else {
+                        tareas.add(Tasks.forResult(null));
+                    }
                 } else {
+                    // Formato nuevo: ya tenemos los nombres, no necesitamos cargar
                     tareas.add(Tasks.forResult(null));
                 }
             }
@@ -264,9 +280,14 @@ public class HistorialPaseosActivity extends AppCompatActivity {
                         if (duenoDoc != null && duenoDoc.exists()) {
                             p.setDuenoNombre(duenoDoc.getString("nombre_display"));
                         }
+                        // Solo actualizar nombre de mascota si es formato antiguo (una sola)
+                        // Si es formato nuevo, ya tiene los nombres concatenados
                         if (mascotaDoc != null && mascotaDoc.exists()) {
-                            p.setMascotaNombre(mascotaDoc.getString("nombre"));
-                            p.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                            // Verificar si ya tiene nombres de múltiples mascotas
+                            if (p.getMascotaNombre() == null || p.getMascotaNombre().isEmpty()) {
+                                p.setMascotaNombre(mascotaDoc.getString("nombre"));
+                                p.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                            }
                         }
                     }
                     

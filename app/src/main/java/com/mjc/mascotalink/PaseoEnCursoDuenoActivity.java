@@ -1237,8 +1237,17 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             }
         }
 
+        // Cargar info de la mascota - soportar ambos formatos
+        @SuppressWarnings("unchecked")
+        List<String> mascotasNombres = (List<String>) snapshot.get("mascotas_nombres");
         String mascotaId = snapshot.getString("id_mascota");
-        if (mascotaId != null) {
+
+        if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+            // Formato nuevo: múltiples mascotas con nombres precargados
+            String nombresConcatenados = String.join(", ", mascotasNombres);
+            tvInfoMascota.setText(nombresConcatenados + " (" + mascotasNombres.size() + " mascotas)");
+        } else if (mascotaId != null) {
+            // Formato antiguo: una sola mascota
             cargarDatosMascota(mascotaId);
         }
     }

@@ -470,9 +470,18 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             tvEstado.setText("Podras iniciar en " + minutosRestantes + " minutos");
         }
 
-        // Cargar info de la mascota
+        // Cargar info de la mascota - soportar ambos formatos
+        @SuppressWarnings("unchecked")
+        List<String> mascotasNombres = (List<String>) snapshot.get("mascotas_nombres");
         String mascotaId = snapshot.getString("id_mascota");
-        if (mascotaId != null && !mascotaId.isEmpty()) {
+
+        if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+            // Formato nuevo: múltiples mascotas con nombres precargados
+            nombreMascota = String.join(", ", mascotasNombres);
+            tvNombreMascota.setText(nombreMascota);
+            ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+        } else if (mascotaId != null && !mascotaId.isEmpty()) {
+            // Formato antiguo: una sola mascota
             mascotaIdActual = mascotaId;
             cargarDatosMascota(mascotaId);
         }
@@ -825,8 +834,21 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             }
         }
 
+        // Cargar info de la mascota - soportar ambos formatos
+        @SuppressWarnings("unchecked")
+        List<String> mascotasNombresListener = (List<String>) snapshot.get("mascotas_nombres");
         String mascotaId = snapshot.getString("id_mascota");
-        if (mascotaId != null && !mascotaId.isEmpty() && !mascotaId.equals(mascotaIdActual)) {
+
+        if (mascotasNombresListener != null && !mascotasNombresListener.isEmpty()) {
+            // Formato nuevo: múltiples mascotas con nombres precargados
+            String nuevosNombres = String.join(", ", mascotasNombresListener);
+            if (nombreMascota == null || !nuevosNombres.equals(nombreMascota)) {
+                nombreMascota = nuevosNombres;
+                tvNombreMascota.setText(nombreMascota);
+                ivFotoMascota.setImageResource(R.drawable.ic_pet_placeholder);
+            }
+        } else if (mascotaId != null && !mascotaId.isEmpty() && !mascotaId.equals(mascotaIdActual)) {
+            // Formato antiguo: una sola mascota
             mascotaIdActual = mascotaId;
             cargarDatosMascota(mascotaId);
         }

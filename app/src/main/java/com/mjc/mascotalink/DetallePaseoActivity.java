@@ -287,8 +287,15 @@ public class DetallePaseoActivity extends AppCompatActivity {
         tareas.add(paseadorRef != null ? paseadorRef.get() : com.google.android.gms.tasks.Tasks.forResult(null));
         tareas.add(duenoRef != null ? duenoRef.get() : com.google.android.gms.tasks.Tasks.forResult(null));
 
-        // Cargar mascota si hay ID
-        if (duenoRef != null && paseo.getIdMascota() != null) {
+        // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
+        @SuppressWarnings("unchecked")
+        java.util.List<String> mascotasNombres = (java.util.List<String>) reservaDoc.get("mascotas_nombres");
+
+        if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+            // Formato nuevo: múltiples mascotas con nombres precargados
+            tareas.add(com.google.android.gms.tasks.Tasks.forResult(null)); // No necesitamos cargar desde Firestore
+        } else if (duenoRef != null && paseo.getIdMascota() != null) {
+            // Formato antiguo: cargar una sola mascota desde Firestore
             tareas.add(FirebaseFirestore.getInstance()
                     .collection("duenos").document(duenoRef.getId())
                     .collection("mascotas").document(paseo.getIdMascota())
@@ -316,10 +323,19 @@ public class DetallePaseoActivity extends AppCompatActivity {
                 }
 
                 // Resultado 2: Mascota
-                DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(2);
-                if (mascotaDoc != null && mascotaDoc.exists()) {
-                    paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
-                    paseo.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                // Verificar si hay múltiples mascotas (formato nuevo)
+                if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                    // Formato nuevo: usar nombres precargados
+                    String nombresConcatenados = String.join(", ", mascotasNombres);
+                    paseo.setMascotaNombre(nombresConcatenados);
+                    // No hay foto única para múltiples mascotas
+                } else {
+                    // Formato antiguo: una sola mascota
+                    DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(2);
+                    if (mascotaDoc != null && mascotaDoc.exists()) {
+                        paseo.setMascotaNombre(mascotaDoc.getString("nombre"));
+                        paseo.setMascotaFoto(mascotaDoc.getString("foto_principal_url"));
+                    }
                 }
 
                 // Ahora sí llenar la UI con todos los datos
