@@ -87,7 +87,7 @@ public class ReservaActivity extends AppCompatActivity {
     // Variables de estado
     private String paseadorId, paseadorNombre;
     private double tarifaPorHora = 10.6;
-    private MascotaSelectorAdapter.Mascota mascotaSeleccionada;
+    private List<MascotaSelectorAdapter.Mascota> mascotasSeleccionadas = new ArrayList<>();
     private Date fechaSeleccionada;
     private HorarioSelectorAdapter.Horario horarioSeleccionado;
     private int duracionMinutos = 0;
@@ -348,9 +348,9 @@ public class ReservaActivity extends AppCompatActivity {
             rvMascotas.animate().alpha(1f).setDuration(300).start();
 
             if (mascotaList.size() == 1) {
-                mascotaSeleccionada = mascotaList.get(0);
-                tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
-                cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
+                mascotasSeleccionadas = new ArrayList<>();
+                mascotasSeleccionadas.add(mascotaList.get(0));
+                tvMascotaNombre.setText(mascotaList.get(0).getNombre());
                 if (mascotaAdapter != null) {
                     mascotaAdapter.setSelectedPosition(0);
                 }
@@ -424,9 +424,9 @@ public class ReservaActivity extends AppCompatActivity {
                     setupMascotasRecyclerView();
 
                     if (mascotaList.size() == 1) {
-                        mascotaSeleccionada = mascotaList.get(0);
-                        tvMascotaNombre.setText(mascotaSeleccionada.getNombre());
-                        cargarNotasAdicionalesMascota(mascotaSeleccionada.getId());
+                        mascotasSeleccionadas = new ArrayList<>();
+                        mascotasSeleccionadas.add(mascotaList.get(0));
+                        tvMascotaNombre.setText(mascotaList.get(0).getNombre());
                         if (mascotaAdapter != null) {
                             mascotaAdapter.setSelectedPosition(0);
                         }
@@ -452,11 +452,21 @@ public class ReservaActivity extends AppCompatActivity {
 
         mascotaAdapter = new MascotaSelectorAdapter(this, mascotaList, new MascotaSelectorAdapter.OnMascotaSelectedListener() {
             @Override
-            public void onMascotaSelected(MascotaSelectorAdapter.Mascota mascota, int position) {
-                mascotaSeleccionada = mascota;
-                tvMascotaNombre.setText(mascota.getNombre());
-                cargarNotasAdicionalesMascota(mascota.getId());
+            public void onMascotasSelected(List<MascotaSelectorAdapter.Mascota> mascotas) {
+                mascotasSeleccionadas = mascotas;
+
+                if (mascotas.isEmpty()) {
+                    tvMascotaNombre.setText("Ninguna");
+                } else {
+                    List<String> nombres = new ArrayList<>();
+                    for (MascotaSelectorAdapter.Mascota m : mascotas) {
+                        nombres.add(m.getNombre());
+                    }
+                    tvMascotaNombre.setText(String.join(", ", nombres));
+                }
+
                 verificarCamposCompletos();
+                actualizarCostoTotal();
             }
 
             @Override
@@ -1503,6 +1513,10 @@ public class ReservaActivity extends AppCompatActivity {
         // --- FIX FIN ---
     }
 
+    private void actualizarCostoTotal() {
+        actualizarResumenCosto();
+    }
+
     private void actualizarResumenCosto() {
         if (duracionMinutos == 0) {
             tvDuracionValor.setText("-");
@@ -1527,19 +1541,32 @@ public class ReservaActivity extends AppCompatActivity {
             }
         }
 
-        costoTotal = tarifaPorHora * horas * diasCalculo;
+        int numeroMascotas = mascotasSeleccionadas != null ? mascotasSeleccionadas.size() : 1;
+        if (numeroMascotas == 0) numeroMascotas = 1;
+
+        costoTotal = tarifaPorHora * horas * diasCalculo * numeroMascotas;
 
         tvDuracionValor.setText(String.format(Locale.US, "%.1f horas", horas));
         tvTotalValor.setText(String.format(Locale.US, "$%.2f", costoTotal));
         tvDetalleDuracion.setText(String.format(Locale.US, "%.1f horas", horas));
 
         String calculoTexto;
-        if (diasCalculo > 1) {
-            calculoTexto = String.format(Locale.US, "Tarifa: $%.1f/hora × %.1f horas/día × %d días = $%.2f",
-                    tarifaPorHora, horas, diasCalculo, costoTotal);
+        if (numeroMascotas > 1) {
+            if (diasCalculo > 1) {
+                calculoTexto = String.format(Locale.US, "Tarifa: $%.1f/hora × %.1f h/día × %d días × %d mascotas = $%.2f",
+                        tarifaPorHora, horas, diasCalculo, numeroMascotas, costoTotal);
+            } else {
+                calculoTexto = String.format(Locale.US, "Tarifa: $%.1f/hora × %.1f horas × %d mascotas = $%.2f",
+                        tarifaPorHora, horas, numeroMascotas, costoTotal);
+            }
         } else {
-            calculoTexto = String.format(Locale.US, "Tarifa: $%.1f/hora × %.1f horas = $%.2f",
-                    tarifaPorHora, horas, costoTotal);
+            if (diasCalculo > 1) {
+                calculoTexto = String.format(Locale.US, "Tarifa: $%.1f/hora × %.1f horas/día × %d días = $%.2f",
+                        tarifaPorHora, horas, diasCalculo, costoTotal);
+            } else {
+                calculoTexto = String.format(Locale.US, "Tarifa: $%.1f/hora × %.1f horas = $%.2f",
+                        tarifaPorHora, horas, costoTotal);
+            }
         }
         tvCalculoResumen.setText(calculoTexto);
         tvCalculoResumen.setVisibility(View.VISIBLE);
@@ -1553,7 +1580,7 @@ public class ReservaActivity extends AppCompatActivity {
             hasFechaValida = fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty();
         }
 
-        boolean todosCompletos = mascotaSeleccionada != null &&
+        boolean todosCompletos = !mascotasSeleccionadas.isEmpty() &&
                 hasFechaValida &&
                 horarioSeleccionado != null &&
                 duracionMinutos > 0 &&
@@ -1582,7 +1609,13 @@ public class ReservaActivity extends AppCompatActivity {
 
         // Construir mensaje
         StringBuilder mensaje = new StringBuilder();
-        mensaje.append("Mascota: ").append(mascotaSeleccionada.getNombre()).append("\n");
+
+        List<String> nombresMascotas = new ArrayList<>();
+        for (MascotaSelectorAdapter.Mascota m : mascotasSeleccionadas) {
+            nombresMascotas.add(m.getNombre());
+        }
+        String mascotasStr = mascotasSeleccionadas.size() == 1 ? "Mascota: " : "Mascotas: ";
+        mensaje.append(mascotasStr).append(String.join(", ", nombresMascotas)).append("\n");
 
         // Mostrar fechas según el tipo
         if (tipoReserva.equals("PUNTUAL") && modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
@@ -1722,9 +1755,18 @@ public class ReservaActivity extends AppCompatActivity {
      */
     private void crearReservaIndividual(double costoTotal, double tarifaConfirmada, Date horaInicio,
                                         Date fecha, String grupoId, boolean esGrupo) {
+        List<String> mascotasIds = new ArrayList<>();
+        List<String> mascotasNombres = new ArrayList<>();
+        for (MascotaSelectorAdapter.Mascota m : mascotasSeleccionadas) {
+            mascotasIds.add(m.getId());
+            mascotasNombres.add(m.getNombre());
+        }
+
         Map<String, Object> reserva = new HashMap<>();
         reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
-        reserva.put("id_mascota", mascotaSeleccionada.getId());
+        reserva.put("mascotas", mascotasIds);
+        reserva.put("mascotas_nombres", mascotasNombres);
+        reserva.put("numero_mascotas", mascotasSeleccionadas.size());
         reserva.put("id_paseador", db.collection("usuarios").document(paseadorId));
         reserva.put("fecha", new Timestamp(fecha));
         reserva.put("hora_inicio", new Timestamp(horaInicio));
@@ -1811,9 +1853,18 @@ public class ReservaActivity extends AppCompatActivity {
             boolean esPrimerDiaGrupo = (indiceFecha == 0);
             int cantidadDiasGrupo = fechasList.size();
 
+            List<String> mascotasIds = new ArrayList<>();
+            List<String> mascotasNombres = new ArrayList<>();
+            for (MascotaSelectorAdapter.Mascota m : mascotasSeleccionadas) {
+                mascotasIds.add(m.getId());
+                mascotasNombres.add(m.getNombre());
+            }
+
             Map<String, Object> reserva = new HashMap<>();
             reserva.put("id_dueno", db.collection("usuarios").document(currentUserId));
-            reserva.put("id_mascota", mascotaSeleccionada.getId());
+            reserva.put("mascotas", mascotasIds);
+            reserva.put("mascotas_nombres", mascotasNombres);
+            reserva.put("numero_mascotas", mascotasSeleccionadas.size());
             reserva.put("id_paseador", db.collection("usuarios").document(paseadorId));
             reserva.put("fecha", new Timestamp(fecha));
             reserva.put("hora_inicio", new Timestamp(horaInicioEspecifica));
@@ -1867,8 +1918,8 @@ public class ReservaActivity extends AppCompatActivity {
         // corrupta en Firebase, causando errores en otras partes de la app (pago, historial).
         // SOLUCIÓN: Se valida cada campo requerido antes de la confirmación. Se añade
         // una comprobación defensiva para la tarifa, aunque ya se valida en onCreate.
-        if (mascotaSeleccionada == null) {
-            Toast.makeText(this, "Selecciona una mascota", Toast.LENGTH_SHORT).show();
+        if (mascotasSeleccionadas == null || mascotasSeleccionadas.isEmpty()) {
+            Toast.makeText(this, "Selecciona al menos una mascota", Toast.LENGTH_SHORT).show();
             return false;
         }
 

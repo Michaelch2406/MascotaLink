@@ -10,7 +10,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.mjc.mascotalink.MyApplication;
 import de.hdodenhof.circleimageview.CircleImageView;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MascotaSelectorAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -19,11 +22,11 @@ public class MascotaSelectorAdapter extends RecyclerView.Adapter<RecyclerView.Vi
 
     private final Context context;
     private final List<Mascota> mascotaList;
-    private int selectedPosition = -1;
+    private Set<Integer> selectedPositions;
     private OnMascotaSelectedListener listener;
 
     public interface OnMascotaSelectedListener {
-        void onMascotaSelected(Mascota mascota, int position);
+        void onMascotasSelected(List<Mascota> mascotas);
         void onAddMascotaClicked();
     }
 
@@ -31,6 +34,7 @@ public class MascotaSelectorAdapter extends RecyclerView.Adapter<RecyclerView.Vi
         this.context = context;
         this.mascotaList = mascotaList;
         this.listener = listener;
+        this.selectedPositions = new HashSet<>();
     }
 
     @Override
@@ -63,7 +67,8 @@ public class MascotaSelectorAdapter extends RecyclerView.Adapter<RecyclerView.Vi
                     .circleCrop()
                     .into(mascotaHolder.ivFoto);
 
-            if (selectedPosition == position) {
+            boolean isSelected = selectedPositions.contains(position);
+            if (isSelected) {
                 mascotaHolder.ivFoto.setBorderColor(context.getResources().getColor(R.color.blue_primary));
                 mascotaHolder.ivFoto.setBorderWidth(8);
             } else {
@@ -72,12 +77,16 @@ public class MascotaSelectorAdapter extends RecyclerView.Adapter<RecyclerView.Vi
             }
 
             mascotaHolder.itemView.setOnClickListener(v -> {
-                int previousPosition = selectedPosition;
-                selectedPosition = mascotaHolder.getAdapterPosition();
-                notifyItemChanged(previousPosition);
-                notifyItemChanged(selectedPosition);
+                int clickedPosition = mascotaHolder.getAdapterPosition();
+                if (selectedPositions.contains(clickedPosition)) {
+                    selectedPositions.remove(clickedPosition);
+                } else {
+                    selectedPositions.add(clickedPosition);
+                }
+                notifyItemChanged(clickedPosition);
+
                 if (listener != null) {
-                    listener.onMascotaSelected(mascota, selectedPosition);
+                    listener.onMascotasSelected(getSelectedMascotas());
                 }
             });
         } else if (holder instanceof AddButtonViewHolder) {
@@ -96,15 +105,26 @@ public class MascotaSelectorAdapter extends RecyclerView.Adapter<RecyclerView.Vi
     }
 
     public void setSelectedPosition(int position) {
-        int previousPosition = this.selectedPosition;
-        this.selectedPosition = position;
+        selectedPositions.clear();
+        if (position != -1 && position < mascotaList.size()) {
+            selectedPositions.add(position);
+        }
+        notifyDataSetChanged();
+    }
 
-        if (previousPosition != -1) {
-            notifyItemChanged(previousPosition);
+    public List<Mascota> getSelectedMascotas() {
+        List<Mascota> selected = new ArrayList<>();
+        for (int position : selectedPositions) {
+            if (position < mascotaList.size()) {
+                selected.add(mascotaList.get(position));
+            }
         }
-        if (position != -1) {
-            notifyItemChanged(position);
-        }
+        return selected;
+    }
+
+    public void clearSelection() {
+        selectedPositions.clear();
+        notifyDataSetChanged();
     }
 
     static class MascotaViewHolder extends RecyclerView.ViewHolder {
