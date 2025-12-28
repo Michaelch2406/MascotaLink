@@ -66,18 +66,6 @@ public class CredentialManager {
         return null;
     }
 
-    public boolean canAutoLogin() {
-        if (credPrefs == null) return false;
-        try {
-            String email = credPrefs.getString(KEY_EMAIL, null);
-            String password = credPrefs.getString(KEY_PASSWORD, null);
-            return email != null && password != null;
-        } catch (Exception e) {
-            Log.e(TAG, "Error checking auto-login", e);
-            return false;
-        }
-    }
-
     public boolean hasStoredCredentials() {
         if (credPrefs == null) return false;
         try {

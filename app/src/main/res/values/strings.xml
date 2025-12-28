@@ -357,4 +357,20 @@
     <string name="cd_calendar_icon">Icono de calendario</string>
     <string name="cd_notification_icon">Icono de notificación</string>
     <string name="cd_map_icon">Icono de mapa</string>
+
+    <!-- Login Activity Strings -->
+    <string name="login_title">Walki</string>
+    <string name="login_subtitle">Conecta con paseadores de confianza para tu mascota</string>
+    <string name="login_email_hint">Correo electrónico</string>
+    <string name="login_email_helper">Ejemplo: usuario@gmail.com</string>
+    <string name="login_password_hint">Contraseña</string>
+    <string name="login_password_helper">Mínimo 6 caracteres</string>
+    <string name="login_forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="login_remember_device">Recordarme en este dispositivo</string>
+    <string name="login_button">Iniciar sesión</string>
+    <string name="login_separator">O</string>
+    <string name="login_google_button">Continuar con Google</string>
+    <string name="login_register_link">¿No tienes una cuenta? Regístrate</string>
+    <string name="cd_logo">Logo de la aplicación</string>
+    <string name="cd_google_icon">Icono de Google</string>
 </resources>

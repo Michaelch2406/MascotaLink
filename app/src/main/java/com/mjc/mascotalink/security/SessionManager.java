@@ -6,6 +6,8 @@ import android.util.Log;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKey;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -116,15 +118,14 @@ public class SessionManager {
         return null;
     }
 
-    public boolean validateAndRefreshToken() {
-        if (!isSessionValid()) {
-            // Don't clear immediately, check firebase
-        }
+    public Task<Boolean> validateAndRefreshToken() {
+        TaskCompletionSource<Boolean> taskSource = new TaskCompletionSource<>();
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             clearStoredSession();
-            return false;
+            taskSource.setResult(false);
+            return taskSource.getTask();
         }
 
         user.getIdToken(true)
@@ -132,11 +133,19 @@ public class SessionManager {
                     String token = tokenResult.getToken();
                     if (token != null) {
                         persistSession(token, encryptedSharedPrefs.getString(SESSION_USER_KEY, ""));
+                        taskSource.setResult(true);
+                    } else {
+                        clearStoredSession();
+                        taskSource.setResult(false);
                     }
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "validateAndRefreshToken: failed to refresh", e));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "validateAndRefreshToken: failed to refresh", e);
+                    clearStoredSession();
+                    taskSource.setResult(false);
+                });
 
-        return true;
+        return taskSource.getTask();
     }
 
     public void clearSession() {

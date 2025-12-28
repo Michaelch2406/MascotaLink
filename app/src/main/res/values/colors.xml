@@ -73,4 +73,12 @@
     <color name="text_white_light">#F0F0F0</color>
     <color name="text_white_medium">#E0E0E0</color>
     <color name="divider_light">#E0E0E0</color>
+
+    <!-- Login Activity Colors -->
+    <color name="login_background">#F7FAFC</color>
+    <color name="login_title">#111827</color>
+    <color name="login_subtitle">#6B7280</color>
+    <color name="login_separator">#9CA3AF</color>
+    <color name="input_hint">#6B7280</color>
+    <color name="input_text">#111827</color>
 </resources>

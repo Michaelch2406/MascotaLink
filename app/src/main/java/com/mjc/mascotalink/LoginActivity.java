@@ -2,6 +2,8 @@ package com.mjc.mascotalink;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -41,22 +43,35 @@ import java.util.HashMap;
 import java.util.Map;
 import com.mjc.mascotalink.ConfirmarPagoActivity;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 
 public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private static final long DEBOUNCE_DELAY = 300; // ms
+    private static final int MAX_LOGIN_ATTEMPTS = 3;
+    private static final long LOCKOUT_DURATION = 60000; // 1 minuto
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
     private TextInputLayout tilEmail, tilPassword;
     private TextInputEditText etEmail, etPassword;
+    private Button btnLogin;
     private CheckBox cbRemember;
     private ProgressBar progressBar;
     private CredentialManager credentialMgr;
-    private String pendingEmail;
-    private String pendingPassword;
+
+    // Memory leak prevention: Referencias a listeners
+    private TextWatcher emailWatcher;
+    private TextWatcher passwordWatcher;
+    private Handler debounceHandler;
+
+    // Rate limiting
+    private int loginAttempts = 0;
+    private long lastFailedAttemptTime = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -70,6 +85,7 @@ public class LoginActivity extends AppCompatActivity {
                 mAuth.setLanguageCode("es");
             }
             credentialMgr = new CredentialManager(this);
+            debounceHandler = new Handler(Looper.getMainLooper());
         } catch (Exception e) {
             Log.e(TAG, "Error configurando Firebase o seguridad: ", e);
             mostrarError("Error de configuración: " + e.getMessage());
@@ -230,12 +246,12 @@ public class LoginActivity extends AppCompatActivity {
         tilPassword = findViewById(R.id.til_password);
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
+        btnLogin = findViewById(R.id.btn_login);
         cbRemember = findViewById(R.id.cb_remember);
         progressBar = findViewById(R.id.pb_loading);
     }
 
     private void setupClickListeners() {
-        Button btnLogin = findViewById(R.id.btn_login);
         TextView tvForgotPassword = findViewById(R.id.tv_forgot_password);
         TextView tvRegisterLink = findViewById(R.id.tv_register_link);
 
@@ -248,49 +264,70 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setupEmailField() {
-        etEmail.addTextChangedListener(new TextWatcher() {
+        emailWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
-                if (s.length() > 0 && !Patterns.EMAIL_ADDRESS.matcher(s.toString().trim()).matches()) {
-                    tilEmail.setError("Formato de correo inválido");
-                } else {
-                    tilEmail.setError(null);
-                }
+                // Debouncing: Cancelar validación pendiente
+                debounceHandler.removeCallbacksAndMessages(null);
+                debounceHandler.postDelayed(() -> {
+                    String email = s.toString().trim();
+                    if (email.length() > 0 && !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                        tilEmail.setError("Formato de correo inválido");
+                    } else {
+                        tilEmail.setError(null);
+                    }
+                }, DEBOUNCE_DELAY);
             }
-        });
+        };
+        etEmail.addTextChangedListener(emailWatcher);
     }
 
     private void setupPasswordField() {
-        etPassword.addTextChangedListener(new TextWatcher() {
+        passwordWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
-                if (s.length() > 0 && s.length() < 6) {
-                    tilPassword.setError("La contraseña debe tener al menos 6 caracteres");
-                } else {
-                    tilPassword.setError(null);
-                }
+                // Debouncing: Cancelar validación pendiente
+                debounceHandler.removeCallbacksAndMessages(null);
+                debounceHandler.postDelayed(() -> {
+                    if (s.length() > 0 && s.length() < 6) {
+                        tilPassword.setError("La contraseña debe tener al menos 6 caracteres");
+                    } else {
+                        tilPassword.setError(null);
+                    }
+                }, DEBOUNCE_DELAY);
             }
-        });
+        };
+        etPassword.addTextChangedListener(passwordWatcher);
     }
 
     private void realizarLogin() {
-        String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
-        String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
-
-        if (!validarCampos(email, password)) {
+        // Rate limiting: Verificar si está bloqueado
+        if (isLoginLockedOut()) {
+            long remainingTime = (lastFailedAttemptTime + LOCKOUT_DURATION - System.currentTimeMillis()) / 1000;
+            mostrarError("Demasiados intentos fallidos. Espera " + remainingTime + " segundos.");
+            btnLogin.setEnabled(true);
             return;
         }
 
-        pendingEmail = email;
-        pendingPassword = password;
+        String email = sanitizeInput(etEmail.getText() != null ? etEmail.getText().toString() : "");
+        String password = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
+
+        if (!validarCampos(email, password)) {
+            btnLogin.setEnabled(true);
+            return;
+        }
 
         mostrarProgressBar(true);
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     mostrarProgressBar(false);
                     if (task.isSuccessful()) {
+                        // Reset intentos en login exitoso
+                        loginAttempts = 0;
+                        lastFailedAttemptTime = 0;
+
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null) {
                             verificarRolYRedirigir(user.getUid());
@@ -302,49 +339,57 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void verificarRolYRedirigir(String uid) {
-        db.collection("usuarios").document(uid).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        String rol = documentSnapshot.getString("rol");
-                        if (rol == null) {
-                            mostrarError("Rol no definido para este usuario.");
-                            return;
-                        }
-                        updateFcmTokenForCurrentUser();
+        Task<com.google.firebase.firestore.DocumentSnapshot> userTask = db.collection("usuarios").document(uid).get();
+        Task<com.google.firebase.firestore.DocumentSnapshot> paseadorTask = db.collection("paseadores").document(uid).get();
+        Task<com.google.firebase.firestore.DocumentSnapshot> duenoTask = db.collection("duenos").document(uid).get();
 
-                        // Reconectar WebSocket con el nuevo token del usuario
-                        com.mjc.mascotalink.network.SocketManager.getInstance(LoginActivity.this).connect();
+        Tasks.whenAllSuccess(userTask, paseadorTask, duenoTask).addOnSuccessListener(results -> {
+            com.google.firebase.firestore.DocumentSnapshot userDoc = (com.google.firebase.firestore.DocumentSnapshot) results.get(0);
+            com.google.firebase.firestore.DocumentSnapshot paseadorDoc = (com.google.firebase.firestore.DocumentSnapshot) results.get(1);
+            com.google.firebase.firestore.DocumentSnapshot duenoDoc = (com.google.firebase.firestore.DocumentSnapshot) results.get(2);
 
-                        if ("PASEADOR".equalsIgnoreCase(rol)) {
-                            db.collection("paseadores").document(uid).get()
-                                    .addOnSuccessListener(paseadorDoc -> {
-                                        if (paseadorDoc.exists()) {
-                                            String verificacionEstado = paseadorDoc.getString("verificacion_estado");
-                                            handleSessionAndRedirect(uid, rol, verificacionEstado);
-                                        } else {
-                                            mostrarError("Error de consistencia de datos del paseador.");
-                                        }
-                                    })
-                                    .addOnFailureListener(e -> mostrarError("Error al verificar estado del paseador: " + e.getMessage()));
-                        } else if ("DUEÑO".equalsIgnoreCase(rol)) {
-                            db.collection("duenos").document(uid).get()
-                                    .addOnSuccessListener(duenoDoc -> {
-                                        if (duenoDoc.exists()) {
-                                            String verificacionEstado = duenoDoc.getString("verificacion_estado");
-                                            handleSessionAndRedirect(uid, rol, verificacionEstado);
-                                        } else {
-                                            mostrarError("Error de consistencia de datos del dueño.");
-                                        }
-                                    })
-                                    .addOnFailureListener(e -> mostrarError("Error al verificar estado del dueño: " + e.getMessage()));
-                        } else {
-                            handleSessionAndRedirect(uid, rol, null);
-                        }
-                    } else {
-                        mostrarError("Usuario no encontrado en la base de datos");
-                    }
-                })
-                .addOnFailureListener(e -> mostrarError("Error al verificar datos de usuario: " + e.getMessage()));
+            if (!userDoc.exists()) {
+                mostrarError("Usuario no encontrado en la base de datos");
+                btnLogin.setEnabled(true);
+                return;
+            }
+
+            String rol = userDoc.getString("rol");
+            if (rol == null) {
+                mostrarError("Rol no definido para este usuario.");
+                btnLogin.setEnabled(true);
+                return;
+            }
+
+            updateFcmTokenForCurrentUser();
+            com.mjc.mascotalink.network.SocketManager.getInstance(LoginActivity.this).connect();
+
+            String verificacionEstado = null;
+
+            if ("PASEADOR".equalsIgnoreCase(rol)) {
+                if (paseadorDoc.exists()) {
+                    verificacionEstado = paseadorDoc.getString("verificacion_estado");
+                } else {
+                    mostrarError("Error de consistencia de datos del paseador.");
+                    btnLogin.setEnabled(true);
+                    return;
+                }
+            } else if ("DUEÑO".equalsIgnoreCase(rol)) {
+                if (duenoDoc.exists()) {
+                    verificacionEstado = duenoDoc.getString("verificacion_estado");
+                } else {
+                    mostrarError("Error de consistencia de datos del dueño.");
+                    btnLogin.setEnabled(true);
+                    return;
+                }
+            }
+
+            handleSessionAndRedirect(uid, rol, verificacionEstado);
+
+        }).addOnFailureListener(e -> {
+            mostrarError("Error al verificar datos de usuario: " + e.getMessage());
+            btnLogin.setEnabled(true);
+        });
     }
 
     private void handleSessionAndRedirect(String uid, String rol, String verificacionEstado) {
@@ -352,29 +397,19 @@ public class LoginActivity extends AppCompatActivity {
         sessionManager.createSession(uid);
         com.mjc.mascotalink.notifications.FcmTokenSyncWorker.enqueueNow(this);
         com.mjc.mascotalink.util.UnreadBadgeManager.start(uid);
+
         if (cbRemember.isChecked()) {
             guardarPreferenciasLogin(uid, rol, verificacionEstado);
-            if (pendingEmail != null && pendingPassword != null) {
-                credentialMgr.saveCredentials(pendingEmail, pendingPassword);
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            if (currentUser != null && currentUser.getEmail() != null) {
+                String userEmail = currentUser.getEmail();
+                String userPassword = etPassword.getText() != null ? etPassword.getText().toString().trim() : "";
+                credentialMgr.saveCredentials(userEmail, userPassword);
             }
         } else {
-            try {
-                EncryptedPreferencesHelper prefs = EncryptedPreferencesHelper.getInstance(this);
-                if (prefs != null) {
-                    prefs.remove("remember_device");
-                    prefs.remove("recordar_sesion");
-                    prefs.remove("user_id");
-                    prefs.remove("uid");
-                    prefs.remove("rol");
-                    prefs.remove("verificacion_estado");
-                    prefs.remove("email");
-                    prefs.remove("token");
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "handleSessionAndRedirect: error limpiando prefs cifradas", e);
-            }
+            limpiarSesion();
         }
-        // Guardar el rol en SharedPreferences para que la navegación funcione correctamente
+
         com.mjc.mascotalink.util.BottomNavManager.saveUserRole(this, rol);
         redirigirSegunRol(rol, verificacionEstado);
     }
@@ -516,6 +551,9 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void manejarErrorLogin(Exception exception) {
+        loginAttempts++;
+        lastFailedAttemptTime = System.currentTimeMillis();
+
         String mensajeError;
         if (exception instanceof FirebaseAuthInvalidCredentialsException) {
             mensajeError = "Credenciales inválidas. Verifica tu correo y contraseña.";
@@ -532,7 +570,9 @@ public class LoginActivity extends AppCompatActivity {
             mensajeError = "Error desconocido. Inténtalo de nuevo.";
             Log.e(TAG, "Error de login no manejado", exception);
         }
+
         mostrarError(mensajeError);
+        btnLogin.setEnabled(true);
     }
 
     private void mostrarProgressBar(boolean mostrar) {
@@ -565,15 +605,14 @@ public class LoginActivity extends AppCompatActivity {
                             return;
                         }
                         String token = task.getResult();
-                        Log.d(TAG, "FCM Token: " + token);
 
                         Map<String, Object> tokenMap = new HashMap<>();
                         tokenMap.put("fcmToken", token);
 
                         db.collection("usuarios").document(currentUser.getUid())
                                 .update(tokenMap)
-                                .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token successfully updated for user: " + currentUser.getUid()))
-                                .addOnFailureListener(e -> Log.e(TAG, "Error updating FCM token for user: " + currentUser.getUid(), e));
+                                .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token successfully updated"))
+                                .addOnFailureListener(e -> Log.e(TAG, "Error updating FCM token", e));
                     });
         } else {
             Log.d(TAG, "No user logged in, cannot save FCM token.");
@@ -599,5 +638,39 @@ public class LoginActivity extends AppCompatActivity {
                 mostrarMensaje("Permiso de ubicación denegado. La detección automática de red para emuladores podría no funcionar.");
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (emailWatcher != null && etEmail != null) {
+            etEmail.removeTextChangedListener(emailWatcher);
+        }
+        if (passwordWatcher != null && etPassword != null) {
+            etPassword.removeTextChangedListener(passwordWatcher);
+        }
+        if (debounceHandler != null) {
+            debounceHandler.removeCallbacksAndMessages(null);
+        }
+    }
+
+    private String sanitizeInput(String input) {
+        if (input == null) return "";
+        return input.trim()
+                .replaceAll("[<>\"']", "")
+                .substring(0, Math.min(input.trim().length(), 254));
+    }
+
+    private boolean isLoginLockedOut() {
+        if (loginAttempts < MAX_LOGIN_ATTEMPTS) {
+            return false;
+        }
+        long elapsedTime = System.currentTimeMillis() - lastFailedAttemptTime;
+        if (elapsedTime >= LOCKOUT_DURATION) {
+            loginAttempts = 0;
+            lastFailedAttemptTime = 0;
+            return false;
+        }
+        return true;
     }
 }

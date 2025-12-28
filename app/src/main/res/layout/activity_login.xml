@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="#F7FAFC"
+    android:background="@color/login_background"
     tools:context=".LoginActivity">
 
     <LinearLayout
@@ -22,7 +22,8 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="24dp"
             android:src="@drawable/walki_logo_secundario"
-            android:contentDescription="@string/app_name" />
+            android:contentDescription="@string/cd_logo"
+            android:importantForAccessibility="yes" />
 
         <!-- Title -->
         <TextView
@@ -31,10 +32,11 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
-            android:text="Walki"
-            android:textColor="#111827"
+            android:text="@string/login_title"
+            android:textColor="@color/login_title"
             android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:importantForAccessibility="yes" />
 
         <!-- Subtitle -->
         <TextView
@@ -43,9 +45,10 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="4dp"
-            android:text="Conecta con paseadores de confianza para tu mascota"
-            android:textColor="#6B7280"
-            android:textSize="14sp" />
+            android:text="@string/login_subtitle"
+            android:textColor="@color/login_subtitle"
+            android:textSize="14sp"
+            android:importantForAccessibility="yes" />
 
         <!-- Spacing -->
         <View
@@ -59,15 +62,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Correo electrónico"
-            app:boxBackgroundColor="#FFFFFF"
-            app:boxStrokeColor="#13A4EC"
+            android:hint="@string/login_email_hint"
+            app:boxBackgroundColor="@color/white"
+            app:boxStrokeColor="@color/checkbox_blue"
             app:boxStrokeWidth="2dp"
             app:boxCornerRadiusTopStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
-            app:helperText="Ejemplo: usuario@gmail.com"
+            app:helperText="@string/login_email_helper"
             app:helperTextTextColor="@color/helper_text_gray"
             app:errorTextColor="@color/error_red"
             app:errorIconTint="@color/error_red">
@@ -78,9 +81,10 @@
                 android:layout_height="wrap_content"
                 android:inputType="textEmailAddress"
                 android:padding="12dp"
-                android:textColor="#111827"
-                android:textColorHint="#6B7280"
-                android:textSize="16sp" />
+                android:textColor="@color/input_text"
+                android:textColorHint="@color/input_hint"
+                android:textSize="16sp"
+                android:importantForAccessibility="yes" />
         </com.google.android.material.textfield.TextInputLayout>
 
 
@@ -92,17 +96,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="Contraseña"
+            android:hint="@string/login_password_hint"
             app:endIconMode="password_toggle"
-            app:endIconTint="#13A4EC"
-            app:boxBackgroundColor="#FFFFFF"
-            app:boxStrokeColor="#13A4EC"
+            app:endIconTint="@color/checkbox_blue"
+            app:boxBackgroundColor="@color/white"
+            app:boxStrokeColor="@color/checkbox_blue"
             app:boxStrokeWidth="2dp"
             app:boxCornerRadiusTopStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
-            app:helperText="Mínimo 6 caracteres"
+            app:helperText="@string/login_password_helper"
             app:helperTextTextColor="@color/helper_text_gray"
             app:errorTextColor="@color/error_red"
             app:errorIconTint="@color/error_red">
@@ -113,9 +117,10 @@
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
                 android:padding="12dp"
-                android:textColor="#111827"
-                android:textColorHint="#6B7280"
-                android:textSize="16sp" />
+                android:textColor="@color/input_text"
+                android:textColorHint="@color/input_hint"
+                android:textSize="16sp"
+                android:importantForAccessibility="yes" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Forgot password link -->
@@ -124,9 +129,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="¿Olvidaste tu contraseña?"
-            android:textColor="#0EA5E9"
-            android:textSize="14sp" />
+            android:text="@string/login_forgot_password"
+            android:textColor="@color/checkbox_blue"
+            android:textSize="14sp"
+            android:importantForAccessibility="yes" />
 
         <!-- Remember me -->
         <com.google.android.material.checkbox.MaterialCheckBox
@@ -134,9 +140,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Recordarme en este dispositivo"
-            android:textColor="#374151"
-            app:buttonTint="@color/checkbox_blue" />
+            android:text="@string/login_remember_device"
+            android:textColor="@color/gray_dark"
+            app:buttonTint="@color/checkbox_blue"
+            android:importantForAccessibility="yes" />
 
         <!-- Login button -->
         <com.google.android.material.button.MaterialButton
@@ -145,11 +152,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:backgroundTint="#13A4EC"
-            android:text="Iniciar sesión"
+            android:backgroundTint="@color/checkbox_blue"
+            android:text="@string/login_button"
             android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold" />
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:importantForAccessibility="yes" />
 
 
 
@@ -170,9 +178,10 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="8dp"
-            android:text="O"
-            android:textColor="#9CA3AF"
-            android:textSize="14sp" />
+            android:text="@string/login_separator"
+            android:textColor="@color/login_separator"
+            android:textSize="14sp"
+            android:importantForAccessibility="no" />
 
         <!-- Google login button outlined -->
         <com.google.android.material.button.MaterialButton
@@ -181,18 +190,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Continuar con Google"
+            android:text="@string/login_google_button"
             android:textAllCaps="false"
-            android:textColor="#111827"
+            android:textColor="@color/login_title"
             android:textSize="16sp"
             app:icon="@drawable/ic_google"
             app:iconGravity="textStart"
             app:iconPadding="12dp"
             app:iconSize="20dp"
             app:iconTint="@color/google_button_gray"
-            app:strokeColor="#13A4EC"
+            app:strokeColor="@color/checkbox_blue"
             app:strokeWidth="2dp"
-            android:backgroundTint="#FFFFFF" />
+            android:backgroundTint="@color/white"
+            android:contentDescription="@string/cd_google_icon"
+            android:importantForAccessibility="yes" />
 
         <!-- Register link -->
         <TextView
@@ -201,9 +212,10 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="16dp"
-            android:text="¿No tienes una cuenta? Regístrate"
-            android:textColor="#6B7280"
-            android:textSize="14sp" />
+            android:text="@string/login_register_link"
+            android:textColor="@color/login_subtitle"
+            android:textSize="14sp"
+            android:importantForAccessibility="yes" />
 
     </LinearLayout>
 </ScrollView>
