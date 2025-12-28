@@ -80,8 +80,6 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private ActivityResultLauncher<Intent> autocompleteLauncher;
 
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -121,11 +119,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        saveButton.setOnClickListener(v -> {
-            if (rateLimiter.shouldProcess()) {
-                completarRegistroDueno();
-            }
-        });
+        saveButton.setOnClickListener(InputUtils.createSafeClickListener(2000, v -> completarRegistroDueno()));
         addressEditText.setOnClickListener(v -> launchAutocomplete());
         ivGeolocate.setOnClickListener(v -> onGeolocateClick());
     }
@@ -247,12 +241,12 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         saveDataToPrefs();
         if (TextUtils.isEmpty(direccionRecogida)) {
             Toast.makeText(this, "La dirección de recogida es requerida", Toast.LENGTH_SHORT).show();
-            rateLimiter.reset();
             return;
         }
 
-        saveButton.setEnabled(false);
-        saveButton.setText("Registrando...");
+        // Ocultar teclado antes de procesar
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(saveButton, true, "Registrando...");
 
         try {
             SharedPreferences prefs = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE);
@@ -264,7 +258,6 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
 
             if (email.isEmpty() || password.isEmpty()) {
                 mostrarError("El correo y la contraseña no se encontraron. Por favor, vuelve al paso 1.");
-                rateLimiter.reset();
                 return;
             }
 
@@ -282,16 +275,12 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
                         if (isFinishing() || isDestroyed()) return;
                         Log.e(TAG, "Error al crear usuario en Firebase Auth", e);
                         mostrarError("Error al crear usuario: " + e.getMessage());
-                        saveButton.setEnabled(true);
-                        saveButton.setText("Guardar");
-                        rateLimiter.reset();
+                        InputUtils.setButtonLoading(saveButton, false);
                     });
         } catch (Exception e) {
             Log.e(TAG, "Error al iniciar registro", e);
             mostrarError("Error inesperado. Por favor, intenta nuevamente.");
-            saveButton.setEnabled(true);
-            saveButton.setText("Guardar");
-            rateLimiter.reset();
+            InputUtils.setButtonLoading(saveButton, false);
         }
     }
 
@@ -350,9 +339,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             Log.e(TAG, "Fallo al subir archivos de dueño", e);
             mostrarError("Error al subir imágenes: " + e.getMessage());
             if (mAuth.getCurrentUser() != null) { mAuth.getCurrentUser().delete(); }
-            saveButton.setEnabled(true);
-            saveButton.setText("Guardar");
-            rateLimiter.reset();
+            InputUtils.setButtonLoading(saveButton, false);
         });
     }
 
@@ -440,9 +427,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             Log.e(TAG, "Error al guardar en Firestore", e);
             mostrarError("Error final al guardar tu perfil: " + e.getMessage());
             if (mAuth.getCurrentUser() != null) { mAuth.getCurrentUser().delete(); }
-            saveButton.setEnabled(true);
-            saveButton.setText("Guardar");
-            rateLimiter.reset();
+            InputUtils.setButtonLoading(saveButton, false);
         });
     }
 

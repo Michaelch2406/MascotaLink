@@ -97,6 +97,11 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri tempUri = result.getData().getData();
                     if (tempUri != null) {
+                        // Validar imagen antes de copiar
+                        if (!InputUtils.isValidImageFile(this, tempUri, 5 * 1024 * 1024)) {
+                            Toast.makeText(this, "La selfie no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                            return;
+                        }
                         Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "SELFIE_");
                         if (permanentUri != null) {
                             selfieUri = permanentUri;
@@ -115,6 +120,11 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri tempUri = result.getData().getData();
                     if (tempUri != null) {
+                        // Validar imagen antes de copiar
+                        if (!InputUtils.isValidImageFile(this, tempUri, 5 * 1024 * 1024)) {
+                            Toast.makeText(this, "La foto de perfil no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                            return;
+                        }
                         Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "FOTO_PERFIL_");
                         if (permanentUri != null) {
                             fotoPerfilUri = permanentUri;
@@ -133,6 +143,11 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri tempUri = result.getData().getData();
                     if (tempUri != null) {
+                        // Validar imagen antes de copiar
+                        if (!InputUtils.isValidImageFile(this, tempUri, 5 * 1024 * 1024)) {
+                            Toast.makeText(this, "La foto de perfil no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                            return;
+                        }
                         Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "FOTO_PERFIL_");
                         if (permanentUri != null) {
                             fotoPerfilUri = permanentUri;
@@ -262,9 +277,12 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private void continuarAlPaso3() {
         // Rate limiting ya integrado en SafeClickListener
         if (selfieUri != null && fotoPerfilUri != null) {
-            btnContinuarPaso3.setEnabled(false);
+            // Ocultar teclado antes de procesar
+            InputUtils.hideKeyboard(this);
+            InputUtils.setButtonLoading(btnContinuarPaso3, true, "Procesando...");
+
             startActivity(new Intent(this, PaseadorRegistroPaso3Activity.class));
-            btnContinuarPaso3.setEnabled(true);
+            InputUtils.setButtonLoading(btnContinuarPaso3, false);
         } else {
             verificarCompletitudPaso2();
         }

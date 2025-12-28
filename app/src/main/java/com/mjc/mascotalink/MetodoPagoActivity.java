@@ -100,10 +100,16 @@ public class MetodoPagoActivity extends AppCompatActivity {
     }
 
     private void guardarMetodoPago() {
+        // Ocultar teclado antes de procesar
+        InputUtils.hideKeyboard(this);
+
         String banco = etBanco.getText().toString().trim();
         String cuenta = etCuenta.getText().toString().trim();
 
         if (!validateInputs(banco, cuenta)) return;
+
+        Button btnGuardar = findViewById(R.id.btn_guardar_pago);
+        InputUtils.setButtonLoading(btnGuardar, true, "Guardando...");
 
         FirebaseUser user = mAuth.getCurrentUser();
 
@@ -118,10 +124,17 @@ public class MetodoPagoActivity extends AppCompatActivity {
                 db.collection("usuarios").document(user.getUid()).collection("metodos_pago").document(metodoPagoId)
                         .update(mp)
                         .addOnSuccessListener(aVoid -> {
+                            InputUtils.setButtonLoading(btnGuardar, false);
                             Toast.makeText(this, "Actualizado correctamente", Toast.LENGTH_SHORT).show();
                             setResult(RESULT_OK);
                             finish();
+                        })
+                        .addOnFailureListener(e -> {
+                            InputUtils.setButtonLoading(btnGuardar, false);
+                            Toast.makeText(this, "Error al actualizar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         });
+            } else {
+                InputUtils.setButtonLoading(btnGuardar, false);
             }
             return;
         }
@@ -141,6 +154,7 @@ public class MetodoPagoActivity extends AppCompatActivity {
                     .putString("pago_cuenta", cuenta)
                     .apply();
 
+            InputUtils.setButtonLoading(btnGuardar, false);
             Toast.makeText(this, "Guardado localmente", Toast.LENGTH_SHORT).show();
             setResult(RESULT_OK);
             finish();
@@ -155,9 +169,14 @@ public class MetodoPagoActivity extends AppCompatActivity {
             db.collection("usuarios").document(user.getUid()).collection("metodos_pago")
                     .add(mp)
                     .addOnSuccessListener(ref -> {
+                        InputUtils.setButtonLoading(btnGuardar, false);
                         Toast.makeText(this, "Método añadido", Toast.LENGTH_SHORT).show();
                         setResult(RESULT_OK);
                         finish();
+                    })
+                    .addOnFailureListener(e -> {
+                        InputUtils.setButtonLoading(btnGuardar, false);
+                        Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     });
         }
     }

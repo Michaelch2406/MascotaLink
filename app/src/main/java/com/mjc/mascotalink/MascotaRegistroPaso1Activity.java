@@ -64,7 +64,6 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
     private TextWatcher validationTextWatcher;
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,25 +102,17 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
         tomarFotoButton.setOnClickListener(v -> checkCameraPermissionAndLaunch());
 
-        siguienteButton.setOnClickListener(v -> {
-            if (rateLimiter.shouldProcess()) {
-                if (validateFields()) {
-                    collectDataAndProceed();
-                }
+        siguienteButton.setOnClickListener(InputUtils.createSafeClickListener(v -> {
+            if (validateFields()) {
+                collectDataAndProceed();
             }
-        });
+        }));
 
-        // TextWatcher con debouncing para validaciones
-        validationTextWatcher = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                InputUtils.debounce("validacion_mascota_paso1", DEBOUNCE_DELAY_MS, () -> validateInputs());
-            }
-        };
+        validationTextWatcher = InputUtils.createDebouncedTextWatcher(
+            "validacion_mascota_paso1",
+            DEBOUNCE_DELAY_MS,
+            text -> validateInputs()
+        );
 
         nombreTextField.getEditText().addTextChangedListener(validationTextWatcher);
         pesoTextField.getEditText().addTextChangedListener(validationTextWatcher);
@@ -143,9 +134,14 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        fotoUri = result.getData().getData();
-                        fotoPrincipalImageView.setImageURI(fotoUri);
-                        validateInputs();
+                        Uri selectedUri = result.getData().getData();
+                        if (InputUtils.isValidImageFile(this, selectedUri, 5 * 1024 * 1024)) {
+                            fotoUri = selectedUri;
+                            fotoPrincipalImageView.setImageURI(fotoUri);
+                            validateInputs();
+                        } else {
+                            Toast.makeText(this, "La imagen no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                        }
                     }
                 });
 
@@ -153,8 +149,13 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
                 new ActivityResultContracts.TakePicture(),
                 success -> {
                     if (success) {
-                        fotoPrincipalImageView.setImageURI(fotoUri);
-                        validateInputs();
+                        if (InputUtils.isValidImageFile(this, fotoUri, 5 * 1024 * 1024)) {
+                            fotoPrincipalImageView.setImageURI(fotoUri);
+                            validateInputs();
+                        } else {
+                            Toast.makeText(this, "La imagen no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                            fotoUri = null;
+                        }
                     }
                 });
 
@@ -234,8 +235,12 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
     private boolean validateFields() {
         boolean isValid = true;
-        if (nombreTextField.getEditText().getText().toString().trim().isEmpty()) {
+        String nombre = nombreTextField.getEditText().getText().toString().trim();
+        if (nombre.isEmpty()) {
             nombreTextField.setError("El nombre no puede estar vacío");
+            isValid = false;
+        } else if (!InputUtils.isValidName(nombre, 2, 50)) {
+            nombreTextField.setError("Nombre inválido (solo letras, 2-50 caracteres)");
             isValid = false;
         } else {
             nombreTextField.setError(null);
@@ -271,6 +276,10 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void collectDataAndProceed() {
+        // Ocultar teclado antes de procesar
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(siguienteButton, true, "Procesando...");
+
         try {
             Intent intent = new Intent(this, MascotaRegistroPaso2Activity.class);
 
@@ -299,6 +308,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
             } catch (ParseException e) {
                 Log.e(TAG, "Error al parsear fecha de nacimiento", e);
                 Toast.makeText(this, "Error en el formato de fecha", Toast.LENGTH_SHORT).show();
+                InputUtils.setButtonLoading(siguienteButton, false);
                 return;
             }
 
@@ -314,6 +324,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error al recolectar datos", e);
             Toast.makeText(this, "Error al procesar los datos. Intenta nuevamente.", Toast.LENGTH_SHORT).show();
+            InputUtils.setButtonLoading(siguienteButton, false);
         }
     }
 

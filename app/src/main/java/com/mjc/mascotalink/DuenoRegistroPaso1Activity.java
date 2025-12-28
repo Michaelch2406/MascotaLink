@@ -82,7 +82,6 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> autocompleteLauncher;
 
     private TextWatcher validationTextWatcher;
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -117,24 +116,16 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnRegistrarse.setOnClickListener(v -> {
-            if (rateLimiter.shouldProcess()) {
-                intentarRegistro();
-            }
-        });
+        btnRegistrarse.setOnClickListener(InputUtils.createSafeClickListener(v -> intentarRegistro()));
         etFechaNacimiento.setOnClickListener(v -> mostrarDatePicker());
         etDomicilio.setOnClickListener(v -> launchAutocomplete());
         ivGeolocate.setOnClickListener(v -> onGeolocateClick());
 
-        // TextWatcher con debouncing para validaciones
-        validationTextWatcher = new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
-            @Override
-            public void afterTextChanged(Editable s) {
-                InputUtils.debounce("validacion_paso1", DEBOUNCE_DELAY_MS, () -> actualizarBoton());
-            }
-        };
+        validationTextWatcher = InputUtils.createDebouncedTextWatcher(
+            "validacion_paso1",
+            DEBOUNCE_DELAY_MS,
+            text -> actualizarBoton()
+        );
 
         etNombre.addTextChangedListener(validationTextWatcher);
         etApellido.addTextChangedListener(validationTextWatcher);
@@ -275,15 +266,17 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     private boolean validarCamposDetallado() {
         boolean ok = true;
 
-        if (TextUtils.isEmpty(etNombre.getText().toString().trim())) {
-            etNombre.setError("El nombre es obligatorio");
+        String nombre = etNombre.getText().toString().trim();
+        if (!InputUtils.isValidName(nombre)) {
+            etNombre.setError("Nombre inválido (solo letras, 2-50 caracteres)");
             ok = false;
         } else {
             etNombre.setError(null);
         }
 
-        if (TextUtils.isEmpty(etApellido.getText().toString().trim())) {
-            etApellido.setError("El apellido es obligatorio");
+        String apellido = etApellido.getText().toString().trim();
+        if (!InputUtils.isValidName(apellido)) {
+            etApellido.setError("Apellido inválido (solo letras, 2-50 caracteres)");
             ok = false;
         } else {
             etApellido.setError(null);
@@ -326,7 +319,8 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
             etCorreo.setError(null);
         }
 
-        if (etPassword.getText() == null || etPassword.getText().toString().length() < 6) {
+        String password = etPassword.getText() != null ? etPassword.getText().toString() : "";
+        if (!InputUtils.isValidPassword(password)) {
             tilPassword.setError("La contraseña debe tener al menos 6 caracteres");
             ok = false;
         } else {
@@ -354,28 +348,11 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
 
     private boolean isEmpty(EditText e) { return TextUtils.isEmpty(e.getText()); }
 
-    private boolean validarEmail(String email) { return Patterns.EMAIL_ADDRESS.matcher(email).matches(); }
+    private boolean validarEmail(String email) { return InputUtils.isValidEmail(email); }
 
-    private boolean validarTelefono(String t) { return t.matches("^(\\+593[0-9]{9}|09[0-9]{8})$"); }
+    private boolean validarTelefono(String t) { return InputUtils.isValidTelefonoEcuador(t); }
 
-    private boolean validarCedula(String c) {
-        if (c == null || !c.matches("\\d{10}")) return false;
-        try {
-            int provincia = Integer.parseInt(c.substring(0, 2));
-            if (provincia < 1 || provincia > 24) return false;
-            int tercer = Character.getNumericValue(c.charAt(2));
-            if (tercer >= 6) return false;
-            int[] coef = {2,1,2,1,2,1,2,1,2};
-            int suma = 0;
-            for (int i=0;i<9;i++) {
-                int d = Character.getNumericValue(c.charAt(i)) * coef[i];
-                if (d >= 10) d -= 9;
-                suma += d;
-            }
-            int dig = suma % 10 == 0 ? 0 : 10 - (suma % 10);
-            return dig == Character.getNumericValue(c.charAt(9));
-        } catch (Exception ex) { return false; }
-    }
+    private boolean validarCedula(String c) { return InputUtils.isValidCedulaEcuador(c); }
 
     private void intentarRegistro() {
         if (!validarCamposDetallado()) {
@@ -387,12 +364,24 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
             return;
         }
 
+        // Ocultar teclado
+        InputUtils.hideKeyboard(this);
+
+        // Mostrar estado de carga
+        InputUtils.setButtonLoading(btnRegistrarse, true, "Guardando...");
+
         try {
-            // Sanitizar todos los inputs
-            String nombreSanitizado = InputUtils.sanitizeInput(etNombre.getText().toString().trim());
-            String apellidoSanitizado = InputUtils.sanitizeInput(etApellido.getText().toString().trim());
-            String telefonoSanitizado = InputUtils.sanitizeInput(etTelefono.getText().toString().trim());
-            String correoSanitizado = InputUtils.sanitizeInput(etCorreo.getText().toString().trim());
+            // Sanitizar y formatear inputs
+            String nombreSanitizado = InputUtils.capitalizeWords(
+                InputUtils.sanitizeInput(etNombre.getText().toString())
+            );
+            String apellidoSanitizado = InputUtils.capitalizeWords(
+                InputUtils.sanitizeInput(etApellido.getText().toString())
+            );
+            String telefonoSanitizado = InputUtils.formatTelefonoEcuador(
+                InputUtils.sanitizeInput(etTelefono.getText().toString())
+            );
+            String correoSanitizado = InputUtils.sanitizeInput(etCorreo.getText().toString()).toLowerCase().trim();
             String cedulaSanitizada = InputUtils.sanitizeInput(etCedula.getText().toString().trim());
             String domicilioSanitizado = InputUtils.sanitizeInput(domicilio);
 
@@ -420,10 +409,17 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
             }
 
             toast("Paso 1 completado. Continúa con el siguiente paso.");
+
+            // Restaurar botón antes de cambiar de activity
+            InputUtils.setButtonLoading(btnRegistrarse, false);
+
             startActivity(new Intent(this, DuenoRegistroPaso2Activity.class));
         } catch (Exception e) {
             Log.e(TAG, "Error al guardar datos del registro", e);
             toast("Error al guardar los datos. Por favor, intenta nuevamente.");
+
+            // Restaurar botón en caso de error
+            InputUtils.setButtonLoading(btnRegistrarse, false);
         }
     }
 

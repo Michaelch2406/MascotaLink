@@ -9,6 +9,19 @@ import android.text.TextWatcher;
 import android.util.Patterns;
 import android.view.View;
 
+import android.app.Activity;
+import android.content.Context;
+import android.net.Uri;
+import android.view.inputmethod.InputMethodManager;
+import android.webkit.MimeTypeMap;
+import android.widget.Button;
+
+import com.google.android.material.textfield.TextInputLayout;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -390,5 +403,250 @@ public class InputUtils {
      */
     public static View.OnClickListener createSafeClickListener(SafeClickListener listener) {
         return createSafeClickListener(1000, listener);
+    }
+
+    // ==================== VALIDACIONES ESPECÍFICAS DOMINIO ====================
+
+    /**
+     * Valida que una fecha de nacimiento cumpla con la edad mínima
+     * @param fechaNacimiento Fecha en formato dd/MM/yyyy
+     * @param edadMinima Edad mínima requerida
+     * @return true si cumple con la edad mínima
+     */
+    public static boolean isValidAge(String fechaNacimiento, int edadMinima) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
+            Date birthDate = sdf.parse(fechaNacimiento);
+            if (birthDate == null) return false;
+
+            Calendar today = Calendar.getInstance();
+            Calendar birth = Calendar.getInstance();
+            birth.setTime(birthDate);
+
+            int age = today.get(Calendar.YEAR) - birth.get(Calendar.YEAR);
+            if (today.get(Calendar.DAY_OF_YEAR) < birth.get(Calendar.DAY_OF_YEAR)) {
+                age--;
+            }
+
+            return age >= edadMinima;
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Valida que un peso esté en un rango válido (kg)
+     * @param pesoStr Peso como string
+     * @param min Peso mínimo (ej: 0.5 kg)
+     * @param max Peso máximo (ej: 100 kg)
+     * @return true si el peso es válido
+     */
+    public static boolean isValidPeso(String pesoStr, double min, double max) {
+        if (TextUtils.isEmpty(pesoStr)) {
+            return false;
+        }
+        try {
+            double peso = Double.parseDouble(pesoStr.trim());
+            return peso >= min && peso <= max;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    // ==================== HELPERS PARA UI ====================
+
+    /**
+     * Muestra u oculta error en TextInputLayout de forma simplificada
+     * @param layout TextInputLayout
+     * @param errorMessage Mensaje de error (null para limpiar)
+     */
+    public static void setError(TextInputLayout layout, String errorMessage) {
+        if (layout == null) return;
+        layout.setError(errorMessage);
+        layout.setErrorEnabled(errorMessage != null);
+    }
+
+    /**
+     * Limpia el error de un TextInputLayout
+     * @param layout TextInputLayout a limpiar
+     */
+    public static void clearError(TextInputLayout layout) {
+        setError(layout, null);
+    }
+
+    // ==================== VALIDACIONES ADICIONALES ====================
+
+    /**
+     * Valida que un nombre solo contenga letras, espacios y caracteres latinos
+     * @param name Nombre a validar
+     * @param minLength Longitud mínima
+     * @param maxLength Longitud máxima
+     * @return true si es válido
+     */
+    public static boolean isValidName(String name, int minLength, int maxLength) {
+        if (!isNotEmpty(name)) {
+            return false;
+        }
+        String trimmed = name.trim();
+        if (trimmed.length() < minLength || trimmed.length() > maxLength) {
+            return false;
+        }
+        // Permite letras (incluyendo acentuadas), espacios y apóstrofes
+        return trimmed.matches("[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ' ]+");
+    }
+
+    /**
+     * Valida que un nombre solo contenga letras (rango por defecto 2-50)
+     * @param name Nombre a validar
+     * @return true si es válido
+     */
+    public static boolean isValidName(String name) {
+        return isValidName(name, 2, 50);
+    }
+
+    // ==================== UI HELPERS AVANZADOS ====================
+
+    /**
+     * Oculta el teclado desde una Activity
+     * @param activity Activity actual
+     */
+    public static void hideKeyboard(Activity activity) {
+        if (activity == null) return;
+        View view = activity.getCurrentFocus();
+        if (view != null) {
+            hideKeyboard(view);
+        }
+    }
+
+    /**
+     * Oculta el teclado desde una View específica
+     * @param view View con foco del teclado
+     */
+    public static void hideKeyboard(View view) {
+        if (view == null) return;
+        InputMethodManager imm = (InputMethodManager) view.getContext()
+                .getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+    /**
+     * Cambia el estado de un botón a modo carga
+     * @param button Botón a modificar
+     * @param loading true para mostrar estado cargando, false para restaurar
+     * @param loadingText Texto a mostrar durante carga (ej: "Cargando...")
+     */
+    public static void setButtonLoading(Button button, boolean loading, String loadingText) {
+        if (button == null) return;
+
+        if (loading) {
+            // Guardar texto original en el tag para restaurar después
+            if (button.getTag() == null) {
+                button.setTag(button.getText().toString());
+            }
+            button.setText(loadingText);
+            button.setEnabled(false);
+        } else {
+            // Restaurar texto original del tag
+            Object originalText = button.getTag();
+            if (originalText != null) {
+                button.setText(originalText.toString());
+                button.setTag(null);
+            }
+            button.setEnabled(true);
+        }
+    }
+
+    /**
+     * Cambia el estado de un botón a modo carga (texto por defecto "Cargando...")
+     * @param button Botón a modificar
+     * @param loading true para mostrar estado cargando, false para restaurar
+     */
+    public static void setButtonLoading(Button button, boolean loading) {
+        setButtonLoading(button, loading, "Cargando...");
+    }
+
+    // ==================== VALIDACIÓN DE ARCHIVOS ====================
+
+    /**
+     * Valida que un archivo de imagen sea válido
+     * @param context Contexto de la aplicación
+     * @param uri URI del archivo
+     * @param maxSizeBytes Tamaño máximo en bytes (ej: 5MB = 5 * 1024 * 1024)
+     * @return true si es una imagen válida dentro del tamaño permitido
+     */
+    public static boolean isValidImageFile(Context context, Uri uri, long maxSizeBytes) {
+        if (context == null || uri == null) {
+            return false;
+        }
+
+        try {
+            // Verificar tipo MIME
+            String mimeType = context.getContentResolver().getType(uri);
+            if (mimeType == null || !mimeType.startsWith("image/")) {
+                return false;
+            }
+
+            // Verificar tamaño del archivo
+            if (maxSizeBytes > 0) {
+                android.database.Cursor cursor = context.getContentResolver()
+                        .query(uri, null, null, null, null);
+                if (cursor != null) {
+                    try {
+                        if (cursor.moveToFirst()) {
+                            int sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE);
+                            if (sizeIndex != -1) {
+                                long fileSize = cursor.getLong(sizeIndex);
+                                if (fileSize > maxSizeBytes) {
+                                    return false;
+                                }
+                            }
+                        }
+                    } finally {
+                        cursor.close();
+                    }
+                }
+            }
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Valida que un archivo de imagen sea válido (tamaño máximo por defecto: 5MB)
+     * @param context Contexto de la aplicación
+     * @param uri URI del archivo
+     * @return true si es una imagen válida
+     */
+    public static boolean isValidImageFile(Context context, Uri uri) {
+        return isValidImageFile(context, uri, 5 * 1024 * 1024); // 5MB por defecto
+    }
+
+    /**
+     * Obtiene la extensión de un archivo desde su URI
+     * @param context Contexto de la aplicación
+     * @param uri URI del archivo
+     * @return Extensión del archivo (ej: "jpg", "png") o null si no se puede determinar
+     */
+    public static String getFileExtension(Context context, Uri uri) {
+        if (context == null || uri == null) {
+            return null;
+        }
+
+        String mimeType = context.getContentResolver().getType(uri);
+        if (mimeType != null) {
+            return MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+        }
+
+        // Fallback: intentar obtener desde el path
+        String path = uri.getPath();
+        if (path != null && path.contains(".")) {
+            return path.substring(path.lastIndexOf(".") + 1).toLowerCase();
+        }
+
+        return null;
     }
 }

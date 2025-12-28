@@ -215,6 +215,12 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
                     }
                 }
 
+                // Validar tamaño del video antes de copiar (máx 100MB para video de presentación)
+                if (!InputUtils.isValidImageFile(this, tempUri, 100 * 1024 * 1024)) {
+                    Toast.makeText(this, "El video es muy grande (máx 100MB)", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
                 Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "VIDEO_PRESENTACION_");
                 if (permanentUri != null) {
                     SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
@@ -330,8 +336,9 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
 
     private void completarRegistro() {
         // Rate limiting ya integrado en SafeClickListener (2 segundos)
-        btnGuardar.setEnabled(false);
-        btnGuardar.setText("Registrando...");
+        // Ocultar teclado antes de procesar
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(btnGuardar, true, "Registrando...");
         tvValidationMessages.setVisibility(View.GONE);
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
@@ -344,8 +351,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         // Validación de seguridad para prevenir crashes
         if (email.isEmpty() || password.isEmpty() || nombre.isEmpty() || apellido.isEmpty() || cedula.isEmpty()) {
             mostrarError("Faltan datos críticos de los pasos anteriores. Por favor, retrocede y completa toda la información.");
-            btnGuardar.setEnabled(true);
-            btnGuardar.setText("Reintentar Registro");
+            InputUtils.setButtonLoading(btnGuardar, false, "Reintentar Registro");
             return;
         }
 
@@ -357,8 +363,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error al crear usuario en Auth", e);
-                    btnGuardar.setEnabled(true);
-                    btnGuardar.setText("Reintentar Registro");
+                    InputUtils.setButtonLoading(btnGuardar, false, "Reintentar Registro");
                     if (e.getMessage() != null && e.getMessage().contains("email address is already in use")) {
                         mostrarError("El correo electrónico ya está registrado. Por favor, usa otro o inicia sesión.");
                     } else {
@@ -460,8 +465,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
             if (mAuth.getCurrentUser() != null) {
                 mAuth.getCurrentUser().delete();
             }
-            btnGuardar.setEnabled(true);
-            btnGuardar.setText("Reintentar Registro");
+            InputUtils.setButtonLoading(btnGuardar, false, "Reintentar Registro");
         });
     }
 
@@ -591,8 +595,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
                 mAuth.getCurrentUser().delete();
             }
             // (Opcional) Aquí iría la lógica para eliminar los archivos ya subidos de Storage
-            btnGuardar.setEnabled(true);
-            btnGuardar.setText("Reintentar Registro");
+            InputUtils.setButtonLoading(btnGuardar, false, "Reintentar Registro");
         });
     }
 

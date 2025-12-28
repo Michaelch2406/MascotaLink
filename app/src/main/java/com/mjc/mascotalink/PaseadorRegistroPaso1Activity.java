@@ -301,10 +301,13 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
             return;
         }
 
-        btnContinuar.setEnabled(false);
+        // Ocultar teclado antes de procesar
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(btnContinuar, true, "Procesando...");
+
         guardarDatosCompletos();
         startActivity(new Intent(this, PaseadorRegistroPaso2Activity.class));
-        btnContinuar.setEnabled(true);
+        InputUtils.setButtonLoading(btnContinuar, false);
     }
 
     private void guardarDatosCompletos() {
@@ -343,8 +346,10 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private boolean validarCamposPantalla1() {
         // Usar InputUtils para todas las validaciones
-        if (!InputUtils.isNotEmpty(etNombre.getText().toString())) return false;
-        if (!InputUtils.isNotEmpty(etApellido.getText().toString())) return false;
+        String nombre = etNombre.getText().toString().trim();
+        String apellido = etApellido.getText().toString().trim();
+        if (!InputUtils.isValidName(nombre, 2, 50)) return false;
+        if (!InputUtils.isValidName(apellido, 2, 50)) return false;
         if (!InputUtils.isValidCedulaEcuador(etCedula.getText().toString().trim())) return false;
         Date fecha = parseFecha(etFechaNac.getText().toString().trim());
         if (fecha == null || !validarEdad(fecha)) return false;

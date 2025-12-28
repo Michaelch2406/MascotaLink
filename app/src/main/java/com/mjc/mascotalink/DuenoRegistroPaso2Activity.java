@@ -36,8 +36,6 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
     private Uri selfieUri;
     private Uri fotoPerfilUri;
 
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
-
 
 
     @Override
@@ -73,11 +71,9 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
             fotoPerfilUri = null;
             updateUI();
         });
-        btnContinuarPaso3.setOnClickListener(v -> {
-            if (rateLimiter.shouldProcess()) {
-                guardarUrisYContinuar();
-            }
-        });
+        btnContinuarPaso3.setOnClickListener(
+            InputUtils.createSafeClickListener(v -> guardarUrisYContinuar())
+        );
     }
 
     private void loadUrisFromPrefs() {
@@ -189,6 +185,20 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
             return;
         }
 
+        // Validar archivos de imagen antes de procesarlos
+        if (!InputUtils.isValidImageFile(this, selfieUri, 5 * 1024 * 1024)) {
+            Toast.makeText(this, "La selfie no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (!InputUtils.isValidImageFile(this, fotoPerfilUri, 5 * 1024 * 1024)) {
+            Toast.makeText(this, "La foto de perfil no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Ocultar teclado antes de procesar
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(btnContinuarPaso3, true, "Guardando...");
+
         try {
             // Copiamos los archivos a almacenamiento interno para asegurar que los URIs persistan
             Uri persistentSelfieUri = FileStorageHelper.copyFileToInternalStorage(this, selfieUri, "selfie_dueno_");
@@ -197,6 +207,7 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
             if (persistentSelfieUri == null || persistentFotoPerfilUri == null) {
                 Log.e(TAG, "Error al copiar archivos a almacenamiento interno");
                 Toast.makeText(this, "Error al guardar las imágenes localmente.", Toast.LENGTH_LONG).show();
+                InputUtils.setButtonLoading(btnContinuarPaso3, false);
                 return;
             }
 
@@ -211,6 +222,7 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error al guardar URIs", e);
             Toast.makeText(this, "Error al procesar las imágenes. Intenta nuevamente.", Toast.LENGTH_LONG).show();
+            InputUtils.setButtonLoading(btnContinuarPaso3, false);
         }
     }
 

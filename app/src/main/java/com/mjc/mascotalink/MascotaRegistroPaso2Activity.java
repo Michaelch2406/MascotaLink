@@ -36,7 +36,6 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
     private Button siguienteButton;
 
     private TextWatcher validationTextWatcher;
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,25 +63,17 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
     private void setupListeners() {
         arrowBack.setOnClickListener(v -> finish());
         ultimaVisitaVetEditText.setOnClickListener(v -> showDatePickerDialog());
-        siguienteButton.setOnClickListener(v -> {
-            if (rateLimiter.shouldProcess()) {
-                if (validateFields()) {
-                    collectDataAndProceed();
-                }
+        siguienteButton.setOnClickListener(InputUtils.createSafeClickListener(v -> {
+            if (validateFields()) {
+                collectDataAndProceed();
             }
-        });
+        }));
 
-        // TextWatcher con debouncing para validaciones
-        validationTextWatcher = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                InputUtils.debounce("validacion_mascota_paso2", DEBOUNCE_DELAY_MS, () -> validateInputs());
-            }
-        };
+        validationTextWatcher = InputUtils.createDebouncedTextWatcher(
+            "validacion_mascota_paso2",
+            DEBOUNCE_DELAY_MS,
+            text -> validateInputs()
+        );
 
         ultimaVisitaVetEditText.addTextChangedListener(validationTextWatcher);
         condicionesMedicasEditText.addTextChangedListener(validationTextWatcher);

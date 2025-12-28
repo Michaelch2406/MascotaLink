@@ -28,7 +28,6 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
     private Button siguienteButton;
 
     private TextWatcher validationTextWatcher;
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,11 +51,7 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
 
     private void setupListeners() {
         arrowBack.setOnClickListener(v -> finish());
-        siguienteButton.setOnClickListener(v -> {
-            if (rateLimiter.shouldProcess()) {
-                collectDataAndProceed();
-            }
-        });
+        siguienteButton.setOnClickListener(InputUtils.createSafeClickListener(v -> collectDataAndProceed()));
 
         RadioGroup.OnCheckedChangeListener radioListener = (group, checkedId) -> validateInputs();
         nivelEnergiaRadioGroup.setOnCheckedChangeListener(radioListener);
@@ -65,17 +60,11 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
         conPerrosRadioGroup.setOnCheckedChangeListener(radioListener);
         habitosCorreaRadioGroup.setOnCheckedChangeListener(radioListener);
 
-        // TextWatcher con debouncing para validaciones
-        validationTextWatcher = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                InputUtils.debounce("validacion_mascota_paso3", DEBOUNCE_DELAY_MS, () -> validateInputs());
-            }
-        };
+        validationTextWatcher = InputUtils.createDebouncedTextWatcher(
+            "validacion_mascota_paso3",
+            DEBOUNCE_DELAY_MS,
+            text -> validateInputs()
+        );
         comandosConocidosEditText.addTextChangedListener(validationTextWatcher);
         miedosFobiasEditText.addTextChangedListener(validationTextWatcher);
         maniasHabitosEditText.addTextChangedListener(validationTextWatcher);

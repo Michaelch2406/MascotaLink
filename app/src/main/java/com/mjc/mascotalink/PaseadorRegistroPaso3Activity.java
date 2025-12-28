@@ -169,9 +169,12 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     private void continuarAlPaso4() {
         // Rate limiting ya integrado en SafeClickListener
         if (antecedentesUri != null && medicoUri != null) {
-            btnContinuarPaso4.setEnabled(false);
+            // Ocultar teclado antes de procesar
+            InputUtils.hideKeyboard(this);
+            InputUtils.setButtonLoading(btnContinuarPaso4, true, "Procesando...");
+
             startActivity(new Intent(this, PaseadorRegistroPaso4Activity.class));
-            btnContinuarPaso4.setEnabled(true);
+            InputUtils.setButtonLoading(btnContinuarPaso4, false);
         } else {
             verificarCompletitudPaso3();
         }

@@ -46,7 +46,6 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
     private String duenoApellido;
 
     private TextWatcher validationTextWatcher;
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,23 +71,13 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
     private void setupListeners() {
         arrowBack.setOnClickListener(v -> finish());
-        guardarButton.setOnClickListener(v -> {
-            if (rateLimiter.shouldProcess()) {
-                guardarMascotaCompleta();
-            }
-        });
+        guardarButton.setOnClickListener(InputUtils.createSafeClickListener(2000, v -> guardarMascotaCompleta()));
 
-        // TextWatcher con debouncing para validaciones
-        validationTextWatcher = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                InputUtils.debounce("validacion_mascota_paso4", DEBOUNCE_DELAY_MS, () -> validateInputs());
-            }
-        };
+        validationTextWatcher = InputUtils.createDebouncedTextWatcher(
+            "validacion_mascota_paso4",
+            DEBOUNCE_DELAY_MS,
+            text -> validateInputs()
+        );
 
         rutinaPaseoEditText.addTextChangedListener(validationTextWatcher);
         tipoCorreaArnesEditText.addTextChangedListener(validationTextWatcher);
@@ -168,7 +157,6 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
                 Log.e(TAG, "URI de foto de mascota no encontrado");
                 mostrarErrorDialog("No se encontró la imagen de la mascota. Por favor, vuelve al paso 1.");
                 guardarButton.setEnabled(true);
-                rateLimiter.reset();
                 return;
             }
             Uri fotoUri = Uri.parse(fotoUriString);
@@ -203,13 +191,11 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
                         Log.e(TAG, "Error al subir foto de mascota", e);
                         mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
                         guardarButton.setEnabled(true);
-                        rateLimiter.reset();
                     });
         } catch (Exception e) {
             Log.e(TAG, "Error al iniciar guardado de mascota", e);
             mostrarErrorDialog("Error inesperado. Por favor, intenta nuevamente.");
             guardarButton.setEnabled(true);
-            rateLimiter.reset();
         }
     }
 
@@ -298,13 +284,11 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
                         Log.e(TAG, "Error al registrar mascota en Firestore", e);
                         mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
                         guardarButton.setEnabled(true);
-                        rateLimiter.reset();
                     });
         } catch (Exception e) {
             Log.e(TAG, "Error al crear documento de mascota", e);
             mostrarErrorDialog("Error al procesar los datos de la mascota.");
             guardarButton.setEnabled(true);
-            rateLimiter.reset();
         }
     }
 

@@ -153,6 +153,11 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
                 for (int i = 0; i < clipData.getItemCount(); i++) {
                     if (localUris.size() < 3) {
                         Uri sourceUri = clipData.getItemAt(i).getUri();
+                        // Validar archivo antes de copiar (máx 50MB para videos/imágenes)
+                        if (!InputUtils.isValidImageFile(this, sourceUri, 50 * 1024 * 1024)) {
+                            Toast.makeText(this, "Archivo muy grande o inválido (máx 50MB)", Toast.LENGTH_LONG).show();
+                            continue;
+                        }
                         // Use a more unique prefix to avoid overwriting files copied in the same second
                         String uniquePrefix = "GALERIA_" + System.nanoTime() + "_";
                         Uri copiedUri = FileStorageHelper.copyFileToInternalStorage(this, sourceUri, uniquePrefix);
@@ -166,6 +171,11 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
             } else if (result.getData().getData() != null) {
                 if (localUris.size() < 3) {
                     Uri sourceUri = result.getData().getData();
+                    // Validar archivo antes de copiar (máx 50MB)
+                    if (!InputUtils.isValidImageFile(this, sourceUri, 50 * 1024 * 1024)) {
+                        Toast.makeText(this, "Archivo muy grande o inválido (máx 50MB)", Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     Uri copiedUri = FileStorageHelper.copyFileToInternalStorage(this, sourceUri, "GALERIA_");
                     if (copiedUri != null) {
                         localUris.add(copiedUri);
@@ -189,6 +199,11 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         if (result.getResultCode() == RESULT_OK && result.getData() != null) {
             Uri tempUri = result.getData().getData();
             if (tempUri != null && localUris.size() < 3) {
+                // Validar archivo antes de copiar (máx 50MB)
+                if (!InputUtils.isValidImageFile(this, tempUri, 50 * 1024 * 1024)) {
+                    Toast.makeText(this, "Video muy grande o inválido (máx 50MB)", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 Uri permanentUri = FileStorageHelper.copyFileToInternalStorage(this, tempUri, "VIDEO_");
                 if (permanentUri != null) {
                     localUris.add(permanentUri);
@@ -282,9 +297,12 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private void guardarYContinuar() {
         // Rate limiting ya integrado en SafeClickListener
         if (btnGuardar.isEnabled()) {
-            btnGuardar.setEnabled(false);
+            // Ocultar teclado antes de procesar
+            InputUtils.hideKeyboard(this);
+            InputUtils.setButtonLoading(btnGuardar, true, "Procesando...");
+
             startActivity(new Intent(this, PaseadorRegistroPaso5Activity.class));
-            btnGuardar.setEnabled(true);
+            InputUtils.setButtonLoading(btnGuardar, false);
         } else {
             verificarCompletitudPaso4();
         }
