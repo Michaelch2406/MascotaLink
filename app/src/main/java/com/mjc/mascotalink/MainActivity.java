@@ -2,6 +2,7 @@ package com.mjc.mascotalink;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -13,12 +14,14 @@ import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.util.UnreadBadgeManager;
 
 import javax.inject.Inject;
-import com.mjc.mascotalink.network.SocketManager; // Ensure this import exists
+import com.mjc.mascotalink.network.SocketManager;
 
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
 
     private BottomNavigationView bottomNav;
     private String currentUserId;
@@ -56,15 +59,20 @@ public class MainActivity extends AppCompatActivity {
         UnreadBadgeManager.start(currentUserId);
         UnreadBadgeManager.registerNav(bottomNav, this);
 
-        // Handle notification deep link for Chat
+        // Handle notification deep link for Chat with validation
         if (getIntent() != null && getIntent().hasExtra("chat_id") && getIntent().hasExtra("id_otro_usuario")) {
             String chatId = getIntent().getStringExtra("chat_id");
             String otherUserId = getIntent().getStringExtra("id_otro_usuario");
 
-            Intent chatIntent = new Intent(this, ChatActivity.class);
-            chatIntent.putExtra("chat_id", chatId);
-            chatIntent.putExtra("id_otro_usuario", otherUserId);
-            startActivity(chatIntent);
+            if (isValidDeepLink(chatId, otherUserId)) {
+                Log.d(TAG, "Valid deep link - Opening chat: " + chatId);
+                Intent chatIntent = new Intent(this, ChatActivity.class);
+                chatIntent.putExtra("chat_id", chatId);
+                chatIntent.putExtra("id_otro_usuario", otherUserId);
+                startActivity(chatIntent);
+            } else {
+                Log.w(TAG, "Invalid deep link parameters - chatId: " + chatId + ", otherUserId: " + otherUserId);
+            }
         }
 
         if (savedInstanceState == null) {
@@ -89,6 +97,19 @@ public class MainActivity extends AppCompatActivity {
         if (networkMonitor != null) {
             networkMonitor.unregister();
         }
+    }
+
+    private boolean isValidDeepLink(String chatId, String otherUserId) {
+        if (chatId == null || chatId.trim().isEmpty()) {
+            return false;
+        }
+        if (otherUserId == null || otherUserId.trim().isEmpty()) {
+            return false;
+        }
+        if (chatId.length() > 100 || otherUserId.length() > 50) {
+            return false;
+        }
+        return true;
     }
 
     private void setupNetworkMonitor() {

@@ -65,4 +65,12 @@
     <color name="calendario_seleccionado">#BBDEFB</color> <!-- Azul claro -->
     <color name="calendario_pasado">#F5F5F5</color> <!-- Gris muy claro -->
     <color name="calendario_text_disabled">#BDBDBD</color> <!-- Gris texto -->
+
+    <!-- Home Fragment Colors (previously hardcoded) -->
+    <color name="background_light">#F7FAFC</color>
+    <color name="white_30">#30FFFFFF</color>
+    <color name="white_90">#E6FFFFFF</color>
+    <color name="text_white_light">#F0F0F0</color>
+    <color name="text_white_medium">#E0E0E0</color>
+    <color name="divider_light">#E0E0E0</color>
 </resources>

@@ -345,4 +345,16 @@
     <string name="error_loading_stats">Error al cargar estadísticas: %1$s</string>
     <string name="error_loading_reservation">Error al verificar paseos activos: %1$s</string>
     <string name="error_refresh_wait">Espera un momento antes de actualizar</string>
+
+    <!-- Content Descriptions for Accessibility -->
+    <string name="cd_profile_picture">Foto de perfil</string>
+    <string name="cd_favorites_icon">Icono de favoritos</string>
+    <string name="cd_history_icon">Icono de historial</string>
+    <string name="cd_pets_icon">Icono de mascotas</string>
+    <string name="cd_walk_status_icon">Icono de estado del paseo</string>
+    <string name="cd_walk_icon">Icono de paseo</string>
+    <string name="cd_location_icon">Icono de ubicación</string>
+    <string name="cd_calendar_icon">Icono de calendario</string>
+    <string name="cd_notification_icon">Icono de notificación</string>
+    <string name="cd_map_icon">Icono de mapa</string>
 </resources>

@@ -59,7 +59,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:src="@drawable/ic_user_placeholder"
-                    android:scaleType="centerCrop"/>
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@string/cd_profile_picture"/>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 

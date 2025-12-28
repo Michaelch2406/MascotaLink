@@ -15,8 +15,12 @@ public class HomeRepository {
     private static final String TAG = "HomeRepository";
     private final MutableLiveData<String> lastError = new MutableLiveData<>();
     private static final long VENTANA_ANTICIPACION_MS = 15 * 60 * 1000;
+    private static final long RATE_LIMIT_MS = 1000;
+    private static final int MAX_RETRIES = 3;
 
     private ListenerRegistration activeReservationListener;
+    private long lastUserProfileQueryTime = 0;
+    private long lastWalkerStatsQueryTime = 0;
 
     public LiveData<String> getLastError() {
         return lastError;
@@ -30,6 +34,13 @@ public class HomeRepository {
             data.setValue(null);
             return data;
         }
+
+        long now = System.currentTimeMillis();
+        if (now - lastUserProfileQueryTime < RATE_LIMIT_MS) {
+            Log.d(TAG, "getUserProfile: Rate limited, too many requests");
+            return data;
+        }
+        lastUserProfileQueryTime = now;
 
         db.collection("usuarios").document(userId).get()
             .addOnSuccessListener(snapshot -> {
@@ -57,6 +68,13 @@ public class HomeRepository {
             data.setValue(getDefaultStats());
             return data;
         }
+
+        long now = System.currentTimeMillis();
+        if (now - lastWalkerStatsQueryTime < RATE_LIMIT_MS) {
+            Log.d(TAG, "getWalkerStats: Rate limited, too many requests");
+            return data;
+        }
+        lastWalkerStatsQueryTime = now;
 
         db.collection("paseadores").document(userId).get()
             .addOnSuccessListener(snapshot -> {

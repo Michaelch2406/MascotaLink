@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +35,7 @@ import java.util.Map;
 
 public class HomeFragment extends Fragment {
 
+    private static final String TAG = "HomeFragment";
     private static final long MIN_REFRESH_INTERVAL_MS = 2000;
 
     private HomeViewModel viewModel;
@@ -54,6 +56,7 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        Log.d(TAG, "onViewCreated called");
 
         container = view.findViewById(R.id.home_container);
         pbLoading = view.findViewById(R.id.pb_loading_home);
@@ -70,6 +73,7 @@ public class HomeFragment extends Fragment {
         if (user != null) {
             userId = user.getUid();
             userRole = BottomNavManager.getUserRole(requireContext());
+            Log.d(TAG, "User authenticated - userId: " + userId + ", role: " + userRole);
 
             Handler timerHandler = new Handler(Looper.getMainLooper());
             ReservationCardHelper.RoleType roleType = "PASEADOR".equals(userRole)
@@ -80,6 +84,8 @@ public class HomeFragment extends Fragment {
 
             setupRoleBasedUI(userRole);
             loadData();
+        } else {
+            Log.w(TAG, "No authenticated user found");
         }
     }
 
@@ -106,29 +112,38 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadData() {
-        if (userId == null) return;
+        if (userId == null) {
+            Log.w(TAG, "loadData: userId is null");
+            return;
+        }
 
+        Log.d(TAG, "loadData: Loading user data for role: " + userRole);
         viewModel.loadUserData(userId);
         viewModel.listenToActiveReservation(userId, userRole != null ? userRole : "DUEÑO");
 
         if ("PASEADOR".equals(userRole)) {
+            Log.d(TAG, "loadData: Loading walker stats");
             viewModel.loadWalkerStats(userId);
         }
     }
 
     private void refreshData() {
         if (!isAdded() || getContext() == null) {
+            Log.w(TAG, "refreshData: Fragment not added or context is null");
             swipeRefresh.setRefreshing(false);
             return;
         }
 
         long now = System.currentTimeMillis();
+        long timeSinceLastRefresh = now - lastRefreshTime;
 
-        if (userId != null && (now - lastRefreshTime) >= MIN_REFRESH_INTERVAL_MS) {
+        if (userId != null && timeSinceLastRefresh >= MIN_REFRESH_INTERVAL_MS) {
+            Log.d(TAG, "refreshData: Refreshing data");
             lastRefreshTime = now;
             viewModel.setLoading(true);
             loadData();
         } else {
+            Log.d(TAG, "refreshData: Debounced - wait " + (MIN_REFRESH_INTERVAL_MS - timeSinceLastRefresh) + "ms");
             swipeRefresh.setRefreshing(false);
             Toast.makeText(requireContext(), R.string.error_refresh_wait, Toast.LENGTH_SHORT).show();
         }
@@ -267,6 +282,7 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        Log.d(TAG, "onDestroyView: Cleaning up resources");
         if (cardHelper != null) {
             cardHelper.stopTimer();
         }
