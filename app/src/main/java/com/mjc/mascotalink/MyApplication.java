@@ -69,8 +69,17 @@ public class MyApplication extends Application {
         }
 
         try {
-            FirebaseFirestore.getInstance().useEmulator(emulatorHost, 8080);
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.useEmulator(emulatorHost, 8080);
             Log.d(TAG, "Firestore emulador conectado a " + emulatorHost + ":8080");
+
+            com.google.firebase.firestore.FirebaseFirestoreSettings settings =
+                new com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                    .setPersistenceEnabled(true)
+                    .setCacheSizeBytes(com.google.firebase.firestore.FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+                    .build();
+            db.setFirestoreSettings(settings);
+            Log.d(TAG, "Firestore offline persistence enabled with unlimited cache");
         } catch (IllegalStateException e) {
             Log.w(TAG, "Firestore emulador ya está configurado.");
         }

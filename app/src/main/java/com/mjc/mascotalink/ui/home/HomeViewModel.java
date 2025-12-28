@@ -15,8 +15,11 @@ public class HomeViewModel extends ViewModel {
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MediatorLiveData<String> error = new MediatorLiveData<>();
 
+    private LiveData<Map<String, Object>> userProfileSource;
+    private LiveData<Map<String, Object>> activeReservationSource;
+    private LiveData<Map<String, Object>> walkerStatsSource;
+
     public HomeViewModel() {
-        // Observe repository errors and propagate them
         error.addSource(repository.getLastError(), errorMsg -> {
             if (errorMsg != null && !errorMsg.isEmpty()) {
                 error.setValue(errorMsg);
@@ -45,22 +48,41 @@ public class HomeViewModel extends ViewModel {
     }
 
     public void loadUserData(String userId) {
+        if (userId == null) return;
+
         isLoading.setValue(true);
-        LiveData<Map<String, Object>> source = repository.getUserProfile(userId);
-        userProfile.addSource(source, data -> {
+
+        if (userProfileSource != null) {
+            userProfile.removeSource(userProfileSource);
+        }
+
+        userProfileSource = repository.getUserProfile(userId);
+        userProfile.addSource(userProfileSource, data -> {
             userProfile.setValue(data);
             isLoading.setValue(false);
         });
     }
 
     public void loadWalkerStats(String userId) {
-        LiveData<Map<String, Object>> source = repository.getWalkerStats(userId);
-        walkerStats.addSource(source, walkerStats::setValue);
+        if (userId == null) return;
+
+        if (walkerStatsSource != null) {
+            walkerStats.removeSource(walkerStatsSource);
+        }
+
+        walkerStatsSource = repository.getWalkerStats(userId);
+        walkerStats.addSource(walkerStatsSource, walkerStats::setValue);
     }
 
     public void listenToActiveReservation(String userId, String role) {
-        LiveData<Map<String, Object>> source = repository.getActiveReservation(userId, role);
-        activeReservation.addSource(source, activeReservation::setValue);
+        if (userId == null || role == null) return;
+
+        if (activeReservationSource != null) {
+            activeReservation.removeSource(activeReservationSource);
+        }
+
+        activeReservationSource = repository.getActiveReservation(userId, role);
+        activeReservation.addSource(activeReservationSource, activeReservation::setValue);
     }
 
     public void setLoading(boolean loading) {
@@ -73,5 +95,22 @@ public class HomeViewModel extends ViewModel {
 
     public void clearError() {
         error.setValue(null);
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+
+        if (userProfileSource != null) {
+            userProfile.removeSource(userProfileSource);
+        }
+        if (activeReservationSource != null) {
+            activeReservation.removeSource(activeReservationSource);
+        }
+        if (walkerStatsSource != null) {
+            walkerStats.removeSource(walkerStatsSource);
+        }
+
+        repository.cleanup();
     }
 }

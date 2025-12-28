@@ -276,4 +276,73 @@
     <string name="home_paseador_disponible_titulo">Disponible</string>
     <string name="home_paseador_disponible_desc">No tienes paseos activos. Revisa tus solicitudes pendientes.</string>
     <string name="home_paseador_disponible_btn">Ver Solicitudes</string>
+
+    <!-- Walk States -->
+    <string name="walk_in_progress_title">Paseo en Curso</string>
+    <string name="walk_ready_to_start_title">Listo para Iniciar</string>
+    <string name="walk_scheduled_title">Paseo Programado</string>
+    <string name="walk_next_walk_title">Próximo Paseo</string>
+    <string name="walk_accepted_title">Reserva Aceptada</string>
+    <string name="walk_pending_title_dueno">Solicitud Enviada</string>
+    <string name="walk_pending_title_paseador">Nueva Solicitud</string>
+    <string name="walk_active">Paseo Activo</string>
+    <string name="walk_mission_active">Misión Activa</string>
+
+    <!-- Walk Actions -->
+    <string name="walk_track_now">Rastrear Ahora</string>
+    <string name="walk_continue">Continuar Paseo</string>
+    <string name="walk_track">Rastrear Paseo</string>
+    <string name="walk_start">Iniciar Paseo</string>
+    <string name="walk_view_details">Ver Detalles</string>
+    <string name="walk_confirm_payment">Confirmar Pago</string>
+    <string name="walk_view_status">Ver Estado</string>
+    <string name="walk_review_request">Revisar Solicitud</string>
+    <string name="walk_manage">Gestionar</string>
+
+    <!-- Walk Descriptions - Dueño -->
+    <string name="walk_ready_desc_dueno_with_name">%1$s está listo para iniciar el paseo</string>
+    <string name="walk_ready_desc_dueno">El paseador está listo para iniciar el paseo</string>
+    <string name="walk_scheduled_desc_dueno">%1$s a las %2$s\n%3$s</string>
+    <string name="walk_confirmed_desc_fallback">Paseo confirmado - Asegúrate de que tu mascota esté lista</string>
+    <string name="walk_accepted_desc_dueno">%1$s a las %2$s\n%3$s</string>
+    <string name="walk_accepted_desc_dueno_name">%1$s aceptó tu solicitud\nPróximo paso: Confirmar pago</string>
+    <string name="walk_accepted_desc_dueno_fallback">Solicitud aceptada\nPróximo paso: Confirmar pago</string>
+    <string name="walk_pending_desc_dueno">Solicitado hace %1$s\n%2$s</string>
+    <string name="walk_pending_waiting_walker">Esperando respuesta de %1$s</string>
+    <string name="walk_pending_waiting">Esperando respuesta del paseador</string>
+
+    <!-- Walk Descriptions - Paseador -->
+    <string name="walk_ready_desc_paseador_full">Encuentra a %1$s con %2$s e inicia el paseo</string>
+    <string name="walk_ready_desc_paseador_pet">Es hora de iniciar el paseo con %1$s</string>
+    <string name="walk_ready_desc_paseador">Es hora de encontrarte con la mascota e iniciar el paseo</string>
+    <string name="walk_scheduled_desc_paseador">%1$s a las %2$s\n%3$s%4$s</string>
+    <string name="walk_scheduled_with_pet"> con %1$s</string>
+    <string name="walk_scheduled_fallback">Tienes un paseo programado%1$s</string>
+    <string name="walk_accepted_desc_paseador">%1$s a las %2$s\nPaseo con %3$s</string>
+    <string name="walk_accepted_desc_paseador_name">Aceptaste el paseo con %1$s\nEsperando confirmación del dueño</string>
+    <string name="walk_accepted_desc_paseador_fallback">Aceptaste la solicitud\nEsperando confirmación del dueño</string>
+    <string name="walk_pending_request_full">%1$s quiere pasear a %2$s</string>
+    <string name="walk_pending_request_pet">Solicitud para pasear a %1$s</string>
+    <string name="walk_pending_request">Tienes una solicitud pendiente</string>
+    <string name="walk_pending_earnings">\nGanancia: $%.2f</string>
+    <string name="walk_pending_time_ago">Hace %1$s</string>
+
+    <!-- Walk Info Labels -->
+    <string name="walk_walker_label">Paseador: %1$s</string>
+    <string name="walk_pet_label">Mascota: %1$s</string>
+    <string name="walk_state_label">Estado: %1$s</string>
+    <string name="walk_distance_format">%.2f km recorridos</string>
+    <string name="price_format">$%.2f</string>
+
+    <!-- Time Formatting -->
+    <string name="time_days_hours">%1$dd %2$dh</string>
+    <string name="time_hours_minutes">%1$dh %2$dmin</string>
+    <string name="time_minutes">%1$dmin</string>
+    <string name="time_seconds">unos segundos</string>
+
+    <!-- Error Messages -->
+    <string name="error_loading_profile">Error al cargar perfil: %1$s</string>
+    <string name="error_loading_stats">Error al cargar estadísticas: %1$s</string>
+    <string name="error_loading_reservation">Error al verificar paseos activos: %1$s</string>
+    <string name="error_refresh_wait">Espera un momento antes de actualizar</string>
 </resources>
