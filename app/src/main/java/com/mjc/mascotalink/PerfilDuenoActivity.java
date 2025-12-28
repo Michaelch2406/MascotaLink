@@ -576,11 +576,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                         }
 
                         Log.d(TAG, "cargarMascotas: petList.size() después de agregar: " + petList.size());
-                        btnVerTodasMascotas.setVisibility(value.size() > 3 ? View.VISIBLE : View.GONE);
                     } else {
                         Log.d(TAG, "cargarMascotas: No se encontraron mascotas activas");
                         tvMascotasRegistradas.setText("0 Mascotas");
-                        btnVerTodasMascotas.setVisibility(View.GONE);
                     }
 
                     Log.d(TAG, "cargarMascotas: Llamando notifyDataSetChanged() con " + petList.size() + " items");

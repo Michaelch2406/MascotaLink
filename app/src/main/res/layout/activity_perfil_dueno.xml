@@ -411,8 +411,7 @@
                              android:layout_width="wrap_content"
                              android:layout_height="wrap_content"
                              android:text="Ver todas"
-                             android:textColor="@color/blue_primary"
-                             android:visibility="gone"/>
+                             android:textColor="@color/blue_primary"/>
                     </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
