@@ -315,7 +315,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             cargarMasResenas(10);
         });
         
-        btnVerTodasMascotas.setOnClickListener(v -> Toast.makeText(this, "Mostrar lista completa de mascotas", Toast.LENGTH_SHORT).show());
+        btnVerTodasMascotas.setOnClickListener(v -> {
+            Intent intent = new Intent(PerfilDuenoActivity.this, MisMascotasActivity.class);
+            startActivity(intent);
+        });
 
         btnCopyEmail.setOnClickListener(v -> copyToClipboard("Correo", tvEmailDueno.getText().toString()));
         btnCopyTelefono.setOnClickListener(v -> copyToClipboard("Teléfono", tvTelefonoDueno.getText().toString()));

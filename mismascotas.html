@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mis Mascotas - Walki</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cae4f", // Matching the green requested (#4CAF50 is very close, using theme's primary for consistency)
+                        "background-light": "#f6f7f6",
+                        "background-dark": "#151d15",
+                        "custom-bg": "#F5F5F5", // Specific background from prompt
+                        "text-primary": "#333333",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for cleaner mobile look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-custom-bg dark:bg-background-dark min-h-screen font-display text-text-primary antialiased selection:bg-primary/30">
+<!-- Screen Container -->
+<div class="relative mx-auto flex h-full min-h-screen w-full max-w-md flex-col overflow-hidden bg-custom-bg dark:bg-background-dark shadow-2xl">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-20 flex h-[56px] items-center justify-between bg-white px-4 shadow-sm dark:bg-[#1e281e]">
+<button class="flex h-10 w-10 items-center justify-start text-text-primary hover:text-primary dark:text-white">
+<span class="material-symbols-outlined text-[24px]">arrow_back_ios</span>
+</button>
+<h1 class="flex-1 text-center text-[20px] font-bold text-text-primary dark:text-white">
+                Mis Mascotas
+            </h1>
+<button class="flex h-10 w-10 items-center justify-end text-primary hover:text-primary/80">
+<span class="material-symbols-outlined text-[24px]">add</span>
+</button>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 overflow-y-auto pb-24 no-scrollbar">
+<!-- Header Info -->
+<div class="px-4 pt-6 pb-2">
+<div class="flex items-center justify-between">
+<h2 class="text-[18px] font-medium text-text-primary dark:text-white">
+                        Tus compañeros peludos 🐕
+                    </h2>
+<span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                        2 Mascotas
+                    </span>
+</div>
+</div>
+<!-- Pets List -->
+<div class="flex flex-col gap-4 px-4 py-4">
+<!-- Pet Card 1: Max -->
+<div class="group relative flex h-[100px] w-full cursor-pointer items-center justify-between rounded-xl bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all hover:scale-[1.02] active:scale-[0.98] dark:bg-[#1e281e]">
+<div class="flex items-center gap-4">
+<!-- Avatar -->
+<div class="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full border-[3px] border-white shadow-sm dark:border-[#2a362a]">
+<div class="h-full w-full bg-cover bg-center" data-alt="Golden Retriever dog portrait looking happy" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB0-WfsNbNBhjWeHbkv0memGJ97yVhCMb5_a1QMiNYUaezKlmPUipheISFe_aKP5aT8NFXEa6LgeV4sPtndJycYxiNDWe-WrbqIQVIYyNZxmRftqJQBw9D2UUhRxc7bueK3Rb9aK5xhaA8DN2ilDo67VpU5DQn-Da5Y5tZ3-eu-K_I2ozc0-zU8IwWQFzF_9k5PpjuOwkAwpC5WGBpcD0hkVACO-Bj1ZsschT0O8f_i4ugNNjaRurEbQCnloGTzANR3JPTJxzumS-8A');">
+</div>
+</div>
+<!-- Info -->
+<div class="flex flex-col justify-center">
+<h3 class="text-[18px] font-bold leading-tight text-text-primary dark:text-white">Max</h3>
+<p class="text-[14px] font-normal leading-snug text-gray-600 dark:text-gray-300">Golden Retriever - Macho</p>
+<p class="mt-0.5 text-[12px] text-gray-400 dark:text-gray-500">3 años • 28 kg</p>
+</div>
+</div>
+<!-- Chevron -->
+<div class="mr-1 flex h-8 w-8 items-center justify-center text-gray-400 group-hover:text-primary">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+<!-- Pet Card 2: Luna -->
+<div class="group relative flex h-[100px] w-full cursor-pointer items-center justify-between rounded-xl bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all hover:scale-[1.02] active:scale-[0.98] dark:bg-[#1e281e]">
+<div class="flex items-center gap-4">
+<!-- Avatar -->
+<div class="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full border-[3px] border-white shadow-sm dark:border-[#2a362a]">
+<div class="h-full w-full bg-cover bg-center" data-alt="Beagle dog portrait sitting in grass" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDINB06ITUE9j1i1LJPNtlORCfMQD8lf51TWBkSD2Eegpq8g2u9v2zSQCIjrO1tnBouOSw-KvKUQFbzKecBGkeP4Us0fvSylB3o7A9lMeYp_aivjCpEh93jJmVV3bbpHbTOTk5Hx3H468eDDTAnKn2K5moeOCOkCbx0OFtu4wlMyw8CqDWtVTTUCRN96U6l2BvpMRKfZp2fbD0PJ4TO1Y0o6rl1TDupR5jzB9wwzLcROW7xgNGWPmNUzOp_OyxcW_YCXWeLkwTmJ7AD');">
+</div>
+</div>
+<!-- Info -->
+<div class="flex flex-col justify-center">
+<h3 class="text-[18px] font-bold leading-tight text-text-primary dark:text-white">Luna</h3>
+<p class="text-[14px] font-normal leading-snug text-gray-600 dark:text-gray-300">Beagle - Hembra</p>
+<p class="mt-0.5 text-[12px] text-gray-400 dark:text-gray-500">2 años • 9 kg</p>
+</div>
+</div>
+<!-- Chevron -->
+<div class="mr-1 flex h-8 w-8 items-center justify-center text-gray-400 group-hover:text-primary">
+<span class="material-symbols-outlined">chevron_right</span>
+</div>
+</div>
+<!-- Example of Empty State (Hidden by default or shown below for demo purposes) -->
+<!-- Ideally this would replace the list if empty, but for the design deliverable I'll add a divider to show the component -->
+<div class="mt-8 flex w-full items-center gap-2 px-4 opacity-50">
+<div class="h-[1px] flex-1 bg-gray-300"></div>
+<span class="text-xs uppercase text-gray-400">Diseño Estado Vacío</span>
+<div class="h-[1px] flex-1 bg-gray-300"></div>
+</div>
+<div class="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white/50 p-8 dark:border-gray-700 dark:bg-white/5">
+<div class="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 text-gray-300 dark:bg-gray-800 dark:text-gray-600">
+<span class="material-symbols-outlined text-[48px]">pets</span>
+</div>
+<h3 class="mt-4 text-center text-[18px] font-bold text-text-primary dark:text-white">Sin mascotas</h3>
+<p class="mt-2 max-w-[240px] text-center text-[14px] text-gray-500 dark:text-gray-400">
+                        Agrega a tu mejor amigo para empezar a buscar paseadores.
+                    </p>
+<button class="mt-6 flex h-10 items-center justify-center rounded-lg bg-primary/10 px-6 text-sm font-bold text-primary hover:bg-primary/20">
+                        Agregar Mascota
+                    </button>
+</div>
+</div>
+</main>
+<!-- Floating Action Button (FAB) -->
+<button class="absolute bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-[0_4px_12px_rgba(76,174,79,0.4)] transition-transform hover:scale-110 active:scale-95">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</div>
+</body></html>

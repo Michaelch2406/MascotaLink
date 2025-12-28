@@ -242,6 +242,11 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
+            android:name=".MisMascotasActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
             android:name=".GestionarGaleriaActivity"
             android:label="Gestionar Galería"
             android:screenOrientation="portrait" />
