@@ -5,12 +5,17 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -20,11 +25,18 @@ import java.util.Locale;
 
 public class MascotaRegistroPaso2Activity extends AppCompatActivity {
 
+    private static final String TAG = "MascotaRegistroPaso2";
+    private static final long DEBOUNCE_DELAY_MS = 500;
+    private static final long RATE_LIMIT_MS = 1000;
+
     private ImageView arrowBack;
     private SwitchMaterial vacunasSwitch, desparasitacionSwitch;
     private TextInputEditText ultimaVisitaVetEditText, condicionesMedicasEditText, medicamentosActualesEditText, veterinarioNombreEditText, veterinarioTelefonoEditText;
     private TextInputLayout ultimaVisitaVetLayout, condicionesMedicasLayout, medicamentosActualesLayout, veterinarioNombreLayout, veterinarioTelefonoLayout;
     private Button siguienteButton;
+
+    private TextWatcher validationTextWatcher;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,27 +65,30 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
         arrowBack.setOnClickListener(v -> finish());
         ultimaVisitaVetEditText.setOnClickListener(v -> showDatePickerDialog());
         siguienteButton.setOnClickListener(v -> {
-            if (validateFields()) {
-                collectDataAndProceed();
+            if (rateLimiter.shouldProcess()) {
+                if (validateFields()) {
+                    collectDataAndProceed();
+                }
             }
         });
 
-        TextWatcher textWatcher = new TextWatcher() {
+        // TextWatcher con debouncing para validaciones
+        validationTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                validateInputs();
+                InputUtils.debounce("validacion_mascota_paso2", DEBOUNCE_DELAY_MS, () -> validateInputs());
             }
         };
 
-        ultimaVisitaVetEditText.addTextChangedListener(textWatcher);
-        condicionesMedicasEditText.addTextChangedListener(textWatcher);
-        medicamentosActualesEditText.addTextChangedListener(textWatcher);
-        veterinarioNombreEditText.addTextChangedListener(textWatcher);
-        veterinarioTelefonoEditText.addTextChangedListener(textWatcher);
+        ultimaVisitaVetEditText.addTextChangedListener(validationTextWatcher);
+        condicionesMedicasEditText.addTextChangedListener(validationTextWatcher);
+        medicamentosActualesEditText.addTextChangedListener(validationTextWatcher);
+        veterinarioNombreEditText.addTextChangedListener(validationTextWatcher);
+        veterinarioTelefonoEditText.addTextChangedListener(validationTextWatcher);
 
         vacunasSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> validateInputs());
         desparasitacionSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> validateInputs());
@@ -134,33 +149,62 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
     }
 
     private void collectDataAndProceed() {
-        Intent intent = new Intent(this, MascotaRegistroPaso3Activity.class);
-        intent.putExtras(getIntent().getExtras()); // Carry over all previous data
+        try {
+            Intent intent = new Intent(this, MascotaRegistroPaso3Activity.class);
+            intent.putExtras(getIntent().getExtras());
 
-        // Add data from Paso 2
-        intent.putExtra("vacunas_al_dia", vacunasSwitch.isChecked());
-        intent.putExtra("desparasitacion_al_dia", desparasitacionSwitch.isChecked());
+            // Sanitizar inputs
+            String condicionesSanitizadas = InputUtils.sanitizeInput(condicionesMedicasEditText.getText().toString().trim());
+            String medicamentosSanitizados = InputUtils.sanitizeInput(medicamentosActualesEditText.getText().toString().trim());
+            String veterinarioNombreSanitizado = InputUtils.sanitizeInput(veterinarioNombreEditText.getText().toString().trim());
+            String veterinarioTelefonoSanitizado = InputUtils.sanitizeInput(veterinarioTelefonoEditText.getText().toString().trim());
 
-        String ultimaVisitaStr = ultimaVisitaVetEditText.getText().toString();
-        if (!ultimaVisitaStr.isEmpty()) {
-            try {
-                // Using "es-ES" locale to correctly parse month names in Spanish
-                SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM 'de' yyyy", new Locale("es", "ES"));
-                Date date = sdf.parse(ultimaVisitaStr);
-                if (date != null) {
-                    intent.putExtra("ultima_visita_vet", date.getTime());
+            intent.putExtra("vacunas_al_dia", vacunasSwitch.isChecked());
+            intent.putExtra("desparasitacion_al_dia", desparasitacionSwitch.isChecked());
+
+            String ultimaVisitaStr = ultimaVisitaVetEditText.getText().toString();
+            if (!ultimaVisitaStr.isEmpty()) {
+                try {
+                    SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM 'de' yyyy", new Locale("es", "ES"));
+                    Date date = sdf.parse(ultimaVisitaStr);
+                    if (date != null) {
+                        intent.putExtra("ultima_visita_vet", date.getTime());
+                    }
+                } catch (ParseException e) {
+                    Log.e(TAG, "Error al parsear fecha de última visita veterinaria", e);
+                    intent.putExtra("ultima_visita_vet", 0L);
                 }
-            } catch (ParseException e) {
-                e.printStackTrace();
-                intent.putExtra("ultima_visita_vet", 0L); // Handle parse error
             }
+
+            intent.putExtra("condiciones_medicas", condicionesSanitizadas);
+            intent.putExtra("medicamentos_actuales", medicamentosSanitizados);
+            intent.putExtra("veterinario_nombre", veterinarioNombreSanitizado);
+            intent.putExtra("veterinario_telefono", veterinarioTelefonoSanitizado);
+
+            Log.d(TAG, "Datos del paso 2 recolectados correctamente");
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "Error al recolectar datos", e);
+            Toast.makeText(this, "Error al procesar los datos. Intenta nuevamente.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar TextWatchers para prevenir memory leaks
+        if (validationTextWatcher != null) {
+            if (ultimaVisitaVetEditText != null) ultimaVisitaVetEditText.removeTextChangedListener(validationTextWatcher);
+            if (condicionesMedicasEditText != null) condicionesMedicasEditText.removeTextChangedListener(validationTextWatcher);
+            if (medicamentosActualesEditText != null) medicamentosActualesEditText.removeTextChangedListener(validationTextWatcher);
+            if (veterinarioNombreEditText != null) veterinarioNombreEditText.removeTextChangedListener(validationTextWatcher);
+            if (veterinarioTelefonoEditText != null) veterinarioTelefonoEditText.removeTextChangedListener(validationTextWatcher);
         }
 
-        intent.putExtra("condiciones_medicas", condicionesMedicasEditText.getText().toString().trim());
-        intent.putExtra("medicamentos_actuales", medicamentosActualesEditText.getText().toString().trim());
-        intent.putExtra("veterinario_nombre", veterinarioNombreEditText.getText().toString().trim());
-        intent.putExtra("veterinario_telefono", veterinarioTelefonoEditText.getText().toString().trim());
+        // Cancelar debounces pendientes
+        InputUtils.cancelDebounce("validacion_mascota_paso2");
 
-        startActivity(intent);
+        Log.d(TAG, "Activity destruida y recursos limpiados");
     }
 }

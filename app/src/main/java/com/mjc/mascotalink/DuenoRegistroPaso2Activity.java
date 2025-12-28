@@ -15,12 +15,19 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import android.content.SharedPreferences;
+import android.util.Log;
 
 public class DuenoRegistroPaso2Activity extends AppCompatActivity {
+
+    private static final String TAG = "DuenoRegistroPaso2";
+    private static final long RATE_LIMIT_MS = 1000;
 
     private ImageView previewFotoPerfil;
     private ImageView previewSelfie;
@@ -28,6 +35,8 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
     private TextView tvValidationMessages;
     private Uri selfieUri;
     private Uri fotoPerfilUri;
+
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
 
 
@@ -64,7 +73,11 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
             fotoPerfilUri = null;
             updateUI();
         });
-        btnContinuarPaso3.setOnClickListener(v -> guardarUrisYContinuar());
+        btnContinuarPaso3.setOnClickListener(v -> {
+            if (rateLimiter.shouldProcess()) {
+                guardarUrisYContinuar();
+            }
+        });
     }
 
     private void loadUrisFromPrefs() {
@@ -124,9 +137,18 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
             });
 
     private void updateUI() {
+        // Configuración optimizada de Glide con caché
+        RequestOptions glideOptions = new RequestOptions()
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .skipMemoryCache(false)
+                .centerCrop();
+
         // Selfie
         if (selfieUri != null) {
-            Glide.with(this).load(MyApplication.getFixedUrl(selfieUri.toString())).into(previewSelfie);
+            Glide.with(this)
+                    .load(MyApplication.getFixedUrl(selfieUri.toString()))
+                    .apply(glideOptions)
+                    .into(previewSelfie);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
         } else {
             findViewById(R.id.container_preview_selfie).setVisibility(View.GONE);
@@ -134,7 +156,10 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
 
         // Foto de perfil
         if (fotoPerfilUri != null) {
-            Glide.with(this).load(MyApplication.getFixedUrl(fotoPerfilUri.toString())).into(previewFotoPerfil);
+            Glide.with(this)
+                    .load(MyApplication.getFixedUrl(fotoPerfilUri.toString()))
+                    .apply(glideOptions)
+                    .into(previewFotoPerfil);
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
         } else {
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.GONE);
@@ -164,21 +189,34 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
             return;
         }
 
-        // Copiamos los archivos a almacenamiento interno para asegurar que los URIs persistan
-        Uri persistentSelfieUri = FileStorageHelper.copyFileToInternalStorage(this, selfieUri, "selfie_dueno_");
-        Uri persistentFotoPerfilUri = FileStorageHelper.copyFileToInternalStorage(this, fotoPerfilUri, "fotoperfil_dueno_");
+        try {
+            // Copiamos los archivos a almacenamiento interno para asegurar que los URIs persistan
+            Uri persistentSelfieUri = FileStorageHelper.copyFileToInternalStorage(this, selfieUri, "selfie_dueno_");
+            Uri persistentFotoPerfilUri = FileStorageHelper.copyFileToInternalStorage(this, fotoPerfilUri, "fotoperfil_dueno_");
 
-        if (persistentSelfieUri == null || persistentFotoPerfilUri == null) {
-            Toast.makeText(this, "Error al guardar las imágenes localmente.", Toast.LENGTH_LONG).show();
-            return;
+            if (persistentSelfieUri == null || persistentFotoPerfilUri == null) {
+                Log.e(TAG, "Error al copiar archivos a almacenamiento interno");
+                Toast.makeText(this, "Error al guardar las imágenes localmente.", Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            SharedPreferences.Editor editor = getSharedPreferences("WizardDueno", MODE_PRIVATE).edit();
+            editor.putString("selfieUri", persistentSelfieUri.toString());
+            editor.putString("fotoPerfilUri", persistentFotoPerfilUri.toString());
+            editor.apply();
+
+            Log.d(TAG, "Imágenes guardadas correctamente");
+            Toast.makeText(this, "Imágenes listas para registrar.", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, DuenoRegistroPaso3Activity.class));
+        } catch (Exception e) {
+            Log.e(TAG, "Error al guardar URIs", e);
+            Toast.makeText(this, "Error al procesar las imágenes. Intenta nuevamente.", Toast.LENGTH_LONG).show();
         }
+    }
 
-        SharedPreferences.Editor editor = getSharedPreferences("WizardDueno", MODE_PRIVATE).edit();
-        editor.putString("selfieUri", persistentSelfieUri.toString());
-        editor.putString("fotoPerfilUri", persistentFotoPerfilUri.toString());
-        editor.apply();
-
-        Toast.makeText(this, "Imágenes listas para registrar.", Toast.LENGTH_SHORT).show();
-        startActivity(new Intent(this, DuenoRegistroPaso3Activity.class));
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "Activity destruida");
     }
 }

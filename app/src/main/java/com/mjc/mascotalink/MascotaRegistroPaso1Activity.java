@@ -38,9 +38,17 @@ import java.util.Locale;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.util.Log;
+
 import androidx.core.content.ContextCompat;
 
+import com.mjc.mascotalink.utils.InputUtils;
+
 public class MascotaRegistroPaso1Activity extends AppCompatActivity {
+
+    private static final String TAG = "MascotaRegistroPaso1";
+    private static final long DEBOUNCE_DELAY_MS = 500;
+    private static final long RATE_LIMIT_MS = 1000;
 
     private ImageView arrowBack, fotoPrincipalImageView;
     private TextInputLayout nombreTextField, pesoTextField, fechaNacimientoTextField, razaTextField;
@@ -54,6 +62,9 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> galleryLauncher;
     private ActivityResultLauncher<Uri> cameraLauncher;
     private ActivityResultLauncher<String> requestPermissionLauncher;
+
+    private TextWatcher validationTextWatcher;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,26 +104,29 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         tomarFotoButton.setOnClickListener(v -> checkCameraPermissionAndLaunch());
 
         siguienteButton.setOnClickListener(v -> {
-            if (validateFields()) {
-                collectDataAndProceed();
+            if (rateLimiter.shouldProcess()) {
+                if (validateFields()) {
+                    collectDataAndProceed();
+                }
             }
         });
 
-        TextWatcher textWatcher = new TextWatcher() {
+        // TextWatcher con debouncing para validaciones
+        validationTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                validateInputs();
+                InputUtils.debounce("validacion_mascota_paso1", DEBOUNCE_DELAY_MS, () -> validateInputs());
             }
         };
 
-        nombreTextField.getEditText().addTextChangedListener(textWatcher);
-        pesoTextField.getEditText().addTextChangedListener(textWatcher);
-        razaAutoComplete.addTextChangedListener(textWatcher);
-        fechaNacimientoEditText.addTextChangedListener(textWatcher);
+        nombreTextField.getEditText().addTextChangedListener(validationTextWatcher);
+        pesoTextField.getEditText().addTextChangedListener(validationTextWatcher);
+        razaAutoComplete.addTextChangedListener(validationTextWatcher);
+        fechaNacimientoEditText.addTextChangedListener(validationTextWatcher);
 
         sexoRadioGroup.setOnCheckedChangeListener((group, checkedId) -> validateInputs());
         tamanoChipGroup.setOnCheckedChangeListener((group, checkedId) -> validateInputs());
@@ -257,38 +271,75 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void collectDataAndProceed() {
-        Intent intent = new Intent(this, MascotaRegistroPaso2Activity.class);
-
-        if (getIntent().hasExtra("FROM_RESERVA")) {
-            intent.putExtra("FROM_RESERVA", getIntent().getBooleanExtra("FROM_RESERVA", false));
-        }
-
-        // Basic Info
-        intent.putExtra("nombre", nombreTextField.getEditText().getText().toString().trim());
-        intent.putExtra("raza", razaAutoComplete.getText().toString());
-
-        int selectedSexoId = sexoRadioGroup.getCheckedRadioButtonId();
-        RadioButton sexoRadioButton = findViewById(selectedSexoId);
-        intent.putExtra("sexo", sexoRadioButton.getText().toString());
-
-        String fechaNacimientoStr = fechaNacimientoEditText.getText().toString();
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
-            Date date = sdf.parse(fechaNacimientoStr);
-            if (date != null) {
-                intent.putExtra("fecha_nacimiento", date.getTime());
+            Intent intent = new Intent(this, MascotaRegistroPaso2Activity.class);
+
+            if (getIntent().hasExtra("FROM_RESERVA")) {
+                intent.putExtra("FROM_RESERVA", getIntent().getBooleanExtra("FROM_RESERVA", false));
             }
-        } catch (ParseException e) {
-            e.printStackTrace();
+
+            // Sanitizar inputs
+            String nombreSanitizado = InputUtils.sanitizeInput(nombreTextField.getEditText().getText().toString().trim());
+            String razaSanitizada = InputUtils.sanitizeInput(razaAutoComplete.getText().toString());
+
+            intent.putExtra("nombre", nombreSanitizado);
+            intent.putExtra("raza", razaSanitizada);
+
+            int selectedSexoId = sexoRadioGroup.getCheckedRadioButtonId();
+            RadioButton sexoRadioButton = findViewById(selectedSexoId);
+            intent.putExtra("sexo", sexoRadioButton.getText().toString());
+
+            String fechaNacimientoStr = fechaNacimientoEditText.getText().toString();
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
+                Date date = sdf.parse(fechaNacimientoStr);
+                if (date != null) {
+                    intent.putExtra("fecha_nacimiento", date.getTime());
+                }
+            } catch (ParseException e) {
+                Log.e(TAG, "Error al parsear fecha de nacimiento", e);
+                Toast.makeText(this, "Error en el formato de fecha", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int selectedTamanoId = tamanoChipGroup.getCheckedChipId();
+            Chip tamanoChip = findViewById(selectedTamanoId);
+            intent.putExtra("tamano", tamanoChip.getText().toString());
+
+            intent.putExtra("peso", Double.parseDouble(pesoTextField.getEditText().getText().toString()));
+            intent.putExtra("foto_uri", fotoUri.toString());
+
+            Log.d(TAG, "Datos del paso 1 recolectados correctamente");
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "Error al recolectar datos", e);
+            Toast.makeText(this, "Error al procesar los datos. Intenta nuevamente.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar TextWatchers para prevenir memory leaks
+        if (validationTextWatcher != null) {
+            if (nombreTextField != null && nombreTextField.getEditText() != null) {
+                nombreTextField.getEditText().removeTextChangedListener(validationTextWatcher);
+            }
+            if (pesoTextField != null && pesoTextField.getEditText() != null) {
+                pesoTextField.getEditText().removeTextChangedListener(validationTextWatcher);
+            }
+            if (razaAutoComplete != null) {
+                razaAutoComplete.removeTextChangedListener(validationTextWatcher);
+            }
+            if (fechaNacimientoEditText != null) {
+                fechaNacimientoEditText.removeTextChangedListener(validationTextWatcher);
+            }
         }
 
-        int selectedTamanoId = tamanoChipGroup.getCheckedChipId();
-        Chip tamanoChip = findViewById(selectedTamanoId);
-        intent.putExtra("tamano", tamanoChip.getText().toString());
+        // Cancelar debounces pendientes
+        InputUtils.cancelDebounce("validacion_mascota_paso1");
 
-        intent.putExtra("peso", Double.parseDouble(pesoTextField.getEditText().getText().toString()));
-        intent.putExtra("foto_uri", fotoUri.toString());
-
-        startActivity(intent);
+        Log.d(TAG, "Activity destruida y recursos limpiados");
     }
 }

@@ -4,19 +4,31 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.material.textfield.TextInputEditText;
+import com.mjc.mascotalink.utils.InputUtils;
 
 public class MascotaRegistroPaso3Activity extends AppCompatActivity {
+
+    private static final String TAG = "MascotaRegistroPaso3";
+    private static final long DEBOUNCE_DELAY_MS = 500;
+    private static final long RATE_LIMIT_MS = 1000;
 
     private ImageView arrowBack;
     private RadioGroup nivelEnergiaRadioGroup, conPersonasRadioGroup, conAnimalesRadioGroup, conPerrosRadioGroup, habitosCorreaRadioGroup;
     private TextInputEditText comandosConocidosEditText, miedosFobiasEditText, maniasHabitosEditText;
     private Button siguienteButton;
+
+    private TextWatcher validationTextWatcher;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +52,11 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
 
     private void setupListeners() {
         arrowBack.setOnClickListener(v -> finish());
-        siguienteButton.setOnClickListener(v -> collectDataAndProceed());
+        siguienteButton.setOnClickListener(v -> {
+            if (rateLimiter.shouldProcess()) {
+                collectDataAndProceed();
+            }
+        });
 
         RadioGroup.OnCheckedChangeListener radioListener = (group, checkedId) -> validateInputs();
         nivelEnergiaRadioGroup.setOnCheckedChangeListener(radioListener);
@@ -49,19 +65,20 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
         conPerrosRadioGroup.setOnCheckedChangeListener(radioListener);
         habitosCorreaRadioGroup.setOnCheckedChangeListener(radioListener);
 
-        TextWatcher textWatcher = new TextWatcher() {
+        // TextWatcher con debouncing para validaciones
+        validationTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                validateInputs();
+                InputUtils.debounce("validacion_mascota_paso3", DEBOUNCE_DELAY_MS, () -> validateInputs());
             }
         };
-        comandosConocidosEditText.addTextChangedListener(textWatcher);
-        miedosFobiasEditText.addTextChangedListener(textWatcher);
-        maniasHabitosEditText.addTextChangedListener(textWatcher);
+        comandosConocidosEditText.addTextChangedListener(validationTextWatcher);
+        miedosFobiasEditText.addTextChangedListener(validationTextWatcher);
+        maniasHabitosEditText.addTextChangedListener(validationTextWatcher);
     }
 
     private void validateInputs() {
@@ -77,20 +94,30 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void collectDataAndProceed() {
-        Intent intent = new Intent(this, MascotaRegistroPaso4Activity.class);
-        intent.putExtras(getIntent().getExtras()); // Carry over all previous data
+        try {
+            Intent intent = new Intent(this, MascotaRegistroPaso4Activity.class);
+            intent.putExtras(getIntent().getExtras());
 
-        // Add data from Paso 3
-        intent.putExtra("nivel_energia", getSelectedRadioButtonText(nivelEnergiaRadioGroup));
-        intent.putExtra("con_personas", getSelectedRadioButtonText(conPersonasRadioGroup));
-        intent.putExtra("con_otros_animales", getSelectedRadioButtonText(conAnimalesRadioGroup));
-        intent.putExtra("con_otros_perros", getSelectedRadioButtonText(conPerrosRadioGroup));
-        intent.putExtra("habitos_correa", getSelectedRadioButtonText(habitosCorreaRadioGroup));
-        intent.putExtra("comandos_conocidos", comandosConocidosEditText.getText().toString().trim());
-        intent.putExtra("miedos_fobias", miedosFobiasEditText.getText().toString().trim());
-        intent.putExtra("manias_habitos", maniasHabitosEditText.getText().toString().trim());
+            // Sanitizar inputs de texto
+            String comandosSanitizados = InputUtils.sanitizeInput(comandosConocidosEditText.getText().toString().trim());
+            String miedosSanitizados = InputUtils.sanitizeInput(miedosFobiasEditText.getText().toString().trim());
+            String maniasSanitizadas = InputUtils.sanitizeInput(maniasHabitosEditText.getText().toString().trim());
 
-        startActivity(intent);
+            intent.putExtra("nivel_energia", getSelectedRadioButtonText(nivelEnergiaRadioGroup));
+            intent.putExtra("con_personas", getSelectedRadioButtonText(conPersonasRadioGroup));
+            intent.putExtra("con_otros_animales", getSelectedRadioButtonText(conAnimalesRadioGroup));
+            intent.putExtra("con_otros_perros", getSelectedRadioButtonText(conPerrosRadioGroup));
+            intent.putExtra("habitos_correa", getSelectedRadioButtonText(habitosCorreaRadioGroup));
+            intent.putExtra("comandos_conocidos", comandosSanitizados);
+            intent.putExtra("miedos_fobias", miedosSanitizados);
+            intent.putExtra("manias_habitos", maniasSanitizadas);
+
+            Log.d(TAG, "Datos del paso 3 recolectados correctamente");
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "Error al recolectar datos", e);
+            Toast.makeText(this, "Error al procesar los datos. Intenta nuevamente.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private String getSelectedRadioButtonText(RadioGroup radioGroup) {
@@ -100,5 +127,22 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
             return selectedRadioButton.getText().toString();
         }
         return "";
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar TextWatchers para prevenir memory leaks
+        if (validationTextWatcher != null) {
+            if (comandosConocidosEditText != null) comandosConocidosEditText.removeTextChangedListener(validationTextWatcher);
+            if (miedosFobiasEditText != null) miedosFobiasEditText.removeTextChangedListener(validationTextWatcher);
+            if (maniasHabitosEditText != null) maniasHabitosEditText.removeTextChangedListener(validationTextWatcher);
+        }
+
+        // Cancelar debounces pendientes
+        InputUtils.cancelDebounce("validacion_mascota_paso3");
+
+        Log.d(TAG, "Activity destruida y recursos limpiados");
     }
 }

@@ -21,6 +21,7 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -30,6 +31,8 @@ import java.util.Objects;
 public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
     private static final String TAG = "MascotaRegistroPaso4";
+    private static final long DEBOUNCE_DELAY_MS = 500;
+    private static final long RATE_LIMIT_MS = 2000;
 
     private ImageView arrowBack;
     private TextInputEditText rutinaPaseoEditText, tipoCorreaArnesEditText, recompensasEditText, instruccionesEmergenciaEditText, notasAdicionalesEditText;
@@ -39,9 +42,11 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseStorage storage;
 
-    // New member variables for owner's name and surname
     private String duenoNombre;
     private String duenoApellido;
+
+    private TextWatcher validationTextWatcher;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,24 +72,29 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
     private void setupListeners() {
         arrowBack.setOnClickListener(v -> finish());
-        guardarButton.setOnClickListener(v -> guardarMascotaCompleta());
+        guardarButton.setOnClickListener(v -> {
+            if (rateLimiter.shouldProcess()) {
+                guardarMascotaCompleta();
+            }
+        });
 
-        TextWatcher textWatcher = new TextWatcher() {
+        // TextWatcher con debouncing para validaciones
+        validationTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                validateInputs();
+                InputUtils.debounce("validacion_mascota_paso4", DEBOUNCE_DELAY_MS, () -> validateInputs());
             }
         };
 
-        rutinaPaseoEditText.addTextChangedListener(textWatcher);
-        tipoCorreaArnesEditText.addTextChangedListener(textWatcher);
-        recompensasEditText.addTextChangedListener(textWatcher);
-        instruccionesEmergenciaEditText.addTextChangedListener(textWatcher);
-        notasAdicionalesEditText.addTextChangedListener(textWatcher);
+        rutinaPaseoEditText.addTextChangedListener(validationTextWatcher);
+        tipoCorreaArnesEditText.addTextChangedListener(validationTextWatcher);
+        recompensasEditText.addTextChangedListener(validationTextWatcher);
+        instruccionesEmergenciaEditText.addTextChangedListener(validationTextWatcher);
+        notasAdicionalesEditText.addTextChangedListener(validationTextWatcher);
     }
 
     private void validateInputs() {
@@ -98,23 +108,37 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
     }
 
     private void loadDuenoDataAndProceed() {
+        if (isFinishing() || isDestroyed()) {
+            Log.w(TAG, "Activity en proceso de destrucción, operación cancelada");
+            return;
+        }
+
         String currentDuenoId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
         if (currentDuenoId == null) {
+            Log.e(TAG, "Usuario no autenticado");
             Toast.makeText(this, "Error: Usuario no autenticado.", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
         db.collection("usuarios").document(currentDuenoId).get().addOnSuccessListener(documentSnapshot -> {
+            if (isFinishing() || isDestroyed()) {
+                Log.w(TAG, "Activity destruida después de cargar datos del dueño");
+                return;
+            }
             if (documentSnapshot.exists()) {
                 duenoNombre = documentSnapshot.getString("nombre");
                 duenoApellido = documentSnapshot.getString("apellido");
-                validateInputs(); // Re-validate after owner data is loaded
+                Log.d(TAG, "Datos del dueño cargados correctamente");
+                validateInputs();
             } else {
+                Log.e(TAG, "Documento del dueño no existe");
                 Toast.makeText(this, "Error: Datos del dueño no encontrados.", Toast.LENGTH_SHORT).show();
                 finish();
             }
         }).addOnFailureListener(e -> {
+            if (isFinishing() || isDestroyed()) return;
+            Log.e(TAG, "Error al cargar datos del dueño", e);
             Toast.makeText(this, "Error al cargar datos del dueño: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             finish();
         });
@@ -127,18 +151,27 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
     }
 
     private void guardarMascotaCompleta() {
-        guardarButton.setEnabled(false); // Prevent double clicks
-        String duenoId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
-        Intent intent = getIntent();
-        String fotoUriString = intent.getStringExtra("foto_uri");
-        String petName = intent.getStringExtra("nombre");
-
-        if (fotoUriString == null) {
-            mostrarErrorDialog("No se encontró la imagen de la mascota. Por favor, vuelve al paso 1.");
-            guardarButton.setEnabled(true);
+        if (isFinishing() || isDestroyed()) {
+            Log.w(TAG, "Activity en proceso de destrucción, operación cancelada");
             return;
         }
-        Uri fotoUri = Uri.parse(fotoUriString);
+
+        guardarButton.setEnabled(false);
+
+        try {
+            String duenoId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
+            Intent intent = getIntent();
+            String fotoUriString = intent.getStringExtra("foto_uri");
+            String petName = intent.getStringExtra("nombre");
+
+            if (fotoUriString == null) {
+                Log.e(TAG, "URI de foto de mascota no encontrado");
+                mostrarErrorDialog("No se encontró la imagen de la mascota. Por favor, vuelve al paso 1.");
+                guardarButton.setEnabled(true);
+                rateLimiter.reset();
+                return;
+            }
+            Uri fotoUri = Uri.parse(fotoUriString);
 
         String extension = getFileExtension(fotoUri);
         
@@ -155,24 +188,54 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         Log.d(TAG, "UID del dueño: " + duenoId);
         Log.d(TAG, "Ruta de Storage construida (MascotaRegistroPaso4): " + storageRef.getPath());
 
-        storageRef.putFile(fotoUri)
-                .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                    String fotoUrl = uri.toString();
-                    crearDocumentoMascota(duenoId, intent, fotoUrl);
-                }))
-                .addOnFailureListener(e -> {
-                    Log.e("Storage", "Error al subir foto", e);
-                    mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
-                    guardarButton.setEnabled(true);
-                });
+            storageRef.putFile(fotoUri)
+                    .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                        if (isFinishing() || isDestroyed()) {
+                            Log.w(TAG, "Activity destruida después de subir foto");
+                            return;
+                        }
+                        String fotoUrl = uri.toString();
+                        Log.d(TAG, "Foto de mascota subida exitosamente");
+                        crearDocumentoMascota(duenoId, intent, fotoUrl);
+                    }))
+                    .addOnFailureListener(e -> {
+                        if (isFinishing() || isDestroyed()) return;
+                        Log.e(TAG, "Error al subir foto de mascota", e);
+                        mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
+                        guardarButton.setEnabled(true);
+                        rateLimiter.reset();
+                    });
+        } catch (Exception e) {
+            Log.e(TAG, "Error al iniciar guardado de mascota", e);
+            mostrarErrorDialog("Error inesperado. Por favor, intenta nuevamente.");
+            guardarButton.setEnabled(true);
+            rateLimiter.reset();
+        }
     }
 
     private void crearDocumentoMascota(String duenoId, Intent intent, String fotoUrl) {
-        Map<String, Object> mascota = new HashMap<>();
+        try {
+            // Sanitizar todos los inputs de texto
+            String nombreSanitizado = InputUtils.sanitizeInput(intent.getStringExtra("nombre"));
+            String razaSanitizada = InputUtils.sanitizeInput(intent.getStringExtra("raza"));
+            String condicionesSanitizadas = InputUtils.sanitizeInput(intent.getStringExtra("condiciones_medicas"));
+            String medicamentosSanitizados = InputUtils.sanitizeInput(intent.getStringExtra("medicamentos_actuales"));
+            String veterinarioNombreSanitizado = InputUtils.sanitizeInput(intent.getStringExtra("veterinario_nombre"));
+            String veterinarioTelefonoSanitizado = InputUtils.sanitizeInput(intent.getStringExtra("veterinario_telefono"));
+            String comandosSanitizados = InputUtils.sanitizeInput(intent.getStringExtra("comandos_conocidos"));
+            String miedosSanitizados = InputUtils.sanitizeInput(intent.getStringExtra("miedos_fobias"));
+            String maniasSanitizadas = InputUtils.sanitizeInput(intent.getStringExtra("manias_habitos"));
+            String rutinaSanitizada = InputUtils.sanitizeInput(rutinaPaseoEditText.getText().toString().trim());
+            String correaSanitizada = InputUtils.sanitizeInput(tipoCorreaArnesEditText.getText().toString().trim());
+            String recompensasSanitizadas = InputUtils.sanitizeInput(recompensasEditText.getText().toString().trim());
+            String instruccionesSanitizadas = InputUtils.sanitizeInput(instruccionesEmergenciaEditText.getText().toString().trim());
+            String notasSanitizadas = InputUtils.sanitizeInput(notasAdicionalesEditText.getText().toString().trim());
 
-        // Pantalla 1 - Información Básica
-        mascota.put("nombre", intent.getStringExtra("nombre"));
-        mascota.put("raza", intent.getStringExtra("raza"));
+            Map<String, Object> mascota = new HashMap<>();
+
+            // Pantalla 1 - Información Básica
+            mascota.put("nombre", nombreSanitizado);
+            mascota.put("raza", razaSanitizada);
         mascota.put("sexo", intent.getStringExtra("sexo"));
         mascota.put("fecha_nacimiento", new com.google.firebase.Timestamp(new java.util.Date(intent.getLongExtra("fecha_nacimiento", 0))));
         mascota.put("tamano", intent.getStringExtra("tamano"));
@@ -190,47 +253,59 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         if (ultimaVisita != 0) {
             salud.put("ultima_visita_vet", new com.google.firebase.Timestamp(new java.util.Date(ultimaVisita)));
         } else {
-            salud.put("ultima_visita_vet", null);
+                    salud.put("ultima_visita_vet", null);
+            }
+            salud.put("condiciones_medicas", condicionesSanitizadas);
+            salud.put("medicamentos_actuales", medicamentosSanitizados);
+            salud.put("veterinario_nombre", veterinarioNombreSanitizado);
+            salud.put("veterinario_telefono", veterinarioTelefonoSanitizado);
+            mascota.put("salud", salud);
+
+            // Pantalla 3 - Comportamiento
+            Map<String, Object> comportamiento = new HashMap<>();
+            comportamiento.put("nivel_energia", intent.getStringExtra("nivel_energia"));
+            comportamiento.put("con_personas", intent.getStringExtra("con_personas"));
+            comportamiento.put("con_otros_animales", intent.getStringExtra("con_otros_animales"));
+            comportamiento.put("con_otros_perros", intent.getStringExtra("con_otros_perros"));
+            comportamiento.put("habitos_correa", intent.getStringExtra("habitos_correa"));
+            comportamiento.put("comandos_conocidos", comandosSanitizados);
+            comportamiento.put("miedos_fobias", miedosSanitizados);
+            comportamiento.put("manias_habitos", maniasSanitizadas);
+            mascota.put("comportamiento", comportamiento);
+
+            // Pantalla 4 - Instrucciones
+            Map<String, Object> instrucciones = new HashMap<>();
+            instrucciones.put("rutina_paseo", rutinaSanitizada);
+            instrucciones.put("tipo_correa_arnes", correaSanitizada);
+            instrucciones.put("recompensas", recompensasSanitizadas);
+            instrucciones.put("instrucciones_emergencia", instruccionesSanitizadas);
+            instrucciones.put("notas_adicionales", notasSanitizadas);
+            mascota.put("instrucciones", instrucciones);
+
+            db.collection("duenos").document(duenoId)
+                    .collection("mascotas")
+                    .add(mascota)
+                    .addOnSuccessListener(documentReference -> {
+                        if (isFinishing() || isDestroyed()) {
+                            Log.w(TAG, "Activity destruida después de registrar mascota");
+                            return;
+                        }
+                        Log.d(TAG, "Mascota registrada exitosamente: " + documentReference.getId());
+                        mostrarMensajeExito();
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isFinishing() || isDestroyed()) return;
+                        Log.e(TAG, "Error al registrar mascota en Firestore", e);
+                        mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
+                        guardarButton.setEnabled(true);
+                        rateLimiter.reset();
+                    });
+        } catch (Exception e) {
+            Log.e(TAG, "Error al crear documento de mascota", e);
+            mostrarErrorDialog("Error al procesar los datos de la mascota.");
+            guardarButton.setEnabled(true);
+            rateLimiter.reset();
         }
-        salud.put("condiciones_medicas", intent.getStringExtra("condiciones_medicas"));
-        salud.put("medicamentos_actuales", intent.getStringExtra("medicamentos_actuales"));
-        salud.put("veterinario_nombre", intent.getStringExtra("veterinario_nombre"));
-        salud.put("veterinario_telefono", intent.getStringExtra("veterinario_telefono"));
-        mascota.put("salud", salud);
-
-        // Pantalla 3 - Comportamiento
-        Map<String, Object> comportamiento = new HashMap<>();
-        comportamiento.put("nivel_energia", intent.getStringExtra("nivel_energia"));
-        comportamiento.put("con_personas", intent.getStringExtra("con_personas"));
-        comportamiento.put("con_otros_animales", intent.getStringExtra("con_otros_animales"));
-        comportamiento.put("con_otros_perros", intent.getStringExtra("con_otros_perros"));
-        comportamiento.put("habitos_correa", intent.getStringExtra("habitos_correa"));
-        comportamiento.put("comandos_conocidos", intent.getStringExtra("comandos_conocidos"));
-        comportamiento.put("miedos_fobias", intent.getStringExtra("miedos_fobias"));
-        comportamiento.put("manias_habitos", intent.getStringExtra("manias_habitos"));
-        mascota.put("comportamiento", comportamiento);
-
-        // Pantalla 4 - Instrucciones
-        Map<String, Object> instrucciones = new HashMap<>();
-        instrucciones.put("rutina_paseo", rutinaPaseoEditText.getText().toString().trim());
-        instrucciones.put("tipo_correa_arnes", tipoCorreaArnesEditText.getText().toString().trim());
-        instrucciones.put("recompensas", recompensasEditText.getText().toString().trim());
-        instrucciones.put("instrucciones_emergencia", instruccionesEmergenciaEditText.getText().toString().trim());
-        instrucciones.put("notas_adicionales", notasAdicionalesEditText.getText().toString().trim());
-        mascota.put("instrucciones", instrucciones);
-
-        db.collection("duenos").document(duenoId)
-                .collection("mascotas")
-                .add(mascota)
-                .addOnSuccessListener(documentReference -> {
-                    Log.d("Registro", "Mascota registrada: " + documentReference.getId());
-                    mostrarMensajeExito();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("Registro", "Error: " + e.getMessage());
-                    mostrarErrorDialog(getString(R.string.error_registro_mascota) + ": " + e.getMessage());
-                    guardarButton.setEnabled(true);
-                });
     }
 
     private void mostrarMensajeExito() {
@@ -257,5 +332,24 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
                 .setPositiveButton(android.R.string.ok, null)
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar TextWatchers para prevenir memory leaks
+        if (validationTextWatcher != null) {
+            if (rutinaPaseoEditText != null) rutinaPaseoEditText.removeTextChangedListener(validationTextWatcher);
+            if (tipoCorreaArnesEditText != null) tipoCorreaArnesEditText.removeTextChangedListener(validationTextWatcher);
+            if (recompensasEditText != null) recompensasEditText.removeTextChangedListener(validationTextWatcher);
+            if (instruccionesEmergenciaEditText != null) instruccionesEmergenciaEditText.removeTextChangedListener(validationTextWatcher);
+            if (notasAdicionalesEditText != null) notasAdicionalesEditText.removeTextChangedListener(validationTextWatcher);
+        }
+
+        // Cancelar debounces pendientes
+        InputUtils.cancelDebounce("validacion_mascota_paso4");
+
+        Log.d(TAG, "Activity destruida y recursos limpiados");
     }
 }

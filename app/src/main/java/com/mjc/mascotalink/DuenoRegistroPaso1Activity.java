@@ -48,6 +48,8 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.GeoPoint;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -61,6 +63,9 @@ import java.util.Locale;
 public class DuenoRegistroPaso1Activity extends AppCompatActivity {
 
     private static final String TAG = "DuenoRegistroPaso1";
+    private static final long DEBOUNCE_DELAY_MS = 500;
+    private static final long RATE_LIMIT_MS = 1000;
+
     private EditText etNombre, etApellido, etFechaNacimiento, etTelefono, etCorreo, etCedula, etDomicilio;
     private TextInputLayout tilPassword;
     private TextInputEditText etPassword;
@@ -75,6 +80,9 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private ActivityResultLauncher<Intent> autocompleteLauncher;
+
+    private TextWatcher validationTextWatcher;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -109,24 +117,32 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnRegistrarse.setOnClickListener(v -> intentarRegistro());
+        btnRegistrarse.setOnClickListener(v -> {
+            if (rateLimiter.shouldProcess()) {
+                intentarRegistro();
+            }
+        });
         etFechaNacimiento.setOnClickListener(v -> mostrarDatePicker());
         etDomicilio.setOnClickListener(v -> launchAutocomplete());
         ivGeolocate.setOnClickListener(v -> onGeolocateClick());
 
-        TextWatcher textWatcher = new TextWatcher() {
+        // TextWatcher con debouncing para validaciones
+        validationTextWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
-            @Override public void afterTextChanged(Editable s) { actualizarBoton(); }
+            @Override
+            public void afterTextChanged(Editable s) {
+                InputUtils.debounce("validacion_paso1", DEBOUNCE_DELAY_MS, () -> actualizarBoton());
+            }
         };
 
-        etNombre.addTextChangedListener(textWatcher);
-        etApellido.addTextChangedListener(textWatcher);
-        etFechaNacimiento.addTextChangedListener(textWatcher);
-        etTelefono.addTextChangedListener(textWatcher);
-        etCorreo.addTextChangedListener(textWatcher);
-        etCedula.addTextChangedListener(textWatcher);
-        etPassword.addTextChangedListener(textWatcher);
+        etNombre.addTextChangedListener(validationTextWatcher);
+        etApellido.addTextChangedListener(validationTextWatcher);
+        etFechaNacimiento.addTextChangedListener(validationTextWatcher);
+        etTelefono.addTextChangedListener(validationTextWatcher);
+        etCorreo.addTextChangedListener(validationTextWatcher);
+        etCedula.addTextChangedListener(validationTextWatcher);
+        etPassword.addTextChangedListener(validationTextWatcher);
         cbTerminos.setOnCheckedChangeListener((buttonView, isChecked) -> actualizarBoton());
     }
 
@@ -371,26 +387,44 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
             return;
         }
 
-        SharedPreferences.Editor editor = getSharedPreferences("WizardDueno", MODE_PRIVATE).edit();
-        editor.putString("nombre", etNombre.getText().toString().trim());
-        editor.putString("apellido", etApellido.getText().toString().trim());
-        editor.putString("fecha_nacimiento", etFechaNacimiento.getText().toString().trim());
-        editor.putString("telefono", etTelefono.getText().toString().trim());
-        editor.putString("correo", etCorreo.getText().toString().trim());
-        editor.putString("domicilio", domicilio);
-        if (domicilioLatLng != null) {
-            editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
-            editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
-        }
-        editor.putString("cedula", etCedula.getText().toString().trim());
-        if (etPassword.getText() != null) {
-            editor.putString("password", etPassword.getText().toString());
-        }
-        editor.putBoolean("acepta_terminos", cbTerminos.isChecked());
-        editor.apply();
+        try {
+            // Sanitizar todos los inputs
+            String nombreSanitizado = InputUtils.sanitizeInput(etNombre.getText().toString().trim());
+            String apellidoSanitizado = InputUtils.sanitizeInput(etApellido.getText().toString().trim());
+            String telefonoSanitizado = InputUtils.sanitizeInput(etTelefono.getText().toString().trim());
+            String correoSanitizado = InputUtils.sanitizeInput(etCorreo.getText().toString().trim());
+            String cedulaSanitizada = InputUtils.sanitizeInput(etCedula.getText().toString().trim());
+            String domicilioSanitizado = InputUtils.sanitizeInput(domicilio);
 
-        toast("Paso 1 completado. Continúa con el siguiente paso.");
-        startActivity(new Intent(this, DuenoRegistroPaso2Activity.class));
+            // Guardar en SharedPreferences normales
+            SharedPreferences.Editor editor = getSharedPreferences("WizardDueno", MODE_PRIVATE).edit();
+            editor.putString("nombre", nombreSanitizado);
+            editor.putString("apellido", apellidoSanitizado);
+            editor.putString("fecha_nacimiento", etFechaNacimiento.getText().toString().trim());
+            editor.putString("telefono", telefonoSanitizado);
+            editor.putString("correo", correoSanitizado);
+            editor.putString("domicilio", domicilioSanitizado);
+            if (domicilioLatLng != null) {
+                editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
+                editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
+            }
+            editor.putString("cedula", cedulaSanitizada);
+            editor.putBoolean("acepta_terminos", cbTerminos.isChecked());
+            editor.apply();
+
+            // Guardar contraseña encriptada
+            if (etPassword.getText() != null && !etPassword.getText().toString().isEmpty()) {
+                EncryptedPreferencesHelper encryptedPrefs = EncryptedPreferencesHelper.getInstance(this);
+                encryptedPrefs.putString("password_dueno", etPassword.getText().toString());
+                Log.d(TAG, "Contraseña guardada de forma encriptada");
+            }
+
+            toast("Paso 1 completado. Continúa con el siguiente paso.");
+            startActivity(new Intent(this, DuenoRegistroPaso2Activity.class));
+        } catch (Exception e) {
+            Log.e(TAG, "Error al guardar datos del registro", e);
+            toast("Error al guardar los datos. Por favor, intenta nuevamente.");
+        }
     }
 
     private void mostrarDialogoTerminos() {
@@ -434,4 +468,25 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void toast(String m) { Toast.makeText(this, m, Toast.LENGTH_LONG).show(); }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar TextWatchers para prevenir memory leaks
+        if (validationTextWatcher != null) {
+            if (etNombre != null) etNombre.removeTextChangedListener(validationTextWatcher);
+            if (etApellido != null) etApellido.removeTextChangedListener(validationTextWatcher);
+            if (etFechaNacimiento != null) etFechaNacimiento.removeTextChangedListener(validationTextWatcher);
+            if (etTelefono != null) etTelefono.removeTextChangedListener(validationTextWatcher);
+            if (etCorreo != null) etCorreo.removeTextChangedListener(validationTextWatcher);
+            if (etCedula != null) etCedula.removeTextChangedListener(validationTextWatcher);
+            if (etPassword != null) etPassword.removeTextChangedListener(validationTextWatcher);
+        }
+
+        // Cancelar debounces pendientes
+        InputUtils.cancelDebounce("validacion_paso1");
+
+        Log.d(TAG, "Activity destruida y recursos limpiados");
+    }
 }

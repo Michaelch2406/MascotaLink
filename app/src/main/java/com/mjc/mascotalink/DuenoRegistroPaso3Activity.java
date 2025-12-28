@@ -46,6 +46,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -59,6 +61,7 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
 
     private static final String TAG = "DuenoRegistroPaso3";
     private static final String PREFS_DUENO = "WizardDueno";
+    private static final long RATE_LIMIT_MS = 2000;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -76,6 +79,8 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private ActivityResultLauncher<Intent> autocompleteLauncher;
+
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(RATE_LIMIT_MS);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -116,7 +121,11 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        saveButton.setOnClickListener(v -> completarRegistroDueno());
+        saveButton.setOnClickListener(v -> {
+            if (rateLimiter.shouldProcess()) {
+                completarRegistroDueno();
+            }
+        });
         addressEditText.setOnClickListener(v -> launchAutocomplete());
         ivGeolocate.setOnClickListener(v -> onGeolocateClick());
     }
@@ -212,45 +221,78 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void saveDataToPrefs() {
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE).edit();
-        editor.putString("direccion_recogida", direccionRecogida);
-        if (ubicacionRecogida != null) {
-            editor.putFloat("ubicacion_recogida_lat", (float) ubicacionRecogida.getLatitude());
-            editor.putFloat("ubicacion_recogida_lng", (float) ubicacionRecogida.getLongitude());
+        try {
+            // Sanitizar dirección
+            String direccionSanitizada = InputUtils.sanitizeInput(direccionRecogida);
+
+            SharedPreferences.Editor editor = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE).edit();
+            editor.putString("direccion_recogida", direccionSanitizada);
+            if (ubicacionRecogida != null) {
+                editor.putFloat("ubicacion_recogida_lat", (float) ubicacionRecogida.getLatitude());
+                editor.putFloat("ubicacion_recogida_lng", (float) ubicacionRecogida.getLongitude());
+            }
+            editor.putBoolean("acepta_mensajes", messagesSwitch.isChecked());
+            editor.apply();
+        } catch (Exception e) {
+            Log.e(TAG, "Error al guardar datos en SharedPreferences", e);
         }
-        editor.putBoolean("acepta_mensajes", messagesSwitch.isChecked());
-        editor.apply();
     }
 
     private void completarRegistroDueno() {
+        if (isFinishing() || isDestroyed()) {
+            Log.w(TAG, "Activity en proceso de destrucción, operación cancelada");
+            return;
+        }
+
         saveDataToPrefs();
         if (TextUtils.isEmpty(direccionRecogida)) {
             Toast.makeText(this, "La dirección de recogida es requerida", Toast.LENGTH_SHORT).show();
+            rateLimiter.reset();
             return;
         }
 
         saveButton.setEnabled(false);
         saveButton.setText("Registrando...");
 
-        SharedPreferences prefs = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE);
-        String email = prefs.getString("correo", "");
-        String password = prefs.getString("password", "");
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_DUENO, MODE_PRIVATE);
+            String email = prefs.getString("correo", "");
 
-        if (email.isEmpty() || password.isEmpty()) {
-            mostrarError("El correo y la contraseña no se encontraron. Por favor, vuelve al paso 1.");
-            return;
+            // Leer contraseña encriptada
+            EncryptedPreferencesHelper encryptedPrefs = EncryptedPreferencesHelper.getInstance(this);
+            String password = encryptedPrefs.getString("password_dueno", "");
+
+            if (email.isEmpty() || password.isEmpty()) {
+                mostrarError("El correo y la contraseña no se encontraron. Por favor, vuelve al paso 1.");
+                rateLimiter.reset();
+                return;
+            }
+
+            mAuth.createUserWithEmailAndPassword(email, password)
+                    .addOnSuccessListener(authResult -> {
+                        if (isFinishing() || isDestroyed()) {
+                            Log.w(TAG, "Activity destruida después de crear usuario");
+                            return;
+                        }
+                        String uid = authResult.getUser().getUid();
+                        Log.d(TAG, "Usuario creado exitosamente: " + uid);
+                        subirArchivosYGuardarDatos(uid);
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isFinishing() || isDestroyed()) return;
+                        Log.e(TAG, "Error al crear usuario en Firebase Auth", e);
+                        mostrarError("Error al crear usuario: " + e.getMessage());
+                        saveButton.setEnabled(true);
+                        saveButton.setText("Guardar");
+                        rateLimiter.reset();
+                    });
+        } catch (Exception e) {
+            Log.e(TAG, "Error al iniciar registro", e);
+            mostrarError("Error inesperado. Por favor, intenta nuevamente.");
+            saveButton.setEnabled(true);
+            saveButton.setText("Guardar");
+            rateLimiter.reset();
         }
-
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener(authResult -> {
-                    String uid = authResult.getUser().getUid();
-                    subirArchivosYGuardarDatos(uid);
-                })
-                .addOnFailureListener(e -> {
-                    mostrarError("Error al crear usuario: " + e.getMessage());
-                    saveButton.setEnabled(true);
-                    saveButton.setText("Guardar");
-                });
     }
 
     private void subirArchivosYGuardarDatos(String uid) {
@@ -297,14 +339,20 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         }
 
         Tasks.whenAllSuccess(uploadTasks).addOnSuccessListener(results -> {
+            if (isFinishing() || isDestroyed()) {
+                Log.w(TAG, "Activity destruida después de subir archivos");
+                return;
+            }
             Log.d(TAG, "Archivos de dueño subidos con éxito.");
             guardarDatosEnFirestore(uid, downloadUrls);
         }).addOnFailureListener(e -> {
+            if (isFinishing() || isDestroyed()) return;
             Log.e(TAG, "Fallo al subir archivos de dueño", e);
             mostrarError("Error al subir imágenes: " + e.getMessage());
             if (mAuth.getCurrentUser() != null) { mAuth.getCurrentUser().delete(); }
             saveButton.setEnabled(true);
             saveButton.setText("Guardar");
+            rateLimiter.reset();
         });
     }
 
@@ -364,8 +412,17 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
             batch.set(db.collection("usuarios").document(uid), usuarioData);
             batch.set(db.collection("duenos").document(uid), duenoData);
         }).addOnSuccessListener(aVoid -> {
+            if (isFinishing() || isDestroyed()) {
+                Log.w(TAG, "Activity destruida después de guardar en Firestore");
+                return;
+            }
             Log.d(TAG, "Registro de dueño completado en Firestore.");
             guardarMetodoDePago(uid, prefs);
+
+            // Limpiar contraseña encriptada
+            EncryptedPreferencesHelper encryptedPrefs = EncryptedPreferencesHelper.getInstance(this);
+            encryptedPrefs.remove("password_dueno");
+
             prefs.edit().clear().apply();
             new AlertDialog.Builder(this)
                 .setTitle("¡Registro Exitoso!")
@@ -379,10 +436,13 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
                 .setCancelable(false)
                 .show();
         }).addOnFailureListener(e -> {
+            if (isFinishing() || isDestroyed()) return;
+            Log.e(TAG, "Error al guardar en Firestore", e);
             mostrarError("Error final al guardar tu perfil: " + e.getMessage());
             if (mAuth.getCurrentUser() != null) { mAuth.getCurrentUser().delete(); }
             saveButton.setEnabled(true);
             saveButton.setText("Guardar");
+            rateLimiter.reset();
         });
     }
 
@@ -418,5 +478,11 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
                 .add(metodoPagoData)
                 .addOnSuccessListener(documentReference -> Log.d(TAG, "Método de pago guardado con ID: " + documentReference.getId()))
                 .addOnFailureListener(e -> Log.e(TAG, "Error al guardar método de pago", e));
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d(TAG, "Activity destruida");
     }
 }
