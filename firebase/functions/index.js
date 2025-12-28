@@ -4883,3 +4883,179 @@ exports.notifyNearbyWalkersScheduled = onSchedule("0 8,12,17 * * *", async (even
     return null;
   }
 });
+
+// ============================================================================
+// MIGRACIÓN DE RESEÑAS - Desnormalización de datos
+// ============================================================================
+
+/**
+ * Cloud Function para migrar reseñas existentes a formato desnormalizado
+ *
+ * Uso desde Firebase Console o CLI:
+ * firebase functions:call migrarResenasADesnormalizado
+ */
+exports.migrarResenasADesnormalizado = onCall({
+  timeoutSeconds: 540,
+  memory: "512MiB"
+}, async (request) => {
+  try {
+      console.log("🚀 Iniciando migración de reseñas...");
+
+      let totalMigradas = 0;
+      let totalErrores = 0;
+      const errores = [];
+
+      // Migrar resenas_duenos
+      console.log("📝 Procesando resenas_duenos...");
+      const resenasDuenosSnapshot = await db.collection('resenas_duenos').get();
+      console.log(`  Total encontradas: ${resenasDuenosSnapshot.size}`);
+
+      for (const resenaDoc of resenasDuenosSnapshot.docs) {
+          try {
+              const resenaData = resenaDoc.data();
+              const autorId = resenaData.paseadorId || resenaData.autorId;
+
+              if (!autorId) {
+                  totalErrores++;
+                  continue;
+              }
+
+              if (resenaData.autorNombre && resenaData.autorFotoUrl) {
+                  continue;
+              }
+
+              const autorDoc = await db.collection('usuarios').doc(autorId).get();
+
+              if (!autorDoc.exists) {
+                  errores.push({ resenaId: resenaDoc.id, error: 'Usuario no encontrado' });
+                  totalErrores++;
+                  continue;
+              }
+
+              const autorData = autorDoc.data();
+              await resenaDoc.ref.update({
+                  autorNombre: autorData.nombre_display || 'Paseador',
+                  autorFotoUrl: autorData.foto_perfil || null
+              });
+
+              totalMigradas++;
+          } catch (error) {
+              errores.push({ resenaId: resenaDoc.id, error: error.message });
+              totalErrores++;
+          }
+      }
+
+      // Migrar resenas_paseadores
+      console.log("📝 Procesando resenas_paseadores...");
+      const resenasPaseadoresSnapshot = await db.collection('resenas_paseadores').get();
+      console.log(`  Total encontradas: ${resenasPaseadoresSnapshot.size}`);
+
+      for (const resenaDoc of resenasPaseadoresSnapshot.docs) {
+          try {
+              const resenaData = resenaDoc.data();
+              const autorId = resenaData.duenoId || resenaData.autorId;
+
+              if (!autorId) {
+                  totalErrores++;
+                  continue;
+              }
+
+              if (resenaData.autorNombre && resenaData.autorFotoUrl) {
+                  continue;
+              }
+
+              const autorDoc = await db.collection('usuarios').doc(autorId).get();
+
+              if (!autorDoc.exists) {
+                  errores.push({ resenaId: resenaDoc.id, error: 'Usuario no encontrado' });
+                  totalErrores++;
+                  continue;
+              }
+
+              const autorData = autorDoc.data();
+              await resenaDoc.ref.update({
+                  autorNombre: autorData.nombre_display || 'Usuario de Walki',
+                  autorFotoUrl: autorData.foto_perfil || null
+              });
+
+              totalMigradas++;
+          } catch (error) {
+              errores.push({ resenaId: resenaDoc.id, error: error.message });
+              totalErrores++;
+          }
+      }
+
+      const resultado = {
+          exito: true,
+          totalMigradas,
+          totalErrores,
+          errores: errores.slice(0, 10),
+          mensaje: `✅ Migración completada: ${totalMigradas} reseñas migradas, ${totalErrores} errores`
+      };
+
+      console.log("🎉 " + resultado.mensaje);
+      return resultado;
+
+  } catch (error) {
+      console.error("❌ Error fatal en migración:", error);
+      throw new Error(`Error en migración: ${error.message}`);
+  }
+});
+
+/**
+ * Trigger automático para desnormalizar nuevas reseñas de dueños
+ */
+exports.desnormalizarResenasDuenos = onDocumentCreated(
+  "resenas_duenos/{resenaId}",
+  async (event) => {
+      const resenaData = event.data.data();
+
+      try {
+          const autorId = resenaData.paseadorId;
+          if (!autorId) return;
+
+          const autorDoc = await db.collection('usuarios').doc(autorId).get();
+          if (!autorDoc.exists) return;
+
+          const autorData = autorDoc.data();
+
+          await event.data.ref.update({
+              autorNombre: autorData.nombre_display || 'Paseador',
+              autorFotoUrl: autorData.foto_perfil || null
+          });
+
+          console.log(`✓ Reseña de dueño ${event.params.resenaId} desnormalizada`);
+      } catch (error) {
+          console.error("Error desnormalizando reseña de dueño:", error);
+      }
+  }
+);
+
+/**
+ * Trigger automático para desnormalizar nuevas reseñas de paseadores
+ */
+exports.desnormalizarResenasPaseadores = onDocumentCreated(
+  "resenas_paseadores/{resenaId}",
+  async (event) => {
+      const resenaData = event.data.data();
+
+      try {
+          const autorId = resenaData.duenoId;
+          if (!autorId) return;
+
+          const autorDoc = await db.collection('usuarios').doc(autorId).get();
+          if (!autorDoc.exists) return;
+
+          const autorData = autorDoc.data();
+
+          await event.data.ref.update({
+              autorNombre: autorData.nombre_display || 'Usuario de Walki',
+              autorFotoUrl: autorData.foto_perfil || null
+          });
+
+          console.log(`✓ Reseña de paseador ${event.params.resenaId} desnormalizada`);
+      } catch (error) {
+          console.error("Error desnormalizando reseña de paseador:", error);
+      }
+  }
+);

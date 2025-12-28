@@ -47,6 +47,9 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.Timestamp;
@@ -1476,9 +1479,10 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                         }
                     }
 
+                    Executor executor = Executors.newFixedThreadPool(3);
                     List<Task<List<Address>>> geocodingTasks = new ArrayList<>();
                     for (GeoPoint centro : zonaCentros) {
-                        Task<List<Address>> task = Tasks.callInBackground(() -> {
+                        Task<List<Address>> task = Tasks.call(executor, () -> {
                             try {
                                 return geocoder.getFromLocation(centro.getLatitude(), centro.getLongitude(), 1);
                             } catch (IOException ex) {
