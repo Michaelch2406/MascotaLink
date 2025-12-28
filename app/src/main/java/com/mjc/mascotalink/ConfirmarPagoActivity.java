@@ -357,8 +357,18 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     }
 
     private void cargarNombrePaseadorYMascota(DocumentSnapshot reservaSnapshot) {
-        // Cargar nombre del paseador
-        if (idPaseador != null) {
+        // Intentar usar campo desnormalizado primero
+        String paseadorNombreDesnormalizado = reservaSnapshot.getString("paseador_nombre");
+
+        if (paseadorNombreDesnormalizado != null && !paseadorNombreDesnormalizado.isEmpty()) {
+            // Usar dato desnormalizado
+            paseadorNombre = paseadorNombreDesnormalizado;
+            Log.d(TAG, "Usando paseador_nombre desnormalizado: " + paseadorNombre);
+            mostrarDatos();
+            actualizarEstadoUI();
+        } else if (idPaseador != null) {
+            // Fallback: consultar Firebase (para reservas antiguas)
+            Log.d(TAG, "Campo desnormalizado no disponible, consultando Firebase");
             db.collection("usuarios").document(idPaseador)
                     .get()
                     .addOnSuccessListener(paseadorDoc -> {
@@ -378,6 +388,10 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         mostrarDatos();
                         actualizarEstadoUI();
                     });
+        } else {
+            paseadorNombre = "No asignado";
+            mostrarDatos();
+            actualizarEstadoUI();
         }
 
         // Cargar nombre de la mascota - soportar ambos formatos

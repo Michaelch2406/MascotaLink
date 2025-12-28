@@ -221,6 +221,10 @@ public class SolicitudesActivity extends AppCompatActivity {
                 }
                 solicitud.setReservaId(doc.getId());
 
+                // Intentar usar campos desnormalizados si están disponibles
+                String duenoNombreDesnormalizado = doc.getString("dueno_nombre");
+                String duenoFotoDesnormalizada = doc.getString("dueno_foto");
+
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
 
                 // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
@@ -234,27 +238,29 @@ public class SolicitudesActivity extends AppCompatActivity {
 
                 solicitudesTemporales.add(solicitud);
 
-                // Preparar tareas para obtener datos relacionados
-                if (duenoRef != null) {
+                // Si tenemos datos desnormalizados, evitar consulta adicional del dueño
+                if (duenoNombreDesnormalizado != null && !duenoNombreDesnormalizado.isEmpty()) {
+                    solicitud.setDuenoNombre(duenoNombreDesnormalizado);
+                    tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
+                    Log.d(TAG, "✅ Usando datos desnormalizados del dueño para reserva " + doc.getId());
+                } else if (duenoRef != null) {
                     tareas.add(duenoRef.get());
-
-                    // Si tiene el formato nuevo con nombres, no necesitamos query adicional
-                    if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
-                        solicitud.setMascotasNombres(mascotasNombres);
-                        solicitud.setNumeroMascotas(mascotasNombres.size());
-                        // Cargar fotos de mascotas si están disponibles
-                        if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
-                            solicitud.setMascotasFotos(mascotasFotos);
-                        }
-                        tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
-                    } else if (idMascota != null && !idMascota.isEmpty()) {
-                        // Formato antiguo: query para obtener nombre de mascota
-                        tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas").document(idMascota).get());
-                    } else {
-                        tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
-                    }
+                    Log.d(TAG, "⚠️ Consultando dueño para reserva " + doc.getId());
                 } else {
                     tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
+                }
+
+                // Manejar mascotas
+                if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
+                    solicitud.setMascotasNombres(mascotasNombres);
+                    solicitud.setNumeroMascotas(mascotasNombres.size());
+                    if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
+                        solicitud.setMascotasFotos(mascotasFotos);
+                    }
+                    tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
+                } else if (idMascota != null && !idMascota.isEmpty() && duenoRef != null) {
+                    tareas.add(db.collection("duenos").document(duenoRef.getId()).collection("mascotas").document(idMascota).get());
+                } else {
                     tareas.add(com.google.android.gms.tasks.Tasks.forResult(null));
                 }
             }
@@ -274,11 +280,13 @@ public class SolicitudesActivity extends AppCompatActivity {
                     DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(resultIndex++);
                     DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(resultIndex++);
 
-                    // Setear datos del dueño en el objeto Paseo
-                    if (duenoDoc != null && duenoDoc.exists()) {
-                        solicitud.setDuenoNombre(duenoDoc.getString("nombre_display"));
-                    } else {
-                        solicitud.setDuenoNombre("Usuario desconocido");
+                    // Setear datos del dueño solo si no están ya asignados
+                    if (solicitud.getDuenoNombre() == null || solicitud.getDuenoNombre().isEmpty()) {
+                        if (duenoDoc != null && duenoDoc.exists()) {
+                            solicitud.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                        } else {
+                            solicitud.setDuenoNombre("Usuario desconocido");
+                        }
                     }
 
                     // Setear datos de la mascota en el objeto Paseo

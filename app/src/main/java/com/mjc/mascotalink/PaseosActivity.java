@@ -502,8 +502,20 @@ public class PaseosActivity extends AppCompatActivity {
                 // Verificar si el paseo CONFIRMADO debe transicionar a LISTO_PARA_INICIAR
                 verificarYTransicionarPaseo(doc.getId(), paseo.getEstado(), paseo.getHora_inicio());
 
+                // Intentar usar campos desnormalizados si están disponibles
+                String paseadorNombreDesnormalizado = doc.getString("paseador_nombre");
+                String duenoNombreDesnormalizado = doc.getString("dueno_nombre");
+
                 // Placeholders visuales mientras carga el detalle
-                if (paseo.getPaseadorNombre() == null) paseo.setPaseadorNombre("Cargando...");
+                if (paseadorNombreDesnormalizado != null && !paseadorNombreDesnormalizado.isEmpty()) {
+                    paseo.setPaseadorNombre(paseadorNombreDesnormalizado);
+                } else if (paseo.getPaseadorNombre() == null) {
+                    paseo.setPaseadorNombre("Cargando...");
+                }
+
+                if (duenoNombreDesnormalizado != null && !duenoNombreDesnormalizado.isEmpty()) {
+                    paseo.setDuenoNombre(duenoNombreDesnormalizado);
+                }
 
                 // Si hay nombres precargados de múltiples mascotas, usarlos directamente
                 if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
@@ -517,13 +529,24 @@ public class PaseosActivity extends AppCompatActivity {
 
                 paseosTemporales.add(paseo);
 
-                // Preparar carga de detalles
+                // Preparar carga de detalles solo si no hay datos desnormalizados
                 DocumentReference paseadorRef = doc.getDocumentReference("id_paseador");
                 DocumentReference duenoRef = doc.getDocumentReference("id_dueno");
                 String currentMascotaId = paseo.getIdMascota();
 
-                tareas.add(paseadorRef != null ? paseadorRef.get() : Tasks.forResult(null));
-                tareas.add(duenoRef != null ? duenoRef.get() : Tasks.forResult(null));
+                // Solo consultar paseador si no hay dato desnormalizado
+                if (paseadorNombreDesnormalizado == null || paseadorNombreDesnormalizado.isEmpty()) {
+                    tareas.add(paseadorRef != null ? paseadorRef.get() : Tasks.forResult(null));
+                } else {
+                    tareas.add(Tasks.forResult(null));
+                }
+
+                // Solo consultar dueño si no hay dato desnormalizado
+                if (duenoNombreDesnormalizado == null || duenoNombreDesnormalizado.isEmpty()) {
+                    tareas.add(duenoRef != null ? duenoRef.get() : Tasks.forResult(null));
+                } else {
+                    tareas.add(Tasks.forResult(null));
+                }
 
                 // Solo cargar mascota si es formato antiguo (una sola mascota)
                 if (mascotasNombres == null || mascotasNombres.isEmpty()) {
@@ -608,16 +631,38 @@ public class PaseosActivity extends AppCompatActivity {
                         paseo.setMascotasFotos(mascotasFotos);
                     }
 
+                    // Cargar datos desnormalizados si están disponibles
+                    String paseadorNombreDesnormalizado = doc.getString("paseador_nombre");
+                    String paseadorFotoDesnormalizada = doc.getString("paseador_foto");
+                    String duenoNombreDesnormalizado = doc.getString("dueno_nombre");
+                    String duenoFotoDesnormalizada = doc.getString("dueno_foto");
+
+                    if (paseadorNombreDesnormalizado != null && !paseadorNombreDesnormalizado.isEmpty()) {
+                        paseo.setPaseadorNombre(paseadorNombreDesnormalizado);
+                    }
+                    if (paseadorFotoDesnormalizada != null && !paseadorFotoDesnormalizada.isEmpty()) {
+                        paseo.setPaseadorFoto(paseadorFotoDesnormalizada);
+                    }
+                    if (duenoNombreDesnormalizado != null && !duenoNombreDesnormalizado.isEmpty()) {
+                        paseo.setDuenoNombre(duenoNombreDesnormalizado);
+                    }
+
                     DocumentSnapshot paseadorDoc = (DocumentSnapshot) results.get(resultIndex++);
                     DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(resultIndex++);
                     DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(resultIndex++);
 
-                    if (paseadorDoc != null && paseadorDoc.exists()) {
-                        paseo.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
-                        paseo.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                    // Solo procesar datos si no hay desnormalizados
+                    if (paseo.getPaseadorNombre() == null || paseo.getPaseadorNombre().equals("Cargando...")) {
+                        if (paseadorDoc != null && paseadorDoc.exists()) {
+                            paseo.setPaseadorNombre(paseadorDoc.getString("nombre_display"));
+                            paseo.setPaseadorFoto(paseadorDoc.getString("foto_perfil"));
+                        }
                     }
-                    if (duenoDoc != null && duenoDoc.exists()) {
-                        paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
+
+                    if (paseo.getDuenoNombre() == null || paseo.getDuenoNombre().isEmpty()) {
+                        if (duenoDoc != null && duenoDoc.exists()) {
+                            paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                        }
                     }
 
                     // Solo actualizar nombre de mascota si es formato antiguo (una sola mascota)

@@ -98,6 +98,11 @@ public class ReservaActivity extends AppCompatActivity {
     private String notasAdicionalesMascota = "";
     private String direccionUsuario = ""; // Dirección del dueño para la reserva
 
+    // Datos desnormalizados para reducir consultas
+    private String duenoNombre = "";
+    private String duenoFoto = "";
+    private String paseadorFoto = "";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -169,7 +174,7 @@ public class ReservaActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         setupBottomNavigation();
-        recargarMascotas();
+        cargarMascotasUsuario();
     }
 
     private void initViews() {
@@ -307,6 +312,25 @@ public class ReservaActivity extends AppCompatActivity {
     private void cargarDatosIniciales() {
         if (currentUserId == null) return;
 
+        // Cargar datos del dueño (usuario actual) usando cache
+        com.mjc.mascotalink.util.UserCacheManager.loadAndCacheUserData(this, currentUserId, userData -> {
+            if (userData != null) {
+                duenoNombre = userData.nombre != null ? userData.nombre : "";
+                duenoFoto = userData.fotoUrl != null ? userData.fotoUrl : "";
+                Log.d(TAG, "Datos del dueño cargados desde caché: " + duenoNombre);
+            }
+        });
+
+        // Cargar datos del paseador usando cache
+        if (paseadorId != null) {
+            com.mjc.mascotalink.util.UserCacheManager.loadAndCacheUserData(this, paseadorId, userData -> {
+                if (userData != null) {
+                    paseadorFoto = userData.fotoUrl != null ? userData.fotoUrl : "";
+                    Log.d(TAG, "Datos del paseador cargados desde caché");
+                }
+            });
+        }
+
         // Mostrar sección de mascotas con transparencia mientras carga
         rvMascotas.setAlpha(0.3f);
 
@@ -355,39 +379,14 @@ public class ReservaActivity extends AppCompatActivity {
                 if (mascotaAdapter != null) {
                     mascotaAdapter.setSelectedPosition(0);
                 }
+                // Cargar notas de la primera mascota
+                cargarNotasAdicionalesMascota(mascotaList.get(0).getId());
                 verificarCamposCompletos();
             }
         }).addOnFailureListener(e -> {
             rvMascotas.animate().alpha(1f).setDuration(300).start();
             Toast.makeText(this, "Error al cargar mascotas", Toast.LENGTH_SHORT).show();
         });
-    }
-
-    private void recargarMascotas() {
-        if (currentUserId == null) return;
-
-        db.collection("duenos").document(currentUserId)
-                .collection("mascotas")
-                .whereEqualTo("activo", true)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    mascotaList.clear();
-                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                        MascotaSelectorAdapter.Mascota mascota = new MascotaSelectorAdapter.Mascota();
-                        mascota.setId(doc.getId());
-                        mascota.setNombre(doc.getString("nombre"));
-                        mascota.setFotoUrl(doc.getString("foto_principal_url"));
-                        mascota.setActivo(Boolean.TRUE.equals(doc.getBoolean("activo")));
-                        mascotaList.add(mascota);
-                    }
-
-                    if (mascotaAdapter != null) {
-                        mascotaAdapter.notifyDataSetChanged();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al recargar mascotas", e);
-                });
     }
 
     private void cargarDireccionUsuario() {
@@ -459,12 +458,18 @@ public class ReservaActivity extends AppCompatActivity {
 
                 if (mascotas.isEmpty()) {
                     tvMascotaNombre.setText("Ninguna");
+                    notasAdicionalesMascota = "";
                 } else {
                     List<String> nombres = new ArrayList<>();
                     for (MascotaSelectorAdapter.Mascota m : mascotas) {
                         nombres.add(m.getNombre());
                     }
                     tvMascotaNombre.setText(String.join(", ", nombres));
+
+                    // Cargar notas de la primera mascota seleccionada
+                    if (!mascotas.isEmpty()) {
+                        cargarNotasAdicionalesMascota(mascotas.get(0).getId());
+                    }
                 }
 
                 verificarCamposCompletos();
@@ -1765,6 +1770,32 @@ public class ReservaActivity extends AppCompatActivity {
      */
     private void crearReservaIndividual(double costoTotal, double tarifaConfirmada, Date horaInicio,
                                         Date fecha, String grupoId, boolean esGrupo) {
+        // Re-verificar datos del caché si están vacíos
+        if ((duenoNombre == null || duenoNombre.isEmpty()) && currentUserId != null) {
+            com.mjc.mascotalink.util.UserCacheManager.UserData userData =
+                com.mjc.mascotalink.util.UserCacheManager.getUserData(this, currentUserId);
+            if (userData != null) {
+                duenoNombre = userData.nombre != null ? userData.nombre : "";
+                duenoFoto = userData.fotoUrl != null ? userData.fotoUrl : "";
+            }
+        }
+
+        if ((paseadorFoto == null || paseadorFoto.isEmpty()) && paseadorId != null) {
+            com.mjc.mascotalink.util.UserCacheManager.UserData userData =
+                com.mjc.mascotalink.util.UserCacheManager.getUserData(this, paseadorId);
+            if (userData != null) {
+                paseadorFoto = userData.fotoUrl != null ? userData.fotoUrl : "";
+            }
+        }
+
+        // Log para verificar datos desnormalizados
+        Log.d(TAG, "Creando reserva con datos:");
+        Log.d(TAG, "  dueno_nombre: " + duenoNombre);
+        Log.d(TAG, "  dueno_foto: " + duenoFoto);
+        Log.d(TAG, "  paseador_nombre: " + paseadorNombre);
+        Log.d(TAG, "  paseador_foto: " + paseadorFoto);
+        Log.d(TAG, "  notas: " + notasAdicionalesMascota);
+
         List<String> mascotasIds = new ArrayList<>();
         List<String> mascotasNombres = new ArrayList<>();
         List<String> mascotasFotos = new ArrayList<>();
@@ -1795,6 +1826,12 @@ public class ReservaActivity extends AppCompatActivity {
         reserva.put("reminderSent", false);
         reserva.put("timeZone", java.util.TimeZone.getDefault().getID());
         reserva.put("direccion_recogida", direccionUsuario); // Guardar dirección
+
+        // Campos desnormalizados para reducir consultas posteriores
+        reserva.put("dueno_nombre", duenoNombre);
+        reserva.put("dueno_foto", duenoFoto);
+        reserva.put("paseador_nombre", paseadorNombre);
+        reserva.put("paseador_foto", paseadorFoto);
 
         // Campos para reservas agrupadas
         if (esGrupo && grupoId != null) {
@@ -1832,6 +1869,24 @@ public class ReservaActivity extends AppCompatActivity {
      * Garantiza atomicidad: o se crean todas las reservas o ninguna.
      */
     private void crearReservasAgrupadas(double costoTotalReal, double tarifaConfirmada, Date horaInicio) {
+        // Re-verificar datos del caché si están vacíos
+        if ((duenoNombre == null || duenoNombre.isEmpty()) && currentUserId != null) {
+            com.mjc.mascotalink.util.UserCacheManager.UserData userData =
+                com.mjc.mascotalink.util.UserCacheManager.getUserData(this, currentUserId);
+            if (userData != null) {
+                duenoNombre = userData.nombre != null ? userData.nombre : "";
+                duenoFoto = userData.fotoUrl != null ? userData.fotoUrl : "";
+            }
+        }
+
+        if ((paseadorFoto == null || paseadorFoto.isEmpty()) && paseadorId != null) {
+            com.mjc.mascotalink.util.UserCacheManager.UserData userData =
+                com.mjc.mascotalink.util.UserCacheManager.getUserData(this, paseadorId);
+            if (userData != null) {
+                paseadorFoto = userData.fotoUrl != null ? userData.fotoUrl : "";
+            }
+        }
+
         Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
         int cantidadDias = fechasSeleccionadas.size();
 
@@ -1900,6 +1955,12 @@ public class ReservaActivity extends AppCompatActivity {
             reserva.put("es_grupo", true);
             reserva.put("es_primer_dia_grupo", esPrimerDiaGrupo);
             reserva.put("cantidad_dias_grupo", cantidadDiasGrupo);
+
+            // Campos desnormalizados para reducir consultas posteriores
+            reserva.put("dueno_nombre", duenoNombre);
+            reserva.put("dueno_foto", duenoFoto);
+            reserva.put("paseador_nombre", paseadorNombre);
+            reserva.put("paseador_foto", paseadorFoto);
 
             com.google.firebase.firestore.DocumentReference newReservaRef = db.collection("reservas").document();
             batch.set(newReservaRef, reserva);
@@ -2138,6 +2199,7 @@ public class ReservaActivity extends AppCompatActivity {
                 .whereGreaterThanOrEqualTo("fecha", inicioRango)
                 .whereLessThanOrEqualTo("fecha", finRango)
                 .whereEqualTo("activo", true)
+                .limit(50)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) {
                         Log.w(TAG, "Error listening to bloqueos", e);
