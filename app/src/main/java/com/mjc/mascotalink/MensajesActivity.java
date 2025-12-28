@@ -26,7 +26,9 @@ import com.mjc.mascotalink.modelo.Chat;
 import com.mjc.mascotalink.util.BottomNavManager;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MensajesActivity extends AppCompatActivity {
 
@@ -41,10 +43,28 @@ public class MensajesActivity extends AppCompatActivity {
     private String currentUserId;
     private String userRole;
     private com.google.firebase.firestore.ListenerRegistration messagesListener;
-    
-    // Handler para actualizar timestamps periódicamente
+
     private Handler updateHandler;
     private Runnable updateRunnable;
+
+    private Map<String, CachedUser> userCache = new HashMap<>();
+    private static final long CACHE_TTL_MS = 5 * 60 * 1000;
+
+    private static class CachedUser {
+        String nombre;
+        String foto;
+        long timestamp;
+
+        CachedUser(String nombre, String foto) {
+            this.nombre = nombre;
+            this.foto = foto;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - timestamp > CACHE_TTL_MS;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -192,19 +212,18 @@ public class MensajesActivity extends AppCompatActivity {
 
                     if (snapshot != null && !snapshot.isEmpty()) {
                         List<Chat> conversaciones = new ArrayList<>();
-                        List<com.google.android.gms.tasks.Task<DocumentSnapshot>> tasks = new ArrayList<>();
+                        Map<String, Integer> userIndexMap = new HashMap<>();
+                        List<String> usersToFetch = new ArrayList<>();
 
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
                             Chat chat = doc.toObject(Chat.class);
                             chat.setChatId(doc.getId());
-                            
-                            // Capturar conteo de mensajes no leídos para el usuario actual
+
                             Object noLeidosObj = doc.get("mensajes_no_leidos");
                             if (noLeidosObj instanceof java.util.Map) {
                                 java.util.Map<String, Long> noLeidosMap = (java.util.Map<String, Long>) noLeidosObj;
                                 if (noLeidosMap != null && noLeidosMap.containsKey(currentUserId)) {
                                     Object val = noLeidosMap.get(currentUserId);
-                                    // Firestore puede devolver Long o Integer
                                     if (val instanceof Long) {
                                         chat.setMensajesNoLeidos(((Long) val).intValue());
                                     } else if (val instanceof Integer) {
@@ -215,7 +234,6 @@ public class MensajesActivity extends AppCompatActivity {
 
                             conversaciones.add(chat);
 
-                            // Find other user ID to fetch details
                             String otherId = null;
                             if (chat.getParticipantes() != null) {
                                 for (String id : chat.getParticipantes()) {
@@ -225,33 +243,61 @@ public class MensajesActivity extends AppCompatActivity {
                                     }
                                 }
                             }
-                            
+
                             if (otherId != null) {
-                                tasks.add(db.collection("usuarios").document(otherId).get());
-                            } else {
-                                tasks.add(Tasks.forResult(null));
-                            }
-                        }
-                        
-                        // Load user details
-                        Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
-                            for (int i = 0; i < results.size(); i++) {
-                                DocumentSnapshot userDoc = (DocumentSnapshot) results.get(i);
-                                if (userDoc != null && userDoc.exists()) {
-                                    conversaciones.get(i).setNombreOtroUsuario(userDoc.getString("nombre_display"));
-                                    conversaciones.get(i).setFotoOtroUsuario(userDoc.getString("foto_perfil"));
-                                    // status could be synced here if needed from 'estado_usuarios' map in chat doc
-                                    // chat object already has 'estado_usuarios' map, use it:
-                                    if (conversaciones.get(i).getEstado_usuarios() != null) {
-                                        String otherId = userDoc.getId();
-                                        conversaciones.get(i).setEstadoOtroUsuario(conversaciones.get(i).getEstado_usuarios().get(otherId));
+                                CachedUser cached = userCache.get(otherId);
+                                if (cached != null && !cached.isExpired()) {
+                                    chat.setNombreOtroUsuario(cached.nombre);
+                                    chat.setFotoOtroUsuario(cached.foto);
+                                    if (chat.getEstado_usuarios() != null) {
+                                        chat.setEstadoOtroUsuario(chat.getEstado_usuarios().get(otherId));
                                     }
+                                } else {
+                                    if (!usersToFetch.contains(otherId)) {
+                                        usersToFetch.add(otherId);
+                                    }
+                                    userIndexMap.put(otherId, conversaciones.size() - 1);
                                 }
                             }
+                        }
+
+                        if (usersToFetch.isEmpty()) {
                             adaptador.actualizarConversaciones(conversaciones);
                             emptyView.setVisibility(View.GONE);
                             rvConversaciones.setVisibility(View.VISIBLE);
-                        });
+                        } else {
+                            List<com.google.android.gms.tasks.Task<DocumentSnapshot>> tasks = new ArrayList<>();
+                            for (String userId : usersToFetch) {
+                                tasks.add(db.collection("usuarios").document(userId).get());
+                            }
+
+                            Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
+                                for (int i = 0; i < results.size(); i++) {
+                                    DocumentSnapshot userDoc = (DocumentSnapshot) results.get(i);
+                                    if (userDoc != null && userDoc.exists()) {
+                                        String userId = userDoc.getId();
+                                        String nombre = userDoc.getString("nombre_display");
+                                        String foto = userDoc.getString("foto_perfil");
+
+                                        userCache.put(userId, new CachedUser(nombre, foto));
+
+                                        Integer chatIndex = userIndexMap.get(userId);
+                                        if (chatIndex != null && chatIndex < conversaciones.size()) {
+                                            conversaciones.get(chatIndex).setNombreOtroUsuario(nombre);
+                                            conversaciones.get(chatIndex).setFotoOtroUsuario(foto);
+                                            if (conversaciones.get(chatIndex).getEstado_usuarios() != null) {
+                                                conversaciones.get(chatIndex).setEstadoOtroUsuario(
+                                                    conversaciones.get(chatIndex).getEstado_usuarios().get(userId)
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                                adaptador.actualizarConversaciones(conversaciones);
+                                emptyView.setVisibility(View.GONE);
+                                rvConversaciones.setVisibility(View.VISIBLE);
+                            });
+                        }
 
                     } else {
                         emptyView.setVisibility(View.VISIBLE);

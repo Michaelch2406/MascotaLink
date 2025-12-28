@@ -21,6 +21,7 @@ import com.mjc.mascotalink.modelo.Mensaje;
 import com.mjc.mascotalink.util.TimeUtils;
 import com.mjc.mascotalink.MyApplication;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import android.content.Intent;
 import android.net.Uri;
 import android.widget.ProgressBar;
@@ -475,6 +476,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
                 Glide.with(itemView.getContext())
                     .load(fixedUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                    .override(800, 600)
                     .placeholder(R.drawable.ic_gallery)
                     .error(R.drawable.ic_gallery)
                     .centerCrop()
@@ -578,6 +581,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
                 Glide.with(itemView.getContext())
                     .load(staticMapUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                    .override(400, 200)
                     .placeholder(R.drawable.ic_location)
                     .error(R.drawable.ic_location)
                     .into(ivMapa);

@@ -51,7 +51,7 @@ public class QuickReplyAdapter extends RecyclerView.Adapter<QuickReplyAdapter.Vi
             quickReplies.add(new QuickReply("📍", "Llegué a tu dirección"));
             quickReplies.add(new QuickReply("🐕", "Iniciando el paseo"));
             quickReplies.add(new QuickReply("🏠", "Estamos de regreso"));
-            quickReplies.add(new QuickReply("", "El paseo terminó exitosamente"));
+            quickReplies.add(new QuickReply("✅", "El paseo terminó exitosamente"));
             quickReplies.add(new QuickReply("💧", "Le di agua a tu mascota"));
             quickReplies.add(new QuickReply("🎾", "Jugamos en el parque"));
             quickReplies.add(new QuickReply("😊", "Tu mascota se portó muy bien"));

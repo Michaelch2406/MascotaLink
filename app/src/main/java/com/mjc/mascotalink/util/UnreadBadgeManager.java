@@ -7,6 +7,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 import com.mjc.mascotalink.R;
 
 import java.lang.ref.WeakReference;
@@ -34,6 +35,8 @@ public final class UnreadBadgeManager {
         registration = FirebaseFirestore.getInstance()
                 .collection("chats")
                 .whereArrayContains("participantes", userId)
+                .orderBy("ultimo_timestamp", Query.Direction.DESCENDING)
+                .limit(50)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) return;
                     int total = 0;

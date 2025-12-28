@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -34,6 +36,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -67,6 +70,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -105,6 +109,8 @@ public class ChatActivity extends AppCompatActivity {
     private ProgressBar progressLoadMore;
 
     private Timer typingTimer;
+    private Handler typingDebounceHandler;
+    private Runnable typingDebounceRunnable;
     private LinearLayoutManager layoutManager;
     private ListenerRegistration newMessagesListener;
     private ListenerRegistration statusUpdatesListener;
@@ -115,7 +121,9 @@ public class ChatActivity extends AppCompatActivity {
     private boolean isSending = false;
     private long lastSendAtMs = 0L;
     private long lastTypingUpdateMs = 0L;
-    private final HashSet<String> messageIds = new HashSet<>();
+    private final Set<String> messageIds = Collections.synchronizedSet(new HashSet<>());
+    private boolean isUsingWebSocket = false;
+    private boolean isUsingFirestore = false;
 
     private Uri currentPhotoUri;
     private FirebaseStorage storage;
@@ -133,6 +141,7 @@ public class ChatActivity extends AppCompatActivity {
         initializeLaunchers();
         initializeFirebase();
         initializeNetworkMonitor();
+        typingDebounceHandler = new Handler(Looper.getMainLooper());
 
         if (!validateUser()) return;
         if (!validateChatData()) return;
@@ -216,14 +225,44 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void setupChatConnection() {
-        if (USE_WEBSOCKET && socketManager.isConnected()) {
-            setupWebSocketListeners();
-        } else {
-            loadInitialMessages();
-        }
-
+        switchToAppropriateConnection();
         networkMonitor.setCurrentRoom(chatId, NetworkMonitorHelper.RoomType.CHAT);
         networkMonitor.register();
+    }
+
+    private void switchToAppropriateConnection() {
+        if (USE_WEBSOCKET && socketManager.isConnected()) {
+            if (!isUsingWebSocket) {
+                removeFirestoreListeners();
+                setupWebSocketListeners();
+                isUsingWebSocket = true;
+                isUsingFirestore = false;
+            }
+        } else {
+            if (!isUsingFirestore) {
+                removeWebSocketListeners();
+                loadInitialMessages();
+                isUsingFirestore = true;
+                isUsingWebSocket = false;
+            }
+        }
+    }
+
+    private void removeFirestoreListeners() {
+        if (newMessagesListener != null) {
+            newMessagesListener.remove();
+            newMessagesListener = null;
+        }
+        if (statusUpdatesListener != null) {
+            statusUpdatesListener.remove();
+            statusUpdatesListener = null;
+        }
+    }
+
+    private void removeWebSocketListeners() {
+        if (USE_WEBSOCKET) {
+            cleanupWebSocketListeners();
+        }
     }
 
     // ==================== NETWORK CALLBACK ====================
@@ -322,13 +361,13 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         private void handleReconnection() {
-            Log.d(TAG, " Reconectado al chat, re-configurando listeners");
+            Log.d(TAG, "Reconectado al chat, re-configurando listeners");
             tvEstadoChat.setTextColor(getColor(R.color.gray_dark));
             dismissReconnectSnackbar();
 
             com.google.android.material.snackbar.Snackbar.make(
                 findViewById(android.R.id.content),
-                " Conexión restaurada",
+                "Conexión restaurada",
                 com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
             ).show();
 
@@ -338,11 +377,7 @@ public class ChatActivity extends AppCompatActivity {
                 socketManager.resetUnreadCount(chatId);
             }
 
-            if (USE_WEBSOCKET && socketManager.isConnected()) {
-                setupWebSocketListeners();
-            }
-
-            loadInitialMessages();
+            switchToAppropriateConnection();
         }
 
         private void disableSendButton() {
@@ -517,14 +552,20 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
 
-        prepareSendingState(texto);
-
-        if (USE_WEBSOCKET && socketManager.isConnected()) {
-            sendMessageViaWebSocket(texto);
+        String textoSanitizado = sanitizeMessageText(texto);
+        if (textoSanitizado.isEmpty()) {
+            Toast.makeText(this, "El mensaje no puede estar vacío", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        sendMessageViaFirestore(texto);
+        prepareSendingState(textoSanitizado);
+
+        if (USE_WEBSOCKET && socketManager.isConnected()) {
+            sendMessageViaWebSocket(textoSanitizado);
+            return;
+        }
+
+        sendMessageViaFirestore(textoSanitizado);
     }
 
     private void prepareSendingState(String texto) {
@@ -544,16 +585,31 @@ public class ChatActivity extends AppCompatActivity {
 
     private void sendMessageViaFirestore(String texto) {
         final String textoOriginal = texto;
-        Map<String, Object> mensaje = buildMessageData(texto, FirestoreConstants.MESSAGE_TYPE_TEXTO);
 
-        db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
-                .collection(FirestoreConstants.COLLECTION_MENSAJES)
-                .add(mensaje)
-                .addOnSuccessListener(docRef -> handleMessageSentSuccess(texto))
-                .addOnFailureListener(e -> handleMessageSentFailure(e, textoOriginal));
+        try {
+            Map<String, Object> mensaje = buildMessageData(texto, FirestoreConstants.MESSAGE_TYPE_TEXTO);
+
+            db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
+                    .collection(FirestoreConstants.COLLECTION_MENSAJES)
+                    .add(mensaje)
+                    .addOnSuccessListener(docRef -> handleMessageSentSuccess(texto))
+                    .addOnFailureListener(e -> handleMessageSentFailure(e, textoOriginal));
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Error de validación: " + e.getMessage());
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            resetSendButton();
+        }
     }
 
     private Map<String, Object> buildMessageData(String texto, String tipo) {
+        if (texto == null || texto.isEmpty()) {
+            throw new IllegalArgumentException("Texto del mensaje no puede estar vacío");
+        }
+
+        if (currentUserId == null || otroUsuarioId == null) {
+            throw new IllegalArgumentException("IDs de usuarios no pueden ser null");
+        }
+
         Map<String, Object> mensaje = new HashMap<>();
         mensaje.put(FirestoreConstants.FIELD_ID_REMITENTE, currentUserId);
         mensaje.put(FirestoreConstants.FIELD_ID_DESTINATARIO, otroUsuarioId);
@@ -568,6 +624,20 @@ public class ChatActivity extends AppCompatActivity {
         mensaje.put(FirestoreConstants.FIELD_FECHA_ELIMINACION, new Timestamp(cal.getTime()));
 
         return mensaje;
+    }
+
+    private String sanitizeMessageText(String texto) {
+        if (texto == null) return "";
+
+        texto = texto.trim();
+
+        if (texto.length() > MESSAGE_MAX_LENGTH) {
+            texto = texto.substring(0, MESSAGE_MAX_LENGTH);
+        }
+
+        texto = texto.replaceAll("[<>]", "");
+
+        return texto;
     }
 
     private void handleMessageSentSuccess(String texto) {
@@ -728,21 +798,26 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void enviarMensajeImagen(String imageUrl) {
-        Map<String, Object> mensaje = buildMessageData("Imagen", FirestoreConstants.MESSAGE_TYPE_IMAGEN);
-        mensaje.put(FirestoreConstants.FIELD_IMAGEN_URL, imageUrl);
+        try {
+            Map<String, Object> mensaje = buildMessageData("Imagen", FirestoreConstants.MESSAGE_TYPE_IMAGEN);
+            mensaje.put(FirestoreConstants.FIELD_IMAGEN_URL, imageUrl);
 
-        db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
-            .collection(FirestoreConstants.COLLECTION_MENSAJES)
-            .add(mensaje)
-            .addOnSuccessListener(docRef -> {
-                Log.d(TAG, "Mensaje de imagen enviado");
-                updateChatLastMessage("📷 Imagen");
-                vibrarSutil();
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error enviando mensaje de imagen", e);
-                Toast.makeText(this, "Error al enviar la imagen", Toast.LENGTH_SHORT).show();
-            });
+            db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
+                .collection(FirestoreConstants.COLLECTION_MENSAJES)
+                .add(mensaje)
+                .addOnSuccessListener(docRef -> {
+                    Log.d(TAG, "Mensaje de imagen enviado");
+                    updateChatLastMessage("📷 Imagen");
+                    vibrarSutil();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error enviando mensaje de imagen", e);
+                    Toast.makeText(this, "Error al enviar la imagen", Toast.LENGTH_SHORT).show();
+                });
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Error de validación al enviar imagen: " + e.getMessage());
+            Toast.makeText(this, "Error al enviar la imagen", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void compartirUbicacion() {
@@ -771,22 +846,27 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void enviarMensajeUbicacion(double latitud, double longitud) {
-        Map<String, Object> mensaje = buildMessageData("Ubicación compartida", FirestoreConstants.MESSAGE_TYPE_UBICACION);
-        mensaje.put(FirestoreConstants.FIELD_LATITUD, latitud);
-        mensaje.put(FirestoreConstants.FIELD_LONGITUD, longitud);
+        try {
+            Map<String, Object> mensaje = buildMessageData("Ubicación compartida", FirestoreConstants.MESSAGE_TYPE_UBICACION);
+            mensaje.put(FirestoreConstants.FIELD_LATITUD, latitud);
+            mensaje.put(FirestoreConstants.FIELD_LONGITUD, longitud);
 
-        db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
-            .collection(FirestoreConstants.COLLECTION_MENSAJES)
-            .add(mensaje)
-            .addOnSuccessListener(docRef -> {
-                Log.d(TAG, "Mensaje de ubicación enviado");
-                updateChatLastMessage("📍 Ubicación");
-                vibrarSutil();
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error enviando mensaje de ubicación", e);
-                Toast.makeText(this, "Error al enviar ubicación", Toast.LENGTH_SHORT).show();
-            });
+            db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
+                .collection(FirestoreConstants.COLLECTION_MENSAJES)
+                .add(mensaje)
+                .addOnSuccessListener(docRef -> {
+                    Log.d(TAG, "Mensaje de ubicación enviado");
+                    updateChatLastMessage("📍 Ubicación");
+                    vibrarSutil();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error enviando mensaje de ubicación", e);
+                    Toast.makeText(this, "Error al enviar ubicación", Toast.LENGTH_SHORT).show();
+                });
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Error de validación al enviar ubicación: " + e.getMessage());
+            Toast.makeText(this, "Error al enviar ubicación", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void updateChatLastMessage(String lastMessage) {
@@ -1111,6 +1191,8 @@ public class ChatActivity extends AppCompatActivity {
                         String foto = doc.getString(FirestoreConstants.FIELD_FOTO_PERFIL);
                         if (foto != null) {
                             Glide.with(this).load(MyApplication.getFixedUrl(foto))
+                                .diskCacheStrategy(DiskCacheStrategy.DATA)
+                                .override(200, 200)
                                 .placeholder(R.drawable.ic_user_placeholder)
                                 .into(ivAvatarChat);
                         }
@@ -1145,9 +1227,21 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void actualizarEstadoEscribiendo(boolean escribiendo) {
-        db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
-                .update(FirestoreConstants.FIELD_ESTADO_USUARIOS + "." + currentUserId,
-                    escribiendo ? FirestoreConstants.STATUS_ESCRIBIENDO : FirestoreConstants.STATUS_ONLINE);
+        if (typingDebounceRunnable != null) {
+            typingDebounceHandler.removeCallbacks(typingDebounceRunnable);
+        }
+
+        typingDebounceRunnable = () -> {
+            if (chatId != null && currentUserId != null) {
+                db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
+                        .update(FirestoreConstants.FIELD_ESTADO_USUARIOS + "." + currentUserId,
+                            escribiendo ? FirestoreConstants.STATUS_ESCRIBIENDO : FirestoreConstants.STATUS_ONLINE)
+                        .addOnFailureListener(e ->
+                            Log.e(TAG, "Error actualizando estado de escritura: " + e.getMessage()));
+            }
+        };
+
+        typingDebounceHandler.postDelayed(typingDebounceRunnable, TYPING_DEBOUNCE_MS);
     }
 
     private String generarChatId(String u1, String u2) {
@@ -1477,35 +1571,33 @@ public class ChatActivity extends AppCompatActivity {
                         FirestoreConstants.FIELD_ULTIMA_ACTIVIDAD + "." + currentUserId, FieldValue.serverTimestamp(),
                         FirestoreConstants.FIELD_CHAT_ABIERTO + "." + currentUserId, null);
 
-        removeListeners();
-    }
-
-    private void removeListeners() {
-        if (newMessagesListener != null) {
-            newMessagesListener.remove();
-            newMessagesListener = null;
-        }
-        if (statusUpdatesListener != null) {
-            statusUpdatesListener.remove();
-            statusUpdatesListener = null;
-        }
+        removeFirestoreListeners();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
-        // FASE 1 - CRÍTICO: Limpiar listeners de Firestore (MEMORY LEAK FIX)
+        // Cancelar typing timer
+        if (typingTimer != null) {
+            typingTimer.cancel();
+            typingTimer = null;
+        }
+
+        // Limpiar typing debounce handler
+        if (typingDebounceHandler != null && typingDebounceRunnable != null) {
+            typingDebounceHandler.removeCallbacks(typingDebounceRunnable);
+        }
+
+        // Limpiar listeners de Firestore
         if (newMessagesListener != null) {
             newMessagesListener.remove();
             newMessagesListener = null;
-            Log.d(TAG, " newMessagesListener removido");
         }
 
         if (statusUpdatesListener != null) {
             statusUpdatesListener.remove();
             statusUpdatesListener = null;
-            Log.d(TAG, " statusUpdatesListener removido");
         }
 
         if (networkMonitor != null) {
