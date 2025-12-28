@@ -122,6 +122,14 @@
       ]
     },
     {
+      "collectionGroup": "resenas_duenos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "duenoId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "resenas_paseadores",
       "queryScope": "COLLECTION",
       "fields": [

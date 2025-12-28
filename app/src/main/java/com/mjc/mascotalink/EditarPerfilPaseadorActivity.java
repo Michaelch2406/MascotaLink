@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -54,7 +56,10 @@ import java.util.Map;
 public class EditarPerfilPaseadorActivity extends AppCompatActivity {
 
     private static final String TAG = "EditarPerfilPaseador";
-    private boolean isLoadingData = false; // Flag para evitar validación durante carga de datos
+    private boolean isLoadingData = false;
+
+    private final Handler validationHandler = new Handler(Looper.getMainLooper());
+    private Runnable validationRunnable;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -256,13 +261,18 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                validateFields();
+                if (validationRunnable != null) {
+                    validationHandler.removeCallbacks(validationRunnable);
+                }
+                validationRunnable = () -> validateFields();
+                validationHandler.postDelayed(validationRunnable, 300);
             }
         };
 
         etNombre.addTextChangedListener(textWatcher);
         etApellido.addTextChangedListener(textWatcher);
         etTelefono.addTextChangedListener(textWatcher);
+        etEmail.addTextChangedListener(textWatcher);
         etDomicilio.addTextChangedListener(textWatcher);
         etMotivacion.addTextChangedListener(textWatcher);
 
@@ -308,14 +318,19 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
     }
 
     private void validateFields() {
-        // No validar si estamos cargando datos desde Firebase
         if (isLoadingData) {
             return;
         }
 
+        String telefono = etTelefono.getText().toString().trim();
+        String email = etEmail.getText().toString().trim();
+
         boolean isValid = !etNombre.getText().toString().trim().isEmpty() &&
                 !etApellido.getText().toString().trim().isEmpty() &&
-                !etTelefono.getText().toString().trim().isEmpty() &&
+                !telefono.isEmpty() &&
+                isValidPhoneNumber(telefono) &&
+                !email.isEmpty() &&
+                isValidEmail(email) &&
                 !etDomicilio.getText().toString().trim().isEmpty() &&
                 !etMotivacion.getText().toString().trim().isEmpty() &&
                 spinnerAnosExperiencia.getSelectedItem() != null &&
@@ -326,6 +341,22 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             btnGuardarCambios.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.blue_primary)));
         } else {
             btnGuardarCambios.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.gray_light)));
+        }
+    }
+
+    private boolean isValidPhoneNumber(String phone) {
+        return phone.matches("^[0-9]{8,15}$");
+    }
+
+    private boolean isValidEmail(String email) {
+        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (validationRunnable != null) {
+            validationHandler.removeCallbacks(validationRunnable);
         }
     }
 

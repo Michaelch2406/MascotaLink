@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.Timestamp;
 import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascotalink.R;
@@ -53,9 +54,27 @@ public class ResenaAdapter extends RecyclerView.Adapter<ResenaAdapter.ResenaView
 
         Glide.with(context)
                 .load(MyApplication.getFixedUrl(resena.getAutorFotoUrl()))
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .override(80, 80)
                 .circleCrop()
                 .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
+                .thumbnail(0.1f)
                 .into(holder.ivAutor);
+
+        preloadNextImages(position);
+    }
+
+    private void preloadNextImages(int position) {
+        int preloadCount = 3;
+        for (int i = 1; i <= preloadCount && (position + i) < resenas.size(); i++) {
+            String url = MyApplication.getFixedUrl(resenas.get(position + i).getAutorFotoUrl());
+            Glide.with(context)
+                    .load(url)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .override(80, 80)
+                    .preload();
+        }
     }
 
     @Override

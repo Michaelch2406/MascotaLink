@@ -11,6 +11,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.mjc.mascotalink.MyApplication;
 import java.util.List;
@@ -43,8 +44,11 @@ public class MascotaPerfilAdapter extends RecyclerView.Adapter<MascotaPerfilAdap
         holder.tvRaza.setText(pet.getBreed()); // Assuming Pet class has getBreed()
 
         Glide.with(context)
-                .load(MyApplication.getFixedUrl(pet.getAvatarUrl())) // Assuming Pet class has getAvatarUrl()
+                .load(MyApplication.getFixedUrl(pet.getAvatarUrl()))
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .override(100, 100)
                 .placeholder(R.drawable.foto_principal_mascota)
+                .error(R.drawable.foto_principal_mascota)
                 .circleCrop()
                 .into(holder.ivMascota);
 

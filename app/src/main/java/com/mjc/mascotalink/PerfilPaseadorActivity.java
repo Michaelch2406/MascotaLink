@@ -732,10 +732,21 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
+            mAuthListener = null;
         }
         detachDataListeners();
         updatePresence(false);
         stopProfileLocationUpdates();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        detachDataListeners();
+        if (mAuthListener != null && mAuth != null) {
+            mAuth.removeAuthStateListener(mAuthListener);
+            mAuthListener = null;
+        }
     }
 
     private void setupRoleBasedUI() {
@@ -1190,11 +1201,26 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     }
 
     private void detachDataListeners() {
-        if (usuarioListener != null) usuarioListener.remove();
-        if (paseadorListener != null) paseadorListener.remove();
-        if (disponibilidadListener != null) disponibilidadListener.remove();
-        if (zonasListener != null) zonasListener.remove();
-        if (metodoPagoListener != null) metodoPagoListener.remove();
+        if (usuarioListener != null) {
+            usuarioListener.remove();
+            usuarioListener = null;
+        }
+        if (paseadorListener != null) {
+            paseadorListener.remove();
+            paseadorListener = null;
+        }
+        if (disponibilidadListener != null) {
+            disponibilidadListener.remove();
+            disponibilidadListener = null;
+        }
+        if (zonasListener != null) {
+            zonasListener.remove();
+            zonasListener = null;
+        }
+        if (metodoPagoListener != null) {
+            metodoPagoListener.remove();
+            metodoPagoListener = null;
+        }
         cleanupPresenceListeners();
     }
 
@@ -1416,18 +1442,58 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                         tvZonasServicioNombres.setText("No especificadas");
                         return;
                     }
+
                     LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
-                    List<String> nombresZonas = new ArrayList<>();
+                    List<GeoPoint> zonaCentros = new ArrayList<>();
                     Geocoder geocoder = new Geocoder(this, new Locale("es", "ES"));
+
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         GeoPoint centro = doc.getGeoPoint("centro");
                         Double radioKm = doc.getDouble("radio_km");
                         if (centro != null && radioKm != null) {
                             LatLng latLng = new LatLng(centro.getLatitude(), centro.getLongitude());
-                            googleMap.addCircle(new CircleOptions().center(latLng).radius(radioKm * 1000).strokeColor(Color.argb(128, 0, 150, 136)).fillColor(Color.argb(64, 0, 150, 136)));
+                            googleMap.addCircle(new CircleOptions()
+                                    .center(latLng)
+                                    .radius(radioKm * 1000)
+                                    .strokeColor(Color.argb(128, 0, 150, 136))
+                                    .fillColor(Color.argb(64, 0, 150, 136)));
                             boundsBuilder.include(latLng);
+                            zonaCentros.add(centro);
+                        }
+                    }
+
+                    if (querySnapshot.size() > 0) {
+                        try {
+                            LatLngBounds bounds = boundsBuilder.build();
+                            if (bounds.northeast.latitude == bounds.southwest.latitude &&
+                                    bounds.northeast.longitude == bounds.southwest.longitude) {
+                                googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(bounds.getCenter(), 14));
+                            } else {
+                                googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+                            }
+                        } catch (IllegalStateException ex) {
+                            Log.e(TAG, "No hay zonas para mostrar en el mapa.", ex);
+                        }
+                    }
+
+                    List<Task<List<Address>>> geocodingTasks = new ArrayList<>();
+                    for (GeoPoint centro : zonaCentros) {
+                        Task<List<Address>> task = Tasks.callInBackground(() -> {
                             try {
-                                List<Address> addresses = geocoder.getFromLocation(centro.getLatitude(), centro.getLongitude(), 1);
+                                return geocoder.getFromLocation(centro.getLatitude(), centro.getLongitude(), 1);
+                            } catch (IOException ex) {
+                                Log.e(TAG, "Error en Geocoder para " + centro, ex);
+                                return null;
+                            }
+                        });
+                        geocodingTasks.add(task);
+                    }
+
+                    Tasks.whenAllSuccess(geocodingTasks).addOnSuccessListener(results -> {
+                        List<String> nombresZonas = new ArrayList<>();
+                        for (Object result : results) {
+                            if (result instanceof List) {
+                                List<Address> addresses = (List<Address>) result;
                                 if (addresses != null && !addresses.isEmpty()) {
                                     String nombreZona = addresses.get(0).getSubLocality();
                                     if (nombreZona == null) nombreZona = addresses.get(0).getLocality();
@@ -1435,26 +1501,14 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                                         nombresZonas.add(nombreZona);
                                     }
                                 }
-                            } catch (IOException ex) {
-                                Log.e(TAG, "Error en Geocoder", ex);
                             }
                         }
-                    }
-                    tvZonasServicioNombres.setText(!nombresZonas.isEmpty() ? android.text.TextUtils.join(", ", nombresZonas) : "Nombres no disponibles");
-                    if(querySnapshot.size() > 0) {
-                       try {
-                           LatLngBounds bounds = boundsBuilder.build();
-                           // Check if bounds are too small (effectively a single point)
-                           if (bounds.northeast.latitude == bounds.southwest.latitude && 
-                               bounds.northeast.longitude == bounds.southwest.longitude) {
-                               googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(bounds.getCenter(), 14));
-                           } else {
-                               googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
-                           }
-                       } catch (IllegalStateException ex) {
-                           Log.e(TAG, "No hay zonas para mostrar en el mapa.", ex);
-                       }
-                    }
+                        tvZonasServicioNombres.setText(!nombresZonas.isEmpty() ?
+                                android.text.TextUtils.join(", ", nombresZonas) : "Nombres no disponibles");
+                    }).addOnFailureListener(ex -> {
+                        Log.e(TAG, "Error procesando geocoding", ex);
+                        tvZonasServicioNombres.setText("Nombres no disponibles");
+                    });
                 });
     }
 
@@ -1479,16 +1533,16 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     private void cargarMasResenas(int limit) {
         if (isLoadingResenas) return;
         isLoadingResenas = true;
-        
+
         Query query = db.collection("resenas_paseadores")
                 .whereEqualTo("paseadorId", paseadorId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit);
-                
+
         if (lastVisibleResena != null) {
             query = query.startAfter(lastVisibleResena);
         }
-        
+
         query.get().addOnSuccessListener(queryDocumentSnapshots -> {
             if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
                 isLoadingResenas = false;
@@ -1498,20 +1552,19 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 }
                 return;
             }
-            
+
             llEmptyReviews.setVisibility(View.GONE);
             recyclerViewResenas.setVisibility(View.VISIBLE);
-            
+
             lastVisibleResena = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
-            
+
             List<Resena> nuevasResenas = new ArrayList<>();
-            List<Task<DocumentSnapshot>> userTasks = new ArrayList<>();
-            
+
             int fetchCount = queryDocumentSnapshots.size();
             boolean hasMore = false;
-            
+
             if (limit == 4 && fetchCount == 4) {
-                fetchCount = 3; 
+                fetchCount = 3;
                 hasMore = true;
                 lastVisibleResena = queryDocumentSnapshots.getDocuments().get(2);
             }
@@ -1524,51 +1577,35 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 Double calif = doc.getDouble("calificacion");
                 resena.setCalificacion(calif != null ? calif.floatValue() : 0f);
                 resena.setFecha(doc.getTimestamp("timestamp"));
-                
-                nuevasResenas.add(resena);
-                
-                String autorId = doc.getString("duenoId");
-                if (autorId == null) autorId = doc.getString("autorId");
-                
-                if (autorId != null) {
-                    userTasks.add(db.collection("usuarios").document(autorId).get());
-                } else {
-                    userTasks.add(Tasks.forResult(null));
+
+                String autorNombre = doc.getString("autorNombre");
+                String autorFotoUrl = doc.getString("autorFotoUrl");
+
+                if (autorNombre == null || autorNombre.isEmpty()) {
+                    autorNombre = "Usuario de Walki";
                 }
+
+                resena.setAutorNombre(autorNombre);
+                resena.setAutorFotoUrl(autorFotoUrl);
+
+                nuevasResenas.add(resena);
             }
-            
+
             final boolean showButton = hasMore;
 
-            if (!userTasks.isEmpty()) {
-                Tasks.whenAllSuccess(userTasks).addOnSuccessListener(userDocs -> {
-                    for (int i = 0; i < userDocs.size(); i++) {
-                        if (userDocs.get(i) instanceof DocumentSnapshot) {
-                            DocumentSnapshot userDoc = (DocumentSnapshot) userDocs.get(i);
-                            if (userDoc != null && userDoc.exists()) {
-                                nuevasResenas.get(i).setAutorNombre(userDoc.getString("nombre_display"));
-                                nuevasResenas.get(i).setAutorFotoUrl(userDoc.getString("foto_perfil"));
-                            } else {
-                                nuevasResenas.get(i).setAutorNombre("Usuario de Walki");
-                            }
-                        }
-                    }
-                    resenaAdapter.addResenas(nuevasResenas);
-                    isLoadingResenas = false;
-                    
-                    if (showButton) {
-                        btnVerMasResenas.setVisibility(View.VISIBLE);
-                    }
-                });
-            } else {
-                resenaAdapter.addResenas(nuevasResenas);
-                isLoadingResenas = false;
-                if (showButton) {
-                    btnVerMasResenas.setVisibility(View.VISIBLE);
-                }
+            resenaAdapter.addResenas(nuevasResenas);
+            isLoadingResenas = false;
+
+            if (showButton) {
+                btnVerMasResenas.setVisibility(View.VISIBLE);
             }
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Error cargando reseñas", e);
             isLoadingResenas = false;
+            // Asegurar que el SwipeRefresh se detenga en caso de error
+            if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
+                swipeRefresh.setRefreshing(false);
+            }
         });
     }
 

@@ -599,16 +599,16 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void cargarMasResenas(int limit) {
         if (isLoadingResenas) return;
         isLoadingResenas = true;
-        
+
         Query query = db.collection("resenas_duenos")
                 .whereEqualTo("duenoId", duenoId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit);
-                
+
         if (lastVisibleResena != null) {
             query = query.startAfter(lastVisibleResena);
         }
-        
+
         query.get().addOnSuccessListener(queryDocumentSnapshots -> {
             if (queryDocumentSnapshots == null || queryDocumentSnapshots.isEmpty()) {
                 isLoadingResenas = false;
@@ -618,23 +618,19 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 }
                 return;
             }
-            
+
             llEmptyReviews.setVisibility(View.GONE);
             recyclerViewResenas.setVisibility(View.VISIBLE);
-            
+
             lastVisibleResena = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
-            
+
             List<Resena> nuevasResenas = new ArrayList<>();
-            List<Task<DocumentSnapshot>> userTasks = new ArrayList<>();
-            
+
             int fetchCount = queryDocumentSnapshots.size();
             boolean hasMore = false;
-            
-            // Check logic for pagination button (simplified)
+
             if (limit == 4 && fetchCount == 4) {
-                hasMore = true; 
-                // Hack: if we request 4 and get 4, assume there might be more. 
-                // Real implementation might request limit+1 to know for sure.
+                hasMore = true;
             }
 
             for (int i = 0; i < fetchCount; i++) {
@@ -645,61 +641,55 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 Double calif = doc.getDouble("calificacion");
                 resena.setCalificacion(calif != null ? calif.floatValue() : 0f);
                 resena.setFecha(doc.getTimestamp("timestamp"));
-                
-                nuevasResenas.add(resena);
-                
-                // Author is a Paseador
-                String autorId = doc.getString("paseadorId");
-                if (autorId == null) autorId = doc.getString("autorId");
-                
-                if (autorId != null) {
-                    userTasks.add(db.collection("usuarios").document(autorId).get());
-                } else {
-                    userTasks.add(Tasks.forResult(null));
+
+                String autorNombre = doc.getString("autorNombre");
+                String autorFotoUrl = doc.getString("autorFotoUrl");
+
+                if (autorNombre == null || autorNombre.isEmpty()) {
+                    autorNombre = "Paseador";
                 }
+
+                resena.setAutorNombre(autorNombre);
+                resena.setAutorFotoUrl(autorFotoUrl);
+
+                nuevasResenas.add(resena);
             }
-            
-            // Just keep the button visible if we got results, simple UX
+
             final boolean showButton = fetchCount >= limit;
 
-            if (!userTasks.isEmpty()) {
-                Tasks.whenAllSuccess(userTasks).addOnSuccessListener(userDocs -> {
-                    for (int i = 0; i < userDocs.size(); i++) {
-                        if (userDocs.get(i) instanceof DocumentSnapshot) {
-                            DocumentSnapshot userDoc = (DocumentSnapshot) userDocs.get(i);
-                            if (userDoc != null && userDoc.exists()) {
-                                nuevasResenas.get(i).setAutorNombre(userDoc.getString("nombre_display"));
-                                nuevasResenas.get(i).setAutorFotoUrl(userDoc.getString("foto_perfil"));
-                            } else {
-                                nuevasResenas.get(i).setAutorNombre("Paseador");
-                            }
-                        }
-                    }
-                    resenaAdapter.addResenas(nuevasResenas);
-                    isLoadingResenas = false;
-                    
-                    if (showButton) {
-                        btnVerMasResenas.setVisibility(View.VISIBLE);
-                    }
-                });
-            } else {
-                resenaAdapter.addResenas(nuevasResenas);
-                isLoadingResenas = false;
-                if (showButton) {
-                    btnVerMasResenas.setVisibility(View.VISIBLE);
-                }
+            resenaAdapter.addResenas(nuevasResenas);
+            isLoadingResenas = false;
+
+            if (showButton) {
+                btnVerMasResenas.setVisibility(View.VISIBLE);
             }
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Error cargando reseñas", e);
             isLoadingResenas = false;
+            // Asegurar que el SwipeRefresh se detenga en caso de error
+            if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
+                swipeRefresh.setRefreshing(false);
+            }
         });
     }
 
     private void detachDataListeners() {
-        if (duenoListener != null) duenoListener.remove();
-        if (duenoStatsListener != null) duenoStatsListener.remove();
-        if (mascotasListener != null) mascotasListener.remove();
-        if (metodoPagoListener != null) metodoPagoListener.remove();
+        if (duenoListener != null) {
+            duenoListener.remove();
+            duenoListener = null;
+        }
+        if (duenoStatsListener != null) {
+            duenoStatsListener.remove();
+            duenoStatsListener = null;
+        }
+        if (mascotasListener != null) {
+            mascotasListener.remove();
+            mascotasListener = null;
+        }
+        if (metodoPagoListener != null) {
+            metodoPagoListener.remove();
+            metodoPagoListener = null;
+        }
         cleanupPresenceListeners();
     }
 
@@ -869,8 +859,19 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         }
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
+            mAuthListener = null;
         }
         detachDataListeners();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        detachDataListeners();
+        if (mAuthListener != null && mAuth != null) {
+            mAuth.removeAuthStateListener(mAuthListener);
+            mAuthListener = null;
+        }
     }
 }
 

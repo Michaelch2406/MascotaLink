@@ -4,6 +4,8 @@ import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -70,6 +72,9 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
     private Calendar fechaNacimientoCalendar = Calendar.getInstance();
     private Calendar ultimaVisitaVetCalendar = Calendar.getInstance();
 
+    private final Handler validationHandler = new Handler(Looper.getMainLooper());
+    private Runnable validationRunnable;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -135,10 +140,18 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         TextWatcher textWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(Editable s) { validateForm(); }
+            @Override public void afterTextChanged(Editable s) {
+                if (validationRunnable != null) {
+                    validationHandler.removeCallbacks(validationRunnable);
+                }
+                validationRunnable = () -> validateForm();
+                validationHandler.postDelayed(validationRunnable, 300);
+            }
         };
         etNombre.addTextChangedListener(textWatcher);
         etRaza.addTextChangedListener(textWatcher);
+        etPeso.addTextChangedListener(textWatcher);
+        etVeterinarioTelefono.addTextChangedListener(textWatcher);
     }
 
     private void loadInitialData() {
@@ -361,7 +374,34 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
     private void validateForm() {
         boolean isNombreValid = !Objects.requireNonNull(etNombre.getText()).toString().trim().isEmpty();
         boolean isRazaValid = !Objects.requireNonNull(etRaza.getText()).toString().trim().isEmpty();
-        btnGuardar.setEnabled(isNombreValid && isRazaValid);
+
+        String pesoStr = Objects.requireNonNull(etPeso.getText()).toString().trim();
+        boolean isPesoValid = true;
+        if (!pesoStr.isEmpty()) {
+            try {
+                double peso = Double.parseDouble(pesoStr);
+                isPesoValid = peso > 0 && peso <= 200;
+            } catch (NumberFormatException e) {
+                isPesoValid = false;
+            }
+        }
+
+        String vetTelefono = Objects.requireNonNull(etVeterinarioTelefono.getText()).toString().trim();
+        boolean isVetTelefonoValid = vetTelefono.isEmpty() || isValidPhoneNumber(vetTelefono);
+
+        btnGuardar.setEnabled(isNombreValid && isRazaValid && isPesoValid && isVetTelefonoValid);
+    }
+
+    private boolean isValidPhoneNumber(String phone) {
+        return phone.matches("^[0-9]{8,15}$");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (validationRunnable != null) {
+            validationHandler.removeCallbacks(validationRunnable);
+        }
     }
 
     private void openFileChooser() {

@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -48,7 +50,10 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
     private Button btnGuardarCambios;
 
     private Uri newPhotoUri;
-    private Uri cameraPhotoUri; // To store URI when taking photo with camera
+    private Uri cameraPhotoUri;
+
+    private final Handler validationHandler = new Handler(Looper.getMainLooper());
+    private Runnable validationRunnable;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -141,7 +146,11 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                validateFields();
+                if (validationRunnable != null) {
+                    validationHandler.removeCallbacks(validationRunnable);
+                }
+                validationRunnable = () -> validateFields();
+                validationHandler.postDelayed(validationRunnable, 300);
             }
         };
 
@@ -181,9 +190,12 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
     }
 
     private void validateFields() {
+        String telefono = etTelefono.getText().toString().trim();
+
         boolean isValid = !etNombre.getText().toString().trim().isEmpty() &&
                 !etApellido.getText().toString().trim().isEmpty() &&
-                !etTelefono.getText().toString().trim().isEmpty() &&
+                !telefono.isEmpty() &&
+                isValidPhoneNumber(telefono) &&
                 !etDomicilio.getText().toString().trim().isEmpty();
 
         btnGuardarCambios.setEnabled(isValid);
@@ -191,6 +203,18 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
             btnGuardarCambios.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.blue_primary)));
         } else {
             btnGuardarCambios.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.gray_light)));
+        }
+    }
+
+    private boolean isValidPhoneNumber(String phone) {
+        return phone.matches("^[0-9]{8,15}$");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (validationRunnable != null) {
+            validationHandler.removeCallbacks(validationRunnable);
         }
     }
 
