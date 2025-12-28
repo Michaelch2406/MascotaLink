@@ -20,6 +20,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +38,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private View layoutSelfieEmpty;
     private View layoutFotoPerfilEmpty;
 
-    private long lastClickTime = 0;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(1000);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -261,19 +262,17 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     }
 
     private void continuarAlPaso3() {
-        // Rate limiting: prevenir doble click
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastClickTime < 1000) {
+        // Rate limiting usando InputUtils.RateLimiter
+        if (!rateLimiter.shouldProcess()) {
             return;
         }
-        lastClickTime = currentTime;
 
         if (selfieUri != null && fotoPerfilUri != null) {
             btnContinuarPaso3.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso3Activity.class));
             btnContinuarPaso3.setEnabled(true);
         } else {
-            verificarCompletitudPaso2(); // Muestra los errores en el TextView
+            verificarCompletitudPaso2();
         }
     }
 

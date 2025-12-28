@@ -38,6 +38,7 @@ import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.utils.InputUtils;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
 import java.text.ParseException;
@@ -58,6 +59,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     private static final String TAG = "PaseadorPaso5";
     private static final String PREFS = "WizardPaseador";
     private static final long DEBOUNCE_DELAY_MS = 500;
+    private static final String DEBOUNCE_KEY = "paso5_save";
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -70,9 +72,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     private View layoutVideoEmpty;
 
     private android.text.TextWatcher precioTextWatcher;
-    private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private Runnable debouncedSaveRunnable;
-    private long lastClickTime = 0;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(2000); // 2 segundos para registro
 
     private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
@@ -170,7 +170,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
             btnGuardar.setOnClickListener(v -> completarRegistro());
         }
 
-        // TextWatcher con debouncing para precio
+        // TextWatcher con debouncing usando InputUtils
         precioTextWatcher = new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -181,12 +181,9 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
             @Override
             public void afterTextChanged(android.text.Editable s) {
                 verificarCompletitudTotal();
-                // Debouncing: retrasar el guardado
-                if (debouncedSaveRunnable != null) {
-                    debounceHandler.removeCallbacks(debouncedSaveRunnable);
-                }
-                debouncedSaveRunnable = PaseadorRegistroPaso5Activity.this::saveState;
-                debounceHandler.postDelayed(debouncedSaveRunnable, DEBOUNCE_DELAY_MS);
+                // Usar InputUtils.debounce() para retrasar el guardado
+                InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS,
+                    PaseadorRegistroPaso5Activity.this::saveState);
             }
         };
         etPrecioHora.addTextChangedListener(precioTextWatcher);
@@ -343,12 +340,10 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     }
 
     private void completarRegistro() {
-        // Rate limiting: prevenir doble click
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastClickTime < 2000) { // 2 segundos para registro
+        // Rate limiting usando InputUtils.RateLimiter (2 segundos para registro)
+        if (!rateLimiter.shouldProcess()) {
             return;
         }
-        lastClickTime = currentTime;
 
         btnGuardar.setEnabled(false);
         btnGuardar.setText("Registrando...");
@@ -498,11 +493,11 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         
         // --- 1. Construir el documento para la colección 'usuarios' ---
         Map<String, Object> usuarioData = new HashMap<>();
-        usuarioData.put("nombre", sanitizeInput(prefs.getString("nombre", "")));
-        usuarioData.put("apellido", sanitizeInput(prefs.getString("apellido", "")));
+        usuarioData.put("nombre", InputUtils.sanitizeInput(prefs.getString("nombre", "")));
+        usuarioData.put("apellido", InputUtils.sanitizeInput(prefs.getString("apellido", "")));
         usuarioData.put("correo", prefs.getString("email", ""));
         usuarioData.put("telefono", prefs.getString("telefono", ""));
-        usuarioData.put("direccion", sanitizeInput(prefs.getString("domicilio", "")));
+        usuarioData.put("direccion", InputUtils.sanitizeInput(prefs.getString("domicilio", "")));
         try {
             String fechaNacStr = prefs.getString("fecha_nacimiento", "");
             if (!fechaNacStr.isEmpty()) {
@@ -557,7 +552,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         Map<String, Object> perfilProfesional = new HashMap<>();
         // Guardar años de experiencia como número en lugar de texto
         perfilProfesional.put("anos_experiencia", prefs.getInt("anos_experiencia", 0));
-        perfilProfesional.put("motivacion", sanitizeInput(prefs.getString("motivacion", "")));
+        perfilProfesional.put("motivacion", InputUtils.sanitizeInput(prefs.getString("motivacion", "")));
         perfilProfesional.put("video_presentacion_url", urls.get("video_presentacion_url"));
         perfilProfesional.put("galeria_paseos_urls", urls.get("galeria_paseos_urls"));
         paseadorData.put("perfil_profesional", perfilProfesional);
@@ -741,18 +736,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Sanitiza la entrada del usuario para prevenir XSS y ataques de inyección
-     */
-    private String sanitizeInput(String input) {
-        if (input == null) return "";
-        return input.replaceAll("<", "&lt;")
-                   .replaceAll(">", "&gt;")
-                   .replaceAll("\"", "&quot;")
-                   .replaceAll("'", "&#x27;")
-                   .replaceAll("/", "&#x2F;");
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -762,9 +745,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
             etPrecioHora.removeTextChangedListener(precioTextWatcher);
         }
 
-        // Limpiar Handler callbacks
-        if (debounceHandler != null && debouncedSaveRunnable != null) {
-            debounceHandler.removeCallbacks(debouncedSaveRunnable);
-        }
+        // Cancelar debounce pendiente usando InputUtils
+        InputUtils.cancelDebounce(DEBOUNCE_KEY);
     }
 }

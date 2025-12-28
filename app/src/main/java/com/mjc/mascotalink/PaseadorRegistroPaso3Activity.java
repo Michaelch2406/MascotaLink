@@ -22,6 +22,7 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +37,7 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     private Uri antecedentesUri;
     private Uri medicoUri;
 
-    private long lastClickTime = 0;
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(1000);
 
     private final ActivityResultLauncher<Intent> antecedentesLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(),
@@ -168,19 +169,17 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void continuarAlPaso4() {
-        // Rate limiting: prevenir doble click
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastClickTime < 1000) {
+        // Rate limiting usando InputUtils.RateLimiter
+        if (!rateLimiter.shouldProcess()) {
             return;
         }
-        lastClickTime = currentTime;
 
         if (antecedentesUri != null && medicoUri != null) {
             btnContinuarPaso4.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso4Activity.class));
             btnContinuarPaso4.setEnabled(true);
         } else {
-            verificarCompletitudPaso3(); // Muestra los errores en el TextView
+            verificarCompletitudPaso3();
         }
     }
 

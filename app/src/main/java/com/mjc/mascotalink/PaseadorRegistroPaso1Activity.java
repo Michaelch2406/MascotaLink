@@ -48,6 +48,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.GeoPoint;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -82,10 +83,11 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     // Prevención de memory leaks: almacenar referencias de TextWatchers
     private TextWatcher generalTextWatcher;
-    private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private Runnable debouncedSaveRunnable;
     private EncryptedPreferencesHelper encryptedPrefs;
-    private long lastClickTime = 0;
+
+    // Usar InputUtils para debouncing y rate limiting
+    private static final String DEBOUNCE_KEY = "paso1_save";
+    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(1000);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -133,18 +135,15 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
             finish();
         });
 
-        // TextWatcher con debouncing para prevenir operaciones I/O excesivas
+        // TextWatcher con debouncing usando InputUtils
         generalTextWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
                 updateButtonEnabled();
-                // Debouncing: retrasar el guardado para evitar guardar en cada tecla
-                if (debouncedSaveRunnable != null) {
-                    debounceHandler.removeCallbacks(debouncedSaveRunnable);
-                }
-                debouncedSaveRunnable = PaseadorRegistroPaso1Activity.this::saveState;
-                debounceHandler.postDelayed(debouncedSaveRunnable, DEBOUNCE_DELAY_MS);
+                // Usar InputUtils.debounce() para evitar guardar en cada tecla
+                InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS,
+                    PaseadorRegistroPaso1Activity.this::saveState);
             }
         };
 
@@ -307,37 +306,31 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void onContinuar() {
-        // Rate limiting: prevenir doble click
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastClickTime < 1000) {
+        // Rate limiting usando InputUtils.RateLimiter
+        if (!rateLimiter.shouldProcess()) {
             return;
         }
-        lastClickTime = currentTime;
 
         if (!validarCamposPantalla1()) {
             Toast.makeText(this, "Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Deshabilitar botón durante el procesamiento
         btnContinuar.setEnabled(false);
-
         guardarDatosCompletos();
         startActivity(new Intent(this, PaseadorRegistroPaso2Activity.class));
-
-        // Re-habilitar botón (se deshabilitará de nuevo al regresar si la validación falla)
         btnContinuar.setEnabled(true);
     }
 
     private void guardarDatosCompletos() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
 
-        // Sanitizar entradas para prevenir ataques XSS/injection
-        editor.putString("nombre", sanitizeInput(etNombre.getText().toString().trim()));
-        editor.putString("apellido", sanitizeInput(etApellido.getText().toString().trim()));
+        // Sanitizar entradas usando InputUtils para prevenir ataques XSS/injection
+        editor.putString("nombre", InputUtils.sanitizeInput(etNombre.getText().toString().trim()));
+        editor.putString("apellido", InputUtils.sanitizeInput(etApellido.getText().toString().trim()));
         editor.putString("cedula", etCedula.getText().toString().trim());
         editor.putString("fecha_nacimiento", etFechaNac.getText().toString().trim());
-        editor.putString("domicilio", sanitizeInput(domicilio));
+        editor.putString("domicilio", InputUtils.sanitizeInput(domicilio));
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
@@ -350,7 +343,6 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         if (encryptedPrefs != null && !password.isEmpty()) {
             encryptedPrefs.putString(PREFS + "_password", password);
         }
-        // También guardar en prefs regulares para compatibilidad durante el flujo de registro
         editor.putString("password", password);
 
         editor.putBoolean("paso1_completo", true);
@@ -399,11 +391,11 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private void saveState() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        editor.putString("nombre", sanitizeInput(etNombre.getText().toString()));
-        editor.putString("apellido", sanitizeInput(etApellido.getText().toString()));
+        editor.putString("nombre", InputUtils.sanitizeInput(etNombre.getText().toString()));
+        editor.putString("apellido", InputUtils.sanitizeInput(etApellido.getText().toString()));
         editor.putString("cedula", etCedula.getText().toString());
         editor.putString("fecha_nacimiento", etFechaNac.getText().toString());
-        editor.putString("domicilio", sanitizeInput(domicilio));
+        editor.putString("domicilio", InputUtils.sanitizeInput(domicilio));
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
@@ -448,19 +440,6 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Sanitiza la entrada del usuario para prevenir XSS y ataques de inyección
-     */
-    private String sanitizeInput(String input) {
-        if (input == null) return "";
-        // Remover caracteres HTML peligrosos
-        return input.replaceAll("<", "&lt;")
-                   .replaceAll(">", "&gt;")
-                   .replaceAll("\"", "&quot;")
-                   .replaceAll("'", "&#x27;")
-                   .replaceAll("/", "&#x2F;");
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -475,9 +454,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
             if (etPassword != null) etPassword.removeTextChangedListener(generalTextWatcher);
         }
 
-        // Limpiar Handler callbacks para prevenir memory leaks
-        if (debounceHandler != null && debouncedSaveRunnable != null) {
-            debounceHandler.removeCallbacks(debouncedSaveRunnable);
-        }
+        // Cancelar debounce pendiente usando InputUtils
+        InputUtils.cancelDebounce(DEBOUNCE_KEY);
     }
 }
