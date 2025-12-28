@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
@@ -51,7 +50,6 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private TextView tvValidationMessages;
 
     private TextWatcher motivacionTextWatcher;
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(1000);
 
     private final ActivityResultLauncher<Intent> galeriaLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(),
@@ -107,7 +105,8 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         findViewById(R.id.btn_galeria).setOnClickListener(v -> abrirGaleria());
         findViewById(R.id.btn_camara).setOnClickListener(v -> abrirCamara());
         btnQuiz.setOnClickListener(v -> iniciarCuestionario());
-        btnGuardar.setOnClickListener(v -> guardarYContinuar());
+        // SafeClickListener para prevenir doble-click
+        btnGuardar.setOnClickListener(InputUtils.createSafeClickListener(v -> guardarYContinuar()));
 
         // Listener para el spinner de años de experiencia
         spinnerAnosExperiencia.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -123,20 +122,11 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
             }
         });
 
-        // TextWatcher con debouncing usando InputUtils
-        motivacionTextWatcher = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                verificarCompletitudPaso4();
-                // Usar InputUtils.debounce() para retrasar el guardado
-                InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS,
-                    PaseadorRegistroPaso4Activity.this::saveState);
-            }
-        };
+        // TextWatcher simplificado con debouncing usando InputUtils
+        motivacionTextWatcher = InputUtils.createSimpleTextWatcher(text -> {
+            verificarCompletitudPaso4();
+            InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS, this::saveState);
+        });
 
         etMotivacion.addTextChangedListener(motivacionTextWatcher);
     }
@@ -290,11 +280,7 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     }
 
     private void guardarYContinuar() {
-        // Rate limiting usando InputUtils.RateLimiter
-        if (!rateLimiter.shouldProcess()) {
-            return;
-        }
-
+        // Rate limiting ya integrado en SafeClickListener
         if (btnGuardar.isEnabled()) {
             btnGuardar.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso5Activity.class));

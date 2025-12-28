@@ -38,8 +38,6 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private View layoutSelfieEmpty;
     private View layoutFotoPerfilEmpty;
 
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(1000);
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,13 +59,13 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         layoutSelfieEmpty = findViewById(R.id.layout_selfie_empty);
         layoutFotoPerfilEmpty = findViewById(R.id.layout_foto_perfil_empty);
 
-        // Listeners
+        // Listeners con SafeClickListener para prevenir doble-click
         findViewById(R.id.img_selfie_ilustracion).setOnClickListener(v -> activarCamaraSelfie());
         btnElegirFoto.setOnClickListener(v -> elegirFotoPerfil());
         btnTomarFoto.setOnClickListener(v -> tomarFotoPerfil());
         btnEliminarSelfie.setOnClickListener(v -> eliminarSelfie());
         btnEliminarFotoPerfil.setOnClickListener(v -> eliminarFotoPerfil());
-        btnContinuarPaso3.setOnClickListener(v -> continuarAlPaso3());
+        btnContinuarPaso3.setOnClickListener(InputUtils.createSafeClickListener(v -> continuarAlPaso3()));
 
         loadState();
         verificarCompletitudPaso2();
@@ -262,11 +260,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     }
 
     private void continuarAlPaso3() {
-        // Rate limiting usando InputUtils.RateLimiter
-        if (!rateLimiter.shouldProcess()) {
-            return;
-        }
-
+        // Rate limiting ya integrado en SafeClickListener
         if (selfieUri != null && fotoPerfilUri != null) {
             btnContinuarPaso3.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso3Activity.class));

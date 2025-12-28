@@ -72,7 +72,6 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     private View layoutVideoEmpty;
 
     private android.text.TextWatcher precioTextWatcher;
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(2000); // 2 segundos para registro
 
     private final ActivityResultLauncher<Intent> videoLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(), this::handleVideoResult
@@ -166,26 +165,16 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
                 activityLauncher.launch(new Intent(this, ZonasServicioActivity.class)));
         }
         
+        // SafeClickListener con 2 segundos para registro (operación crítica)
         if (btnGuardar != null) {
-            btnGuardar.setOnClickListener(v -> completarRegistro());
+            btnGuardar.setOnClickListener(InputUtils.createSafeClickListener(2000, v -> completarRegistro()));
         }
 
-        // TextWatcher con debouncing usando InputUtils
-        precioTextWatcher = new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-            @Override
-            public void afterTextChanged(android.text.Editable s) {
-                verificarCompletitudTotal();
-                // Usar InputUtils.debounce() para retrasar el guardado
-                InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS,
-                    PaseadorRegistroPaso5Activity.this::saveState);
-            }
-        };
+        // TextWatcher simplificado con debouncing usando InputUtils
+        precioTextWatcher = InputUtils.createSimpleTextWatcher(text -> {
+            verificarCompletitudTotal();
+            InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS, this::saveState);
+        });
         etPrecioHora.addTextChangedListener(precioTextWatcher);
     }
 
@@ -340,11 +329,7 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     }
 
     private void completarRegistro() {
-        // Rate limiting usando InputUtils.RateLimiter (2 segundos para registro)
-        if (!rateLimiter.shouldProcess()) {
-            return;
-        }
-
+        // Rate limiting ya integrado en SafeClickListener (2 segundos)
         btnGuardar.setEnabled(false);
         btnGuardar.setText("Registrando...");
         tvValidationMessages.setVisibility(View.GONE);
@@ -493,10 +478,13 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         
         // --- 1. Construir el documento para la colección 'usuarios' ---
         Map<String, Object> usuarioData = new HashMap<>();
-        usuarioData.put("nombre", InputUtils.sanitizeInput(prefs.getString("nombre", "")));
-        usuarioData.put("apellido", InputUtils.sanitizeInput(prefs.getString("apellido", "")));
-        usuarioData.put("correo", prefs.getString("email", ""));
-        usuarioData.put("telefono", prefs.getString("telefono", ""));
+        // Capitalizar y sanitizar nombres usando InputUtils
+        String nombre = InputUtils.capitalizeWords(prefs.getString("nombre", ""));
+        String apellido = InputUtils.capitalizeWords(prefs.getString("apellido", ""));
+        usuarioData.put("nombre", InputUtils.sanitizeInput(nombre));
+        usuarioData.put("apellido", InputUtils.sanitizeInput(apellido));
+        usuarioData.put("correo", InputUtils.trimSafe(prefs.getString("email", "")).toLowerCase());
+        usuarioData.put("telefono", InputUtils.formatTelefonoEcuador(prefs.getString("telefono", "")));
         usuarioData.put("direccion", InputUtils.sanitizeInput(prefs.getString("domicilio", "")));
         try {
             String fechaNacStr = prefs.getString("fecha_nacimiento", "");

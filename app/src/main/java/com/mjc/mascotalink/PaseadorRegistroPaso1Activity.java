@@ -11,14 +11,11 @@ import android.content.res.ColorStateList;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.Html;
 import android.text.InputType;
-import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
-import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -84,10 +81,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     // Prevención de memory leaks: almacenar referencias de TextWatchers
     private TextWatcher generalTextWatcher;
     private EncryptedPreferencesHelper encryptedPrefs;
-
-    // Usar InputUtils para debouncing y rate limiting
     private static final String DEBOUNCE_KEY = "paso1_save";
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(1000);
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -125,7 +119,8 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        btnContinuar.setOnClickListener(v -> onContinuar());
+        // Usar SafeClickListener para el botón continuar (rate limiting integrado)
+        btnContinuar.setOnClickListener(InputUtils.createSafeClickListener(v -> onContinuar()));
         etFechaNac.setOnClickListener(v -> openDatePicker());
         etDomicilio.setOnClickListener(v -> launchAutocomplete());
         ivGeolocate.setOnClickListener(v -> onGeolocateClick());
@@ -135,17 +130,11 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
             finish();
         });
 
-        // TextWatcher con debouncing usando InputUtils
-        generalTextWatcher = new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(Editable s) {
-                updateButtonEnabled();
-                // Usar InputUtils.debounce() para evitar guardar en cada tecla
-                InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS,
-                    PaseadorRegistroPaso1Activity.this::saveState);
-            }
-        };
+        // TextWatcher simplificado con debouncing integrado usando InputUtils
+        generalTextWatcher = InputUtils.createSimpleTextWatcher(text -> {
+            updateButtonEnabled();
+            InputUtils.debounce(DEBOUNCE_KEY, DEBOUNCE_DELAY_MS, this::saveState);
+        });
 
         etNombre.addTextChangedListener(generalTextWatcher);
         etApellido.addTextChangedListener(generalTextWatcher);
@@ -306,11 +295,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void onContinuar() {
-        // Rate limiting usando InputUtils.RateLimiter
-        if (!rateLimiter.shouldProcess()) {
-            return;
-        }
-
+        // Rate limiting ya integrado en SafeClickListener
         if (!validarCamposPantalla1()) {
             Toast.makeText(this, "Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
             return;
@@ -325,21 +310,27 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     private void guardarDatosCompletos() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
 
-        // Sanitizar entradas usando InputUtils para prevenir ataques XSS/injection
-        editor.putString("nombre", InputUtils.sanitizeInput(etNombre.getText().toString().trim()));
-        editor.putString("apellido", InputUtils.sanitizeInput(etApellido.getText().toString().trim()));
-        editor.putString("cedula", etCedula.getText().toString().trim());
-        editor.putString("fecha_nacimiento", etFechaNac.getText().toString().trim());
+        // Sanitizar y capitalizar nombres usando InputUtils
+        String nombre = InputUtils.capitalizeWords(etNombre.getText().toString());
+        String apellido = InputUtils.capitalizeWords(etApellido.getText().toString());
+
+        editor.putString("nombre", InputUtils.sanitizeInput(nombre));
+        editor.putString("apellido", InputUtils.sanitizeInput(apellido));
+        editor.putString("cedula", InputUtils.trimSafe(etCedula.getText().toString()));
+        editor.putString("fecha_nacimiento", InputUtils.trimSafe(etFechaNac.getText().toString()));
         editor.putString("domicilio", InputUtils.sanitizeInput(domicilio));
+
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
         }
-        editor.putString("telefono", etTelefono.getText().toString().trim());
-        editor.putString("email", etEmail.getText().toString().trim().toLowerCase());
+
+        // Formatear teléfono a formato internacional
+        editor.putString("telefono", InputUtils.formatTelefonoEcuador(etTelefono.getText().toString()));
+        editor.putString("email", InputUtils.trimSafe(etEmail.getText().toString()).toLowerCase());
 
         // SEGURIDAD: Almacenar contraseña encriptada
-        String password = etPassword.getText().toString().trim();
+        String password = InputUtils.trimSafe(etPassword.getText().toString());
         if (encryptedPrefs != null && !password.isEmpty()) {
             encryptedPrefs.putString(PREFS + "_password", password);
         }
@@ -351,18 +342,18 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private boolean validarCamposPantalla1() {
-        boolean ok = true;
-        if (TextUtils.isEmpty(etNombre.getText().toString().trim())) ok = false;
-        if (TextUtils.isEmpty(etApellido.getText().toString().trim())) ok = false;
-        if (!validarCedulaEcuador(etCedula.getText().toString().trim())) ok = false;
+        // Usar InputUtils para todas las validaciones
+        if (!InputUtils.isNotEmpty(etNombre.getText().toString())) return false;
+        if (!InputUtils.isNotEmpty(etApellido.getText().toString())) return false;
+        if (!InputUtils.isValidCedulaEcuador(etCedula.getText().toString().trim())) return false;
         Date fecha = parseFecha(etFechaNac.getText().toString().trim());
-        if (fecha == null || !validarEdad(fecha)) ok = false;
-        if (TextUtils.isEmpty(domicilio)) ok = false;
-        if (!etTelefono.getText().toString().trim().matches("^(\\+593[0-9]{9}|09[0-9]{8})$")) ok = false;
-        if (!Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString().trim()).matches()) ok = false;
-        if (etPassword.getText().toString().trim().length() < 6) ok = false;
-        if (!cbAceptaTerminos.isChecked()) ok = false;
-        return ok;
+        if (fecha == null || !validarEdad(fecha)) return false;
+        if (!InputUtils.isNotEmpty(domicilio)) return false;
+        if (!InputUtils.isValidTelefonoEcuador(etTelefono.getText().toString())) return false;
+        if (!InputUtils.isValidEmail(etEmail.getText().toString())) return false;
+        if (!InputUtils.isValidPassword(etPassword.getText().toString())) return false;
+        if (!cbAceptaTerminos.isChecked()) return false;
+        return true;
     }
 
     private boolean validarEdad(Date nacimiento) {
@@ -371,38 +362,20 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         return nacimiento.before(cal.getTime());
     }
 
-    private boolean validarCedulaEcuador(String cedula) {
-        if (!cedula.matches("\\d{10}")) return false;
-        try {
-            int provincia = Integer.parseInt(cedula.substring(0, 2));
-            if (provincia < 1 || provincia > 24) return false;
-            int[] coeficientes = {2, 1, 2, 1, 2, 1, 2, 1, 2};
-            int suma = 0;
-            for (int i = 0; i < 9; i++) {
-                int producto = Character.getNumericValue(cedula.charAt(i)) * coeficientes[i];
-                suma += (producto >= 10) ? producto - 9 : producto;
-            }
-            int digitoVerificador = (suma % 10 == 0) ? 0 : (10 - (suma % 10));
-            return digitoVerificador == Character.getNumericValue(cedula.charAt(9));
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
-
     private void saveState() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
         editor.putString("nombre", InputUtils.sanitizeInput(etNombre.getText().toString()));
         editor.putString("apellido", InputUtils.sanitizeInput(etApellido.getText().toString()));
-        editor.putString("cedula", etCedula.getText().toString());
-        editor.putString("fecha_nacimiento", etFechaNac.getText().toString());
+        editor.putString("cedula", InputUtils.trimSafe(etCedula.getText().toString()));
+        editor.putString("fecha_nacimiento", InputUtils.trimSafe(etFechaNac.getText().toString()));
         editor.putString("domicilio", InputUtils.sanitizeInput(domicilio));
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
         }
-        editor.putString("telefono", etTelefono.getText().toString());
-        editor.putString("email", etEmail.getText().toString());
-        editor.putString("password", etPassword.getText().toString());
+        editor.putString("telefono", InputUtils.trimSafe(etTelefono.getText().toString()));
+        editor.putString("email", InputUtils.trimSafe(etEmail.getText().toString()));
+        editor.putString("password", InputUtils.trimSafe(etPassword.getText().toString()));
         editor.apply();
     }
 

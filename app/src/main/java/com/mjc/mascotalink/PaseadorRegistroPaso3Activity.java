@@ -37,8 +37,6 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     private Uri antecedentesUri;
     private Uri medicoUri;
 
-    private final InputUtils.RateLimiter rateLimiter = new InputUtils.RateLimiter(1000);
-
     private final ActivityResultLauncher<Intent> antecedentesLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(),
         result -> handleActivityResult(result, "antecedentes")
@@ -61,12 +59,12 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
         btnContinuarPaso4 = findViewById(R.id.btn_enviar_verificacion); // ID del XML
 
-        // Listeners
+        // Listeners con SafeClickListener para prevenir doble-click
         findViewById(R.id.btn_subir_antecedentes).setOnClickListener(v -> selectFile("antecedentes"));
         findViewById(R.id.btn_subir_medico).setOnClickListener(v -> selectFile("medico"));
         findViewById(R.id.btn_eliminar_antecedentes).setOnClickListener(v -> eliminarDocumento("antecedentes"));
         findViewById(R.id.btn_eliminar_medico).setOnClickListener(v -> eliminarDocumento("medico"));
-        btnContinuarPaso4.setOnClickListener(v -> continuarAlPaso4());
+        btnContinuarPaso4.setOnClickListener(InputUtils.createSafeClickListener(v -> continuarAlPaso4()));
 
         loadState();
         verificarCompletitudPaso3();
@@ -169,11 +167,7 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void continuarAlPaso4() {
-        // Rate limiting usando InputUtils.RateLimiter
-        if (!rateLimiter.shouldProcess()) {
-            return;
-        }
-
+        // Rate limiting ya integrado en SafeClickListener
         if (antecedentesUri != null && medicoUri != null) {
             btnContinuarPaso4.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso4Activity.class));
