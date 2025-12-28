@@ -25,6 +25,7 @@ import com.mjc.mascotalink.fragments.DialogHorarioEspecialFragment;
 import com.mjc.mascotalink.modelo.Bloqueo;
 import com.mjc.mascotalink.modelo.HorarioEspecial;
 import com.mjc.mascotalink.utils.CalendarioUtils;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -111,16 +112,16 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void setupCalendario() {
-        // Navegación de mes
-        btnMesAnterior.setOnClickListener(v -> {
+        // Navegación de mes con SafeClickListener para evitar clicks múltiples
+        btnMesAnterior.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             mesActual.add(Calendar.MONTH, -1);
             actualizarCalendario();
-        });
+        }));
 
-        btnMesSiguiente.setOnClickListener(v -> {
+        btnMesSiguiente.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             mesActual.add(Calendar.MONTH, 1);
             actualizarCalendario();
-        });
+        }));
 
         actualizarCalendario();
     }
@@ -266,8 +267,8 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void setupTarjetasAccion() {
-        // Tarjeta 1: Horario Estándar
-        cardHorarioEstandar.setOnClickListener(v -> {
+        // Tarjeta 1: Horario Estándar con SafeClickListener
+        cardHorarioEstandar.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (currentUserId == null) {
                 Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
                 return;
@@ -278,10 +279,10 @@ public class DisponibilidadActivity extends AppCompatActivity {
                 Toast.makeText(this, "Horario por defecto actualizado", Toast.LENGTH_SHORT).show();
             });
             dialog.show(getSupportFragmentManager(), "horario_default");
-        });
+        }));
 
-        // Tarjeta 2: Bloquear Días
-        cardBloquearDias.setOnClickListener(v -> {
+        // Tarjeta 2: Bloquear Días con SafeClickListener
+        cardBloquearDias.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (currentUserId == null) {
                 Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
                 return;
@@ -291,10 +292,10 @@ public class DisponibilidadActivity extends AppCompatActivity {
                 cargarDatosDisponibilidad();
             });
             dialog.show(getSupportFragmentManager(), "bloquear_dias");
-        });
+        }));
 
-        // Tarjeta 3: Horarios Especiales
-        cardHorariosEspeciales.setOnClickListener(v -> {
+        // Tarjeta 3: Horarios Especiales con SafeClickListener
+        cardHorariosEspeciales.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (currentUserId == null) {
                 Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
                 return;
@@ -303,7 +304,7 @@ public class DisponibilidadActivity extends AppCompatActivity {
             DialogHorarioEspecialFragment dialog = DialogHorarioEspecialFragment.newInstance(currentUserId, null);
             dialog.setOnHorarioEspecialGuardadoListener(this::cargarDatosDisponibilidad);
             dialog.show(getSupportFragmentManager(), "horario_especial");
-        });
+        }));
     }
 
     private void setupConfiguracionesActivas() {

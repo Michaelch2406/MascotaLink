@@ -12,6 +12,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +54,8 @@ public class TiposPerrosActivity extends AppCompatActivity {
 
         loadState(); // Load previously saved state
 
-        btnGuardar.setOnClickListener(v -> guardarTiposPerros());
+        // SafeClickListener para prevenir doble-click
+        btnGuardar.setOnClickListener(InputUtils.createSafeClickListener(v -> guardarTiposPerros()));
     }
 
     private void loadState() {

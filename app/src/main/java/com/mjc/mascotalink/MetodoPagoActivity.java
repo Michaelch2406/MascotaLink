@@ -1,7 +1,6 @@
 package com.mjc.mascotalink;
 
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -17,6 +16,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,8 +72,9 @@ public class MetodoPagoActivity extends AppCompatActivity {
             loadStateFromPrefs();
         }
 
-        btnGuardar.setOnClickListener(v -> guardarMetodoPago());
-        btnCancelar.setOnClickListener(v -> finish());
+        // SafeClickListener para prevenir doble-click
+        btnGuardar.setOnClickListener(InputUtils.createSafeClickListener(v -> guardarMetodoPago()));
+        btnCancelar.setOnClickListener(InputUtils.createSafeClickListener(v -> finish()));
     }
 
     private void loadMetodoPagoFromFirestore(String id) {
@@ -93,9 +94,9 @@ public class MetodoPagoActivity extends AppCompatActivity {
         if (encryptedPrefs == null) return;
         String savedBank = encryptedPrefs.getString(prefKey("pago_banco"), "");
         String savedAccount = encryptedPrefs.getString(prefKey("pago_cuenta"), "");
-        
-        if (!TextUtils.isEmpty(savedBank)) etBanco.setText(savedBank, false);
-        if (!TextUtils.isEmpty(savedAccount)) etCuenta.setText(savedAccount);
+
+        if (InputUtils.isNotEmpty(savedBank)) etBanco.setText(savedBank, false);
+        if (InputUtils.isNotEmpty(savedAccount)) etCuenta.setText(savedAccount);
     }
 
     private void guardarMetodoPago() {
@@ -165,11 +166,11 @@ public class MetodoPagoActivity extends AppCompatActivity {
         tilBanco.setError(null);
         tilCuenta.setError(null);
 
-        if (TextUtils.isEmpty(banco)) {
+        if (!InputUtils.isNotEmpty(banco)) {
             tilBanco.setError("Selecciona un banco");
             return false;
         }
-        if (TextUtils.isEmpty(cuenta)) {
+        if (!InputUtils.isNotEmpty(cuenta)) {
             tilCuenta.setError("Ingresa el número de cuenta");
             return false;
         }

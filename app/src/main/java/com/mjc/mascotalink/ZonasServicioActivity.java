@@ -50,6 +50,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.slider.Slider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -140,10 +141,12 @@ public class ZonasServicioActivity extends AppCompatActivity implements OnMapRea
         });
 
         etDireccionZona.setOnClickListener(v -> launchAutocomplete());
-        ivGeolocateZona.setOnClickListener(v -> onGeolocateClick());
-        ivMyLocation.setOnClickListener(v -> centerOnUserLocation());
-        btnAgregarZona.setOnClickListener(v -> agregarZona());
-        btnGuardarZonas.setOnClickListener(v -> guardarZonasSeguro());
+
+        // SafeClickListener para prevenir doble-click en operaciones importantes
+        ivGeolocateZona.setOnClickListener(InputUtils.createSafeClickListener(v -> onGeolocateClick()));
+        ivMyLocation.setOnClickListener(InputUtils.createSafeClickListener(v -> centerOnUserLocation()));
+        btnAgregarZona.setOnClickListener(InputUtils.createSafeClickListener(v -> agregarZona()));
+        btnGuardarZonas.setOnClickListener(InputUtils.createSafeClickListener(v -> guardarZonasSeguro()));
     }
 
     private void setupLocationServices() {
