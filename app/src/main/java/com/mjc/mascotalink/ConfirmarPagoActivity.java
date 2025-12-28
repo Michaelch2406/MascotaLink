@@ -43,6 +43,7 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private EncryptedPreferencesHelper encryptedPrefs;
     private SessionManager sessionManager;
+    private com.google.firebase.firestore.ListenerRegistration reservaListener;
 
     // Views
     private ImageView ivBack;
@@ -167,10 +168,17 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
     }
 
     private void cargarDatosReserva() {
-        db.collection("reservas").document(reservaId)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (!documentSnapshot.exists()) {
+        // Usar listener en tiempo real para detectar cambios de estado
+        reservaListener = db.collection("reservas").document(reservaId)
+                .addSnapshotListener((documentSnapshot, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "Error en listener de reserva", error);
+                        Toast.makeText(this, "Error al cargar la reserva. Intenta nuevamente.", Toast.LENGTH_LONG).show();
+                        finish();
+                        return;
+                    }
+
+                    if (documentSnapshot == null || !documentSnapshot.exists()) {
                         Toast.makeText(this, "La reserva ya no está disponible.", Toast.LENGTH_LONG).show();
                         finish();
                         return;
@@ -187,10 +195,12 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                         // Es una reserva individual, cargar normalmente
                         cargarReservaIndividual(documentSnapshot);
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error al cargar la reserva. Intenta nuevamente.", Toast.LENGTH_LONG).show();
-                    finish();
+
+                    // Log para debugging
+                    String nuevoEstado = documentSnapshot.getString("estado");
+                    if (nuevoEstado != null && !nuevoEstado.equals(estadoReserva)) {
+                        Log.d(TAG, "Estado de reserva cambió: " + estadoReserva + " → " + nuevoEstado);
+                    }
                 });
     }
 
@@ -849,6 +859,15 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (reservaListener != null) {
+            reservaListener.remove();
+            reservaListener = null;
+        }
     }
 }
 

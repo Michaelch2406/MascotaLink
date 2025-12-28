@@ -104,6 +104,213 @@ public class DisponibilidadHelper {
     }
 
     /**
+     * Valida múltiples horarios de forma eficiente mediante batch loading.
+     * Reduce consultas de 4*N a solo 4 queries en total (donde N = cantidad de horarios).
+     *
+     * @param paseadorId ID del paseador
+     * @param fecha Fecha del paseo
+     * @param horariosAValidar Lista de pares [horaInicio, horaFin] en formato "HH:mm"
+     * @return Task con Map de resultados indexado por "horaInicio-horaFin"
+     */
+    public Task<Map<String, ResultadoDisponibilidad>> validarMultiplesHorarios(
+            String paseadorId,
+            Date fecha,
+            List<String[]> horariosAValidar) {
+
+        if (horariosAValidar == null || horariosAValidar.isEmpty()) {
+            return Tasks.forResult(new HashMap<>());
+        }
+
+        Log.d(TAG, String.format("Validación batch: %d horarios para paseador=%s, fecha=%s",
+                horariosAValidar.size(), paseadorId, fecha));
+
+        // PASO 1: Cargar switch global
+        Task<DocumentSnapshot> taskUsuario = db.collection("usuarios").document(paseadorId).get();
+
+        // PASO 2: Cargar bloqueos del día
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(fecha);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        Timestamp inicioDia = new Timestamp(cal.getTime());
+
+        cal.set(Calendar.HOUR_OF_DAY, 23);
+        cal.set(Calendar.MINUTE, 59);
+        cal.set(Calendar.SECOND, 59);
+        Timestamp finDia = new Timestamp(cal.getTime());
+
+        Task<QuerySnapshot> taskBloqueos = db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("bloqueos")
+                .collection("items")
+                .whereGreaterThanOrEqualTo("fecha", inicioDia)
+                .whereLessThanOrEqualTo("fecha", finDia)
+                .whereEqualTo("activo", true)
+                .get();
+
+        // PASO 3: Cargar horarios especiales del día
+        Task<QuerySnapshot> taskHorariosEspeciales = db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("horarios_especiales")
+                .collection("items")
+                .whereGreaterThanOrEqualTo("fecha", inicioDia)
+                .whereLessThanOrEqualTo("fecha", finDia)
+                .whereEqualTo("activo", true)
+                .get();
+
+        // PASO 4: Cargar horario default
+        Task<DocumentSnapshot> taskHorarioDefault = db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("horario_default")
+                .get();
+
+        // Ejecutar todas las queries en paralelo
+        return Tasks.whenAllSuccess(taskUsuario, taskBloqueos, taskHorariosEspeciales, taskHorarioDefault)
+                .continueWith(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.e(TAG, "Error en batch loading", task.getException());
+                        throw task.getException();
+                    }
+
+                    List<Object> results = task.getResult();
+                    DocumentSnapshot usuario = (DocumentSnapshot) results.get(0);
+                    QuerySnapshot bloqueos = (QuerySnapshot) results.get(1);
+                    QuerySnapshot horariosEspeciales = (QuerySnapshot) results.get(2);
+                    DocumentSnapshot horarioDefault = (DocumentSnapshot) results.get(3);
+
+                    Map<String, ResultadoDisponibilidad> resultados = new HashMap<>();
+
+                    // Validar switch global una sola vez
+                    Boolean aceptaSolicitudes = usuario != null && usuario.exists()
+                            ? usuario.getBoolean("acepta_solicitudes")
+                            : null;
+
+                    if (aceptaSolicitudes != null && !aceptaSolicitudes) {
+                        // Todos los horarios no disponibles por switch global
+                        for (String[] horario : horariosAValidar) {
+                            String key = horario[0] + "-" + horario[1];
+                            resultados.put(key, ResultadoDisponibilidad.noDisponible(
+                                    "Paseador pausó servicios temporalmente", "switch_global"));
+                        }
+                        return resultados;
+                    }
+
+                    // Validar cada horario con los datos ya cargados
+                    for (String[] horario : horariosAValidar) {
+                        String horaInicio = horario[0];
+                        String horaFin = horario[1];
+                        String key = horaInicio + "-" + horaFin;
+
+                        ResultadoDisponibilidad resultado = validarConDatosCargados(
+                                horaInicio, horaFin, fecha, bloqueos, horariosEspeciales, horarioDefault);
+
+                        resultados.put(key, resultado);
+                    }
+
+                    Log.d(TAG, String.format("Batch completado: %d horarios validados con 4 queries",
+                            resultados.size()));
+
+                    return resultados;
+                });
+    }
+
+    /**
+     * Valida un horario individual usando datos ya cargados de Firebase.
+     * No hace queries adicionales.
+     */
+    private ResultadoDisponibilidad validarConDatosCargados(
+            String horaInicio,
+            String horaFin,
+            Date fecha,
+            QuerySnapshot bloqueos,
+            QuerySnapshot horariosEspeciales,
+            DocumentSnapshot horarioDefault) {
+
+        // PASO 2: Verificar bloqueos
+        if (bloqueos != null && !bloqueos.isEmpty()) {
+            for (DocumentSnapshot doc : bloqueos.getDocuments()) {
+                Bloqueo bloqueo = doc.toObject(Bloqueo.class);
+                if (bloqueo == null) continue;
+
+                // Bloqueo de día completo
+                if (Bloqueo.TIPO_DIA_COMPLETO.equals(bloqueo.getTipo())) {
+                    String razon = bloqueo.getRazon() != null && !bloqueo.getRazon().isEmpty()
+                            ? bloqueo.getRazon()
+                            : "Día bloqueado";
+                    return ResultadoDisponibilidad.noDisponible(razon, "bloqueo_dia_completo");
+                }
+
+                // Bloqueos parciales
+                int horaInicioInt = convertirHoraAInt(horaInicio);
+                if (bloqueo.afectaHora(horaInicioInt)) {
+                    return ResultadoDisponibilidad.noDisponible(
+                            bloqueo.getDescripcion(), "bloqueo_parcial");
+                }
+            }
+        }
+
+        // PASO 3: Verificar horarios especiales
+        if (horariosEspeciales != null && !horariosEspeciales.isEmpty()) {
+            HorarioEspecial horarioEspecial = horariosEspeciales.getDocuments().get(0)
+                    .toObject(HorarioEspecial.class);
+
+            if (horarioEspecial != null) {
+                boolean enRango = estaEnRango(horaInicio, horaFin,
+                        horarioEspecial.getHora_inicio(),
+                        horarioEspecial.getHora_fin());
+
+                if (enRango) {
+                    return ResultadoDisponibilidad.disponible(
+                            "Horario especial configurado", "horario_especial");
+                } else {
+                    String razon = String.format("Fuera de horario especial (%s - %s)",
+                            horarioEspecial.getHora_inicio(),
+                            horarioEspecial.getHora_fin());
+                    return ResultadoDisponibilidad.noDisponible(razon, "horario_especial");
+                }
+            }
+        }
+
+        // PASO 4: Verificar horario default
+        if (horarioDefault == null || !horarioDefault.exists()) {
+            return ResultadoDisponibilidad.disponible(
+                    "Sin configuración de horario", "sin_configuracion");
+        }
+
+        String diaSemana = obtenerDiaSemana(fecha);
+        Map<String, Object> diaData = (Map<String, Object>) horarioDefault.get(diaSemana);
+
+        if (diaData == null) {
+            return ResultadoDisponibilidad.noDisponible(
+                    "No trabaja los " + capitalizarPrimeraLetra(diaSemana), "horario_default");
+        }
+
+        Boolean disponible = (Boolean) diaData.get("disponible");
+        if (disponible == null || !disponible) {
+            return ResultadoDisponibilidad.noDisponible(
+                    "No trabaja los " + capitalizarPrimeraLetra(diaSemana), "horario_default");
+        }
+
+        String horaInicioDefault = (String) diaData.get("hora_inicio");
+        String horaFinDefault = (String) diaData.get("hora_fin");
+
+        if (horaInicioDefault == null || horaFinDefault == null) {
+            return ResultadoDisponibilidad.noDisponible(
+                    "Horario no configurado correctamente", "horario_default");
+        }
+
+        boolean enRango = estaEnRango(horaInicio, horaFin, horaInicioDefault, horaFinDefault);
+
+        if (enRango) {
+            return ResultadoDisponibilidad.disponible(
+                    "Horario de trabajo habitual", "horario_default");
+        } else {
+            String razon = String.format("Fuera de horario de trabajo (%s - %s)",
+                    horaInicioDefault, horaFinDefault);
+            return ResultadoDisponibilidad.noDisponible(razon, "horario_default");
+        }
+    }
+
+    /**
      * PASO 2 y 3: Verificar bloqueos (día completo y parciales)
      */
     private Task<ResultadoDisponibilidad> verificarBloqueos(

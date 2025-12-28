@@ -1139,39 +1139,82 @@ public class ReservaActivity extends AppCompatActivity {
         rvHorarios.setAlpha(0.3f);
 
         if (duracionMinutos > 0) {
-            final int[] totalHorarios = {0};
+            // Batch validation: construir lista de horarios a validar
+            List<String[]> horariosAValidar = new ArrayList<>();
+            List<HorarioSelectorAdapter.Horario> horariosParaValidar = new ArrayList<>();
+
             for (HorarioSelectorAdapter.Horario horario : horarioList) {
                 if (horario != null && "VALIDANDO".equals(horario.getDisponibilidadEstado())) {
-                    totalHorarios[0]++;
+                    String horaInicio = String.format(Locale.US, "%02d:%02d", horario.getHora(), horario.getMinutos());
+
+                    Calendar calFin = Calendar.getInstance();
+                    calFin.setTime(fechaParaValidacion);
+                    calFin.set(Calendar.HOUR_OF_DAY, horario.getHora());
+                    calFin.set(Calendar.MINUTE, horario.getMinutos());
+                    calFin.add(Calendar.MINUTE, duracionMinutos);
+
+                    String horaFin = String.format(Locale.US, "%02d:%02d",
+                        calFin.get(Calendar.HOUR_OF_DAY),
+                        calFin.get(Calendar.MINUTE));
+
+                    horariosAValidar.add(new String[]{horaInicio, horaFin});
+                    horariosParaValidar.add(horario);
                 }
             }
 
-            final int[] horariosValidados = {0};
+            // Validar todos los horarios con una sola llamada batch (4 queries en total)
+            Date fechaFinal = fechaParaValidacion;
+            disponibilidadHelper.validarMultiplesHorarios(paseadorId, fechaFinal, horariosAValidar)
+                .addOnSuccessListener(resultados -> {
+                    // Aplicar resultados a cada horario
+                    for (int i = 0; i < horariosParaValidar.size(); i++) {
+                        HorarioSelectorAdapter.Horario horario = horariosParaValidar.get(i);
+                        String[] horarioPar = horariosAValidar.get(i);
+                        String key = horarioPar[0] + "-" + horarioPar[1];
 
-            for (HorarioSelectorAdapter.Horario horario : horarioList) {
-                if (horario == null || !"VALIDANDO".equals(horario.getDisponibilidadEstado())) continue;
+                        com.mjc.mascotalink.utils.DisponibilidadHelper.ResultadoDisponibilidad resultado =
+                            resultados.get(key);
 
-                validarDisponibilidadHorarioConCallback(horario, () -> {
-                    horariosValidados[0]++;
-                    if (horariosValidados[0] >= totalHorarios[0]) {
-                        if (horarioAdapter != null) {
-                            horarioAdapter.notifyDataSetChanged();
-                        }
-
-                        // Animación fade in después de validar todos los horarios
-                        rvHorarios.animate().alpha(1f).setDuration(300).start();
-
-                        scrollToFirstAvailableTime();
-
-                        // Solo auto-avanzar en modo PUNTUAL de un solo día
-                        if (modoFechaActual.equals("DIAS_ESPECIFICOS") &&
-                            calendarioAdapter != null &&
-                            calendarioAdapter.getFechasSeleccionadas().size() == 1) {
-                            autoAvanzarSiNoHayDisponibilidad();
+                        if (resultado != null) {
+                            if (resultado.disponible) {
+                                horario.setDisponible(true);
+                                horario.setDisponibilidadEstado("DISPONIBLE");
+                            } else {
+                                horario.setDisponible(false);
+                                horario.setDisponibilidadEstado("NO_DISPONIBLE");
+                                horario.setRazonNoDisponible(resultado.razon);
+                            }
                         }
                     }
+
+                    if (horarioAdapter != null) {
+                        horarioAdapter.notifyDataSetChanged();
+                    }
+
+                    // Animación fade in después de validar todos los horarios
+                    rvHorarios.animate().alpha(1f).setDuration(300).start();
+
+                    scrollToFirstAvailableTime();
+
+                    // Solo auto-avanzar en modo PUNTUAL de un solo día
+                    if (modoFechaActual.equals("DIAS_ESPECIFICOS") &&
+                        calendarioAdapter != null &&
+                        calendarioAdapter.getFechasSeleccionadas().size() == 1) {
+                        autoAvanzarSiNoHayDisponibilidad();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error en validación batch de horarios", e);
+                    // En caso de error, marcar todos como disponibles por defecto
+                    for (HorarioSelectorAdapter.Horario horario : horariosParaValidar) {
+                        horario.setDisponible(true);
+                        horario.setDisponibilidadEstado("DISPONIBLE");
+                    }
+                    if (horarioAdapter != null) {
+                        horarioAdapter.notifyDataSetChanged();
+                    }
+                    rvHorarios.animate().alpha(1f).setDuration(300).start();
                 });
-            }
         } else {
             for (HorarioSelectorAdapter.Horario horario : horarioList) {
                 if (horario != null && "VALIDANDO".equals(horario.getDisponibilidadEstado())) {
