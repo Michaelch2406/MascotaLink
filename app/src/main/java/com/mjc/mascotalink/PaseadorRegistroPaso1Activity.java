@@ -47,6 +47,7 @@ import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.GeoPoint;
+import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -61,6 +62,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private static final String TAG = "Paso1Paseador";
     private static final String PREFS = "WizardPaseador";
+    private static final long DEBOUNCE_DELAY_MS = 500;
 
     private EditText etNombre, etApellido, etCedula, etFechaNac, etDomicilio, etTelefono, etEmail, etPassword;
     private TextInputLayout tilPassword;
@@ -78,6 +80,13 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
+    // Prevención de memory leaks: almacenar referencias de TextWatchers
+    private TextWatcher generalTextWatcher;
+    private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable debouncedSaveRunnable;
+    private EncryptedPreferencesHelper encryptedPrefs;
+    private long lastClickTime = 0;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,6 +94,8 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+
+        encryptedPrefs = EncryptedPreferencesHelper.getInstance(this);
 
         bindViews();
         setupListeners();
@@ -122,18 +133,27 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
             finish();
         });
 
-        TextWatcher watcher = new TextWatcher() {
+        // TextWatcher con debouncing para prevenir operaciones I/O excesivas
+        generalTextWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(Editable s) { saveState(); updateButtonEnabled(); }
+            @Override public void afterTextChanged(Editable s) {
+                updateButtonEnabled();
+                // Debouncing: retrasar el guardado para evitar guardar en cada tecla
+                if (debouncedSaveRunnable != null) {
+                    debounceHandler.removeCallbacks(debouncedSaveRunnable);
+                }
+                debouncedSaveRunnable = PaseadorRegistroPaso1Activity.this::saveState;
+                debounceHandler.postDelayed(debouncedSaveRunnable, DEBOUNCE_DELAY_MS);
+            }
         };
 
-        etNombre.addTextChangedListener(watcher);
-        etApellido.addTextChangedListener(watcher);
-        etCedula.addTextChangedListener(watcher);
-        etTelefono.addTextChangedListener(watcher);
-        etEmail.addTextChangedListener(watcher);
-        etPassword.addTextChangedListener(watcher);
+        etNombre.addTextChangedListener(generalTextWatcher);
+        etApellido.addTextChangedListener(generalTextWatcher);
+        etCedula.addTextChangedListener(generalTextWatcher);
+        etTelefono.addTextChangedListener(generalTextWatcher);
+        etEmail.addTextChangedListener(generalTextWatcher);
+        etPassword.addTextChangedListener(generalTextWatcher);
         cbAceptaTerminos.setOnCheckedChangeListener((v, isChecked) -> updateButtonEnabled());
     }
 
@@ -287,28 +307,52 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void onContinuar() {
-        if (!validarCamposPantalla1()) {
-            Toast.makeText(this, " Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
+        // Rate limiting: prevenir doble click
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastClickTime < 1000) {
             return;
         }
+        lastClickTime = currentTime;
+
+        if (!validarCamposPantalla1()) {
+            Toast.makeText(this, "Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Deshabilitar botón durante el procesamiento
+        btnContinuar.setEnabled(false);
+
         guardarDatosCompletos();
         startActivity(new Intent(this, PaseadorRegistroPaso2Activity.class));
+
+        // Re-habilitar botón (se deshabilitará de nuevo al regresar si la validación falla)
+        btnContinuar.setEnabled(true);
     }
 
     private void guardarDatosCompletos() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        editor.putString("nombre", etNombre.getText().toString().trim());
-        editor.putString("apellido", etApellido.getText().toString().trim());
+
+        // Sanitizar entradas para prevenir ataques XSS/injection
+        editor.putString("nombre", sanitizeInput(etNombre.getText().toString().trim()));
+        editor.putString("apellido", sanitizeInput(etApellido.getText().toString().trim()));
         editor.putString("cedula", etCedula.getText().toString().trim());
         editor.putString("fecha_nacimiento", etFechaNac.getText().toString().trim());
-        editor.putString("domicilio", domicilio);
+        editor.putString("domicilio", sanitizeInput(domicilio));
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
         }
         editor.putString("telefono", etTelefono.getText().toString().trim());
-        editor.putString("email", etEmail.getText().toString().trim());
-        editor.putString("password", etPassword.getText().toString().trim());
+        editor.putString("email", etEmail.getText().toString().trim().toLowerCase());
+
+        // SEGURIDAD: Almacenar contraseña encriptada
+        String password = etPassword.getText().toString().trim();
+        if (encryptedPrefs != null && !password.isEmpty()) {
+            encryptedPrefs.putString(PREFS + "_password", password);
+        }
+        // También guardar en prefs regulares para compatibilidad durante el flujo de registro
+        editor.putString("password", password);
+
         editor.putBoolean("paso1_completo", true);
         editor.putBoolean("acepto_terminos", cbAceptaTerminos.isChecked());
         editor.apply();
@@ -355,11 +399,11 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private void saveState() {
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
-        editor.putString("nombre", etNombre.getText().toString());
-        editor.putString("apellido", etApellido.getText().toString());
+        editor.putString("nombre", sanitizeInput(etNombre.getText().toString()));
+        editor.putString("apellido", sanitizeInput(etApellido.getText().toString()));
         editor.putString("cedula", etCedula.getText().toString());
         editor.putString("fecha_nacimiento", etFechaNac.getText().toString());
-        editor.putString("domicilio", domicilio);
+        editor.putString("domicilio", sanitizeInput(domicilio));
         if (domicilioLatLng != null) {
             editor.putFloat("domicilio_lat", (float) domicilioLatLng.getLatitude());
             editor.putFloat("domicilio_lng", (float) domicilioLatLng.getLongitude());
@@ -401,6 +445,39 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
             return sdf.parse(fechaStr);
         } catch (ParseException e) {
             return null;
+        }
+    }
+
+    /**
+     * Sanitiza la entrada del usuario para prevenir XSS y ataques de inyección
+     */
+    private String sanitizeInput(String input) {
+        if (input == null) return "";
+        // Remover caracteres HTML peligrosos
+        return input.replaceAll("<", "&lt;")
+                   .replaceAll(">", "&gt;")
+                   .replaceAll("\"", "&quot;")
+                   .replaceAll("'", "&#x27;")
+                   .replaceAll("/", "&#x2F;");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar TextWatchers para prevenir memory leaks
+        if (generalTextWatcher != null) {
+            if (etNombre != null) etNombre.removeTextChangedListener(generalTextWatcher);
+            if (etApellido != null) etApellido.removeTextChangedListener(generalTextWatcher);
+            if (etCedula != null) etCedula.removeTextChangedListener(generalTextWatcher);
+            if (etTelefono != null) etTelefono.removeTextChangedListener(generalTextWatcher);
+            if (etEmail != null) etEmail.removeTextChangedListener(generalTextWatcher);
+            if (etPassword != null) etPassword.removeTextChangedListener(generalTextWatcher);
+        }
+
+        // Limpiar Handler callbacks para prevenir memory leaks
+        if (debounceHandler != null && debouncedSaveRunnable != null) {
+            debounceHandler.removeCallbacks(debouncedSaveRunnable);
         }
     }
 }

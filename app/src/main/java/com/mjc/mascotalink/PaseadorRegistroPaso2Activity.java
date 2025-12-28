@@ -17,9 +17,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.storage.FirebaseStorage;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
@@ -38,8 +37,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     private View layoutSelfieEmpty;
     private View layoutFotoPerfilEmpty;
 
-    private FirebaseAuth mAuth;
-    private FirebaseStorage storage;
+    private long lastClickTime = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -48,9 +46,6 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
-
-        mAuth = FirebaseAuth.getInstance();
-        storage = FirebaseStorage.getInstance();
 
         // Vistas
         previewFotoPerfil = findViewById(R.id.preview_foto_perfil);
@@ -223,21 +218,29 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private void mostrarPreviewSelfie(Uri uri) {
         try {
-            Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).into(previewSelfie);
+            Glide.with(this)
+                .load(MyApplication.getFixedUrl(uri.toString()))
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(false)
+                .into(previewSelfie);
             layoutSelfieEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
         } catch (Exception e) {
-            Toast.makeText(this, " No se pudo mostrar la preview de la selfie.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No se pudo mostrar la preview de la selfie.", Toast.LENGTH_SHORT).show();
         }
     }
 
     private void mostrarPreviewFotoPerfil(Uri uri) {
         try {
-            Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).into(previewFotoPerfil);
+            Glide.with(this)
+                .load(MyApplication.getFixedUrl(uri.toString()))
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(false)
+                .into(previewFotoPerfil);
             layoutFotoPerfilEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
         } catch (Exception e) {
-            Toast.makeText(this, " No se pudo mostrar la preview de la foto.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No se pudo mostrar la preview de la foto.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -258,8 +261,17 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
     }
 
     private void continuarAlPaso3() {
+        // Rate limiting: prevenir doble click
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastClickTime < 1000) {
+            return;
+        }
+        lastClickTime = currentTime;
+
         if (selfieUri != null && fotoPerfilUri != null) {
+            btnContinuarPaso3.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso3Activity.class));
+            btnContinuarPaso3.setEnabled(true);
         } else {
             verificarCompletitudPaso2(); // Muestra los errores en el TextView
         }

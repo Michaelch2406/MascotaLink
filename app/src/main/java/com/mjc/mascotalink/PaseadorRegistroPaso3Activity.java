@@ -18,9 +18,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.auth.FirebaseAuth;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.mjc.mascotalink.MyApplication;
 
@@ -37,8 +36,7 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     private Uri antecedentesUri;
     private Uri medicoUri;
 
-    private FirebaseAuth mAuth;
-    private FirebaseStorage storage;
+    private long lastClickTime = 0;
 
     private final ActivityResultLauncher<Intent> antecedentesLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(),
@@ -57,9 +55,6 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
-
-        mAuth = FirebaseAuth.getInstance();
-        storage = FirebaseStorage.getInstance();
 
         // Vistas
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
@@ -127,7 +122,11 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         } else { // Es imagen
             pdfPreview.setVisibility(View.GONE);
             imgPreview.setVisibility(View.VISIBLE);
-            Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).into(imgPreview);
+            Glide.with(this)
+                .load(MyApplication.getFixedUrl(uri.toString()))
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(false)
+                .into(imgPreview);
         }
     }
 
@@ -169,8 +168,17 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void continuarAlPaso4() {
+        // Rate limiting: prevenir doble click
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastClickTime < 1000) {
+            return;
+        }
+        lastClickTime = currentTime;
+
         if (antecedentesUri != null && medicoUri != null) {
+            btnContinuarPaso4.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso4Activity.class));
+            btnContinuarPaso4.setEnabled(true);
         } else {
             verificarCompletitudPaso3(); // Muestra los errores en el TextView
         }

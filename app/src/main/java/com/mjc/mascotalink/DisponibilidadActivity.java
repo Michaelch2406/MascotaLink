@@ -639,8 +639,8 @@ public class DisponibilidadActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Si hay cambios en bloqueos, recalcular disponibilidad del mes
-                    if (snapshot != null) {
+                    // Verificar si la activity está activa antes de actualizar UI
+                    if (snapshot != null && !isFinishing() && !isDestroyed()) {
                         cargarDisponibilidadDelMes();
                     }
                 });
@@ -657,8 +657,8 @@ public class DisponibilidadActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Si hay cambios en horarios especiales, recalcular disponibilidad del mes
-                    if (snapshot != null) {
+                    // Verificar si la activity está activa antes de actualizar UI
+                    if (snapshot != null && !isFinishing() && !isDestroyed()) {
                         cargarDisponibilidadDelMes();
                     }
                 });
@@ -674,8 +674,8 @@ public class DisponibilidadActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Si hay cambios en horario por defecto, actualizar descripción
-                    if (snapshot != null) {
+                    // Verificar si la activity está activa antes de actualizar UI
+                    if (snapshot != null && !isFinishing() && !isDestroyed()) {
                         cargarHorarioDefault();
                         cargarDisponibilidadDelMes();
                     }

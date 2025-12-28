@@ -23,9 +23,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.storage.FirebaseStorage;
 import com.mjc.mascotalink.MyApplication;
 
 import java.util.ArrayList;
@@ -38,8 +37,8 @@ import android.util.Log;
 public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
 
     private static final String TAG = "PaseadorPaso4";
-
     private static final String PREFS = "WizardPaseador";
+    private static final long DEBOUNCE_DELAY_MS = 500;
 
     private final ArrayList<Uri> localUris = new ArrayList<>();
     private ImageView img1, img2, img3;
@@ -49,8 +48,10 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private Button btnQuiz, btnGuardar;
     private TextView tvValidationMessages;
 
-    private FirebaseAuth mAuth;
-    private FirebaseStorage storage;
+    private TextWatcher motivacionTextWatcher;
+    private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable debouncedSaveRunnable;
+    private long lastClickTime = 0;
 
     private final ActivityResultLauncher<Intent> galeriaLauncher = registerForActivityResult(
         new ActivityResultContracts.StartActivityForResult(),
@@ -66,9 +67,6 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_paseador_registro_paso4);
-
-        mAuth = FirebaseAuth.getInstance();
-        storage = FirebaseStorage.getInstance();
 
         setupViews();
         setupListeners();
@@ -125,20 +123,25 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
             }
         });
 
-        // TextWatcher para motivación
-        TextWatcher textWatcher = new TextWatcher() {
+        // TextWatcher con debouncing para motivación
+        motivacionTextWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                saveState();
                 verificarCompletitudPaso4();
+                // Debouncing: retrasar el guardado
+                if (debouncedSaveRunnable != null) {
+                    debounceHandler.removeCallbacks(debouncedSaveRunnable);
+                }
+                debouncedSaveRunnable = PaseadorRegistroPaso4Activity.this::saveState;
+                debounceHandler.postDelayed(debouncedSaveRunnable, DEBOUNCE_DELAY_MS);
             }
         };
 
-        etMotivacion.addTextChangedListener(textWatcher);
+        etMotivacion.addTextChangedListener(motivacionTextWatcher);
     }
 
     private void abrirGaleria() {
@@ -222,7 +225,12 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
             if (i < localUris.size()) {
                 Uri uri = localUris.get(i);
                 placeholders[i].setAlpha(1.0f);
-                Glide.with(this).load(MyApplication.getFixedUrl(uri.toString())).centerCrop().into(placeholders[i]);
+                Glide.with(this)
+                    .load(MyApplication.getFixedUrl(uri.toString()))
+                    .centerCrop()
+                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    .skipMemoryCache(false)
+                    .into(placeholders[i]);
 
                 String mimeType = getContentResolver().getType(uri);
                 playIcons[i].setVisibility(mimeType != null && mimeType.startsWith("video/") ? View.VISIBLE : View.GONE);
@@ -285,8 +293,17 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     }
 
     private void guardarYContinuar() {
+        // Rate limiting: prevenir doble click
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastClickTime < 1000) {
+            return;
+        }
+        lastClickTime = currentTime;
+
         if (btnGuardar.isEnabled()) {
+            btnGuardar.setEnabled(false);
             startActivity(new Intent(this, PaseadorRegistroPaso5Activity.class));
+            btnGuardar.setEnabled(true);
         } else {
             verificarCompletitudPaso4();
         }
@@ -353,6 +370,21 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
                 }
             }
             actualizarVistaGaleria();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Limpiar TextWatchers para prevenir memory leaks
+        if (motivacionTextWatcher != null && etMotivacion != null) {
+            etMotivacion.removeTextChangedListener(motivacionTextWatcher);
+        }
+
+        // Limpiar Handler callbacks
+        if (debounceHandler != null && debouncedSaveRunnable != null) {
+            debounceHandler.removeCallbacks(debouncedSaveRunnable);
         }
     }
 }

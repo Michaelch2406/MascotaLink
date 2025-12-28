@@ -19,6 +19,7 @@ public class FileStorageHelper {
 
     private static final String TAG = "FileStorageHelper";
     private static final String SHARED_DIR = "shared_files";
+    private static final int BUFFER_SIZE = 8192; // Aumentado de 1024 a 8192 para mejor rendimiento
 
     /**
      * Creates a new file in the app's private storage and returns a content URI for it.
@@ -78,7 +79,7 @@ public class FileStorageHelper {
             File destinationFile = new File(sharedDir, fileName);
 
             try (OutputStream outputStream = new FileOutputStream(destinationFile)) {
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[BUFFER_SIZE];
                 int length;
                 while ((length = inputStream.read(buffer)) > 0) {
                     outputStream.write(buffer, 0, length);
