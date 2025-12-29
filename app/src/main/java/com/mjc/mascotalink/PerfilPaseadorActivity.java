@@ -726,13 +726,6 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
     @Override
     protected void onStop() {
         super.onStop();
-        if (ivAvatar != null && !isDestroyed() && !isFinishing()) {
-            try {
-                Glide.with(this).clear(ivAvatar);
-            } catch (Exception e) {
-                Log.w(TAG, "Error clearing Glide request in onStop", e);
-            }
-        }
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
             mAuthListener = null;

@@ -838,9 +838,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (ivAvatar != null && !isDestroyed() && !isFinishing()) {
-            Glide.with(this).clear(ivAvatar);
-        }
         if (mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
             mAuthListener = null;
