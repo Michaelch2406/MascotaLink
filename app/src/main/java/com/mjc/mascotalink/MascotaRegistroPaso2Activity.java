@@ -30,7 +30,7 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
     private static final long RATE_LIMIT_MS = 1000;
 
     private ImageView arrowBack;
-    private SwitchMaterial vacunasSwitch, desparasitacionSwitch;
+    private SwitchMaterial vacunasSwitch, desparasitacionSwitch, esterilizadoSwitch;
     private TextInputEditText ultimaVisitaVetEditText, condicionesMedicasEditText, medicamentosActualesEditText, veterinarioNombreEditText, veterinarioTelefonoEditText;
     private TextInputLayout ultimaVisitaVetLayout, condicionesMedicasLayout, medicamentosActualesLayout, veterinarioNombreLayout, veterinarioTelefonoLayout;
     private Button siguienteButton;
@@ -45,6 +45,7 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
         arrowBack = findViewById(R.id.arrow_back);
         vacunasSwitch = findViewById(R.id.vacunasSwitch);
         desparasitacionSwitch = findViewById(R.id.desparasitacionSwitch);
+        esterilizadoSwitch = findViewById(R.id.esterilizadoSwitch);
         ultimaVisitaVetEditText = findViewById(R.id.ultimaVisitaVetEditText);
         condicionesMedicasEditText = findViewById(R.id.condicionesMedicasEditText);
         medicamentosActualesEditText = findViewById(R.id.medicamentosActualesEditText);
@@ -83,6 +84,7 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
 
         vacunasSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> validateInputs());
         desparasitacionSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> validateInputs());
+        esterilizadoSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> validateInputs());
     }
 
     private void validateInputs() {
@@ -152,6 +154,7 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
 
             intent.putExtra("vacunas_al_dia", vacunasSwitch.isChecked());
             intent.putExtra("desparasitacion_al_dia", desparasitacionSwitch.isChecked());
+            intent.putExtra("esterilizado", esterilizadoSwitch.isChecked());
 
             String ultimaVisitaStr = ultimaVisitaVetEditText.getText().toString();
             if (!ultimaVisitaStr.isEmpty()) {

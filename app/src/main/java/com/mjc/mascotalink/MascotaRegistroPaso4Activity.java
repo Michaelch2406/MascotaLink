@@ -88,11 +88,8 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
 
     private void validateInputs() {
         boolean allFilled = !rutinaPaseoEditText.getText().toString().trim().isEmpty()
-                && !tipoCorreaArnesEditText.getText().toString().trim().isEmpty()
                 && !recompensasEditText.getText().toString().trim().isEmpty()
-                && !instruccionesEmergenciaEditText.getText().toString().trim().isEmpty()
-                && !notasAdicionalesEditText.getText().toString().trim().isEmpty();
-        // Only enable if owner data is loaded too
+                && !instruccionesEmergenciaEditText.getText().toString().trim().isEmpty();
         guardarButton.setEnabled(allFilled && duenoNombre != null && duenoApellido != null);
     }
 
@@ -226,10 +223,11 @@ public class MascotaRegistroPaso4Activity extends AppCompatActivity {
         mascota.put("fecha_nacimiento", new com.google.firebase.Timestamp(new java.util.Date(intent.getLongExtra("fecha_nacimiento", 0))));
         mascota.put("tamano", intent.getStringExtra("tamano"));
         mascota.put("peso", intent.getDoubleExtra("peso", 0.0));
+        mascota.put("esterilizado", intent.getBooleanExtra("esterilizado", false));
         mascota.put("foto_principal_url", fotoUrl);
         mascota.put("fecha_registro", FieldValue.serverTimestamp());
         mascota.put("ultima_actualizacion", FieldValue.serverTimestamp());
-        mascota.put("activo", true); // FIX: Añadir el campo 'activo' por defecto
+        mascota.put("activo", true);
 
         // Pantalla 2 - Salud
         Map<String, Object> salud = new HashMap<>();

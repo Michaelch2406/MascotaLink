@@ -10,8 +10,12 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -61,12 +65,14 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
 
     // UI Components
     private ImageView ivBack, ivAvatarMascota;
-    private TextInputEditText etNombre, etRaza, etPeso;
+    private TextInputEditText etNombre, etPeso;
+    private AutoCompleteTextView etRaza;
     private ChipGroup chipGroupSexo, chipGroupTamano, chipGroupEnergia;
     private TextInputEditText etFechaNacimiento, etUltimaVisitaVet;
     private SwitchMaterial switchEsterilizado, switchVacunas, switchDesparasitacion;
     private TextInputEditText etCondicionesMedicas, etMedicamentos, etVeterinarioNombre, etVeterinarioTelefono;
-    private TextInputEditText etConPersonas, etConOtrosPerros, etConOtrosAnimales, etHabitosCorrea, etComandosConocidos, etMiedosFobias, etManiasHabitos;
+    private RadioGroup rgConPersonas, rgConOtrosPerros, rgConOtrosAnimales, rgHabitosCorrea;
+    private TextInputEditText etComandosConocidos, etMiedosFobias, etManiasHabitos;
     private TextInputEditText etRutinaPaseo, etTipoCorreaArnes, etRecompensas, etInstruccionesEmergencia, etNotasAdicionales;
     private Button btnGuardar;
 
@@ -94,6 +100,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         }
 
         initViews();
+        setupRazaDropdown();
         setupListeners();
         loadInitialData();
     }
@@ -116,10 +123,10 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         etVeterinarioNombre = findViewById(R.id.et_veterinario_nombre);
         etVeterinarioTelefono = findViewById(R.id.et_veterinario_telefono);
         chipGroupEnergia = findViewById(R.id.chipgroup_energia);
-        etConPersonas = findViewById(R.id.et_con_personas);
-        etConOtrosPerros = findViewById(R.id.et_con_otros_perros);
-        etConOtrosAnimales = findViewById(R.id.et_con_otros_animales);
-        etHabitosCorrea = findViewById(R.id.et_habitos_correa);
+        rgConPersonas = findViewById(R.id.rg_con_personas);
+        rgConOtrosPerros = findViewById(R.id.rg_con_otros_perros);
+        rgConOtrosAnimales = findViewById(R.id.rg_con_otros_animales);
+        rgHabitosCorrea = findViewById(R.id.rg_habitos_correa);
         etComandosConocidos = findViewById(R.id.et_comandos_conocidos);
         etMiedosFobias = findViewById(R.id.et_miedos_fobias);
         etManiasHabitos = findViewById(R.id.et_manias_habitos);
@@ -129,6 +136,12 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         etInstruccionesEmergencia = findViewById(R.id.et_instrucciones_emergencia);
         etNotasAdicionales = findViewById(R.id.et_notas_adicionales);
         btnGuardar = findViewById(R.id.btn_guardar);
+    }
+
+    private void setupRazaDropdown() {
+        String[] razas = getResources().getStringArray(R.array.razas_perros);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, razas);
+        etRaza.setAdapter(adapter);
     }
 
     private void setupListeners() {
@@ -184,7 +197,6 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
                         etPeso.setText(document.contains("peso") ? String.valueOf(document.getDouble("peso")) : "");
                         setChipGroupValue(chipGroupSexo, document.getString("sexo"));
                         setChipGroupValue(chipGroupTamano, document.getString("tamano"));
-                        switchEsterilizado.setChecked(document.contains("esterilizado") && Boolean.TRUE.equals(document.getBoolean("esterilizado")));
 
                         if (document.contains("fecha_nacimiento")) {
                             Timestamp ts = document.getTimestamp("fecha_nacimiento");
@@ -217,6 +229,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
 
         switch (mapKey) {
             case "salud":
+                switchEsterilizado.setChecked(map.containsKey("esterilizado") && Boolean.TRUE.equals(map.get("esterilizado")));
                 switchVacunas.setChecked(map.containsKey("vacunas_al_dia") && Boolean.TRUE.equals(map.get("vacunas_al_dia")));
                 switchDesparasitacion.setChecked(map.containsKey("desparasitacion_aldia") && Boolean.TRUE.equals(map.get("desparasitacion_aldia")));
                 etCondicionesMedicas.setText((String) map.get("condiciones_medicas"));
@@ -233,10 +246,10 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
                 break;
             case "comportamiento":
                 setChipGroupValue(chipGroupEnergia, (String) map.get("nivel_energia"));
-                etConPersonas.setText((String) map.get("con_personas"));
-                etConOtrosPerros.setText((String) map.get("con_otros_perros"));
-                etConOtrosAnimales.setText((String) map.get("con_otros_animales"));
-                etHabitosCorrea.setText((String) map.get("habitos_correa"));
+                setRadioGroupValue(rgConPersonas, (String) map.get("con_personas"));
+                setRadioGroupValue(rgConOtrosPerros, (String) map.get("con_otros_perros"));
+                setRadioGroupValue(rgConOtrosAnimales, (String) map.get("con_otros_animales"));
+                setRadioGroupValue(rgHabitosCorrea, (String) map.get("habitos_correa"));
                 etComandosConocidos.setText((String) map.get("comandos_conocidos"));
                 etMiedosFobias.setText((String) map.get("miedos_fobias"));
                 etManiasHabitos.setText((String) map.get("manias_habitos"));
@@ -315,8 +328,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         } catch (NumberFormatException e) {
             mascotaData.put("peso", 0.0);
         }
-        mascotaData.put("esterilizado", switchEsterilizado.isChecked());
-        
+
         // Only update photo URL if a new one was provided
         if (newPhotoUrl != null) {
             mascotaData.put("foto_principal_url", newPhotoUrl);
@@ -324,6 +336,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
 
         // Maps
         Map<String, Object> saludMap = new HashMap<>();
+        saludMap.put("esterilizado", switchEsterilizado.isChecked());
         saludMap.put("vacunas_al_dia", switchVacunas.isChecked());
         saludMap.put("desparasitacion_aldia", switchDesparasitacion.isChecked());
         saludMap.put("condiciones_medicas", Objects.requireNonNull(etCondicionesMedicas.getText()).toString());
@@ -335,10 +348,10 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
 
         Map<String, Object> compMap = new HashMap<>();
         compMap.put("nivel_energia", getChipGroupValue(chipGroupEnergia));
-        compMap.put("con_personas", Objects.requireNonNull(etConPersonas.getText()).toString());
-        compMap.put("con_otros_perros", Objects.requireNonNull(etConOtrosPerros.getText()).toString());
-        compMap.put("con_otros_animales", Objects.requireNonNull(etConOtrosAnimales.getText()).toString());
-        compMap.put("habitos_correa", Objects.requireNonNull(etHabitosCorrea.getText()).toString());
+        compMap.put("con_personas", getRadioGroupValue(rgConPersonas));
+        compMap.put("con_otros_perros", getRadioGroupValue(rgConOtrosPerros));
+        compMap.put("con_otros_animales", getRadioGroupValue(rgConOtrosAnimales));
+        compMap.put("habitos_correa", getRadioGroupValue(rgHabitosCorrea));
         compMap.put("comandos_conocidos", Objects.requireNonNull(etComandosConocidos.getText()).toString());
         compMap.put("miedos_fobias", Objects.requireNonNull(etMiedosFobias.getText()).toString());
         compMap.put("manias_habitos", Objects.requireNonNull(etManiasHabitos.getText()).toString());
@@ -442,6 +455,29 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
             return selectedChip.getText().toString();
         }
         return null;
+    }
+
+    private void setRadioGroupValue(RadioGroup radioGroup, String value) {
+        if (value == null || radioGroup == null) return;
+        for (int i = 0; i < radioGroup.getChildCount(); i++) {
+            RadioButton radioButton = (RadioButton) radioGroup.getChildAt(i);
+            if (radioButton.getText().toString().equalsIgnoreCase(value)) {
+                radioButton.setChecked(true);
+                break;
+            }
+        }
+    }
+
+    private String getRadioGroupValue(RadioGroup radioGroup) {
+        if (radioGroup == null) return "";
+        int selectedId = radioGroup.getCheckedRadioButtonId();
+        if (selectedId != -1) {
+            RadioButton selectedRadioButton = radioGroup.findViewById(selectedId);
+            if (selectedRadioButton != null) {
+                return selectedRadioButton.getText().toString();
+            }
+        }
+        return "";
     }
 
     private void updateDateInView(TextInputEditText editText, Date date) {

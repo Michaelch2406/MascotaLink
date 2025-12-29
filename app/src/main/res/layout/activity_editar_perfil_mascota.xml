@@ -114,15 +114,17 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:id="@+id/layout_raza"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:hint="Raza">
-                <com.google.android.material.textfield.TextInputEditText
+                <AutoCompleteTextView
                     android:id="@+id/et_raza"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sexo"/>
@@ -279,51 +281,113 @@
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Moderado"/>
                 <com.google.android.material.chip.Chip style="@style/Widget.MaterialComponents.Chip.Choice" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alto"/>
             </com.google.android.material.chip.ChipGroup>
-            
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Comportamiento con personas" android:layout_marginTop="8dp"/>
+            <RadioGroup
+                android:id="@+id/rg_con_personas"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:hint="Comportamiento con personas">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_con_personas"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+                <RadioButton
+                    android:id="@+id/rb_personas_amigable"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Amigable"/>
+                <RadioButton
+                    android:id="@+id/rb_personas_timido"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Tímido"/>
+                <RadioButton
+                    android:id="@+id/rb_personas_agresivo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Agresivo"/>
+            </RadioGroup>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Comportamiento con otros perros"/>
+            <RadioGroup
+                android:id="@+id/rg_con_otros_perros"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:hint="Comportamiento con otros perros">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_con_otros_perros"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:orientation="vertical"
+                android:layout_marginBottom="8dp">
+                <RadioButton
+                    android:id="@+id/rb_perros_amigable"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Amigable"/>
+                <RadioButton
+                    android:id="@+id/rb_perros_jugueton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Juguetón"/>
+                <RadioButton
+                    android:id="@+id/rb_perros_timido"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tímido"/>
+                <RadioButton
+                    android:id="@+id/rb_perros_agresivo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Agresivo"/>
+            </RadioGroup>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Comportamiento con otros animales"/>
+            <RadioGroup
+                android:id="@+id/rg_con_otros_animales"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:hint="Comportamiento con otros animales">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_con_otros_animales"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+                <RadioButton
+                    android:id="@+id/rb_animales_amigable"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Amigable"/>
+                <RadioButton
+                    android:id="@+id/rb_animales_indiferente"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Indiferente"/>
+                <RadioButton
+                    android:id="@+id/rb_animales_agresivo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Agresivo"/>
+            </RadioGroup>
+
+            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Hábitos con la correa"/>
+            <RadioGroup
+                android:id="@+id/rg_habitos_correa"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:hint="Hábitos con la correa">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_habitos_correa"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:orientation="vertical"
+                android:layout_marginBottom="8dp">
+                <RadioButton
+                    android:id="@+id/rb_correa_camina_bien"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Camina bien"/>
+                <RadioButton
+                    android:id="@+id/rb_correa_tira"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tira"/>
+                <RadioButton
+                    android:id="@+id/rb_correa_necesita_entrenamiento"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Necesita entrenamiento"/>
+            </RadioGroup>
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
