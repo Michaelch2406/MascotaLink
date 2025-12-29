@@ -187,19 +187,17 @@ public class MisMascotasActivity extends AppCompatActivity {
         String fotoUrl = doc.getString("foto_principal_url");
         mascota.setFotoUrl(MyApplication.getFixedUrl(fotoUrl));
 
-        // Edad - puede ser Long o String
-        Object edadObj = doc.get("edad_anios");
-        if (edadObj == null) {
-            edadObj = doc.get("edad");
-        }
-        if (edadObj instanceof Number) {
-            mascota.setEdadAnios(((Number) edadObj).intValue());
-        } else if (edadObj instanceof String) {
-            try {
-                mascota.setEdadAnios(Integer.parseInt((String) edadObj));
-            } catch (NumberFormatException e) {
-                mascota.setEdadAnios(null);
-            }
+        // Edad - calculada desde fecha_nacimiento
+        com.google.firebase.Timestamp fechaNacimiento = doc.getTimestamp("fecha_nacimiento");
+        if (fechaNacimiento != null) {
+            java.util.Date birthDate = fechaNacimiento.toDate();
+            java.time.LocalDate localBirthDate = birthDate.toInstant()
+                    .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+            java.time.LocalDate currentDate = java.time.LocalDate.now();
+            int edad = java.time.Period.between(localBirthDate, currentDate).getYears();
+            mascota.setEdadAnios(edad);
+        } else {
+            mascota.setEdadAnios(null);
         }
 
         // Peso - puede ser Double, Long o String

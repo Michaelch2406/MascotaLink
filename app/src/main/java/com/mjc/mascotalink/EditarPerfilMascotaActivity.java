@@ -32,6 +32,7 @@ import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -132,7 +133,8 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
-        btnGuardar.setOnClickListener(v -> saveMascotaData());
+        // SafeClickListener para prevenir doble-click
+        btnGuardar.setOnClickListener(InputUtils.createSafeClickListener(v -> saveMascotaData()));
         ivAvatarMascota.setOnClickListener(v -> openFileChooser());
         etFechaNacimiento.setOnClickListener(v -> showDatePickerDialog(fechaNacimientoCalendar, etFechaNacimiento));
         etUltimaVisitaVet.setOnClickListener(v -> showDatePickerDialog(ultimaVisitaVetCalendar, etUltimaVisitaVet));
@@ -251,8 +253,10 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
 
     private void saveMascotaData() {
         if (!btnGuardar.isEnabled()) return;
-        btnGuardar.setEnabled(false);
-        Toast.makeText(this, "Guardando...", Toast.LENGTH_SHORT).show();
+
+        // Ocultar teclado y mostrar estado de carga
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(btnGuardar, true, "Guardando...");
 
         // If a new image was selected, start the delete/upload process.
         // Otherwise, just save the text data.
@@ -295,7 +299,7 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
                 }))
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error al subir nueva foto: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    btnGuardar.setEnabled(true);
+                    InputUtils.setButtonLoading(btnGuardar, false);
                 });
     }
 
@@ -351,12 +355,13 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
         db.collection("duenos").document(duenoId).collection("mascotas").document(mascotaId)
                 .set(mascotaData, SetOptions.merge()) // Use merge to be safe
                 .addOnSuccessListener(aVoid -> {
+                    InputUtils.setButtonLoading(btnGuardar, false);
                     Toast.makeText(this, "Perfil de mascota actualizado", Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    btnGuardar.setEnabled(true);
+                    InputUtils.setButtonLoading(btnGuardar, false);
                 });
     }
 
@@ -372,28 +377,20 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
     }
 
     private void validateForm() {
-        boolean isNombreValid = !Objects.requireNonNull(etNombre.getText()).toString().trim().isEmpty();
-        boolean isRazaValid = !Objects.requireNonNull(etRaza.getText()).toString().trim().isEmpty();
+        String nombre = Objects.requireNonNull(etNombre.getText()).toString().trim();
+        String raza = Objects.requireNonNull(etRaza.getText()).toString().trim();
+
+        // Usar InputUtils para validaciones
+        boolean isNombreValid = InputUtils.isValidName(nombre, 2, 50);
+        boolean isRazaValid = !raza.isEmpty();
 
         String pesoStr = Objects.requireNonNull(etPeso.getText()).toString().trim();
-        boolean isPesoValid = true;
-        if (!pesoStr.isEmpty()) {
-            try {
-                double peso = Double.parseDouble(pesoStr);
-                isPesoValid = peso > 0 && peso <= 200;
-            } catch (NumberFormatException e) {
-                isPesoValid = false;
-            }
-        }
+        boolean isPesoValid = pesoStr.isEmpty() || InputUtils.isValidPeso(pesoStr, 0.1, 200);
 
         String vetTelefono = Objects.requireNonNull(etVeterinarioTelefono.getText()).toString().trim();
-        boolean isVetTelefonoValid = vetTelefono.isEmpty() || isValidPhoneNumber(vetTelefono);
+        boolean isVetTelefonoValid = vetTelefono.isEmpty() || InputUtils.isValidTelefonoEcuador(vetTelefono);
 
         btnGuardar.setEnabled(isNombreValid && isRazaValid && isPesoValid && isVetTelefonoValid);
-    }
-
-    private boolean isValidPhoneNumber(String phone) {
-        return phone.matches("^[0-9]{8,15}$");
     }
 
     @Override
@@ -415,9 +412,15 @@ public class EditarPerfilMascotaActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            imageUri = data.getData();
-            Glide.with(this).load(imageUri).circleCrop().into(ivAvatarMascota);
-            validateForm();
+            Uri selectedUri = data.getData();
+            // Validar imagen antes de usar
+            if (InputUtils.isValidImageFile(this, selectedUri, 5 * 1024 * 1024)) {
+                imageUri = selectedUri;
+                Glide.with(this).load(imageUri).circleCrop().into(ivAvatarMascota);
+                validateForm();
+            } else {
+                Toast.makeText(this, "La imagen no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+            }
         }
     }
 

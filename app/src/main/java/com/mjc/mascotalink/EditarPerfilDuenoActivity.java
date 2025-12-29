@@ -33,6 +33,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -122,9 +123,15 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    newPhotoUri = result.getData().getData();
-                    ivAvatar.setImageURI(newPhotoUri);
-                    validateFields();
+                    Uri selectedUri = result.getData().getData();
+                    // Validar imagen antes de usar
+                    if (InputUtils.isValidImageFile(this, selectedUri, 5 * 1024 * 1024)) {
+                        newPhotoUri = selectedUri;
+                        ivAvatar.setImageURI(newPhotoUri);
+                        validateFields();
+                    } else {
+                        Toast.makeText(this, "La imagen no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                    }
                 }
             });
 
@@ -132,9 +139,14 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK) {
-                    newPhotoUri = cameraPhotoUri;
-                    ivAvatar.setImageURI(newPhotoUri);
-                    validateFields();
+                    // Validar imagen antes de usar
+                    if (InputUtils.isValidImageFile(this, cameraPhotoUri, 5 * 1024 * 1024)) {
+                        newPhotoUri = cameraPhotoUri;
+                        ivAvatar.setImageURI(newPhotoUri);
+                        validateFields();
+                    } else {
+                        Toast.makeText(this, "La imagen no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                    }
                 }
             });
 
@@ -163,7 +175,8 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
         ivAvatar.setOnClickListener(photoClickListener);
         tvCambiarFoto.setOnClickListener(photoClickListener);
 
-        btnGuardarCambios.setOnClickListener(v -> saveDuenoData());
+        // SafeClickListener para prevenir doble-click
+        btnGuardarCambios.setOnClickListener(InputUtils.createSafeClickListener(v -> saveDuenoData()));
     }
 
     private void showPhotoOptionsDialog() {
@@ -190,13 +203,16 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
     }
 
     private void validateFields() {
+        String nombre = etNombre.getText().toString().trim();
+        String apellido = etApellido.getText().toString().trim();
         String telefono = etTelefono.getText().toString().trim();
+        String domicilio = etDomicilio.getText().toString().trim();
 
-        boolean isValid = !etNombre.getText().toString().trim().isEmpty() &&
-                !etApellido.getText().toString().trim().isEmpty() &&
-                !telefono.isEmpty() &&
-                isValidPhoneNumber(telefono) &&
-                !etDomicilio.getText().toString().trim().isEmpty();
+        // Usar InputUtils para validaciones
+        boolean isValid = InputUtils.isValidName(nombre, 2, 50) &&
+                InputUtils.isValidName(apellido, 2, 50) &&
+                InputUtils.isValidTelefonoEcuador(telefono) &&
+                !domicilio.isEmpty();
 
         btnGuardarCambios.setEnabled(isValid);
         if (isValid) {
@@ -204,10 +220,6 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
         } else {
             btnGuardarCambios.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.gray_light)));
         }
-    }
-
-    private boolean isValidPhoneNumber(String phone) {
-        return phone.matches("^[0-9]{8,15}$");
     }
 
     @Override
@@ -225,8 +237,9 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
         }
         if (currentUserId == null) return;
 
-        btnGuardarCambios.setEnabled(false);
-        Toast.makeText(this, "Guardando cambios...", Toast.LENGTH_SHORT).show();
+        // Ocultar teclado y mostrar estado de carga
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(btnGuardarCambios, true, "Guardando...");
 
         if (newPhotoUri != null) {
             String nombre = etNombre.getText().toString().trim();
@@ -262,12 +275,13 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
 
         db.collection("usuarios").document(currentUserId).set(userUpdates, SetOptions.merge())
             .addOnSuccessListener(aVoid -> {
+                InputUtils.setButtonLoading(btnGuardarCambios, false);
                 Toast.makeText(EditarPerfilDuenoActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
                 finish();
             })
             .addOnFailureListener(e -> {
                 Toast.makeText(EditarPerfilDuenoActivity.this, "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                btnGuardarCambios.setEnabled(true);
+                InputUtils.setButtonLoading(btnGuardarCambios, false);
             });
     }
 }

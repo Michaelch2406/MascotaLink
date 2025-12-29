@@ -93,10 +93,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private BottomNavigationView bottomNav;
 
     // Mascotas
-    private RecyclerView rvMascotas;
-    private MascotaPerfilAdapter mascotaAdapter;
-    private List<Pet> petList = new ArrayList<>();
-    private Button btnVerTodasMascotas;
+    private LinearLayout btnMisMascotas;
+    private com.mjc.mascotalink.views.OverlappingAvatarsView overlappingMascotas;
+    private ListenerRegistration mascotasListener;
 
     // Reseñas
     private RecyclerView recyclerViewResenas;
@@ -121,7 +120,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private FirebaseAuth.AuthStateListener mAuthListener;
     private ListenerRegistration duenoListener;
     private ListenerRegistration duenoStatsListener;
-    private ListenerRegistration mascotasListener;
     private ListenerRegistration metodoPagoListener;
 
     private static final int REQUEST_NOTIFICATION_PERMISSION = 123;
@@ -199,11 +197,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         llResenas = findViewById(R.id.ll_resenas);
         
         // Acerca de content
-        rvMascotas = findViewById(R.id.rv_mascotas);
-        rvMascotas.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        mascotaAdapter = new MascotaPerfilAdapter(this, petList);
-        rvMascotas.setAdapter(mascotaAdapter);
-        btnVerTodasMascotas = findViewById(R.id.btn_ver_todas_mascotas);
+        btnMisMascotas = findViewById(R.id.btn_mis_mascotas);
+        overlappingMascotas = findViewById(R.id.overlapping_mascotas);
         
         tvEmailDueno = findViewById(R.id.tv_email_dueno);
         tvTelefonoDueno = findViewById(R.id.tv_telefono_dueno);
@@ -315,7 +310,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
             cargarMasResenas(10);
         });
         
-        btnVerTodasMascotas.setOnClickListener(v -> {
+        btnMisMascotas.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, MisMascotasActivity.class);
             startActivity(intent);
         });
@@ -400,7 +395,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void refreshProfileData() {
         // Reload profile data
         attachDataListeners();
-        cargarMascotas();
+        cargarMascotasAvatares();
         cargarMasResenas(4);
         // Refresh indicator will stop automatically when showContent() is called
     }
@@ -525,8 +520,9 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                  tvResenasTotal.setText((totalResenas != null ? totalResenas : 0) + " reviews");
              }
         });
-        
-        cargarMascotas();
+
+        cargarMascotasAvatares();
+
         if (duenoId.equals(currentUserId)) {
             cargarMetodoPagoPredeterminado(duenoId);
         }
@@ -537,52 +533,39 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         }
     }
     
-    private void cargarMascotas() {
+    private void cargarMascotasAvatares() {
         if (mascotasListener != null) mascotasListener.remove();
-        Log.d(TAG, "cargarMascotas: Iniciando carga para duenoId: " + duenoId);
 
         mascotasListener = db.collection("duenos").document(duenoId).collection("mascotas")
-                .whereEqualTo("activo", true)  // Solo mostrar mascotas activas
+                .whereEqualTo("activo", true)
                 .addSnapshotListener((value, e) -> {
                     if (e != null) {
-                        Log.e(TAG, "cargarMascotas: Error en query", e);
+                        Log.e(TAG, "Error cargando avatares de mascotas", e);
+                        overlappingMascotas.setPlaceholders(1);
                         return;
                     }
 
-                    Log.d(TAG, "cargarMascotas: Query ejecutado");
-                    Log.d(TAG, "cargarMascotas: Documentos recibidos: " + (value != null ? value.size() : 0));
-
-                    petList.clear();
                     if (value != null && !value.isEmpty()) {
                         tvMascotasRegistradas.setText(value.size() + " Mascotas");
-                        Log.d(TAG, "cargarMascotas: Procesando " + value.size() + " mascotas");
 
-                        int index = 0;
+                        // Recolectar URLs de fotos para el OverlappingAvatarsView
+                        java.util.List<String> fotoUrls = new java.util.ArrayList<>();
                         for (QueryDocumentSnapshot doc : value) {
-                            Log.d(TAG, "cargarMascotas: Mascota " + index + " - ID: " + doc.getId());
-                            Log.d(TAG, "  - nombre: " + doc.getString("nombre"));
-                            Log.d(TAG, "  - raza: " + doc.getString("raza"));
-                            Log.d(TAG, "  - activo: " + doc.getBoolean("activo"));
-                            Log.d(TAG, "  - foto_principal_url: " + doc.getString("foto_principal_url"));
-
-                            Pet pet = new Pet();
-                            pet.setId(doc.getId());
-                            pet.setName(doc.getString("nombre"));
-                            pet.setBreed(doc.getString("raza"));
-                            pet.setAvatarUrl(MyApplication.getFixedUrl(doc.getString("foto_principal_url")));
-                            pet.setOwnerId(duenoId);
-                            petList.add(pet);
-                            index++;
+                            String fotoUrl = doc.getString("foto_principal_url");
+                            if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                                fotoUrls.add(fotoUrl);
+                            }
                         }
 
-                        Log.d(TAG, "cargarMascotas: petList.size() después de agregar: " + petList.size());
+                        if (!fotoUrls.isEmpty()) {
+                            overlappingMascotas.setImageUrls(fotoUrls);
+                        } else {
+                            overlappingMascotas.setPlaceholders(value.size());
+                        }
                     } else {
-                        Log.d(TAG, "cargarMascotas: No se encontraron mascotas activas");
                         tvMascotasRegistradas.setText("0 Mascotas");
+                        overlappingMascotas.setPlaceholders(1);
                     }
-
-                    Log.d(TAG, "cargarMascotas: Llamando notifyDataSetChanged() con " + petList.size() + " items");
-                    mascotaAdapter.notifyDataSetChanged();
                 });
     }
 

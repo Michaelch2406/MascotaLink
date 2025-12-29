@@ -43,6 +43,7 @@ import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.mjc.mascotalink.MyApplication;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -80,9 +81,15 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    newAvatarUri = result.getData().getData();
-                    ivAvatarPaseador.setImageURI(newAvatarUri);
-                    validateFields(); 
+                    Uri selectedUri = result.getData().getData();
+                    // Validar imagen antes de usar
+                    if (InputUtils.isValidImageFile(this, selectedUri, 5 * 1024 * 1024)) {
+                        newAvatarUri = selectedUri;
+                        ivAvatarPaseador.setImageURI(newAvatarUri);
+                        validateFields();
+                    } else {
+                        Toast.makeText(this, "La imagen no es válida o excede 5MB", Toast.LENGTH_LONG).show();
+                    }
                 }
             });
 
@@ -235,10 +242,16 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    newVideoUri = result.getData().getData();
-                    video_preview.setVideoURI(newVideoUri);
-                    video_preview.start();
-                    validateFields();
+                    Uri selectedUri = result.getData().getData();
+                    // Validar video antes de usar (máx 100MB)
+                    if (InputUtils.isValidImageFile(this, selectedUri, 100 * 1024 * 1024)) {
+                        newVideoUri = selectedUri;
+                        video_preview.setVideoURI(newVideoUri);
+                        video_preview.start();
+                        validateFields();
+                    } else {
+                        Toast.makeText(this, "El video no es válido o excede 100MB", Toast.LENGTH_LONG).show();
+                    }
                 }
             });
 
@@ -246,10 +259,15 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK) {
-                    newVideoUri = videoUri;
-                    video_preview.setVideoURI(newVideoUri);
-                    video_preview.start();
-                    validateFields();
+                    // Validar video antes de usar (máx 100MB)
+                    if (InputUtils.isValidImageFile(this, videoUri, 100 * 1024 * 1024)) {
+                        newVideoUri = videoUri;
+                        video_preview.setVideoURI(newVideoUri);
+                        video_preview.start();
+                        validateFields();
+                    } else {
+                        Toast.makeText(this, "El video no es válido o excede 100MB", Toast.LENGTH_LONG).show();
+                    }
                 }
             });
 
@@ -308,8 +326,8 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
 
         ivAvatarPaseador.setOnClickListener(v -> openImagePicker());
 
-
-        btnGuardarCambios.setOnClickListener(v -> savePaseadorData());
+        // SafeClickListener para prevenir doble-click
+        btnGuardarCambios.setOnClickListener(InputUtils.createSafeClickListener(v -> savePaseadorData()));
     }
 
     private void openImagePicker() {
@@ -322,17 +340,20 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
             return;
         }
 
+        String nombre = etNombre.getText().toString().trim();
+        String apellido = etApellido.getText().toString().trim();
         String telefono = etTelefono.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
+        String domicilio = etDomicilio.getText().toString().trim();
+        String motivacion = etMotivacion.getText().toString().trim();
 
-        boolean isValid = !etNombre.getText().toString().trim().isEmpty() &&
-                !etApellido.getText().toString().trim().isEmpty() &&
-                !telefono.isEmpty() &&
-                isValidPhoneNumber(telefono) &&
-                !email.isEmpty() &&
-                isValidEmail(email) &&
-                !etDomicilio.getText().toString().trim().isEmpty() &&
-                !etMotivacion.getText().toString().trim().isEmpty() &&
+        // Usar InputUtils para validaciones
+        boolean isValid = InputUtils.isValidName(nombre, 2, 50) &&
+                InputUtils.isValidName(apellido, 2, 50) &&
+                InputUtils.isValidTelefonoEcuador(telefono) &&
+                InputUtils.isValidEmail(email) &&
+                !domicilio.isEmpty() &&
+                !motivacion.isEmpty() &&
                 spinnerAnosExperiencia.getSelectedItem() != null &&
                 cgTiposPerros.getCheckedChipIds().size() > 0;
 
@@ -342,14 +363,6 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         } else {
             btnGuardarCambios.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.gray_light)));
         }
-    }
-
-    private boolean isValidPhoneNumber(String phone) {
-        return phone.matches("^[0-9]{8,15}$");
-    }
-
-    private boolean isValidEmail(String email) {
-        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
     }
 
     @Override
@@ -405,8 +418,9 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         }
         if (currentUserId == null) return;
 
-        btnGuardarCambios.setEnabled(false);
-        Toast.makeText(this, "Guardando cambios...", Toast.LENGTH_SHORT).show();
+        // Ocultar teclado y mostrar estado de carga
+        InputUtils.hideKeyboard(this);
+        InputUtils.setButtonLoading(btnGuardarCambios, true, "Guardando...");
 
         String nombre = etNombre.getText().toString().trim();
         String apellido = etApellido.getText().toString().trim();
@@ -473,11 +487,12 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
         Task<Void> paseadorTask = db.collection("paseadores").document(currentUserId).update(paseadorUpdates);
 
         Tasks.whenAllSuccess(userTask, paseadorTask).addOnSuccessListener(list -> {
+            InputUtils.setButtonLoading(btnGuardarCambios, false);
             Toast.makeText(EditarPerfilPaseadorActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
             finish(); // Volver a la pantalla de perfil
         }).addOnFailureListener(e -> {
             Toast.makeText(EditarPerfilPaseadorActivity.this, "Error al guardar datos: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            btnGuardarCambios.setEnabled(true);
+            InputUtils.setButtonLoading(btnGuardarCambios, false);
         });
     }
 }
