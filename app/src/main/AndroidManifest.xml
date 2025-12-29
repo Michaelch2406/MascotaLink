@@ -175,11 +175,6 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
-            android:name=".MascotaRegistroPaso4Activity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.MascotaLink" />
-        <activity
             android:name=".PaseadorRegistroPaso2Activity"
             android:exported="false"
             android:screenOrientation="portrait"

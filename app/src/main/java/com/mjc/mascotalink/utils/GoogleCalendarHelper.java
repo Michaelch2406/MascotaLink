@@ -14,6 +14,7 @@ import java.util.TimeZone;
 public class GoogleCalendarHelper {
 
     private static final String TAG = "GoogleCalendarHelper";
+    public static final int REQUEST_CODE_ADD_CALENDAR = 1001;
 
     public interface CalendarCallback {
         void onSuccess();
@@ -49,7 +50,7 @@ public class GoogleCalendarHelper {
             addReminders(intent);
 
             if (intent.resolveActivity(activity.getPackageManager()) != null) {
-                activity.startActivity(intent);
+                activity.startActivityForResult(intent, REQUEST_CODE_ADD_CALENDAR);
                 Log.d(TAG, "Evento de calendario abierto para reserva: " + reservaId);
             } else {
                 Log.e(TAG, "No hay app de calendario disponible");
@@ -95,7 +96,7 @@ public class GoogleCalendarHelper {
             addReminders(intent);
 
             if (intent.resolveActivity(activity.getPackageManager()) != null) {
-                activity.startActivity(intent);
+                activity.startActivityForResult(intent, REQUEST_CODE_ADD_CALENDAR);
                 Log.d(TAG, "Evento de calendario (paseador) abierto para reserva: " + reservaId);
             } else {
                 Log.e(TAG, "No hay app de calendario disponible");
@@ -142,7 +143,7 @@ public class GoogleCalendarHelper {
             addReminders(intent);
 
             if (intent.resolveActivity(activity.getPackageManager()) != null) {
-                activity.startActivity(intent);
+                activity.startActivityForResult(intent, REQUEST_CODE_ADD_CALENDAR);
                 Log.d(TAG, "Evento recurrente de calendario abierto para grupo: " + grupoReservaId);
             } else {
                 Log.e(TAG, "No hay app de calendario disponible");

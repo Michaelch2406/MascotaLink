@@ -3,7 +3,6 @@ package com.mjc.mascotalink;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -807,8 +806,6 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
                 .setMessage("¿Deseas agregar este paseo a tu calendario para recibir recordatorios?")
                 .setPositiveButton("Sí, agregar", (dialog, which) -> {
                     agregarAlCalendario();
-                    // Aumentar delay a 2 segundos para dar tiempo a que se abra el calendario
-                    new Handler().postDelayed(this::navegarAPaseos, 2000);
                 })
                 .setNegativeButton("No, gracias", (dialog, which) -> navegarAPaseos())
                 .setCancelable(false)
@@ -859,6 +856,17 @@ public class ConfirmarPagoActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == com.mjc.mascotalink.utils.GoogleCalendarHelper.REQUEST_CODE_ADD_CALENDAR) {
+            // El usuario ha terminado de interactuar con el calendario
+            // Independientemente del resultado, navegamos a PaseosActivity
+            navegarAPaseos();
+        }
     }
 
     @Override

@@ -177,10 +177,6 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         duracionMinutos,
                         tvNotas.getText().toString()
                 );
-                
-                // CERRAR LA PANTALLA después de lanzar el calendario
-                finishWithDelay();
-                
             } catch (Exception e) {
                 Log.e(TAG, "Error al abrir calendario", e);
                 Toast.makeText(this, "Error al abrir la app de calendario: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -1019,6 +1015,17 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                     btnRechazar.setEnabled(true);
                     btnVerPerfil.setEnabled(true);
                 });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == com.mjc.mascotalink.utils.GoogleCalendarHelper.REQUEST_CODE_ADD_CALENDAR) {
+            // El usuario ha terminado de interactuar con el calendario
+            // Cerramos la actividad después de un pequeño delay
+            finishWithDelay();
+        }
     }
 
     /**
