@@ -281,19 +281,78 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         swipeRefresh.setColorSchemeResources(R.color.blue_primary);
 
         btnCerrarSesion.setOnClickListener(v -> {
-            detachDataListeners();
-            com.mjc.mascotalink.util.UnreadBadgeManager.stop();
-            new CredentialManager(PerfilDuenoActivity.this).clearCredentials();
-            try {
-                EncryptedPreferencesHelper.getInstance(PerfilDuenoActivity.this).clear();
-            } catch (Exception e) {
-                Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
+            // Crear diálogo moderno con layout personalizado
+            View dialogView = getLayoutInflater().inflate(R.layout.dialog_logout_progress, null);
+            AlertDialog progressDialog = new AlertDialog.Builder(PerfilDuenoActivity.this)
+                    .setView(dialogView)
+                    .setCancelable(false)
+                    .create();
+
+            // Hacer el fondo del diálogo transparente para mostrar las esquinas redondeadas
+            if (progressDialog.getWindow() != null) {
+                progressDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
             }
-            // Limpiar el rol guardado para evitar conflictos al cambiar de usuario
-            com.mjc.mascotalink.util.BottomNavManager.clearUserRole(PerfilDuenoActivity.this);
-            // Desconectar WebSocket antes de cerrar sesión
-            com.mjc.mascotalink.network.SocketManager.getInstance(PerfilDuenoActivity.this).disconnect();
-            mAuth.signOut();
+
+            progressDialog.show();
+
+            // Deshabilitar botón para evitar clicks múltiples
+            btnCerrarSesion.setEnabled(false);
+
+            // Ejecutar limpieza en segundo plano
+            new Thread(() -> {
+                try {
+                    // Detener listeners y servicios
+                    runOnUiThread(() -> detachDataListeners());
+                    com.mjc.mascotalink.util.UnreadBadgeManager.stop();
+
+                    // Limpiar credenciales
+                    new CredentialManager(PerfilDuenoActivity.this).clearCredentials();
+
+                    // Limpiar preferencias cifradas
+                    try {
+                        EncryptedPreferencesHelper.getInstance(PerfilDuenoActivity.this).clear();
+                    } catch (Exception e) {
+                        Log.e(TAG, "btnCerrarSesion: error limpiando prefs cifradas", e);
+                    }
+
+                    // Limpiar el rol guardado
+                    com.mjc.mascotalink.util.BottomNavManager.clearUserRole(PerfilDuenoActivity.this);
+
+                    // Desconectar WebSocket con timeout
+                    try {
+                        com.mjc.mascotalink.network.SocketManager.getInstance(PerfilDuenoActivity.this).disconnect();
+                        // Dar tiempo para que se desconecte
+                        Thread.sleep(500);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error desconectando WebSocket", e);
+                    }
+
+                    // Cerrar sesión en el hilo principal
+                    runOnUiThread(() -> {
+                        mAuth.signOut();
+
+                        // Cerrar diálogo
+                        if (progressDialog.isShowing()) {
+                            progressDialog.dismiss();
+                        }
+
+                        // Navegar a LoginActivity inmediatamente
+                        Intent intent = new Intent(PerfilDuenoActivity.this, LoginActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error durante cierre de sesión", e);
+                    runOnUiThread(() -> {
+                        if (progressDialog.isShowing()) {
+                            progressDialog.dismiss();
+                        }
+                        Toast.makeText(PerfilDuenoActivity.this, "Error al cerrar sesión. Inténtalo de nuevo.", Toast.LENGTH_SHORT).show();
+                        btnCerrarSesion.setEnabled(true);
+                    });
+                }
+            }).start();
         });
 
         scrollViewContent.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
