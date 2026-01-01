@@ -73,7 +73,7 @@ public class EditarPerfilPaseadorActivity extends AppCompatActivity {
     private ProgressBar video_progress;
     private Button btnGuardarCambios, btnSubirVideo, btnGrabarVideo;
     private ChipGroup cgTiposPerros;
-    private com.google.android.material.imageview.ShapeableImageView ivAvatarPaseador;
+    private android.widget.ImageView ivAvatarPaseador;
 
     private Uri videoUri, newVideoUri, newAvatarUri;
 

@@ -246,6 +246,10 @@
             android:label="Gestionar Galería"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".GestionarGaleriaMascotaActivity"
+            android:label="Galería de Mascota"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".PerfilPaseadorActivity"
             android:exported="false"
             android:screenOrientation="portrait"

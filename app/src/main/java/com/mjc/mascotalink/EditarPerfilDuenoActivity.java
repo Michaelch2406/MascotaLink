@@ -25,7 +25,7 @@ import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.imageview.ShapeableImageView;
+import android.widget.ImageView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -45,7 +45,7 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
     private FirebaseStorage storage;
     private String currentUserId, cedula;
 
-    private ShapeableImageView ivAvatar;
+    private ImageView ivAvatar;
     private TextView tvCambiarFoto;
     private TextInputEditText etNombre, etApellido, etTelefono, etDomicilio;
     private Button btnGuardarCambios;

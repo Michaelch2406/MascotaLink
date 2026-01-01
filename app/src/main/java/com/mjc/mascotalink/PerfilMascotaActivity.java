@@ -40,10 +40,11 @@ public class PerfilMascotaActivity extends AppCompatActivity {
 
     // Views
     private ImageView ivBack, ivAvatarMascota, ivEditMascota;
-    private TextView tvNombreMascota, tvDescripcionMascota;
+    private TextView tvNombreMascota, tvDescripcionMascota, tvInfoAdicional;
     private TextView tvRaza, tvSexo, tvEdad, tvTamano, tvPeso, tvEsterilizado;
     private RecyclerView rvGaleria;
     private View btnSalud, btnComportamiento, btnInstrucciones;
+    private View btnAddPhoto, emptyGaleriaContainer, btnAddPhotoEmpty;
     private GaleriaAdapter galeriaAdapter;
     private List<String> galeriaUrls;
     private BottomNavigationView bottomNav;
@@ -112,11 +113,13 @@ public class PerfilMascotaActivity extends AppCompatActivity {
 
 
 
-    private void initViews() {        ivBack = findViewById(R.id.iv_back);
+    private void initViews() {
+        ivBack = findViewById(R.id.iv_back);
         ivEditMascota = findViewById(R.id.iv_edit_mascota);
         ivAvatarMascota = findViewById(R.id.iv_avatar_mascota);
         tvNombreMascota = findViewById(R.id.tv_nombre_mascota);
         tvDescripcionMascota = findViewById(R.id.tv_descripcion_mascota);
+        tvInfoAdicional = findViewById(R.id.tv_info_adicional);
         tvRaza = findViewById(R.id.tv_raza);
         tvSexo = findViewById(R.id.tv_sexo);
         tvEdad = findViewById(R.id.tv_edad);
@@ -129,6 +132,11 @@ public class PerfilMascotaActivity extends AppCompatActivity {
         galeriaUrls = new ArrayList<>();
         galeriaAdapter = new GaleriaAdapter(this, galeriaUrls);
         rvGaleria.setAdapter(galeriaAdapter);
+
+        // Galería - botones de añadir
+        btnAddPhoto = findViewById(R.id.btn_add_photo);
+        emptyGaleriaContainer = findViewById(R.id.empty_galeria_container);
+        btnAddPhotoEmpty = findViewById(R.id.btn_add_photo_empty);
 
         btnSalud = findViewById(R.id.btn_salud);
         btnComportamiento = findViewById(R.id.btn_comportamiento);
@@ -145,6 +153,11 @@ public class PerfilMascotaActivity extends AppCompatActivity {
 
         // The main edit icon is only visible to the owner
         ivEditMascota.setVisibility(isOwner ? View.VISIBLE : View.GONE);
+
+        // Gallery add buttons only visible to owner
+        if (btnAddPhoto != null) {
+            btnAddPhoto.setVisibility(isOwner ? View.VISIBLE : View.GONE);
+        }
 
         // The bottom navigation is only visible to the owner
         if (isOwner) {
@@ -166,6 +179,24 @@ public class PerfilMascotaActivity extends AppCompatActivity {
             intent.putExtra("mascota_id", mascotaId);
             startActivity(intent);
         });
+
+        // Gallery add photo buttons - open gallery management
+        View.OnClickListener addPhotoListener = v -> {
+            Intent intent = new Intent(PerfilMascotaActivity.this, GestionarGaleriaMascotaActivity.class);
+            intent.putExtra("dueno_id", duenoId);
+            intent.putExtra("mascota_id", mascotaId);
+            startActivity(intent);
+        };
+
+        if (btnAddPhoto != null) {
+            btnAddPhoto.setOnClickListener(addPhotoListener);
+        }
+        if (btnAddPhotoEmpty != null) {
+            btnAddPhotoEmpty.setOnClickListener(addPhotoListener);
+        }
+        if (emptyGaleriaContainer != null) {
+            emptyGaleriaContainer.setOnClickListener(addPhotoListener);
+        }
 
         // These buttons are visible to everyone (owner and walker)
         btnSalud.setOnClickListener(v -> {
@@ -286,9 +317,9 @@ public class PerfilMascotaActivity extends AppCompatActivity {
                             ivAvatarMascota.setImageResource(R.drawable.ic_pet_placeholder);
                         }
 
-                        // Galería
+                        // Galería - usar galeria_mascotas
                         galeriaUrls.clear();
-                        List<String> galeria = (List<String>) document.get("galeria_fotos");
+                        List<String> galeria = (List<String>) document.get("galeria_mascotas");
                         if (galeria != null && !galeria.isEmpty()) {
                             for (String url : galeria) {
                                 galeriaUrls.add(MyApplication.getFixedUrl(url));
@@ -298,6 +329,33 @@ public class PerfilMascotaActivity extends AppCompatActivity {
                             galeriaUrls.add(MyApplication.getFixedUrl(fotoUrl));
                         }
                         galeriaAdapter.notifyDataSetChanged();
+
+                        // Mostrar/ocultar estado vacío de galería
+                        boolean isOwner = duenoId != null && duenoId.equals(currentUserId);
+                        if (galeriaUrls.isEmpty() && isOwner) {
+                            rvGaleria.setVisibility(View.GONE);
+                            if (emptyGaleriaContainer != null) {
+                                emptyGaleriaContainer.setVisibility(View.VISIBLE);
+                            }
+                        } else {
+                            rvGaleria.setVisibility(View.VISIBLE);
+                            if (emptyGaleriaContainer != null) {
+                                emptyGaleriaContainer.setVisibility(View.GONE);
+                            }
+                        }
+
+                        // Info adicional (sexo · edad)
+                        if (tvInfoAdicional != null) {
+                            StringBuilder infoAdicional = new StringBuilder();
+                            if (sexo != null) {
+                                infoAdicional.append(sexo);
+                            }
+                            if (edad > 0) {
+                                if (infoAdicional.length() > 0) infoAdicional.append(" · ");
+                                infoAdicional.append(edad).append(" años");
+                            }
+                            tvInfoAdicional.setText(infoAdicional.toString());
+                        }
 
                     } else {
                         Log.d(TAG, "No such document for duenoId: " + duenoId + " y mascotaId: " + mascotaId);
