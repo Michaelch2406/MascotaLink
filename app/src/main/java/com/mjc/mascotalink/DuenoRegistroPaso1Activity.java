@@ -19,6 +19,7 @@ import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
+import android.text.InputFilter;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -26,6 +27,8 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.core.widget.NestedScrollView;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
@@ -66,13 +69,14 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
     private static final long DEBOUNCE_DELAY_MS = 500;
     private static final long RATE_LIMIT_MS = 1000;
 
-    private EditText etNombre, etApellido, etFechaNacimiento, etTelefono, etCorreo, etCedula, etDomicilio;
-    private TextInputLayout tilPassword;
+    private TextInputEditText etNombre, etApellido, etFechaNacimiento, etTelefono, etCorreo, etCedula, etDomicilio;
+    private TextInputLayout tilNombre, tilApellido, tilFechaNacimiento, tilCedula, tilTelefono, tilCorreo, tilDomicilio, tilPassword;
     private TextInputEditText etPassword;
     private CheckBox cbTerminos;
     private Button btnRegistrarse;
     private ImageView ivGeolocate;
     private ProgressBar pbGeolocate;
+    private NestedScrollView scrollView;
 
     private String domicilio;
     private GeoPoint domicilioLatLng;
@@ -100,6 +104,8 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
+        scrollView = findViewById(R.id.scroll_view);
+
         etNombre = findViewById(R.id.et_nombre);
         etApellido = findViewById(R.id.et_apellido);
         etFechaNacimiento = findViewById(R.id.et_fecha_nacimiento);
@@ -107,19 +113,49 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         etCorreo = findViewById(R.id.et_correo);
         etCedula = findViewById(R.id.et_cedula);
         etDomicilio = findViewById(R.id.et_domicilio);
+
+        tilNombre = findViewById(R.id.et_nombre).getParent().getParent() instanceof TextInputLayout
+            ? (TextInputLayout) findViewById(R.id.et_nombre).getParent().getParent() : null;
+        tilApellido = findViewById(R.id.et_apellido).getParent().getParent() instanceof TextInputLayout
+            ? (TextInputLayout) findViewById(R.id.et_apellido).getParent().getParent() : null;
+        tilFechaNacimiento = findViewById(R.id.et_fecha_nacimiento).getParent().getParent() instanceof TextInputLayout
+            ? (TextInputLayout) findViewById(R.id.et_fecha_nacimiento).getParent().getParent() : null;
+        tilCedula = findViewById(R.id.til_cedula);
+        tilTelefono = findViewById(R.id.til_telefono);
+        tilCorreo = findViewById(R.id.til_correo);
+        tilDomicilio = findViewById(R.id.til_domicilio);
         tilPassword = findViewById(R.id.til_password);
+
         etPassword = findViewById(R.id.et_password);
         cbTerminos = findViewById(R.id.cb_terminos);
         btnRegistrarse = findViewById(R.id.btn_registrarse);
         ivGeolocate = findViewById(R.id.iv_geolocate);
         pbGeolocate = findViewById(R.id.pb_geolocate);
+
+        // Aplicar filtros de entrada para nombres (solo letras y espacios)
+        InputFilter letterFilter = (source, start, end, dest, dstart, dend) -> {
+            for (int i = start; i < end; i++) {
+                char c = source.charAt(i);
+                if (!Character.isLetter(c) && !Character.isSpaceChar(c)) {
+                    return "";
+                }
+            }
+            return null;
+        };
+
+        etNombre.setFilters(new InputFilter[]{letterFilter, new InputFilter.LengthFilter(50)});
+        etApellido.setFilters(new InputFilter[]{letterFilter, new InputFilter.LengthFilter(50)});
     }
 
     private void setupListeners() {
         btnRegistrarse.setOnClickListener(InputUtils.createSafeClickListener(v -> intentarRegistro()));
         etFechaNacimiento.setOnClickListener(v -> mostrarDatePicker());
         etDomicilio.setOnClickListener(v -> launchAutocomplete());
-        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
+
+        // Listener para el icono de ubicación en el domicilio
+        if (tilDomicilio != null) {
+            tilDomicilio.setEndIconOnClickListener(v -> onGeolocateClick());
+        }
 
         validationTextWatcher = InputUtils.createDebouncedTextWatcher(
             "validacion_paso1",
@@ -265,69 +301,112 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
 
     private boolean validarCamposDetallado() {
         boolean ok = true;
+        View firstErrorView = null;
 
+        // Validar nombre
         String nombre = etNombre.getText().toString().trim();
         if (!InputUtils.isValidName(nombre)) {
-            etNombre.setError("Nombre inválido (solo letras, 2-50 caracteres)");
+            if (tilNombre != null) {
+                tilNombre.setError("Nombre inválido (solo letras, 2-50 caracteres)");
+                if (firstErrorView == null) firstErrorView = tilNombre;
+            }
             ok = false;
         } else {
-            etNombre.setError(null);
+            if (tilNombre != null) tilNombre.setError(null);
         }
 
+        // Validar apellido
         String apellido = etApellido.getText().toString().trim();
         if (!InputUtils.isValidName(apellido)) {
-            etApellido.setError("Apellido inválido (solo letras, 2-50 caracteres)");
+            if (tilApellido != null) {
+                tilApellido.setError("Apellido inválido (solo letras, 2-50 caracteres)");
+                if (firstErrorView == null) firstErrorView = tilApellido;
+            }
             ok = false;
         } else {
-            etApellido.setError(null);
+            if (tilApellido != null) tilApellido.setError(null);
         }
 
+        // Validar fecha de nacimiento
         Date fechaNac = parseFecha(etFechaNacimiento.getText().toString().trim());
         if (fechaNac == null) {
-            etFechaNacimiento.setError("Selecciona tu fecha de nacimiento");
+            if (tilFechaNacimiento != null) {
+                tilFechaNacimiento.setError("Selecciona tu fecha de nacimiento");
+                if (firstErrorView == null) firstErrorView = tilFechaNacimiento;
+            }
             ok = false;
         } else if (!validarEdad(fechaNac)) {
-            etFechaNacimiento.setError("Debes ser mayor de 18 años");
+            if (tilFechaNacimiento != null) {
+                tilFechaNacimiento.setError("Debes ser mayor de 18 años");
+                if (firstErrorView == null) firstErrorView = tilFechaNacimiento;
+            }
             ok = false;
         } else {
-            etFechaNacimiento.setError(null);
+            if (tilFechaNacimiento != null) tilFechaNacimiento.setError(null);
         }
 
+        // Validar cédula
         if (!validarCedula(etCedula.getText().toString().trim())) {
-            etCedula.setError("Cédula inválida");
+            tilCedula.setError("Cédula inválida");
+            if (firstErrorView == null) firstErrorView = tilCedula;
             ok = false;
         } else {
-            etCedula.setError(null);
+            tilCedula.setError(null);
         }
 
-        if (TextUtils.isEmpty(domicilio)) {
-            toast("La dirección es obligatoria. Por favor, selecciónala de la lista.");
-            ok = false;
-        }
-
+        // Validar teléfono
         if (!validarTelefono(etTelefono.getText().toString().trim())) {
-            etTelefono.setError("Teléfono inválido");
+            tilTelefono.setError("Teléfono inválido (10 dígitos)");
+            if (firstErrorView == null) firstErrorView = tilTelefono;
             ok = false;
         } else {
-            etTelefono.setError(null);
+            tilTelefono.setError(null);
         }
 
+        // Validar correo
         if (!validarEmail(etCorreo.getText().toString().trim())) {
-            etCorreo.setError("Correo inválido");
+            tilCorreo.setError("Correo inválido");
+            if (firstErrorView == null) firstErrorView = tilCorreo;
             ok = false;
         } else {
-            etCorreo.setError(null);
+            tilCorreo.setError(null);
         }
 
+        // Validar domicilio
+        if (TextUtils.isEmpty(domicilio)) {
+            tilDomicilio.setError("La dirección es obligatoria");
+            if (firstErrorView == null) firstErrorView = tilDomicilio;
+            ok = false;
+        } else {
+            tilDomicilio.setError(null);
+        }
+
+        // Validar contraseña
         String password = etPassword.getText() != null ? etPassword.getText().toString() : "";
         if (!InputUtils.isValidPassword(password)) {
             tilPassword.setError("La contraseña debe tener al menos 6 caracteres");
+            if (firstErrorView == null) firstErrorView = tilPassword;
             ok = false;
         } else {
             tilPassword.setError(null);
         }
 
+        // Scroll al primer error encontrado
+        if (!ok && firstErrorView != null) {
+            scrollToView(firstErrorView);
+        }
+
         return ok;
+    }
+
+    private void scrollToView(View view) {
+        if (scrollView != null && view != null) {
+            scrollView.post(() -> {
+                int scrollY = view.getTop() - 100; // 100px de padding superior
+                scrollView.smoothScrollTo(0, scrollY);
+                view.requestFocus();
+            });
+        }
     }
 
     private Date parseFecha(String fechaStr) {
@@ -346,7 +425,7 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         return !calNacimiento.after(calHoy);
     }
 
-    private boolean isEmpty(EditText e) { return TextUtils.isEmpty(e.getText()); }
+    private boolean isEmpty(TextInputEditText e) { return TextUtils.isEmpty(e.getText()); }
 
     private boolean validarEmail(String email) { return InputUtils.isValidEmail(email); }
 

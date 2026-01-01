@@ -17,7 +17,6 @@ import android.util.Log;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
@@ -28,6 +27,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.NestedScrollView;
 
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -39,7 +39,10 @@ import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -67,11 +70,13 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseStorage storage;
 
-    private EditText addressEditText;
+    private TextInputEditText addressEditText;
+    private TextInputLayout tilAddress;
     private ImageView ivGeolocate;
     private ProgressBar pbGeolocate;
     private SwitchMaterial messagesSwitch;
-    private Button saveButton;
+    private MaterialButton saveButton;
+    private NestedScrollView scrollView;
 
     private String direccionRecogida;
     private GeoPoint ubicacionRecogida;
@@ -103,13 +108,15 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
+        scrollView = findViewById(R.id.scroll_view);
         addressEditText = findViewById(R.id.addressEditText);
+        tilAddress = findViewById(R.id.til_address);
         ivGeolocate = findViewById(R.id.iv_geolocate);
         pbGeolocate = findViewById(R.id.pb_geolocate);
         messagesSwitch = findViewById(R.id.messagesSwitch);
         saveButton = findViewById(R.id.saveButton);
 
-        Button paymentMethodButton = findViewById(R.id.paymentMethodButton);
+        MaterialButton paymentMethodButton = findViewById(R.id.paymentMethodButton);
         paymentMethodButton.setOnClickListener(v -> {
             saveDataToPrefs();
             Intent intent = new Intent(this, MetodoPagoActivity.class);
@@ -121,7 +128,9 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
     private void setupListeners() {
         saveButton.setOnClickListener(InputUtils.createSafeClickListener(2000, v -> completarRegistroDueno()));
         addressEditText.setOnClickListener(v -> launchAutocomplete());
-        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
+
+        // Handle end icon click for geolocation
+        tilAddress.setEndIconOnClickListener(v -> onGeolocateClick());
     }
 
     private void setupLocationServices() {
@@ -239,9 +248,15 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
         }
 
         saveDataToPrefs();
+
+        // Validar dirección con TextInputLayout
         if (TextUtils.isEmpty(direccionRecogida)) {
-            Toast.makeText(this, "La dirección de recogida es requerida", Toast.LENGTH_SHORT).show();
+            tilAddress.setError("La dirección de recogida es requerida");
+            tilAddress.requestFocus();
+            scrollToView(tilAddress);
             return;
+        } else {
+            tilAddress.setError(null);
         }
 
         // Ocultar teclado antes de procesar
@@ -463,6 +478,16 @@ public class DuenoRegistroPaso3Activity extends AppCompatActivity {
                 .add(metodoPagoData)
                 .addOnSuccessListener(documentReference -> Log.d(TAG, "Método de pago guardado con ID: " + documentReference.getId()))
                 .addOnFailureListener(e -> Log.e(TAG, "Error al guardar método de pago", e));
+    }
+
+    private void scrollToView(View view) {
+        if (scrollView != null && view != null) {
+            scrollView.post(() -> {
+                int scrollY = view.getTop() - 100;
+                scrollView.smoothScrollTo(0, scrollY);
+                view.requestFocus();
+            });
+        }
     }
 
     @Override

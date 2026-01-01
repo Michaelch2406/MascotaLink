@@ -33,6 +33,7 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
     private ImageView previewSelfie;
     private Button btnContinuarPaso3;
     private TextView tvValidationMessages;
+    private View cardSelfiePlaceholder;
     private Uri selfieUri;
     private Uri fotoPerfilUri;
 
@@ -57,20 +58,27 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
         previewSelfie = findViewById(R.id.preview_selfie);
         btnContinuarPaso3 = findViewById(R.id.btn_continuar_paso3);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
+        cardSelfiePlaceholder = findViewById(R.id.card_selfie_placeholder);
     }
 
     private void setupListeners() {
+        // Listeners para selfie
         findViewById(R.id.img_selfie_ilustracion).setOnClickListener(v -> tomarSelfie());
-        findViewById(R.id.btn_elegir_foto).setOnClickListener(v -> elegirFotoPerfil());
-        findViewById(R.id.btn_tomar_foto).setOnClickListener(v -> tomarFotoPerfil());
+        findViewById(R.id.btn_tomar_selfie).setOnClickListener(v -> tomarSelfie());
         findViewById(R.id.btn_eliminar_selfie).setOnClickListener(v -> {
             selfieUri = null;
             updateUI();
         });
+
+        // Listeners para foto de perfil
+        findViewById(R.id.btn_elegir_foto).setOnClickListener(v -> elegirFotoPerfil());
+        findViewById(R.id.btn_tomar_foto).setOnClickListener(v -> tomarFotoPerfil());
         findViewById(R.id.btn_eliminar_foto_perfil).setOnClickListener(v -> {
             fotoPerfilUri = null;
             updateUI();
         });
+
+        // Continuar
         btnContinuarPaso3.setOnClickListener(
             InputUtils.createSafeClickListener(v -> guardarUrisYContinuar())
         );
@@ -146,8 +154,14 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
                     .apply(glideOptions)
                     .into(previewSelfie);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
+            if (cardSelfiePlaceholder != null) {
+                cardSelfiePlaceholder.setVisibility(View.GONE);
+            }
         } else {
             findViewById(R.id.container_preview_selfie).setVisibility(View.GONE);
+            if (cardSelfiePlaceholder != null) {
+                cardSelfiePlaceholder.setVisibility(View.VISIBLE);
+            }
         }
 
         // Foto de perfil

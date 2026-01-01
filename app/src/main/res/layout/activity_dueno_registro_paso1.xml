@@ -1,167 +1,349 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
+    android:background="@color/background_light">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material"
-        app:navigationIconTint="#111827"
-        app:title="Registro"
-        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+        app:elevation="0dp">
 
-    <ScrollView
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/abc_ic_ab_back_material"
+            app:navigationIconTint="#111827"
+            app:title="Registro"
+            app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:layout_above="@+id/bottom_bar"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp">
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="24dp">
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Nombre"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
-                <EditText android:id="@+id/et_nombre" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu nombre" android:inputType="textPersonName" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Xavier"/>
-
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Apellido"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
-                <EditText android:id="@+id/et_apellido" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu apellido" android:inputType="textPersonName" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Zambrano"/>
-
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fecha de nacimiento"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
-                <EditText android:id="@+id/et_fecha_nacimiento" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="DD/MM/AAAA" android:inputType="none" android:focusable="false" android:clickable="true" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Tu fecha de nacimiento."/>
-
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Número de teléfono"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
-                <EditText android:id="@+id/et_telefono" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu número de teléfono" android:inputType="phone" android:maxLength="10" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Formato: 0980032651"/>
-
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Correo electrónico"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
-                <EditText android:id="@+id/et_correo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu correo electrónico" android:inputType="textEmailAddress" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Usarás este correo para iniciar sesión."/>
-
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Domicilio"/>
-            <RelativeLayout
+            <!-- Tarjeta de Información Personal -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#E7EEF2"
-                android:padding="12dp"
-                android:layout_marginTop="8dp">
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
 
-                <EditText
-                    android:id="@+id/et_domicilio"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Toca para buscar tu dirección"
-                    android:background="@android:color/transparent"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"
-                    android:layout_centerVertical="true"
-                    android:layout_toStartOf="@+id/iv_geolocate"
-                    android:focusable="false" />
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                <ImageView
-                    android:id="@+id/iv_geolocate"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_my_location"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:contentDescription="Obtener ubicación actual"
-                    app:tint="#13A4EC" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Información Personal"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="16dp"/>
 
-                <ProgressBar
-                    android:id="@+id/pb_geolocate"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:visibility="gone" />
+                    <!-- Nombre -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Nombre"
+                        android:layout_marginBottom="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp">
 
-            </RelativeLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Empieza a escribir y selecciona tu dirección."/>
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_nombre"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPersonName|textCapWords"
+                            android:maxLength="50"/>
+                    </com.google.android.material.textfield.TextInputLayout>
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cédula"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="#E7EEF2" android:padding="12dp" android:layout_marginTop="8dp">
-                <EditText android:id="@+id/et_cedula" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Ingresa tu cédula" android:inputType="number" android:maxLength="10" android:background="@android:color/transparent" android:textColor="#111827" android:textColorHint="#9CA3AF"/>
-            </LinearLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Ejemplo: 1002003002."/>
+                    <!-- Apellido -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Apellido"
+                        android:layout_marginBottom="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp">
 
-            <TextView style="@style/TextAppearance.Mascota.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Contraseña"/>
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_password"
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_apellido"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPersonName|textCapWords"
+                            android:maxLength="50"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Fecha de Nacimiento -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Fecha de nacimiento"
+                        android:layout_marginBottom="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:endIconMode="custom"
+                        app:endIconDrawable="@drawable/ic_calendar"
+                        app:endIconTint="@color/blue_primary">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_fecha_nacimiento"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:focusable="false"
+                            android:clickable="true"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Cédula -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_cedula"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Cédula"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:helperText="10 dígitos"
+                        app:helperTextTextColor="@color/gray_text">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_cedula"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:maxLength="10"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Tarjeta de Contacto -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Información de Contacto"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="16dp"/>
+
+                    <!-- Teléfono -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_telefono"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Teléfono"
+                        android:layout_marginBottom="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:helperText="10 dígitos (09XXXXXXXX)"
+                        app:helperTextTextColor="@color/gray_text">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_telefono"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="phone"
+                            android:maxLength="10"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Correo -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_correo"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Correo electrónico"
+                        android:layout_marginBottom="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_correo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textEmailAddress"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Domicilio -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_domicilio"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Domicilio"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:endIconMode="custom"
+                        app:endIconDrawable="@drawable/ic_my_location"
+                        app:endIconTint="@color/blue_primary"
+                        app:helperText="Toca para buscar tu dirección"
+                        app:helperTextTextColor="@color/gray_text">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_domicilio"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:focusable="false"
+                            android:clickable="true"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_geolocate"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="end"
+                        android:layout_marginTop="-40dp"
+                        android:layout_marginEnd="12dp"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:id="@+id/iv_geolocate"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Tarjeta de Seguridad -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Seguridad"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="16dp"/>
+
+                    <!-- Contraseña -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_password"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Contraseña"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:endIconMode="password_toggle"
+                        app:endIconTint="@color/blue_primary"
+                        app:helperText="Mínimo 6 caracteres"
+                        app:helperTextTextColor="@color/gray_text">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Términos y Condiciones -->
+            <CheckBox
+                android:id="@+id/cb_terminos"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                app:endIconMode="password_toggle"
-                app:endIconTint="#13A4EC"
-                app:boxBackgroundMode="filled"
-                app:boxBackgroundColor="#E7EEF2"
-                app:boxCornerRadiusTopStart="12dp"
-                app:boxCornerRadiusTopEnd="12dp"
-                app:boxCornerRadiusBottomStart="12dp"
-                app:boxCornerRadiusBottomEnd="12dp"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_password"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ingresa tu contraseña"
-                    android:inputType="textPassword"
-                    android:textColor="#111827"
-                    android:textColorHint="#9CA3AF"/>
-            </com.google.android.material.textfield.TextInputLayout>
-            <TextView style="@style/TextAppearance.Mascota.BodyMuted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:text="Mínimo 6 caracteres."/>
+                android:layout_marginBottom="120dp"
+                android:textSize="14sp"
+                android:textColor="@color/black"/>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-    <LinearLayout
-        android:id="@+id/bottom_bar"
+    <!-- Botón fijo en la parte inferior -->
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_gravity="bottom"
+        app:cardElevation="8dp"
+        app:cardCornerRadius="0dp">
 
-        <CheckBox
-            android:id="@+id/cb_terminos"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:textSize="14sp"
-            android:textColor="@color/black"
-            android:text="" />
-
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_registrarse"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="56dp"
+            android:layout_margin="16dp"
             android:text="Continuar"
-            style="@style/Widget.Mascota.PrimaryButton"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textAllCaps="false"
             android:enabled="false"
-            android:backgroundTint="@color/blue_primary" />
-    </LinearLayout>
+            app:backgroundTint="@color/blue_primary"
+            app:cornerRadius="12dp"
+            android:stateListAnimator="@animator/fab_press_scale"/>
+    </androidx.cardview.widget.CardView>
 
-</RelativeLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
