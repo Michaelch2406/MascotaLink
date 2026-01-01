@@ -6,11 +6,14 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
+
+import com.google.android.material.appbar.MaterialToolbar;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
@@ -29,11 +32,11 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
     private static final long DEBOUNCE_DELAY_MS = 500;
     private static final long RATE_LIMIT_MS = 1000;
 
-    private ImageView arrowBack;
     private SwitchMaterial vacunasSwitch, desparasitacionSwitch, esterilizadoSwitch;
     private TextInputEditText ultimaVisitaVetEditText, condicionesMedicasEditText, medicamentosActualesEditText, veterinarioNombreEditText, veterinarioTelefonoEditText;
     private TextInputLayout ultimaVisitaVetLayout, condicionesMedicasLayout, medicamentosActualesLayout, veterinarioNombreLayout, veterinarioTelefonoLayout;
     private Button siguienteButton;
+    private NestedScrollView scrollView;
 
     private TextWatcher validationTextWatcher;
 
@@ -42,27 +45,36 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mascota_registro_paso2);
 
-        arrowBack = findViewById(R.id.arrow_back);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
+        scrollView = findViewById(R.id.scroll_view);
         vacunasSwitch = findViewById(R.id.vacunasSwitch);
         desparasitacionSwitch = findViewById(R.id.desparasitacionSwitch);
         esterilizadoSwitch = findViewById(R.id.esterilizadoSwitch);
-        ultimaVisitaVetEditText = findViewById(R.id.ultimaVisitaVetEditText);
-        condicionesMedicasEditText = findViewById(R.id.condicionesMedicasEditText);
-        medicamentosActualesEditText = findViewById(R.id.medicamentosActualesEditText);
-        veterinarioNombreEditText = findViewById(R.id.veterinarioNombreEditText);
-        veterinarioTelefonoEditText = findViewById(R.id.veterinarioTelefonoEditText);
-        siguienteButton = findViewById(R.id.siguienteButton);
 
-        // Assuming layouts are siblings to the EditTexts, will need to adjust if not
-        // This part of the code might need resource ID adjustments in the XML
-        // For now, proceeding without direct layout references for setError
+        ultimaVisitaVetLayout = findViewById(R.id.ultimaVisitaVetLayout);
+        ultimaVisitaVetEditText = findViewById(R.id.ultimaVisitaVetEditText);
+
+        condicionesMedicasLayout = findViewById(R.id.condicionesMedicasLayout);
+        condicionesMedicasEditText = findViewById(R.id.condicionesMedicasEditText);
+
+        medicamentosActualesLayout = findViewById(R.id.medicamentosActualesLayout);
+        medicamentosActualesEditText = findViewById(R.id.medicamentosActualesEditText);
+
+        veterinarioNombreLayout = findViewById(R.id.veterinarioNombreLayout);
+        veterinarioNombreEditText = findViewById(R.id.veterinarioNombreEditText);
+
+        veterinarioTelefonoLayout = findViewById(R.id.veterinarioTelefonoLayout);
+        veterinarioTelefonoEditText = findViewById(R.id.veterinarioTelefonoEditText);
+
+        siguienteButton = findViewById(R.id.siguienteButton);
 
         setupListeners();
         validateInputs();
     }
 
     private void setupListeners() {
-        arrowBack.setOnClickListener(v -> finish());
         ultimaVisitaVetEditText.setOnClickListener(v -> showDatePickerDialog());
         siguienteButton.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (validateFields()) {
@@ -98,31 +110,68 @@ public class MascotaRegistroPaso2Activity extends AppCompatActivity {
 
     private boolean validateFields() {
         boolean isValid = true;
+        View firstErrorView = null;
+
         if (ultimaVisitaVetEditText.getText().toString().trim().isEmpty()) {
-            // Cannot set error on a non-TextInputLayout view directly without a wrapper
-            ultimaVisitaVetEditText.setError("Selecciona una fecha");
+            ultimaVisitaVetLayout.setError("Selecciona una fecha");
+            if (firstErrorView == null) firstErrorView = ultimaVisitaVetLayout;
             isValid = false;
+        } else {
+            ultimaVisitaVetLayout.setError(null);
         }
+
         if (condicionesMedicasEditText.getText().toString().trim().isEmpty()) {
-            condicionesMedicasEditText.setError("Describe las condiciones médicas");
+            condicionesMedicasLayout.setError("Describe las condiciones médicas");
+            if (firstErrorView == null) firstErrorView = condicionesMedicasLayout;
             isValid = false;
+        } else {
+            condicionesMedicasLayout.setError(null);
         }
+
         if (medicamentosActualesEditText.getText().toString().trim().isEmpty()) {
-            medicamentosActualesEditText.setError("Describe los medicamentos actuales");
+            medicamentosActualesLayout.setError("Describe los medicamentos actuales");
+            if (firstErrorView == null) firstErrorView = medicamentosActualesLayout;
             isValid = false;
+        } else {
+            medicamentosActualesLayout.setError(null);
         }
+
         if (veterinarioNombreEditText.getText().toString().trim().isEmpty()) {
-            veterinarioNombreEditText.setError("Ingresa el nombre del veterinario");
+            veterinarioNombreLayout.setError("Ingresa el nombre del veterinario");
+            if (firstErrorView == null) firstErrorView = veterinarioNombreLayout;
             isValid = false;
+        } else {
+            veterinarioNombreLayout.setError(null);
         }
+
         if (veterinarioTelefonoEditText.getText().toString().trim().isEmpty()) {
-            veterinarioTelefonoEditText.setError("Ingresa el teléfono del veterinario");
+            veterinarioTelefonoLayout.setError("Ingresa el teléfono del veterinario");
+            if (firstErrorView == null) firstErrorView = veterinarioTelefonoLayout;
             isValid = false;
         } else if (veterinarioTelefonoEditText.getText().length() < 10) {
-            veterinarioTelefonoEditText.setError("El teléfono debe tener 10 dígitos");
+            veterinarioTelefonoLayout.setError("El teléfono debe tener 10 dígitos");
+            if (firstErrorView == null) firstErrorView = veterinarioTelefonoLayout;
             isValid = false;
+        } else {
+            veterinarioTelefonoLayout.setError(null);
         }
+
+        // Scroll to first error
+        if (!isValid && firstErrorView != null) {
+            scrollToView(firstErrorView);
+        }
+
         return isValid;
+    }
+
+    private void scrollToView(View view) {
+        if (scrollView != null && view != null) {
+            scrollView.post(() -> {
+                int scrollY = view.getTop() - 100;
+                scrollView.smoothScrollTo(0, scrollY);
+                view.requestFocus();
+            });
+        }
     }
 
     private void showDatePickerDialog() {

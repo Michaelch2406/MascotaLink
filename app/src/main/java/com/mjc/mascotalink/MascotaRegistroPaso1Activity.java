@@ -6,12 +6,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -20,8 +20,11 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
 import androidx.core.content.FileProvider;
+
+import com.google.android.material.appbar.MaterialToolbar;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -50,13 +53,14 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
     private static final long DEBOUNCE_DELAY_MS = 500;
     private static final long RATE_LIMIT_MS = 1000;
 
-    private ImageView arrowBack, fotoPrincipalImageView;
+    private ImageView fotoPrincipalImageView;
     private TextInputLayout nombreTextField, pesoTextField, fechaNacimientoTextField, razaTextField;
     private AutoCompleteTextView razaAutoComplete;
     private RadioGroup sexoRadioGroup;
     private ChipGroup tamanoChipGroup;
     private Button siguienteButton, elegirGaleriaButton, tomarFotoButton;
     private TextInputEditText fechaNacimientoEditText;
+    private NestedScrollView scrollView;
 
     private Uri fotoUri;
     private ActivityResultLauncher<Intent> galleryLauncher;
@@ -70,7 +74,10 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mascota_registro_paso1);
 
-        arrowBack = findViewById(R.id.arrow_back);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
+        scrollView = findViewById(R.id.scroll_view);
         fotoPrincipalImageView = findViewById(R.id.fotoPrincipalImageView);
         nombreTextField = findViewById(R.id.nombreTextField);
         razaTextField = findViewById(R.id.razaTextField);
@@ -84,15 +91,28 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
         elegirGaleriaButton = findViewById(R.id.elegirGaleriaButton);
         tomarFotoButton = findViewById(R.id.tomarFotoButton);
 
+        setupInputFilters(); // Setup input filters
         setupLaunchers(); // Setup launchers first
         setupListeners();
         setupRazaSpinner();
         validateInputs(); // Call initially to set button state
     }
 
-    private void setupListeners() {
-        arrowBack.setOnClickListener(v -> finish());
+    private void setupInputFilters() {
+        // InputFilter para el nombre de la mascota - solo letras y espacios
+        InputFilter letterFilter = (source, start, end, dest, dstart, dend) -> {
+            for (int i = start; i < end; i++) {
+                char c = source.charAt(i);
+                if (!Character.isLetter(c) && !Character.isSpaceChar(c)) {
+                    return "";
+                }
+            }
+            return null;
+        };
+        nombreTextField.getEditText().setFilters(new InputFilter[]{letterFilter, new InputFilter.LengthFilter(50)});
+    }
 
+    private void setupListeners() {
         fechaNacimientoEditText.setOnClickListener(v -> showDatePickerDialog());
 
         elegirGaleriaButton.setOnClickListener(v -> {
@@ -235,12 +255,16 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
     private boolean validateFields() {
         boolean isValid = true;
+        View firstErrorView = null;
+
         String nombre = nombreTextField.getEditText().getText().toString().trim();
         if (nombre.isEmpty()) {
             nombreTextField.setError("El nombre no puede estar vacío");
+            if (firstErrorView == null) firstErrorView = nombreTextField;
             isValid = false;
         } else if (!InputUtils.isValidName(nombre, 2, 50)) {
             nombreTextField.setError("Nombre inválido (solo letras, 2-50 caracteres)");
+            if (firstErrorView == null) firstErrorView = nombreTextField;
             isValid = false;
         } else {
             nombreTextField.setError(null);
@@ -248,6 +272,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
         if (razaAutoComplete.getText().toString().trim().isEmpty() || razaAutoComplete.getText().toString().equals(getString(R.string.raza_mascota_prompt))) {
             razaTextField.setError("Debes seleccionar una raza");
+            if (firstErrorView == null) firstErrorView = razaTextField;
             isValid = false;
         } else {
             razaTextField.setError(null);
@@ -255,6 +280,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
         if (fechaNacimientoEditText.getText().toString().trim().isEmpty()) {
             fechaNacimientoTextField.setError("Selecciona una fecha de nacimiento");
+            if (firstErrorView == null) firstErrorView = fechaNacimientoTextField;
             isValid = false;
         } else {
             fechaNacimientoTextField.setError(null);
@@ -262,6 +288,7 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
 
         if (pesoTextField.getEditText().getText().toString().trim().isEmpty()) {
             pesoTextField.setError("Ingresa el peso de la mascota");
+            if (firstErrorView == null) firstErrorView = pesoTextField;
             isValid = false;
         } else {
             pesoTextField.setError(null);
@@ -272,7 +299,22 @@ public class MascotaRegistroPaso1Activity extends AppCompatActivity {
             isValid = false;
         }
 
+        // Scroll to first error
+        if (!isValid && firstErrorView != null) {
+            scrollToView(firstErrorView);
+        }
+
         return isValid;
+    }
+
+    private void scrollToView(View view) {
+        if (scrollView != null && view != null) {
+            scrollView.post(() -> {
+                int scrollY = view.getTop() - 100;
+                scrollView.smoothScrollTo(0, scrollY);
+                view.requestFocus();
+            });
+        }
     }
 
     private void collectDataAndProceed() {

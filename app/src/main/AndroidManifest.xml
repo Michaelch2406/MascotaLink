@@ -148,31 +148,37 @@
             android:name=".DuenoRegistroPaso1Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".DuenoRegistroPaso2Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".DuenoRegistroPaso3Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MascotaRegistroPaso1Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MascotaRegistroPaso2Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".MascotaRegistroPaso3Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PaseadorRegistroPaso2Activity"

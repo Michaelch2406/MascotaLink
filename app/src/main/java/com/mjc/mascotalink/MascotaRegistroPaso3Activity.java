@@ -7,17 +7,20 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -36,8 +39,13 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
     private static final long DEBOUNCE_DELAY_MS = 500;
     private static final long RATE_LIMIT_MS = 2000;
 
-    private ImageView arrowBack;
+    private MaterialToolbar toolbar;
+    private NestedScrollView scrollView;
     private RadioGroup nivelEnergiaRadioGroup, conPersonasRadioGroup, conAnimalesRadioGroup, conPerrosRadioGroup, habitosCorreaRadioGroup;
+
+    private TextInputLayout comandosConocidosLayout, miedosFobiasLayout, maniasHabitosLayout;
+    private TextInputLayout rutinaPaseoLayout, tipoCorreaArnesLayout, recompensasLayout, instruccionesEmergenciaLayout, notasAdicionalesLayout;
+
     private TextInputEditText comandosConocidosEditText, miedosFobiasEditText, maniasHabitosEditText;
     private TextInputEditText rutinaPaseoEditText, tipoCorreaArnesEditText, recompensasEditText, instruccionesEmergenciaEditText, notasAdicionalesEditText;
     private Button guardarButton;
@@ -60,20 +68,41 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         storage = FirebaseStorage.getInstance();
 
-        arrowBack = findViewById(R.id.arrow_back);
+        toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
+        scrollView = findViewById(R.id.scroll_view);
+
         nivelEnergiaRadioGroup = findViewById(R.id.nivelEnergiaRadioGroup);
         conPersonasRadioGroup = findViewById(R.id.conPersonasRadioGroup);
         conAnimalesRadioGroup = findViewById(R.id.conAnimalesRadioGroup);
         conPerrosRadioGroup = findViewById(R.id.conPerrosRadioGroup);
         habitosCorreaRadioGroup = findViewById(R.id.habitosCorreaRadioGroup);
+
+        comandosConocidosLayout = findViewById(R.id.comandosConocidosLayout);
         comandosConocidosEditText = findViewById(R.id.comandosConocidosEditText);
+
+        miedosFobiasLayout = findViewById(R.id.miedosFobiasLayout);
         miedosFobiasEditText = findViewById(R.id.miedosFobiasEditText);
+
+        maniasHabitosLayout = findViewById(R.id.maniasHabitosLayout);
         maniasHabitosEditText = findViewById(R.id.maniasHabitosEditText);
+
+        rutinaPaseoLayout = findViewById(R.id.rutinaPaseoLayout);
         rutinaPaseoEditText = findViewById(R.id.rutinaPaseoEditText);
+
+        tipoCorreaArnesLayout = findViewById(R.id.tipoCorreaArnesLayout);
         tipoCorreaArnesEditText = findViewById(R.id.tipoCorreaArnesEditText);
+
+        recompensasLayout = findViewById(R.id.recompensasLayout);
         recompensasEditText = findViewById(R.id.recompensasEditText);
+
+        instruccionesEmergenciaLayout = findViewById(R.id.instruccionesEmergenciaLayout);
         instruccionesEmergenciaEditText = findViewById(R.id.instruccionesEmergenciaEditText);
+
+        notasAdicionalesLayout = findViewById(R.id.notasAdicionalesLayout);
         notasAdicionalesEditText = findViewById(R.id.notasAdicionalesEditText);
+
         guardarButton = findViewById(R.id.guardarButton);
 
         setupListeners();
@@ -82,8 +111,11 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        arrowBack.setOnClickListener(v -> finish());
-        guardarButton.setOnClickListener(InputUtils.createSafeClickListener(RATE_LIMIT_MS, v -> guardarMascotaCompleta()));
+        guardarButton.setOnClickListener(InputUtils.createSafeClickListener(RATE_LIMIT_MS, v -> {
+            if (validateFields()) {
+                guardarMascotaCompleta();
+            }
+        }));
 
         RadioGroup.OnCheckedChangeListener radioListener = (group, checkedId) -> validateInputs();
         nivelEnergiaRadioGroup.setOnCheckedChangeListener(radioListener);
@@ -120,6 +152,82 @@ public class MascotaRegistroPaso3Activity extends AppCompatActivity {
                 && !recompensasEditText.getText().toString().trim().isEmpty()
                 && !instruccionesEmergenciaEditText.getText().toString().trim().isEmpty();
         guardarButton.setEnabled(allFilled && duenoNombre != null && duenoApellido != null);
+    }
+
+    private boolean validateFields() {
+        boolean isValid = true;
+        View firstErrorView = null;
+
+        // Validar comandos conocidos
+        if (comandosConocidosEditText.getText().toString().trim().isEmpty()) {
+            comandosConocidosLayout.setError("Ingresa los comandos que conoce");
+            if (firstErrorView == null) firstErrorView = comandosConocidosLayout;
+            isValid = false;
+        } else {
+            comandosConocidosLayout.setError(null);
+        }
+
+        // Validar miedos y fobias
+        if (miedosFobiasEditText.getText().toString().trim().isEmpty()) {
+            miedosFobiasLayout.setError("Describe los miedos o escribe 'Ninguno'");
+            if (firstErrorView == null) firstErrorView = miedosFobiasLayout;
+            isValid = false;
+        } else {
+            miedosFobiasLayout.setError(null);
+        }
+
+        // Validar manías y hábitos
+        if (maniasHabitosEditText.getText().toString().trim().isEmpty()) {
+            maniasHabitosLayout.setError("Describe las manías o escribe 'Ninguno'");
+            if (firstErrorView == null) firstErrorView = maniasHabitosLayout;
+            isValid = false;
+        } else {
+            maniasHabitosLayout.setError(null);
+        }
+
+        // Validar rutina de paseo
+        if (rutinaPaseoEditText.getText().toString().trim().isEmpty()) {
+            rutinaPaseoLayout.setError("Describe la rutina de paseo");
+            if (firstErrorView == null) firstErrorView = rutinaPaseoLayout;
+            isValid = false;
+        } else {
+            rutinaPaseoLayout.setError(null);
+        }
+
+        // Validar recompensas
+        if (recompensasEditText.getText().toString().trim().isEmpty()) {
+            recompensasLayout.setError("Describe las recompensas");
+            if (firstErrorView == null) firstErrorView = recompensasLayout;
+            isValid = false;
+        } else {
+            recompensasLayout.setError(null);
+        }
+
+        // Validar instrucciones de emergencia
+        if (instruccionesEmergenciaEditText.getText().toString().trim().isEmpty()) {
+            instruccionesEmergenciaLayout.setError("Ingresa las instrucciones de emergencia");
+            if (firstErrorView == null) firstErrorView = instruccionesEmergenciaLayout;
+            isValid = false;
+        } else {
+            instruccionesEmergenciaLayout.setError(null);
+        }
+
+        // Scroll al primer error
+        if (!isValid && firstErrorView != null) {
+            scrollToView(firstErrorView);
+        }
+
+        return isValid;
+    }
+
+    private void scrollToView(View view) {
+        if (scrollView != null && view != null) {
+            scrollView.post(() -> {
+                int scrollY = view.getTop() - 100;
+                scrollView.smoothScrollTo(0, scrollY);
+                view.requestFocus();
+            });
+        }
     }
 
     private void loadDuenoDataAndProceed() {
