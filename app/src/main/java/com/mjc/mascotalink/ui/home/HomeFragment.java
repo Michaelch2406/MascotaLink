@@ -169,6 +169,8 @@ public class HomeFragment extends Fragment {
     private void setupDuenoUI(View view) {
         TextView tvNombre = view.findViewById(R.id.tv_nombre_usuario);
         ImageView ivPerfil = view.findViewById(R.id.iv_perfil_icon);
+        TextView tvPaseosSolicitados = view.findViewById(R.id.tv_paseos_solicitados);
+        TextView tvMascotasCount = view.findViewById(R.id.tv_mascotas_count);
 
         viewModel.getUserProfile().observe(getViewLifecycleOwner(), data -> {
             if (!isAdded() || getContext() == null) return;
@@ -192,6 +194,39 @@ public class HomeFragment extends Fragment {
                 }
             }
         });
+
+        // Cargar estadísticas del dueño
+        if (userId != null) {
+            viewModel.getDb().collection("duenos").document(userId)
+                .addSnapshotListener((duenoDoc, error) -> {
+                    if (!isAdded() || getContext() == null || error != null) return;
+
+                    if (duenoDoc != null && duenoDoc.exists()) {
+                        // Paseos solicitados
+                        Object paseosObj = duenoDoc.get("num_paseos_solicitados");
+                        long paseos = 0;
+                        if (paseosObj instanceof Number) {
+                            paseos = ((Number) paseosObj).longValue();
+                        }
+                        if (tvPaseosSolicitados != null) {
+                            tvPaseosSolicitados.setText(String.valueOf(paseos));
+                        }
+                    }
+                });
+
+            // Contar mascotas
+            viewModel.getDb().collection("duenos").document(userId)
+                .collection("mascotas")
+                .whereEqualTo("activo", true)
+                .addSnapshotListener((mascotasSnapshot, error) -> {
+                    if (!isAdded() || getContext() == null || error != null) return;
+
+                    int count = mascotasSnapshot != null ? mascotasSnapshot.size() : 0;
+                    if (tvMascotasCount != null) {
+                        tvMascotasCount.setText(String.valueOf(count));
+                    }
+                });
+        }
 
         viewModel.getActiveReservation().observe(getViewLifecycleOwner(), reservation -> {
             if (cardHelper != null) {

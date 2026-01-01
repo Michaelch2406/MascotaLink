@@ -189,7 +189,9 @@ public class ReservationCardHelper {
     }
 
     private void setupConfirmedState(ViewHolder vh, Map<String, Object> reservation, String resId) {
-        vh.header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
+        // Mismo color (teal) para ambos roles en estado CONFIRMADO
+        vh.header.setBackgroundResource(R.drawable.bg_gradient_teal_card);
+
         vh.titulo.setTextColor(context.getColor(R.color.white));
 
         vh.layoutStats.setVisibility(View.GONE);
@@ -211,6 +213,8 @@ public class ReservationCardHelper {
             }
 
             vh.btn.setText(R.string.walk_view_details);
+            vh.btn.setTextColor(context.getColor(R.color.teal_primary));
+
             vh.btn.setOnClickListener(v -> {
                 if (context != null) {
                     Intent intent = new Intent(context, PaseoEnCursoDuenoActivity.class);
@@ -237,6 +241,8 @@ public class ReservationCardHelper {
             }
 
             vh.btn.setText(R.string.walk_view_details);
+            vh.btn.setTextColor(context.getColor(R.color.teal_primary));
+
             vh.btn.setOnClickListener(v -> {
                 if (context != null) {
                     Intent intent = new Intent(context, PaseoEnCursoActivity.class);
@@ -247,7 +253,6 @@ public class ReservationCardHelper {
         }
 
         vh.desc.setTextColor(context.getColor(R.color.white));
-        vh.btn.setTextColor(context.getColor(R.color.blue_primary));
         vh.icon.setImageResource(R.drawable.ic_calendar);
         vh.icon.setColorFilter(context.getColor(R.color.white));
 
@@ -258,7 +263,9 @@ public class ReservationCardHelper {
     }
 
     private void setupAcceptedState(ViewHolder vh, Map<String, Object> reservation, String resId) {
-        vh.header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
+        // Mismo color (morado) para ambos roles en estado ACEPTADO
+        vh.header.setBackgroundResource(R.drawable.bg_gradient_purple_card);
+
         vh.titulo.setText(R.string.walk_accepted_title);
         vh.titulo.setTextColor(context.getColor(R.color.white));
 
@@ -282,6 +289,7 @@ public class ReservationCardHelper {
             }
 
             vh.btn.setText(R.string.walk_confirm_payment);
+            vh.btn.setTextColor(context.getColor(R.color.purple_primary));
         } else {
             String mascotaNombre = (String) reservation.get("mascota_nombre");
 
@@ -296,10 +304,10 @@ public class ReservationCardHelper {
             }
 
             vh.btn.setText(R.string.walk_view_details);
+            vh.btn.setTextColor(context.getColor(R.color.purple_primary));
         }
 
         vh.desc.setTextColor(context.getColor(R.color.white));
-        vh.btn.setTextColor(context.getColor(R.color.blue_primary));
         vh.icon.setImageResource(R.drawable.ic_check_circle);
         vh.icon.setColorFilter(context.getColor(R.color.white));
 
@@ -412,7 +420,8 @@ public class ReservationCardHelper {
         vh.layoutStats.setVisibility(View.GONE);
         vh.desc.setVisibility(View.VISIBLE);
 
-        vh.header.setBackgroundResource(R.drawable.bg_gradient_blue_card);
+        // Color gris para estados no definidos/fallback
+        vh.header.setBackgroundResource(R.drawable.bg_gradient_gray_card);
         vh.titulo.setText(roleType == RoleType.DUENO ? R.string.walk_active : R.string.walk_mission_active);
         vh.titulo.setTextColor(context.getColor(R.color.white));
 
@@ -421,7 +430,7 @@ public class ReservationCardHelper {
         vh.desc.setTextColor(context.getColor(R.color.white));
 
         vh.btn.setText(roleType == RoleType.DUENO ? R.string.walk_view_details : R.string.walk_manage);
-        vh.btn.setTextColor(context.getColor(R.color.blue_primary));
+        vh.btn.setTextColor(context.getColor(R.color.gray_primary));
         vh.icon.setImageResource(R.drawable.ic_info);
         vh.icon.setColorFilter(context.getColor(R.color.white));
 

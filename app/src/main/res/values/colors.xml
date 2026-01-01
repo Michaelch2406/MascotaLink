@@ -46,6 +46,9 @@
     <color name="grey_600">#757575</color>
     <color name="orange_500">#FF9800</color>
     <color name="orange_primary">#FB8C00</color>
+    <color name="teal_primary">#26A69A</color>
+    <color name="purple_primary">#7E57C2</color>
+    <color name="gray_primary">#78909C</color>
 
     <!-- Modern UI Colors -->
     <color name="background_modern">#F9FAFB</color>

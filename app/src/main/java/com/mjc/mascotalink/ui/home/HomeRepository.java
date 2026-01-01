@@ -199,6 +199,10 @@ public class HomeRepository {
         return data;
     }
 
+    public FirebaseFirestore getDb() {
+        return db;
+    }
+
     public void cleanup() {
         if (activeReservationListener != null) {
             activeReservationListener.remove();

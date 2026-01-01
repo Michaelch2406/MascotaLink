@@ -97,6 +97,10 @@ public class HomeViewModel extends ViewModel {
         error.setValue(null);
     }
 
+    public com.google.firebase.firestore.FirebaseFirestore getDb() {
+        return repository.getDb();
+    }
+
     @Override
     protected void onCleared() {
         super.onCleared();

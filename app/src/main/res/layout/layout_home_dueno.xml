@@ -94,9 +94,12 @@
                     android:layout_width="70dp"
                     android:layout_height="70dp"
                     app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
+                    app:cardElevation="4dp"
                     app:strokeWidth="0dp"
-                    app:cardBackgroundColor="#FFF3E0">
+                    app:cardBackgroundColor="#FFF3E0"
+                    android:stateListAnimator="@animator/fab_press_scale"
+                    android:clickable="true"
+                    android:focusable="true">
                     <ImageView
                         android:layout_width="32dp"
                         android:layout_height="32dp"
@@ -128,9 +131,12 @@
                     android:layout_width="70dp"
                     android:layout_height="70dp"
                     app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
+                    app:cardElevation="4dp"
                     app:strokeWidth="0dp"
-                    app:cardBackgroundColor="#E3F2FD">
+                    app:cardBackgroundColor="#E3F2FD"
+                    android:stateListAnimator="@animator/fab_press_scale"
+                    android:clickable="true"
+                    android:focusable="true">
                     <ImageView
                         android:layout_width="32dp"
                         android:layout_height="32dp"
@@ -162,9 +168,12 @@
                     android:layout_width="70dp"
                     android:layout_height="70dp"
                     app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
+                    app:cardElevation="4dp"
                     app:strokeWidth="0dp"
-                    app:cardBackgroundColor="#E8F5E9">
+                    app:cardBackgroundColor="#E8F5E9"
+                    android:stateListAnimator="@animator/fab_press_scale"
+                    android:clickable="true"
+                    android:focusable="true">
                     <ImageView
                         android:layout_width="32dp"
                         android:layout_height="32dp"
@@ -204,8 +213,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="8dp"
-                app:cardBackgroundColor="@android:color/transparent">
+                app:cardElevation="12dp"
+                app:cardBackgroundColor="@android:color/transparent"
+                android:stateListAnimator="@animator/fab_press_scale">
 
                 <!-- Layout Container para aplicar el background gradient -->
                 <LinearLayout
@@ -322,12 +332,139 @@
                         android:text="Buscar Paseador"
                         android:textColor="@color/blue_primary"
                         android:textStyle="bold"
+                        android:textSize="15sp"
                         app:backgroundTint="@color/white"
                         app:cornerRadius="16dp"
-                        app:elevation="0dp"/>
+                        app:elevation="2dp"
+                        app:rippleColor="#2013A4EC"
+                        app:icon="@drawable/ic_arrow_forward"
+                        app:iconGravity="end"
+                        app:iconTint="@color/blue_primary"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </FrameLayout>
+
+        <!-- Estadísticas del Dueño -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Resumen"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/gray_dark"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- Card: Paseos Solicitados -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/white"
+                android:stateListAnimator="@animator/fab_press_scale">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:gravity="center_horizontal">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#E3F2FD">
+                        <ImageView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:src="@drawable/ic_walk"
+                            android:layout_gravity="center"
+                            app:tint="@color/blue_primary"/>
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/tv_paseos_solicitados"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black"
+                        android:layout_marginTop="12dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Paseos"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Card: Mascotas Registradas -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/white"
+                android:stateListAnimator="@animator/fab_press_scale">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:gravity="center_horizontal">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#E8F5E9">
+                        <ImageView
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:src="@drawable/ic_dog"
+                            android:layout_gravity="center"
+                            app:tint="@color/green_success"/>
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/tv_mascotas_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black"
+                        android:layout_marginTop="12dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mascotas"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
