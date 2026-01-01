@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.Timestamp;
+import com.mjc.mascotalink.ConfirmarPagoActivity;
 import com.mjc.mascotalink.PaseoEnCursoActivity;
 import com.mjc.mascotalink.PaseoEnCursoDuenoActivity;
 import com.mjc.mascotalink.R;
@@ -309,9 +310,14 @@ public class ReservationCardHelper {
 
         vh.btn.setOnClickListener(v -> {
             if (context != null) {
-                Intent intent = roleType == RoleType.DUENO
-                    ? new Intent(context, PaseoEnCursoDuenoActivity.class)
-                    : new Intent(context, PaseoEnCursoActivity.class);
+                Intent intent;
+                if (roleType == RoleType.DUENO) {
+                    // Para el dueño en estado ACEPTADO, abrir pantalla de confirmar pago
+                    intent = new Intent(context, ConfirmarPagoActivity.class);
+                } else {
+                    // Para el paseador, abrir detalles del paseo
+                    intent = new Intent(context, PaseoEnCursoActivity.class);
+                }
                 intent.putExtra("id_reserva", resId);
                 context.startActivity(intent);
             }

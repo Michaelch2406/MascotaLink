@@ -312,6 +312,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         
         btnMisMascotas.setOnClickListener(v -> {
             Intent intent = new Intent(PerfilDuenoActivity.this, MisMascotasActivity.class);
+            intent.putExtra("dueno_id", duenoId);
             startActivity(intent);
         });
 

@@ -39,6 +39,7 @@ public class MisMascotasActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private String currentUserId;
+    private String duenoId; // ID del dueño cuyas mascotas se mostrarán
     private ListenerRegistration mascotasListener;
 
     // Views
@@ -74,6 +75,11 @@ public class MisMascotasActivity extends AppCompatActivity {
         }
         currentUserId = currentUser.getUid();
 
+        // Obtener dueno_id del Intent, si no existe usar currentUserId
+        String duenoIdFromIntent = getIntent().getStringExtra("dueno_id");
+        duenoId = (duenoIdFromIntent != null && !duenoIdFromIntent.isEmpty())
+                ? duenoIdFromIntent : currentUserId;
+
         initViews();
         setupRecyclerView();
         setupListeners();
@@ -102,7 +108,7 @@ public class MisMascotasActivity extends AppCompatActivity {
         adapter.setOnMascotaClickListener(mascota -> {
             Intent intent = new Intent(MisMascotasActivity.this, PerfilMascotaActivity.class);
             intent.putExtra("mascota_id", mascota.getId());
-            intent.putExtra("dueno_id", currentUserId);
+            intent.putExtra("dueno_id", duenoId);
             startActivity(intent);
         });
     }
@@ -115,19 +121,32 @@ public class MisMascotasActivity extends AppCompatActivity {
         swipeRefresh.setColorSchemeResources(R.color.blue_primary);
         swipeRefresh.setOnRefreshListener(this::cargarMascotas);
 
-        // FAB agregar mascota con rate limiting
-        fabAgregarMascota.setOnClickListener(v -> {
-            if (fabRateLimiter.shouldProcess()) {
-                navegarAgregarMascota();
-            }
-        });
+        // Determinar si es perfil propio
+        boolean isOwnProfile = duenoId.equals(currentUserId);
 
-        // Botón agregar en estado vacío
-        View btnAgregarEmpty = findViewById(R.id.btn_agregar_mascota_empty);
-        if (btnAgregarEmpty != null) {
-            btnAgregarEmpty.setOnClickListener(
-                    InputUtils.createSafeClickListener(v -> navegarAgregarMascota())
-            );
+        // Mostrar/ocultar botones de agregar según si es perfil propio
+        if (!isOwnProfile) {
+            // Ocultar FAB y botón de agregar si está viendo mascotas de otro dueño
+            fabAgregarMascota.setVisibility(View.GONE);
+            View btnAgregarEmpty = findViewById(R.id.btn_agregar_mascota_empty);
+            if (btnAgregarEmpty != null) {
+                btnAgregarEmpty.setVisibility(View.GONE);
+            }
+        } else {
+            // FAB agregar mascota con rate limiting
+            fabAgregarMascota.setOnClickListener(v -> {
+                if (fabRateLimiter.shouldProcess()) {
+                    navegarAgregarMascota();
+                }
+            });
+
+            // Botón agregar en estado vacío
+            View btnAgregarEmpty = findViewById(R.id.btn_agregar_mascota_empty);
+            if (btnAgregarEmpty != null) {
+                btnAgregarEmpty.setOnClickListener(
+                        InputUtils.createSafeClickListener(v -> navegarAgregarMascota())
+                );
+            }
         }
     }
 
@@ -142,7 +161,7 @@ public class MisMascotasActivity extends AppCompatActivity {
         }
 
         mascotasListener = db.collection("duenos")
-                .document(currentUserId)
+                .document(duenoId)
                 .collection("mascotas")
                 .whereEqualTo("activo", true)
                 .addSnapshotListener((value, error) -> {
@@ -181,7 +200,7 @@ public class MisMascotasActivity extends AppCompatActivity {
         mascota.setNombre(doc.getString("nombre"));
         mascota.setRaza(doc.getString("raza"));
         mascota.setSexo(doc.getString("sexo"));
-        mascota.setOwnerId(currentUserId);
+        mascota.setOwnerId(duenoId);
 
         // Foto URL
         String fotoUrl = doc.getString("foto_principal_url");
@@ -252,7 +271,7 @@ public class MisMascotasActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         // Recargar datos cuando se vuelve de agregar/editar mascota
-        if (mascotasListener == null && currentUserId != null) {
+        if (mascotasListener == null && duenoId != null) {
             cargarMascotas();
         }
     }
