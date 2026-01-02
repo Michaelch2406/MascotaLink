@@ -783,6 +783,9 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         }
 
         final AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
 
         // Botón Aplicar Filtros
         dialogView.findViewById(R.id.button_aplicar_filtros).setOnClickListener(v -> {

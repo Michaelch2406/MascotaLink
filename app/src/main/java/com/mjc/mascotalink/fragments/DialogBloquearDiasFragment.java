@@ -46,8 +46,6 @@ public class DialogBloquearDiasFragment extends DialogFragment {
     private EditText etRazon;
     private RadioGroup rgTipoBloqueo;
     private RadioButton rbDiaCompleto, rbManana, rbTarde;
-    private CheckBox cbRepetir;
-    private RadioGroup rgFrecuencia;
     private Button btnBloquear, btnCancelar;
 
     private Calendar mesActual;
@@ -105,14 +103,11 @@ public class DialogBloquearDiasFragment extends DialogFragment {
         rbDiaCompleto = view.findViewById(R.id.rbDiaCompleto);
         rbManana = view.findViewById(R.id.rbManana);
         rbTarde = view.findViewById(R.id.rbTarde);
-        cbRepetir = view.findViewById(R.id.cbRepetir);
-        rgFrecuencia = view.findViewById(R.id.rgFrecuencia);
         btnBloquear = view.findViewById(R.id.btnBloquear);
         btnCancelar = view.findViewById(R.id.btnCancelar);
 
         // Configurar por defecto
         rbDiaCompleto.setChecked(true);
-        rgFrecuencia.setVisibility(View.GONE);
 
         setupListeners();
         actualizarCalendario();
@@ -136,6 +131,7 @@ public class DialogBloquearDiasFragment extends DialogFragment {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             );
+            getDialog().getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
     }
 
@@ -148,10 +144,6 @@ public class DialogBloquearDiasFragment extends DialogFragment {
         btnMesSiguiente.setOnClickListener(v -> {
             mesActual.add(Calendar.MONTH, 1);
             actualizarCalendario();
-        });
-
-        cbRepetir.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            rgFrecuencia.setVisibility(isChecked ? View.VISIBLE : View.GONE);
         });
 
         btnBloquear.setOnClickListener(v -> bloquearFechas());
@@ -299,17 +291,8 @@ public class DialogBloquearDiasFragment extends DialogFragment {
             tipo = Bloqueo.TIPO_TARDE;
         }
 
-        boolean repetir = cbRepetir.isChecked();
+        boolean repetir = false; // Valor por defecto ya que se eliminó la UI
         String frecuencia = null;
-
-        if (repetir) {
-            int selectedId = rgFrecuencia.getCheckedRadioButtonId();
-            if (selectedId == R.id.rbSemanal) {
-                frecuencia = Bloqueo.FRECUENCIA_SEMANAL;
-            } else if (selectedId == R.id.rbMensual) {
-                frecuencia = Bloqueo.FRECUENCIA_MENSUAL;
-            }
-        }
 
         // Guardar cada fecha seleccionada
         int contador = 0;
@@ -318,8 +301,8 @@ public class DialogBloquearDiasFragment extends DialogFragment {
             bloqueo.setFecha(new Timestamp(fecha));
             bloqueo.setTipo(tipo);
             bloqueo.setRazon(razon.isEmpty() ? "Día bloqueado" : razon);
-            bloqueo.setRepetir(repetir);
-            bloqueo.setFrecuencia_repeticion(frecuencia);
+            bloqueo.setRepetir(false);
+            bloqueo.setFrecuencia_repeticion(null);
             bloqueo.setActivo(true);
 
             final String finalFrecuencia = frecuencia;

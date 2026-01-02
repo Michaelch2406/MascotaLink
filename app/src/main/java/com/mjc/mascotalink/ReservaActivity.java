@@ -1559,6 +1559,9 @@ public class ReservaActivity extends AppCompatActivity {
         builder.setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss());
 
         AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
         dialog.show();
         // --- FIX FIN ---
     }

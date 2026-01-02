@@ -1433,7 +1433,11 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         });
 
         builder.setNegativeButton("Volver al paseo", null);
-        builder.show();
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+        dialog.show();
     }
 
     private void confirmarCancelacionPaseador(String motivo) {

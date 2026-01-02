@@ -4,12 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="24dp">
+    android:background="@drawable/bg_dialog_rounded">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:padding="24dp"
         android:divider="@drawable/spacer_medium"
         android:showDividers="middle">
 
@@ -19,6 +20,8 @@
             android:layout_height="wrap_content"
             android:text="Filtros y Ordenamiento"
             android:textAppearance="?attr/textAppearanceHeadline6"
+            android:textStyle="bold"
+            android:textColor="@color/black"
             android:layout_marginBottom="16dp"/>
 
         <!-- Ordenamiento -->
@@ -33,14 +36,16 @@
                 android:layout_height="wrap_content"
                 android:text="Ordenar por"
                 android:textAppearance="?attr/textAppearanceSubtitle1"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
 
             <Spinner
                 android:id="@+id/spinner_ordenar_por"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/edit_text_background"
-                android:padding="12dp"/>
+                android:background="@drawable/bg_input_rounded"
+                android:padding="12dp"
+                android:minHeight="48dp"/>
         </LinearLayout>
 
         <!-- Filtro de Distancia -->
@@ -56,6 +61,7 @@
                 android:layout_height="wrap_content"
                 android:text="Distancia (km)"
                 android:textAppearance="?attr/textAppearanceSubtitle1"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
 
             <com.google.android.material.slider.RangeSlider
@@ -66,6 +72,8 @@
                 android:valueTo="50"
                 app:values="@array/initial_range_slider_values_distancia"
                 app:labelBehavior="visible"
+                app:trackColorActive="@color/blue_primary"
+                app:thumbColor="@color/blue_primary"
                 tools:ignore="SpeakableTextPresentCheck" />
         </LinearLayout>
 
@@ -82,6 +90,7 @@
                 android:layout_height="wrap_content"
                 android:text="Tarifa por hora ($)"
                 android:textAppearance="?attr/textAppearanceSubtitle1"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
 
             <com.google.android.material.slider.RangeSlider
@@ -92,6 +101,8 @@
                 android:valueTo="100"
                 app:values="@array/initial_range_slider_values_precio"
                 app:labelBehavior="visible"
+                app:trackColorActive="@color/blue_primary"
+                app:thumbColor="@color/blue_primary"
                 tools:ignore="SpeakableTextPresentCheck" />
         </LinearLayout>
 
@@ -107,6 +118,7 @@
                 android:layout_height="wrap_content"
                 android:text="Calificación mínima"
                 android:textAppearance="?attr/textAppearanceSubtitle1"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
 
             <RatingBar
@@ -115,6 +127,7 @@
                 android:layout_height="wrap_content"
                 android:numStars="5"
                 android:stepSize="0.5"
+                android:theme="@style/Widget.AppCompat.RatingBar.Indicator"
                 android:rating="0" />
         </LinearLayout>
 
@@ -130,6 +143,7 @@
                 android:layout_height="wrap_content"
                 android:text="Admite mascotas de tamaño"
                 android:textAppearance="?attr/textAppearanceSubtitle1"
+                android:textColor="@color/text_secondary"
                 android:layout_marginBottom="8dp"/>
 
             <com.google.android.material.chip.ChipGroup
@@ -144,21 +158,24 @@
                     style="@style/Widget.MaterialComponents.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Pequeño"/>
+                    android:text="Pequeño"
+                    android:textColor="@color/black"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_mediano"
                     style="@style/Widget.MaterialComponents.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Mediano"/>
+                    android:text="Mediano"
+                    android:textColor="@color/black"/>
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_grande"
                     style="@style/Widget.MaterialComponents.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Grande"/>
+                    android:text="Grande"
+                    android:textColor="@color/black"/>
             </com.google.android.material.chip.ChipGroup>
         </LinearLayout>
 
@@ -169,19 +186,22 @@
             android:orientation="horizontal"
             android:gravity="end">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_limpiar_filtros"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Limpiar"
+                android:textColor="@color/text_secondary"
                 android:layout_marginEnd="8dp"/>
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_aplicar_filtros"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Aplicar"/>
+                android:text="Aplicar"
+                app:backgroundTint="@color/blue_primary"
+                app:cornerRadius="16dp"/>
         </LinearLayout>
 
     </LinearLayout>

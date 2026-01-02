@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nestedScrollView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@android:color/white"
+    android:background="@drawable/bg_dialog_rounded"
     android:fillViewport="true">
 
     <LinearLayout
@@ -17,10 +18,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/bloqueo_title"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="@color/gray_dark"
-            android:layout_marginBottom="16dp"/>
+            android:textColor="@color/black"
+            android:layout_marginBottom="24dp"
+            android:gravity="center_horizontal"/>
 
         <!-- Navegación del calendario -->
         <LinearLayout
@@ -28,15 +30,19 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
+            android:background="@drawable/bg_input_rounded"
+            android:padding="4dp"
+            android:layout_marginBottom="16dp">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnMesAnterior"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:text="◄"
+                android:textColor="@color/gray_dark"
                 android:textSize="18sp"
-                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+                app:backgroundTint="@android:color/transparent"/>
 
             <TextView
                 android:id="@+id/tvMesActual"
@@ -47,15 +53,17 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:gravity="center"
-                android:textColor="@color/gray_dark"/>
+                android:textColor="@color/black"/>
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnMesSiguiente"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:text="►"
+                android:textColor="@color/gray_dark"
                 android:textSize="18sp"
-                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+                app:backgroundTint="@android:color/transparent"/>
         </LinearLayout>
 
         <!-- Días de la semana header -->
@@ -66,74 +74,26 @@
             android:layout_marginBottom="8dp">
 
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/dia_lunes_corto"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"/>
-
+                style="@style/DayHeaderStyle"
+                android:text="@string/dia_lunes_corto"/>
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/dia_martes_corto"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"/>
-
+                style="@style/DayHeaderStyle"
+                android:text="@string/dia_martes_corto"/>
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/dia_miercoles_corto"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"/>
-
+                style="@style/DayHeaderStyle"
+                android:text="@string/dia_miercoles_corto"/>
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/dia_jueves_corto"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"/>
-
+                style="@style/DayHeaderStyle"
+                android:text="@string/dia_jueves_corto"/>
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/dia_viernes_corto"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"/>
-
+                style="@style/DayHeaderStyle"
+                android:text="@string/dia_viernes_corto"/>
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/dia_sabado_corto"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"/>
-
+                style="@style/DayHeaderStyle"
+                android:text="@string/dia_sabado_corto"/>
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/dia_domingo_corto"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"/>
+                style="@style/DayHeaderStyle"
+                android:text="@string/dia_domingo_corto"/>
         </LinearLayout>
 
         <!-- Calendario -->
@@ -144,16 +104,15 @@
             android:numColumns="7"
             android:horizontalSpacing="4dp"
             android:verticalSpacing="4dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="24dp"
             android:stretchMode="columnWidth"
             android:gravity="center"/>
 
-        <TextView
+        <!-- Separador -->
+        <View
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Selecciona múltiples fechas tocando los días"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary"
+            android:layout_height="1dp"
+            android:background="@color/gray_100"
             android:layout_marginBottom="16dp"/>
 
         <!-- Razón del bloqueo -->
@@ -162,17 +121,28 @@
             android:layout_height="wrap_content"
             android:text="@string/bloqueo_razon"
             android:textSize="14sp"
-            android:textColor="@color/text_secondary"
+            android:textStyle="bold"
+            android:textColor="@color/black"
             android:layout_marginBottom="8dp"/>
 
-        <EditText
-            android:id="@+id/etRazon"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/bloqueo_razon_hint"
-            android:inputType="text"
-            android:maxLines="1"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="16dp"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etRazon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/bloqueo_razon_hint"
+                android:inputType="text"
+                android:maxLines="1"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Tipo de bloqueo -->
         <TextView
@@ -180,7 +150,8 @@
             android:layout_height="wrap_content"
             android:text="@string/bloqueo_tipo"
             android:textSize="14sp"
-            android:textColor="@color/text_secondary"
+            android:textStyle="bold"
+            android:textColor="@color/black"
             android:layout_marginBottom="8dp"/>
 
         <RadioGroup
@@ -194,54 +165,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/bloqueo_tipo_dia_completo"
-                android:buttonTint="@color/checkbox_blue"/>
+                android:buttonTint="@color/blue_primary"/>
 
             <RadioButton
                 android:id="@+id/rbManana"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/bloqueo_tipo_manana"
-                android:buttonTint="@color/checkbox_blue"/>
+                android:buttonTint="@color/blue_primary"/>
 
             <RadioButton
                 android:id="@+id/rbTarde"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/bloqueo_tipo_tarde"
-                android:buttonTint="@color/checkbox_blue"/>
-        </RadioGroup>
-
-        <!-- Repetición -->
-        <CheckBox
-            android:id="@+id/cbRepetir"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/bloqueo_repetir"
-            android:buttonTint="@color/checkbox_blue"
-            android:layout_marginBottom="8dp"/>
-
-        <RadioGroup
-            android:id="@+id/rgFrecuencia"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="32dp"
-            android:paddingEnd="0dp"
-            android:layout_marginBottom="24dp"
-            android:visibility="gone">
-
-            <RadioButton
-                android:id="@+id/rbSemanal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/bloqueo_frecuencia_semanal"
-                android:buttonTint="@color/checkbox_blue"/>
-
-            <RadioButton
-                android:id="@+id/rbMensual"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/bloqueo_frecuencia_mensual"
-                android:buttonTint="@color/checkbox_blue"/>
+                android:buttonTint="@color/blue_primary"/>
         </RadioGroup>
 
         <!-- Botones de acción -->
@@ -249,23 +187,26 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="end">
+            android:gravity="end"
+            android:layout_marginTop="8dp">
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCancelar"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/disponibilidad_cancelar"
                 android:textColor="@color/text_secondary"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+                android:layout_marginEnd="8dp"/>
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBloquear"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/bloqueo_confirmar"
-                android:backgroundTint="@color/error_red"/>
+                android:textColor="@color/white"
+                app:backgroundTint="@color/red_error"
+                app:cornerRadius="20dp"/>
         </LinearLayout>
 
     </LinearLayout>
