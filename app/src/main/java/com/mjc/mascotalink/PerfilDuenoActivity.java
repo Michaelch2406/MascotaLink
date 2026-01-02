@@ -187,24 +187,24 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         tvMascotasRegistradas = findViewById(R.id.tv_mascotas_registradas);
         tvPaseosSolicitados = findViewById(R.id.tv_paseos_solicitados);
         tvMiembroDesdeStat = findViewById(R.id.tv_miembro_desde_stat);
-        
+
         tvRatingValor = findViewById(R.id.tv_rating_valor);
         ratingBar = findViewById(R.id.rating_bar);
         tvResenasTotal = findViewById(R.id.tv_resenas_total);
-        
+
         tabLayout = findViewById(R.id.tab_layout);
         llAcercaDe = findViewById(R.id.ll_acerca_de);
         llResenas = findViewById(R.id.ll_resenas);
-        
+
         // Acerca de content
         btnMisMascotas = findViewById(R.id.btn_mis_mascotas);
         overlappingMascotas = findViewById(R.id.overlapping_mascotas);
-        
+
         tvEmailDueno = findViewById(R.id.tv_email_dueno);
         tvTelefonoDueno = findViewById(R.id.tv_telefono_dueno);
         btnCopyEmail = findViewById(R.id.btn_copy_email);
         btnCopyTelefono = findViewById(R.id.btn_copy_telefono);
-        
+
         ajustes_section = findViewById(R.id.ajustes_section);
         btnMisPaseos = findViewById(R.id.btn_mis_paseos);
         btnFavoritos = findViewById(R.id.btn_favoritos);
@@ -217,16 +217,22 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         btnCentroAyuda = findViewById(R.id.btn_centro_ayuda);
         btnTerminos = findViewById(R.id.btn_terminos);
         btnCerrarSesion = findViewById(R.id.btn_cerrar_sesion);
-        
+
         // Reseñas content
         recyclerViewResenas = findViewById(R.id.recycler_view_resenas);
         llEmptyReviews = findViewById(R.id.ll_empty_reviews);
         btnVerMasResenas = findViewById(R.id.btn_ver_mas_resenas);
-        
+
         skeletonLayout = findViewById(R.id.skeleton_layout);
         scrollViewContent = findViewById(R.id.scroll_view_content);
         swipeRefresh = findViewById(R.id.swipe_refresh_perfil);
         bottomNav = findViewById(R.id.bottom_nav);
+
+        // Inicialmente ocultar TODO el contenido y mostrar skeleton
+        scrollViewContent.setVisibility(View.GONE);
+        ivEditPerfil.setVisibility(View.GONE);
+        btnMensaje.setVisibility(View.GONE);
+        showSkeleton();
     }
 
     private void setupListeners() {
@@ -430,9 +436,13 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 if (duenoId == null) {
                     duenoId = currentUserId;
                 }
+                
+                // Determine ownership immediately to avoid race conditions with showContent()
+                isOwnProfile = duenoId != null && duenoId.equals(currentUserId);
+                
                 fetchCurrentUserRoleAndSetupUI();
                 attachDataListeners();
-                if (duenoId.equals(currentUserId)) {
+                if (isOwnProfile) {
                     updateFcmToken();
                 }
             } else {
@@ -480,31 +490,30 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
         private void setupRoleBasedUI() {
             this.isOwnProfile = duenoId != null && duenoId.equals(currentUserId);
-    
+
             if (this.isOwnProfile) {
-                toolbarTitle.setText("Perfil");            ivEditPerfil.setVisibility(View.VISIBLE);
-            btnMensaje.setVisibility(View.GONE);
-            ajustes_section.setVisibility(View.VISIBLE);
-            soporte_section.setVisibility(View.VISIBLE);
-            btnCerrarSesion.setVisibility(View.VISIBLE);
-            bottomNavRole = "Dueño";
-            bottomNavSelectedItem = R.id.menu_perfil;
-        } else {
-            toolbarTitle.setText("Dueño");
-            ivEditPerfil.setVisibility(View.GONE);
-            btnMensaje.setVisibility(View.VISIBLE);
-            ajustes_section.setVisibility(View.GONE);
-            soporte_section.setVisibility(View.GONE);
-            btnCerrarSesion.setVisibility(View.GONE);
-            
-            // Assuming viewing as Walker
-            bottomNavRole = currentUserRole != null ? currentUserRole : "PASEADOR";
-            bottomNavSelectedItem = R.id.menu_search;
+                toolbarTitle.setText("Perfil");
+                // No mostrar botones aún, se mostrarán cuando se carguen los datos
+                ajustes_section.setVisibility(View.VISIBLE);
+                soporte_section.setVisibility(View.VISIBLE);
+                btnCerrarSesion.setVisibility(View.VISIBLE);
+                bottomNavRole = "Dueño";
+                bottomNavSelectedItem = R.id.menu_perfil;
+            } else {
+                toolbarTitle.setText("Dueño");
+                // No mostrar botones aún, se mostrarán cuando se carguen los datos
+                ajustes_section.setVisibility(View.GONE);
+                soporte_section.setVisibility(View.GONE);
+                btnCerrarSesion.setVisibility(View.GONE);
+
+                // Assuming viewing as Walker
+                bottomNavRole = currentUserRole != null ? currentUserRole : "PASEADOR";
+                bottomNavSelectedItem = R.id.menu_search;
+            }
+            com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
+            setupBottomNavigation();
+            setupTabs(); // Call setupTabs here after isOwnProfile is determined
         }
-        com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
-        setupBottomNavigation();
-        setupTabs(); // Call setupTabs here after isOwnProfile is determined
-    }
 
     private void setupBottomNavigation() {
         if (bottomNav == null) return;
@@ -515,7 +524,8 @@ public class PerfilDuenoActivity extends AppCompatActivity {
 
     private void attachDataListeners() {
         detachDataListeners();
-        
+        showSkeleton(); // Mostrar skeleton antes de cargar datos
+
         // 1. Load User Basic Info & Stats
         DocumentReference userDocRef = db.collection("usuarios").document(duenoId);
         duenoListener = userDocRef.addSnapshotListener((usuarioDoc, e) -> {
@@ -821,12 +831,56 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         }
     }
 
+    private void showSkeleton() {
+        if (skeletonLayout != null && scrollViewContent != null) {
+            skeletonLayout.setVisibility(View.VISIBLE);
+            scrollViewContent.setVisibility(View.GONE);
+            isContentVisible = false;
+            startShimmerAnimation();
+        }
+    }
+
+    private void startShimmerAnimation() {
+        if (skeletonLayout == null) return;
+        android.view.animation.Animation shimmer = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.shimmer_animation);
+        applyShimmerToChildren(skeletonLayout, shimmer);
+    }
+
+    private void applyShimmerToChildren(View view, android.view.animation.Animation animation) {
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup viewGroup = (android.view.ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                View child = viewGroup.getChildAt(i);
+                if (child instanceof android.view.ViewGroup) {
+                    applyShimmerToChildren(child, animation);
+                } else if (child.getBackground() != null) {
+                    child.startAnimation(animation);
+                }
+            }
+        }
+    }
+
     private void showContent() {
         if (!isContentVisible) {
             isContentVisible = true;
-            skeletonLayout.setVisibility(View.GONE);
-            scrollViewContent.setVisibility(View.VISIBLE);
+            if (skeletonLayout != null) {
+                skeletonLayout.clearAnimation();
+                skeletonLayout.setVisibility(View.GONE);
+            }
+            if (scrollViewContent != null) {
+                scrollViewContent.setVisibility(View.VISIBLE);
+            }
         }
+
+        // Actualizar botones de acción según el tipo de perfil (siempre)
+        if (isOwnProfile) {
+            if (ivEditPerfil != null) ivEditPerfil.setVisibility(View.VISIBLE);
+            if (btnMensaje != null) btnMensaje.setVisibility(View.GONE);
+        } else {
+            if (ivEditPerfil != null) ivEditPerfil.setVisibility(View.GONE);
+            if (btnMensaje != null) btnMensaje.setVisibility(View.VISIBLE);
+        }
+
         // Stop refresh indicator when content is loaded
         if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
             swipeRefresh.setRefreshing(false);

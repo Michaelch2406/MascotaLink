@@ -346,10 +346,16 @@ public class DuenoRegistroPaso1Activity extends AppCompatActivity {
         }
 
         // Validar cédula
-        if (!validarCedula(etCedula.getText().toString().trim())) {
-            tilCedula.setError("Cédula inválida");
+        String cedula = etCedula.getText().toString().trim();
+        if (cedula.isEmpty()) {
+            tilCedula.setError("La cédula no puede estar vacía");
             if (firstErrorView == null) firstErrorView = tilCedula;
-            ok = false;
+        } else if (cedula.length() != 10) {
+            tilCedula.setError("La cédula debe tener exactamente 10 dígitos");
+            if (firstErrorView == null) firstErrorView = tilCedula;
+        } else if (!InputUtils.isValidCedulaEcuador(cedula)) {
+            tilCedula.setError("Cédula ecuatoriana inválida (dígito verificador incorrecto)");
+            if (firstErrorView == null) firstErrorView = tilCedula;
         } else {
             tilCedula.setError(null);
         }

@@ -76,29 +76,196 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="visible"
+        android:background="@color/white"
+        android:visibility="gone"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <View
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_gravity="center"
-            android:background="@drawable/bg_avatar_circle_skeleton" />
+        <!-- Header Skeleton -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
 
-        <View
-            android:layout_width="200dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
-            android:layout_marginTop="16dp"
-            android:background="@color/skeleton_color" />
+            <!-- Avatar Circle -->
+            <View
+                android:id="@+id/skeleton_avatar"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:background="@drawable/bg_skeleton_circle" />
 
+            <!-- Nombre y Rol -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="16dp"
+                android:layout_toEndOf="@id/skeleton_avatar"
+                android:orientation="vertical">
+
+                <View
+                    android:layout_width="180dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+
+                <View
+                    android:layout_width="120dp"
+                    android:layout_height="16dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+
+                <View
+                    android:layout_width="80dp"
+                    android:layout_height="14dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+
+            </LinearLayout>
+
+        </RelativeLayout>
+
+        <!-- Stats Grid Skeleton -->
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:padding="8dp"
+            android:rowCount="2">
+
+            <!-- Stat 1-4 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="100dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:background="@drawable/bg_round_12"
+                android:backgroundTint="#F3F4F6"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <View
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/bg_skeleton_circle" />
+
+                <View
+                    android:layout_width="60dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="100dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:background="@drawable/bg_round_12"
+                android:backgroundTint="#F3F4F6"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <View
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/bg_skeleton_circle" />
+
+                <View
+                    android:layout_width="60dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="100dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:background="@drawable/bg_round_12"
+                android:backgroundTint="#F3F4F6"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <View
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/bg_skeleton_circle" />
+
+                <View
+                    android:layout_width="70dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="100dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="4dp"
+                android:background="@drawable/bg_round_12"
+                android:backgroundTint="#F3F4F6"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <View
+                    android:layout_width="30dp"
+                    android:layout_height="20dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+
+                <View
+                    android:layout_width="40dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_skeleton_rounded" />
+            </LinearLayout>
+
+        </GridLayout>
+
+        <!-- Tabs Skeleton -->
         <View
             android:layout_width="match_parent"
-            android:layout_height="150dp"
-            android:layout_marginTop="24dp"
-            android:background="@drawable/bg_round_12"
-            android:backgroundTint="@color/skeleton_color_light" />
+            android:layout_height="48dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="16dp"
+            android:background="@drawable/bg_skeleton_rounded" />
+
+        <!-- Content Skeleton -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <View
+                android:layout_width="150dp"
+                android:layout_height="18dp"
+                android:background="@drawable/bg_skeleton_rounded" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_skeleton_rounded" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_skeleton_rounded" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_skeleton_rounded" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout

@@ -430,11 +430,12 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         if (cedula.isEmpty()) {
             tilCedula.setError("La cédula no puede estar vacía");
             if (firstErrorView == null) firstErrorView = tilCedula;
-            isValid = false;
-        } else if (!InputUtils.isValidCedulaEcuador(cedula)) {
-            tilCedula.setError("Cédula inválida (10 dígitos válidos)");
+        } else if (cedula.length() != 10) {
+            tilCedula.setError("La cédula debe tener exactamente 10 dígitos");
             if (firstErrorView == null) firstErrorView = tilCedula;
-            isValid = false;
+        } else if (!InputUtils.isValidCedulaEcuador(cedula)) {
+            tilCedula.setError("Cédula ecuatoriana inválida (dígito verificador incorrecto)");
+            if (firstErrorView == null) firstErrorView = tilCedula;
         } else {
             tilCedula.setError(null);
         }

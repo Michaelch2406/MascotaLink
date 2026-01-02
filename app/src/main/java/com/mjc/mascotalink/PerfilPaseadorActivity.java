@@ -323,6 +323,16 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
+
+        // Inicialmente ocultar TODO el contenido y mostrar skeleton
+        scrollViewContent.setVisibility(View.GONE);
+        ivEditPerfil.setVisibility(View.GONE);
+        btnMensaje.setVisibility(View.GONE);
+        fabReservar.setVisibility(View.GONE);
+        if (btnFavorito != null) btnFavorito.setVisibility(View.GONE);
+        if (btnVerGaleria != null) btnVerGaleria.setVisibility(View.GONE);
+        if (btnGestionarGaleria != null) btnGestionarGaleria.setVisibility(View.GONE);
+        showSkeleton();
     }
 
     private void setupTabs() {
@@ -676,7 +686,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                     paseadorId = currentUserId;
                 }
                 fetchCurrentUserRoleAndSetupUI();
-                attachDataListeners();
+                // attachDataListeners() se llamará desde setupRoleBasedUI() después de establecer isOwnProfile
                 updateFcmToken();
             } else {
                 currentUserId = null;
@@ -814,10 +824,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
 
         if (isOwnProfile) {
-            ivEditPerfil.setVisibility(View.VISIBLE);
-            btnMensaje.setVisibility(View.GONE);
-            btnFavorito.setVisibility(View.GONE);
-            fabReservar.setVisibility(View.GONE);
+            // No mostrar botones aún, se mostrarán cuando se carguen los datos
             ivEditZonas.setVisibility(View.VISIBLE);
             ivEditDisponibilidad.setVisibility(View.VISIBLE);
             btnGestionarGaleria.setVisibility(View.VISIBLE);
@@ -827,24 +834,18 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             bottomNavRole = "PASEADOR";
             bottomNavSelectedItem = R.id.menu_perfil;
         } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
-            ivEditPerfil.setVisibility(View.GONE);
-            btnMensaje.setVisibility(View.VISIBLE);
-            btnFavorito.setVisibility(View.VISIBLE);
-            fabReservar.setVisibility(View.VISIBLE);
+            // No mostrar botones aún, se mostrarán cuando se carguen los datos
             ivEditZonas.setVisibility(View.GONE);
             ivEditDisponibilidad.setVisibility(View.GONE);
             btnGestionarGaleria.setVisibility(View.GONE);
             ajustes_section.setVisibility(View.GONE);
             soporte_section.setVisibility(View.GONE);
             btnCerrarSesion.setVisibility(View.GONE);
-            configurarBotonFavorito(currentUserId, paseadorId);
+            // configurarBotonFavorito se llamará en showContent()
             bottomNavRole = "DUEÑO";
             bottomNavSelectedItem = R.id.menu_search;
         } else {
-            ivEditPerfil.setVisibility(View.GONE);
-            btnMensaje.setVisibility(View.GONE);
-            btnFavorito.setVisibility(View.GONE);
-            fabReservar.setVisibility(View.GONE);
+            // No mostrar botones aún
             ivEditZonas.setVisibility(View.GONE);
             ivEditDisponibilidad.setVisibility(View.GONE);
             btnGestionarGaleria.setVisibility(View.GONE);
@@ -856,6 +857,7 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
         }
         setupBottomNavigation();
         setupTabs(); // Call setupTabs here after isOwnProfile is determined
+        attachDataListeners(); // Llamar DESPUÉS de establecer isOwnProfile
     }
 
     private void setupBottomNavigation() {
@@ -1127,6 +1129,8 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
 
     private void attachDataListeners() {
         detachDataListeners();
+        showSkeleton(); // Mostrar skeleton antes de cargar datos
+
         DocumentReference userDocRef = db.collection("usuarios").document(paseadorId);
         usuarioListener = userDocRef.addSnapshotListener((usuarioDoc, e) -> {
             if (e != null) return;
@@ -1413,12 +1417,72 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
             .addOnFailureListener(e -> Log.w(TAG, "Error recargando ultima_conexion", e));
     }
 
+    private void showSkeleton() {
+        if (skeletonLayout != null && scrollViewContent != null) {
+            skeletonLayout.setVisibility(View.VISIBLE);
+            scrollViewContent.setVisibility(View.GONE);
+            isContentVisible = false;
+            startShimmerAnimation();
+        }
+    }
+
+    private void startShimmerAnimation() {
+        if (skeletonLayout == null) return;
+        android.view.animation.Animation shimmer = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.shimmer_animation);
+        applyShimmerToChildren(skeletonLayout, shimmer);
+    }
+
+    private void applyShimmerToChildren(View view, android.view.animation.Animation animation) {
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup viewGroup = (android.view.ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                View child = viewGroup.getChildAt(i);
+                if (child instanceof android.view.ViewGroup) {
+                    applyShimmerToChildren(child, animation);
+                } else if (child.getBackground() != null) {
+                    child.startAnimation(animation);
+                }
+            }
+        }
+    }
+
     private void showContent() {
         if (!isContentVisible) {
             isContentVisible = true;
-            skeletonLayout.setVisibility(View.GONE);
-            scrollViewContent.setVisibility(View.VISIBLE);
+            if (skeletonLayout != null) {
+                skeletonLayout.clearAnimation();
+                skeletonLayout.setVisibility(View.GONE);
+            }
+            if (scrollViewContent != null) {
+                scrollViewContent.setVisibility(View.VISIBLE);
+            }
         }
+
+        // Actualizar botones de acción según el tipo de perfil (siempre)
+        if (isOwnProfile) {
+            if (ivEditPerfil != null) ivEditPerfil.setVisibility(View.VISIBLE);
+            if (btnMensaje != null) btnMensaje.setVisibility(View.GONE);
+            if (btnFavorito != null) btnFavorito.setVisibility(View.GONE);
+            if (fabReservar != null) fabReservar.setVisibility(View.GONE);
+            if (btnVerGaleria != null) btnVerGaleria.setVisibility(View.GONE);
+        } else if ("DUEÑO".equalsIgnoreCase(currentUserRole)) {
+            if (ivEditPerfil != null) ivEditPerfil.setVisibility(View.GONE);
+            if (btnMensaje != null) btnMensaje.setVisibility(View.VISIBLE);
+            if (btnFavorito != null) btnFavorito.setVisibility(View.VISIBLE);
+            if (fabReservar != null) fabReservar.setVisibility(View.VISIBLE);
+            if (btnVerGaleria != null) btnVerGaleria.setVisibility(View.VISIBLE);
+            // Configurar botón favorito
+            if (currentUserId != null && paseadorId != null) {
+                configurarBotonFavorito(currentUserId, paseadorId);
+            }
+        } else {
+            if (ivEditPerfil != null) ivEditPerfil.setVisibility(View.GONE);
+            if (btnMensaje != null) btnMensaje.setVisibility(View.GONE);
+            if (btnFavorito != null) btnFavorito.setVisibility(View.GONE);
+            if (fabReservar != null) fabReservar.setVisibility(View.GONE);
+            if (btnVerGaleria != null) btnVerGaleria.setVisibility(View.GONE);
+        }
+
         // Stop refresh indicator when content is loaded
         if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
             swipeRefresh.setRefreshing(false);

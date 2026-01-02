@@ -11,11 +11,13 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.mjc.mascotalink.utils.InputUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +35,7 @@ public class QuizActivity extends AppCompatActivity {
     private RadioButton rb1, rb2, rb3, rb4;
     private Button btnNext;
     private ProgressBar progressBar;
+    private NestedScrollView scrollView;
 
     private int index = 0;
     private int totalScore = 0;
@@ -50,7 +53,8 @@ public class QuizActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
 
-        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
 
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
@@ -58,13 +62,14 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestion = findViewById(R.id.tv_question);
         tvProgress = findViewById(R.id.tv_progress);
         progressBar = findViewById(R.id.progress_quiz);
+        scrollView = findViewById(R.id.scroll_view);
         rgOptions = findViewById(R.id.rg_options);
         rb1 = findViewById(R.id.rb1); rb2 = findViewById(R.id.rb2); rb3 = findViewById(R.id.rb3); rb4 = findViewById(R.id.rb4);
         btnNext = findViewById(R.id.btn_next);
 
         showQuestion();
 
-        btnNext.setOnClickListener(v -> {
+        btnNext.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (!validateAnswer()) return;
             if (index < QuestionBank.QUESTIONS.length - 1) {
                 index++;
@@ -72,7 +77,7 @@ public class QuizActivity extends AppCompatActivity {
             } else {
                 finishQuiz();
             }
-        });
+        }));
     }
 
     private void showQuestion() {

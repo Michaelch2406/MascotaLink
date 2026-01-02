@@ -1,186 +1,179 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#F9FAFB"
     tools:context=".QuizActivity">
 
-    <!-- Header / Toolbar -->
+    <!-- AppBar con MaterialToolbar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/abc_ic_ab_back_material"
+            app:navigationIconTint="#111827"
+            app:title="Cuestionario"
+            app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="20dp"
-        android:background="@android:color/transparent">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <ImageView
-            android:id="@+id/iv_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_icon_container"
-            android:contentDescription="Atrás"
-            android:padding="10dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="@color/black" />
+        <!-- Progress Bar -->
+        <ProgressBar
+            android:id="@+id/progress_quiz"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:progressDrawable="@drawable/bg_status_chip"
+            android:progressTint="@color/blue_primary"
+            android:progress="10"
+            android:max="100"/>
 
         <TextView
-            android:layout_width="0dp"
+            android:id="@+id/tv_progress"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="8dp"
+            android:text="Pregunta 1 de 10"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:textAlignment="center"/>
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="Cuestionario"
-            android:textColor="@color/black"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:fillViewport="true">
 
-        <!-- Spacer for centering -->
-        <View
-            android:layout_width="40dp"
-            android:layout_height="40dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
 
-    </LinearLayout>
+                <!-- Question Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="4dp"
+                    app:strokeWidth="0dp">
 
-    <!-- Progress Bar -->
-    <ProgressBar
-        android:id="@+id/progress_quiz"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:progressDrawable="@drawable/bg_status_chip"
-        android:progressTint="@color/blue_primary"
-        android:progress="10"
-        android:max="100"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="24dp">
 
-    <TextView
-        android:id="@+id/tv_progress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="8dp"
-        android:text="Pregunta 1 de 10"
-        android:textColor="@color/text_secondary"
-        android:textSize="12sp"
-        android:textAlignment="center"/>
+                        <TextView
+                            android:id="@+id/tv_question"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="¿Cuál es la pregunta?"
+                            android:textColor="@color/black"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:lineSpacingMultiplier="1.2"/>
 
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
+                <!-- Options -->
+                <RadioGroup
+                    android:id="@+id/rg_options"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Opción 1"
+                        android:textSize="16sp"
+                        android:padding="12dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:buttonTint="@color/blue_primary"/>
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Opción 2"
+                        android:textSize="16sp"
+                        android:padding="12dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:buttonTint="@color/blue_primary"/>
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Opción 3"
+                        android:textSize="16sp"
+                        android:padding="12dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:buttonTint="@color/blue_primary"/>
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb4"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Opción 4"
+                        android:textSize="16sp"
+                        android:padding="12dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_input_rounded"
+                        android:buttonTint="@color/blue_primary"/>
+
+                </RadioGroup>
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Bottom Bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="20dp"
+            android:background="@color/white"
+            android:elevation="8dp">
 
-            <!-- Question Card -->
-            <com.google.android.material.card.MaterialCardView
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_next"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="24dp">
-
-                    <TextView
-                        android:id="@+id/tv_question"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="¿Cuál es la pregunta?"
-                        android:textColor="@color/black"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:lineSpacingMultiplier="1.2"/>
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Options -->
-            <RadioGroup
-                android:id="@+id/rg_options"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <com.google.android.material.radiobutton.MaterialRadioButton
-                    android:id="@+id/rb1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Opción 1"
-                    android:textSize="16sp"
-                    android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@drawable/bg_input_rounded"
-                    android:buttonTint="@color/blue_primary"/>
-
-                <com.google.android.material.radiobutton.MaterialRadioButton
-                    android:id="@+id/rb2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Opción 2"
-                    android:textSize="16sp"
-                    android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@drawable/bg_input_rounded"
-                    android:buttonTint="@color/blue_primary"/>
-
-                <com.google.android.material.radiobutton.MaterialRadioButton
-                    android:id="@+id/rb3"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Opción 3"
-                    android:textSize="16sp"
-                    android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@drawable/bg_input_rounded"
-                    android:buttonTint="@color/blue_primary"/>
-
-                <com.google.android.material.radiobutton.MaterialRadioButton
-                    android:id="@+id/rb4"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Opción 4"
-                    android:textSize="16sp"
-                    android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@drawable/bg_input_rounded"
-                    android:buttonTint="@color/blue_primary"/>
-
-            </RadioGroup>
-
+                android:layout_height="56dp"
+                android:text="Siguiente"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                app:backgroundTint="@color/blue_primary"
+                app:cornerRadius="16dp"
+                app:elevation="4dp"
+                android:stateListAnimator="@animator/fab_press_scale"/>
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
 
-    <!-- Bottom Bar -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="20dp"
-        android:background="@color/white"
-        android:elevation="8dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_next"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Siguiente"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            app:cornerRadius="16dp"
-            app:elevation="4dp"/>
     </LinearLayout>
 
-</LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

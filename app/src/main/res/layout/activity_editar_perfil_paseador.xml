@@ -247,6 +247,7 @@
 
                     <!-- Domicilio -->
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_domicilio"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -256,15 +257,33 @@
                         app:boxCornerRadiusBottomStart="12dp"
                         app:boxCornerRadiusTopEnd="12dp"
                         app:boxCornerRadiusTopStart="12dp"
-                        app:startIconDrawable="@drawable/ic_location"
-                        app:startIconTint="@color/blue_primary">
+                        app:endIconMode="custom"
+                        app:endIconDrawable="@drawable/ic_my_location"
+                        app:endIconTint="@color/blue_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_domicilio"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="textPostalAddress" />
+                            android:focusable="false"
+                            android:clickable="true"/>
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_geolocate"
+                        style="?android:attr/progressBarStyleSmall"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="end"
+                        android:layout_marginTop="-40dp"
+                        android:layout_marginEnd="12dp"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:id="@+id/iv_geolocate"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone"/>
 
                 </LinearLayout>
 

@@ -143,6 +143,7 @@
             android:name=".PaseadorRegistroPaso1Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".DuenoRegistroPaso1Activity"
@@ -194,11 +195,13 @@
             android:name=".PaseadorRegistroPaso4Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PaseadorRegistroPaso5Activity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".QuizActivity"
@@ -214,6 +217,7 @@
             android:name=".MetodoPagoActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".SelfieActivity"
@@ -229,12 +233,14 @@
             android:name=".ZonasServicioActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".DisponibilidadActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
@@ -270,12 +276,14 @@
             android:name=".EditarPerfilPaseadorActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
             android:name=".EditarPerfilDuenoActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
@@ -318,6 +326,7 @@
             android:name=".EditarPerfilMascotaActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
@@ -346,6 +355,7 @@
             android:name="com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
@@ -378,6 +388,7 @@
             android:name=".PaseoEnCursoActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
         <activity
             android:name=".PaseoEnCursoDuenoActivity"
@@ -393,6 +404,7 @@
             android:name=".VerifyEmailActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink" />
 
         <activity
@@ -429,6 +441,7 @@
             android:name=".ResetPasswordActivity"
             android:exported="true"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
