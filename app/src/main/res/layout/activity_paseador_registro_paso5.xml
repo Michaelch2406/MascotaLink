@@ -1,379 +1,602 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
+    android:background="@color/background_light">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material"
-        app:navigationIconTint="#111827"
-        app:title="Configura tu perfil de paseador"
-        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+        app:elevation="0dp">
 
-    <ScrollView
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/abc_ic_ab_back_material"
+            app:navigationIconTint="#111827"
+            app:title="Configuración"
+            app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:layout_above="@+id/bottom_bar"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="24dp">
 
-            <!-- Método de pago -->
-            <LinearLayout
+            <!-- Tarjeta de Método de Pago -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="12dp">
-                <TextView
-                    style="@style/TextAppearance.Mascota.CardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Método de Pago"/>
-                <ImageView
-                    android:id="@+id/iv_pago_check"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="12dp"
-                    android:src="@drawable/abc_btn_check_to_on_mtrl_015"
-                    app:tint="@color/colorSuccess"
-                    android:visibility="gone"/>
-            </LinearLayout>
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Selecciona un método de pago para completar tus transacciones de forma segura."/>
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_metodo_pago"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginTop="8dp"
-                android:text="Ingresar Cuenta Bancaria"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                app:strokeColor="#CBD5E1"
-                app:strokeWidth="1dp"/>
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
 
-            <!-- Video de presentación -->
-            <TextView
-                style="@style/TextAppearance.Mascota.CardTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Video de presentación"/>
-            
-            <!-- Estado Vacío: Descripción y Botones -->
-            <LinearLayout
-                android:id="@+id/layout_video_empty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="visible">
-
-                <TextView
-                    style="@style/TextAppearance.Mascota.BodyMuted"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Graba un video corto (30–60 segundos) para que los dueños te conozcan mejor."/>
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Header con icono -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#E3F2FD">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_payment"
+                                android:layout_gravity="center"
+                                app:tint="@color/blue_primary"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Método de Pago"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Para recibir tus pagos de forma segura"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/iv_pago_check"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/abc_btn_check_to_on_mtrl_015"
+                            app:tint="@color/green_success"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Selecciona un método de pago para completar tus transacciones de forma segura"
+                        android:textSize="14sp"
+                        android:textColor="@color/gray_text"
+                        android:layout_marginBottom="16dp"/>
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_subir_video"
+                        android:id="@+id/btn_metodo_pago"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Ingresar Cuenta Bancaria"
+                        android:textAllCaps="false"
+                        android:textStyle="bold"
                         style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Subir video"
-                        app:icon="@android:drawable/ic_menu_upload" />
-
-                    <View
-                        android:layout_width="16dp"
-                        android:layout_height="0dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_grabar_video"
-                        style="@style/Widget.Mascota.PrimaryPillButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Grabar video"
-                        app:icon="@android:drawable/ic_menu_camera" />
+                        app:strokeColor="@color/blue_primary"
+                        app:strokeWidth="2dp"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_add"
+                        app:iconGravity="start"
+                        app:iconTint="@color/blue_primary"
+                        android:textColor="@color/blue_primary"/>
 
                 </LinearLayout>
-            </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-            <!-- Estado Lleno: Preview de Video -->
-            <FrameLayout
-                android:id="@+id/video_preview_container"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="8dp"
-                android:visibility="gone">
-
-                <ImageView
-                    android:id="@+id/video_thumbnail"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:background="#E0E0E0"/>
-
-                <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_gravity="center"
-                    android:src="@android:drawable/ic_media_play"
-                    app:tint="@android:color/white"/>
-
-                <FrameLayout
-                    android:id="@+id/btn_eliminar_video"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_gravity="top|end"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/bg_circle_soft"
-                    android:backgroundTint="#CCFFFFFF">
-                    
-                    <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_close"
-                        app:tint="@color/red_error" />
-                </FrameLayout>
-
-            </FrameLayout>
-
-            <!-- Zona de servicio -->
-            <LinearLayout
+            <!-- Tarjeta de Video de Presentación -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="20dp">
-                <TextView
-                    style="@style/TextAppearance.Mascota.CardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Zona de servicio"/>
-                <ImageView
-                    android:id="@+id/iv_zonas_check"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="8dp"
-                    android:src="@drawable/ic_check_circle"
-                    app:tint="@color/green_success"
-                    android:visibility="gone"/>
-            </LinearLayout>
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Define las áreas donde ofreces tus servicios de paseo."/>
-            <LinearLayout
-                android:id="@+id/row_zonas_servicio"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="12dp"
-                android:background="@android:color/white"
-                android:layout_marginTop="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Configurar Zonas"/>
-                <ImageView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@android:drawable/ic_media_play" />
-            </LinearLayout>
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
 
-            <!-- Disponibilidad -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="20dp">
-                <TextView
-                    style="@style/TextAppearance.Mascota.CardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Disponibilidad"/>
-                <ImageView
-                    android:id="@+id/iv_disponibilidad_check"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="8dp"
-                    android:src="@drawable/ic_check_circle"
-                    app:tint="@color/green_success"
-                    android:visibility="gone"/>
-            </LinearLayout>
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Indica los días y horas en que estás disponible para pasear."/>
-            <LinearLayout
-                android:id="@+id/row_disponibilidad"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="12dp"
-                android:background="@android:color/white"
-                android:layout_marginTop="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Horario"/>
-                <ImageView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@android:drawable/arrow_down_float"/>
-            </LinearLayout>
-
-            <!-- Tipos de perros -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="20dp">
-                <TextView
-                    style="@style/TextAppearance.Mascota.CardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tipos de perros"/>
-                <ImageView
-                    android:id="@+id/iv_perros_check"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="8dp"
-                    android:src="@drawable/ic_check_circle"
-                    app:tint="@color/green_success"
-                    android:visibility="gone"/>
-            </LinearLayout>
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Especifica los tamaños y temperamentos de perros que puedes manejar."/>
-            <LinearLayout
-                android:id="@+id/row_tipos_perros"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="12dp"
-                android:background="@android:color/white"
-                android:layout_marginTop="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Tamaño y temperamento"/>
-                <ImageView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@android:drawable/arrow_down_float"/>
-            </LinearLayout>
-
-            <!-- Precio por hora -->
-            <TextView
-                style="@style/TextAppearance.Mascota.CardTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Precio por hora"/>
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Establece la tarifa que cobrarás por cada hora de paseo."/>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_precio_hora"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:boxBackgroundColor="@android:color/white"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp"
-                app:hintEnabled="false">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_precio_hora"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Ej: 10.50"
-                    android:inputType="numberDecimal"
-                    android:paddingStart="16dp"
-                    android:paddingTop="12dp"
-                    android:paddingEnd="16dp"
-                    android:paddingBottom="12dp"
-                    android:background="@drawable/edit_text_background"/>
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
+                    <!-- Header con icono -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
 
-            <View
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#E8F5E9">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_video"
+                                android:layout_gravity="center"
+                                app:tint="@color/green_success"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Video de Presentación"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Comparte un video corto sobre ti"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Estado Vacío: Descripción y Botones -->
+                    <LinearLayout
+                        android:id="@+id/layout_video_empty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="visible">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Graba un video corto (30–60 segundos) para que los dueños te conozcan mejor"
+                            android:textSize="14sp"
+                            android:textColor="@color/gray_text"
+                            android:layout_marginBottom="16dp"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_subir_video"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1"
+                                android:text="Galería"
+                                android:textAllCaps="false"
+                                android:textStyle="bold"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                app:strokeColor="@color/green_success"
+                                app:strokeWidth="2dp"
+                                app:cornerRadius="12dp"
+                                app:icon="@drawable/ic_gallery"
+                                app:iconGravity="start"
+                                app:iconTint="@color/green_success"
+                                android:textColor="@color/green_success"
+                                android:layout_marginEnd="8dp"/>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_grabar_video"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_weight="1"
+                                android:text="Grabar"
+                                android:textColor="@color/white"
+                                android:textStyle="bold"
+                                android:textAllCaps="false"
+                                app:backgroundTint="@color/green_success"
+                                app:cornerRadius="12dp"
+                                app:icon="@drawable/ic_camera"
+                                app:iconGravity="start"
+                                app:iconTint="@color/white"
+                                android:layout_marginStart="8dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Estado Lleno: Preview de Video -->
+                    <RelativeLayout
+                        android:id="@+id/video_preview_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone">
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="200dp"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="0dp">
+
+                            <ImageView
+                                android:id="@+id/video_thumbnail"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:background="#E5EDF1"/>
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_gravity="center"
+                                android:src="@android:drawable/ic_media_play"
+                                app:tint="@android:color/white"/>
+                        </androidx.cardview.widget.CardView>
+
+                        <FrameLayout
+                            android:id="@+id/btn_eliminar_video"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_alignParentEnd="true"
+                            android:layout_margin="12dp"
+                            android:elevation="4dp"
+                            android:background="@drawable/bg_circle_soft"
+                            android:backgroundTint="#FFFFFF"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_close"
+                                app:tint="@color/red_error"/>
+                        </FrameLayout>
+                    </RelativeLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Tarjeta de Configuración de Servicio -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
-                android:layout_height="24dp"/>
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="120dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Header con icono -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#FFF3E0">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_settings"
+                                android:layout_gravity="center"
+                                app:tint="#FF9800"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Configuración de Servicio"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Define tu zona, disponibilidad y tarifas"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Zona de servicio -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Zona de servicio"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/gray_dark"/>
+
+                        <ImageView
+                            android:id="@+id/iv_zonas_check"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_check_circle"
+                            app:tint="@color/green_success"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Define las áreas donde ofreces tus servicios de paseo"
+                        android:textSize="13sp"
+                        android:textColor="@color/gray_text"
+                        android:layout_marginBottom="12dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/row_zonas_servicio"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Configurar Zonas"
+                        android:textAllCaps="false"
+                        android:textStyle="bold"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        app:strokeColor="#CBD5E1"
+                        app:strokeWidth="1dp"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_location"
+                        app:iconGravity="start"
+                        app:iconTint="@color/gray_dark"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="20dp"/>
+
+                    <!-- Disponibilidad -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Disponibilidad"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/gray_dark"/>
+
+                        <ImageView
+                            android:id="@+id/iv_disponibilidad_check"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_check_circle"
+                            app:tint="@color/green_success"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Indica los días y horas en que estás disponible para pasear"
+                        android:textSize="13sp"
+                        android:textColor="@color/gray_text"
+                        android:layout_marginBottom="12dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/row_disponibilidad"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Configurar Horario"
+                        android:textAllCaps="false"
+                        android:textStyle="bold"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        app:strokeColor="#CBD5E1"
+                        app:strokeWidth="1dp"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_schedule"
+                        app:iconGravity="start"
+                        app:iconTint="@color/gray_dark"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="20dp"/>
+
+                    <!-- Tipos de perros -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Tipos de perros"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/gray_dark"/>
+
+                        <ImageView
+                            android:id="@+id/iv_perros_check"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_check_circle"
+                            app:tint="@color/green_success"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Especifica los tamaños y temperamentos de perros que puedes manejar"
+                        android:textSize="13sp"
+                        android:textColor="@color/gray_text"
+                        android:layout_marginBottom="12dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/row_tipos_perros"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Tamaño y Temperamento"
+                        android:textAllCaps="false"
+                        android:textStyle="bold"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        app:strokeColor="#CBD5E1"
+                        app:strokeWidth="1dp"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_pets"
+                        app:iconGravity="start"
+                        app:iconTint="@color/gray_dark"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="20dp"/>
+
+                    <!-- Precio por hora -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Precio por hora"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Establece la tarifa que cobrarás por cada hora de paseo"
+                        android:textSize="13sp"
+                        android:textColor="@color/gray_text"
+                        android:layout_marginBottom="12dp"/>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_precio_hora"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Ej: 10.50"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:prefixText="$"
+                        app:prefixTextColor="@color/gray_dark">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_precio_hora"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-    <LinearLayout
-        android:id="@+id/bottom_bar"
+    <!-- Botón fijo en la parte inferior -->
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_gravity="bottom"
+        app:cardElevation="8dp"
+        app:cardCornerRadius="0dp">
 
-        <TextView
-            android:id="@+id/tv_validation_messages"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:textAlignment="center"
-            android:textColor="@color/colorError"
-            android:visibility="gone"/>
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <Button
-            android:id="@+id/btn_guardar_continuar"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Finalizar Registro"
-            style="@style/Widget.Mascota.PrimaryButton"/>
-    </LinearLayout>
+            <TextView
+                android:id="@+id/tv_validation_messages"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:textAlignment="center"
+                android:textColor="@color/red_error"
+                android:visibility="gone"/>
 
-</RelativeLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_guardar_continuar"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Finalizar Registro"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                app:backgroundTint="@color/blue_primary"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_check"
+                app:iconGravity="end"
+                app:iconTint="@color/white"
+                android:stateListAnimator="@animator/fab_press_scale"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

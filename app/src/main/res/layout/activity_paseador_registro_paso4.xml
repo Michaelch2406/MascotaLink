@@ -1,298 +1,456 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
+    android:background="@color/background_light">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material"
-        app:navigationIconTint="#111827"
-        app:title="Paseos"
-        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+        app:elevation="0dp">
 
-    <ScrollView
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/abc_ic_ab_back_material"
+            app:navigationIconTint="#111827"
+            app:title="Experiencia"
+            app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:layout_above="@+id/bottom_bar"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="24dp">
 
-            <!-- Sección 1: Comparte tu experiencia -->
-            <TextView
-                style="@style/TextAppearance.Mascota.TitleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="Comparte tu experiencia"/>
-
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Muestra tu experiencia con fotos o videos de paseos anteriores. También, completa un cuestionario para demostrar tus conocimientos sobre el cuidado de mascotas."/>
-
-            <!-- Sección Sobre Ti -->
-            <TextView
-                style="@style/TextAppearance.Mascota.Label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Años de experiencia como paseador" />
-
-            <Spinner
-                android:id="@+id/spinner_anos_experiencia"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/spinner_background"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="12dp" />
-
-            <com.google.android.material.textfield.TextInputLayout
+            <!-- Tarjeta de Experiencia -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="¿Cuál es tu motivación?">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_motivacion"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:inputType="textMultiLine"
-                    android:minLines="2" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Sección 2: Galería de paseos -->
-            <TextView
-                style="@style/TextAppearance.Mascota.CardTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Galería de paseos"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp">
-
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1">
-                    <ImageView
-                        android:id="@+id/placeholder_img1"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/galeria_paseos_foto1"
-                        android:scaleType="centerCrop"
-                        android:background="#FFFFFFFF"/>
-                    <ImageView
-                        android:id="@+id/play_icon1"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@android:drawable/ic_media_play"
-                        android:layout_gravity="center"
-                        android:visibility="gone"/>
-                </FrameLayout>
-                <View android:layout_width="8dp" android:layout_height="0dp"/>
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1">
-                    <ImageView
-                        android:id="@+id/placeholder_img2"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/galeria_paseos_foto2"
-                        android:scaleType="centerCrop"
-                        android:background="#FFFFFFFF"/>
-                    <ImageView
-                        android:id="@+id/play_icon2"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@android:drawable/ic_media_play"
-                        android:layout_gravity="center"
-                        android:visibility="gone"/>
-                </FrameLayout>
-                <View android:layout_width="8dp" android:layout_height="0dp"/>
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1">
-                    <ImageView
-                        android:id="@+id/placeholder_img3"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/galeria_paseos_foto3"
-                        android:scaleType="centerCrop"
-                        android:background="#FFFFFFFF"/>
-                    <ImageView
-                        android:id="@+id/play_icon3"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@android:drawable/ic_media_play"
-                        android:layout_gravity="center"
-                        android:visibility="gone"/>
-                </FrameLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_horizontal"
-                android:layout_marginTop="12dp">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_galeria"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Galería"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:textAllCaps="false"
-                    android:textStyle="bold"
-                    android:textColor="#111827"
-                    app:strokeColor="#CBD5E1"
-                    app:strokeWidth="1dp"/>
-
-                <View
-                    android:layout_width="12dp"
-                    android:layout_height="0dp"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_camara"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Cámara"
-                    style="@style/Widget.Mascota.PrimaryPillButton"/>
-            </LinearLayout>
-
-            <!-- Sección 3: Cuestionario -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:layout_marginTop="20dp">
-
-                <TextView
-                    style="@style/TextAppearance.Mascota.CardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Cuestionario de conocimientos"/>
-
-                <ImageView
-                    android:id="@+id/iv_quiz_completed_check"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="20dp"
-                    android:src="@drawable/abc_btn_check_to_on_mtrl_015"
-                    app:tint="@color/colorSuccess"
-                    android:visibility="gone"/>
-            </LinearLayout>
-
-            <TextView
-                style="@style/TextAppearance.Mascota.BodyMuted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Responde a las siguientes preguntas para demostrar tu experiencia y conocimientos sobre el cuidado de mascotas."/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:layout_marginTop="8dp"
-                android:background="#FFFFFF"
-                android:elevation="1dp">
-
-                <ImageView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:src="@android:drawable/ic_menu_edit"
-                    android:contentDescription="icono"
-                    app:tint="#111827" />
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:paddingStart="12dp">
+                    android:padding="20dp">
 
+                    <!-- Header con icono -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#E3F2FD">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_star"
+                                android:layout_gravity="center"
+                                app:tint="@color/blue_primary"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Tu Experiencia"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Cuéntanos sobre tu experiencia"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Años de experiencia -->
                     <TextView
-                        android:id="@+id/tv_quiz_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Cuestionario de conocimientos"
-                        style="@style/TextAppearance.Mascota.Label"/>
+                        android:text="Años de experiencia como paseador"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/gray_dark"
+                        android:layout_marginBottom="8dp"/>
 
-                    <TextView
-                        android:id="@+id/tv_quiz_description"
-                        android:layout_width="wrap_content"
+                    <Spinner
+                        android:id="@+id/spinner_anos_experiencia"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@drawable/spinner_background"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="12dp"/>
+
+                    <!-- Motivación -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_motivacion"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Comportamiento canino, primeros auxilios, manejo de emergencias y normas de seguridad"
-                        style="@style/TextAppearance.Mascota.BodyMuted"/>
+                        android:hint="¿Cuál es tu motivación?"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusTopStart="12dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_motivacion"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="top"
+                            android:inputType="textMultiLine"
+                            android:minLines="3"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
                 </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-                <Button
-                    android:id="@+id/btn_comenzar_quiz"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:text="Comenzar"
-                    style="@style/Widget.Mascota.PrimaryPillButton"/>
-            </LinearLayout>
-
-            <View
+            <!-- Tarjeta de Galería -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
-                android:layout_height="24dp"/>
-        </LinearLayout>
-    </ScrollView>
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
 
-    <LinearLayout
-        android:id="@+id/bottom_bar"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Header con icono -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#E8F5E9">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_gallery"
+                                android:layout_gravity="center"
+                                app:tint="@color/green_success"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Galería de Paseos"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Muestra fotos o videos de tus paseos"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Grid de 3 fotos -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="0dp"
+                            android:layout_height="100dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp">
+                            <ImageView
+                                android:id="@+id/placeholder_img1"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@drawable/galeria_paseos_foto1"
+                                android:scaleType="centerCrop"
+                                android:background="#F3F4F6"/>
+                            <ImageView
+                                android:id="@+id/play_icon1"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:src="@android:drawable/ic_media_play"
+                                android:layout_gravity="center"
+                                android:visibility="gone"/>
+                        </FrameLayout>
+
+                        <FrameLayout
+                            android:layout_width="0dp"
+                            android:layout_height="100dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp">
+                            <ImageView
+                                android:id="@+id/placeholder_img2"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@drawable/galeria_paseos_foto2"
+                                android:scaleType="centerCrop"
+                                android:background="#F3F4F6"/>
+                            <ImageView
+                                android:id="@+id/play_icon2"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:src="@android:drawable/ic_media_play"
+                                android:layout_gravity="center"
+                                android:visibility="gone"/>
+                        </FrameLayout>
+
+                        <FrameLayout
+                            android:layout_width="0dp"
+                            android:layout_height="100dp"
+                            android:layout_weight="1">
+                            <ImageView
+                                android:id="@+id/placeholder_img3"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:src="@drawable/galeria_paseos_foto3"
+                                android:scaleType="centerCrop"
+                                android:background="#F3F4F6"/>
+                            <ImageView
+                                android:id="@+id/play_icon3"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:src="@android:drawable/ic_media_play"
+                                android:layout_gravity="center"
+                                android:visibility="gone"/>
+                        </FrameLayout>
+                    </LinearLayout>
+
+                    <!-- Botones -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_galeria"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:text="Galería"
+                            android:textAllCaps="false"
+                            android:textStyle="bold"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            app:strokeColor="@color/blue_primary"
+                            app:strokeWidth="2dp"
+                            app:cornerRadius="12dp"
+                            app:icon="@drawable/ic_gallery"
+                            app:iconGravity="start"
+                            app:iconTint="@color/blue_primary"
+                            android:textColor="@color/blue_primary"
+                            android:layout_marginEnd="8dp"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_camara"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:text="Cámara"
+                            android:textColor="@color/white"
+                            android:textStyle="bold"
+                            android:textAllCaps="false"
+                            app:backgroundTint="@color/blue_primary"
+                            app:cornerRadius="12dp"
+                            app:icon="@drawable/ic_camera"
+                            app:iconGravity="start"
+                            app:iconTint="@color/white"
+                            android:layout_marginStart="8dp"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Tarjeta de Cuestionario -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="120dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Header con icono -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#FFF3E0">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_quiz"
+                                android:layout_gravity="center"
+                                app:tint="#FF9800"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Cuestionario"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Demuestra tus conocimientos"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+
+                        <ImageView
+                            android:id="@+id/iv_quiz_completed_check"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/abc_btn_check_to_on_mtrl_015"
+                            app:tint="@color/green_success"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Responde preguntas sobre comportamiento canino, primeros auxilios y normas de seguridad"
+                        android:textSize="14sp"
+                        android:textColor="@color/gray_text"
+                        android:layout_marginBottom="16dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_comenzar_quiz"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Comenzar Cuestionario"
+                        android:textColor="@color/white"
+                        android:textStyle="bold"
+                        android:textAllCaps="false"
+                        app:backgroundTint="#FF9800"
+                        app:cornerRadius="12dp"
+                        app:icon="@drawable/ic_arrow_forward"
+                        app:iconGravity="end"
+                        app:iconTint="@color/white"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Botón fijo en la parte inferior -->
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_gravity="bottom"
+        app:cardElevation="8dp"
+        app:cardCornerRadius="0dp">
 
-        <TextView
-            android:id="@+id/tv_validation_messages"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:textAlignment="center"
-            android:textColor="@color/colorError"
-            android:visibility="gone"/>
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <Button
-            android:id="@+id/btn_guardar_continuar"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Guardar y continuar"
-            style="@style/Widget.Mascota.PrimaryButton"/>
-    </LinearLayout>
+            <TextView
+                android:id="@+id/tv_validation_messages"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:textAlignment="center"
+                android:textColor="@color/red_error"
+                android:visibility="gone"/>
 
-</RelativeLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_guardar_continuar"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Guardar y Continuar"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                app:backgroundTint="@color/blue_primary"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_arrow_forward"
+                app:iconGravity="end"
+                app:iconTint="@color/white"
+                android:stateListAnimator="@animator/fab_press_scale"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

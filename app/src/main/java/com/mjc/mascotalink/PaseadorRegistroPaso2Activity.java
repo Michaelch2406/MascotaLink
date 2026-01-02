@@ -15,6 +15,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.bumptech.glide.Glide;
@@ -29,14 +30,15 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private static final String PREFS = "WizardPaseador";
 
+    private NestedScrollView scrollView;
     private ImageView previewFotoPerfil;
     private ImageView previewSelfie;
     private Button btnContinuarPaso3;
     private TextView tvValidationMessages;
     private Uri selfieUri;
     private Uri fotoPerfilUri;
-    private View layoutSelfieEmpty;
-    private View layoutFotoPerfilEmpty;
+    private View cardSelfieplaceholder;
+    private Button btnTomarSelfie;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -47,6 +49,7 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         // Vistas
+        scrollView = findViewById(R.id.scroll_view);
         previewFotoPerfil = findViewById(R.id.preview_foto_perfil);
         previewSelfie = findViewById(R.id.preview_selfie);
         btnContinuarPaso3 = findViewById(R.id.btn_continuar_paso3);
@@ -55,12 +58,12 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
         View btnEliminarFotoPerfil = findViewById(R.id.btn_eliminar_foto_perfil);
         Button btnElegirFoto = findViewById(R.id.btn_elegir_foto);
         Button btnTomarFoto = findViewById(R.id.btn_tomar_foto);
-        
-        layoutSelfieEmpty = findViewById(R.id.layout_selfie_empty);
-        layoutFotoPerfilEmpty = findViewById(R.id.layout_foto_perfil_empty);
+        btnTomarSelfie = findViewById(R.id.btn_tomar_selfie);
+        cardSelfieplaceholder = findViewById(R.id.card_selfie_placeholder);
 
         // Listeners con SafeClickListener para prevenir doble-click
         findViewById(R.id.img_selfie_ilustracion).setOnClickListener(v -> activarCamaraSelfie());
+        btnTomarSelfie.setOnClickListener(v -> activarCamaraSelfie());
         btnElegirFoto.setOnClickListener(v -> elegirFotoPerfil());
         btnTomarFoto.setOnClickListener(v -> tomarFotoPerfil());
         btnEliminarSelfie.setOnClickListener(v -> eliminarSelfie());
@@ -237,7 +240,8 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 .diskCacheStrategy(DiskCacheStrategy.NONE)
                 .skipMemoryCache(false)
                 .into(previewSelfie);
-            layoutSelfieEmpty.setVisibility(View.GONE);
+            cardSelfieplaceholder.setVisibility(View.GONE);
+            btnTomarSelfie.setVisibility(View.GONE);
             findViewById(R.id.container_preview_selfie).setVisibility(View.VISIBLE);
         } catch (Exception e) {
             Toast.makeText(this, "No se pudo mostrar la preview de la selfie.", Toast.LENGTH_SHORT).show();
@@ -251,7 +255,6 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
                 .diskCacheStrategy(DiskCacheStrategy.NONE)
                 .skipMemoryCache(false)
                 .into(previewFotoPerfil);
-            layoutFotoPerfilEmpty.setVisibility(View.GONE);
             findViewById(R.id.container_preview_foto_perfil).setVisibility(View.VISIBLE);
         } catch (Exception e) {
             Toast.makeText(this, "No se pudo mostrar la preview de la foto.", Toast.LENGTH_SHORT).show();
@@ -260,7 +263,8 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private void eliminarSelfie() {
         selfieUri = null;
-        layoutSelfieEmpty.setVisibility(View.VISIBLE);
+        cardSelfieplaceholder.setVisibility(View.VISIBLE);
+        btnTomarSelfie.setVisibility(View.VISIBLE);
         findViewById(R.id.container_preview_selfie).setVisibility(View.GONE);
         saveState();
         verificarCompletitudPaso2();
@@ -268,7 +272,6 @@ public class PaseadorRegistroPaso2Activity extends AppCompatActivity {
 
     private void eliminarFotoPerfil() {
         fotoPerfilUri = null;
-        layoutFotoPerfilEmpty.setVisibility(View.VISIBLE);
         findViewById(R.id.container_preview_foto_perfil).setVisibility(View.GONE);
         saveState();
         verificarCompletitudPaso2();

@@ -1,272 +1,376 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7FAFC">
+    android:background="@color/background_light">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/abc_ic_ab_back_material"
-        app:navigationIconTint="#111827"
-        app:title="Verificación de identidad"
-        app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+        app:elevation="0dp">
 
-    <ScrollView
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/abc_ic_ab_back_material"
+            app:navigationIconTint="#111827"
+            app:title="Verificación de identidad"
+            app:titleTextAppearance="@style/TextAppearance.Mascota.ToolbarTitle"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/toolbar"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_above="@+id/bottom_bar">
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingTop="8dp">
+            android:padding="24dp">
 
-            <!-- ================= SECCIÓN SELFIE ================= -->
-            <TextView
-                android:id="@+id/tv_selfie_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.TitleLarge"
-                android:layout_marginTop="12dp"
-                android:textColor="#111827"
-                android:text="Toma una selfie de verificación"/>
-
-            <!-- Estado Vacío: Instrucciones e Ilustración -->
-            <LinearLayout
-                android:id="@+id/layout_selfie_empty"
+            <!-- Tarjeta de Selfie de Verificación -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="visible">
-
-                <TextView
-                    android:id="@+id/tv_selfie_desc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    style="@style/TextAppearance.Mascota.BodyMuted"
-                    android:layout_marginTop="6dp"
-                    android:textColor="#6B7280"
-                    android:text="Para completar la verificación, toma una selfie en tiempo real. Asegúrate de que tu rostro sea visible y que la foto sea clara."/>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    app:cardCornerRadius="12dp"
-                    app:cardUseCompatPadding="true"
-                    android:backgroundTint="#FFFFFF">
-
-                    <ImageView
-                        android:id="@+id/img_selfie_ilustracion"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:src="@drawable/selfie"
-                        android:adjustViewBounds="true"
-                        android:contentDescription="Ilustración selfie"
-                        android:clickable="true"
-                        android:focusable="true"/>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-            
-            <!-- Estado Lleno: Preview de selfie capturada -->
-            <RelativeLayout
-                android:id="@+id/container_preview_selfie"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:visibility="gone">
-                
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="2dp">
-                    
-                    <ImageView
-                        android:id="@+id/preview_selfie"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:scaleType="centerCrop"
-                        android:background="#E5EDF1"
-                        android:contentDescription="Preview selfie capturada"/>
-                </com.google.android.material.card.MaterialCardView>
-                    
-                <FrameLayout
-                    android:id="@+id/btn_eliminar_selfie"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_margin="12dp"
-                    android:elevation="4dp"
-                    android:background="@drawable/bg_circle_soft"
-                    android:backgroundTint="#CCFFFFFF">
-                    
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_close"
-                        app:tint="@color/red_error" />
-                </FrameLayout>
-            </RelativeLayout>
-
-            <!-- ================= SECCIÓN FOTO DE PERFIL ================= -->
-            <TextView
-                android:id="@+id/tv_fotoperfil_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.Mascota.CardTitle"
-                android:layout_marginTop="24dp"
-                android:textColor="#111827"
-                android:text="Foto de perfil"/>
-
-            <!-- Estado Vacío: Instrucciones y Botones -->
-            <LinearLayout
-                android:id="@+id/layout_foto_perfil_empty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="visible">
-
-                <TextView
-                    android:id="@+id/tv_fotoperfil_desc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    style="@style/TextAppearance.Mascota.BodyMuted"
-                    android:layout_marginTop="6dp"
-                    android:textColor="#6B7280"
-                    android:text="Elige una foto de perfil clara para que las demás personas puedan reconocerte."/>
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_horizontal"
-                    android:layout_marginTop="12dp">
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
+                    <!-- Header con icono -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#E3F2FD">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_camera"
+                                android:layout_gravity="center"
+                                app:tint="@color/blue_primary"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Selfie de Verificación"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Requerido para verificar tu identidad"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Contenedor de preview o placeholder -->
+                    <RelativeLayout
+                        android:id="@+id/container_preview_selfie"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="gone">
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="0dp">
+
+                            <ImageView
+                                android:id="@+id/preview_selfie"
+                                android:layout_width="match_parent"
+                                android:layout_height="240dp"
+                                android:scaleType="centerCrop"
+                                android:contentDescription="Preview selfie"/>
+                        </androidx.cardview.widget.CardView>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_eliminar_selfie"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:layout_alignParentEnd="true"
+                            android:layout_margin="12dp"
+                            android:text="Eliminar"
+                            android:textSize="12sp"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            app:backgroundTint="@color/red_error"
+                            app:cornerRadius="8dp"
+                            app:icon="@drawable/ic_close"
+                            app:iconGravity="textStart"
+                            app:iconSize="16dp"
+                            app:iconTint="@color/white"/>
+                    </RelativeLayout>
+
+                    <!-- Ilustración cuando no hay selfie -->
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/card_selfie_placeholder"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="2dp"
+                        app:strokeColor="@color/blue_primary">
+
+                        <ImageView
+                            android:id="@+id/img_selfie_ilustracion"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/selfie"
+                            android:adjustViewBounds="true"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:contentDescription="Toca para tomar selfie"/>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Botón de tomar selfie -->
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_elegir_foto"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:text="Galería"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        app:icon="@android:drawable/ic_menu_gallery"
-                        app:iconTint="#111827"
-                        android:textAllCaps="false"
+                        android:id="@+id/btn_tomar_selfie"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="Tomar Selfie"
+                        android:textColor="@color/white"
                         android:textStyle="bold"
-                        android:textColor="#111827"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/blue_primary"
                         app:cornerRadius="12dp"
-                        app:strokeColor="#CBD5E1"
-                        app:strokeWidth="1dp"/>
-
-                    <View
-                        android:layout_width="12dp"
-                        android:layout_height="0dp"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_tomar_foto"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:text="Cámara"
-                        app:icon="@android:drawable/ic_menu_camera"
-                        style="@style/Widget.Mascota.PrimaryPillButton"
-                        app:cornerRadius="12dp"/>
+                        app:icon="@drawable/ic_camera"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/white"
+                        android:stateListAnimator="@animator/fab_press_scale"/>
 
                 </LinearLayout>
-            </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-            <!-- Estado Lleno: Preview Foto Perfil -->
-            <RelativeLayout
-                android:id="@+id/container_preview_foto_perfil"
+            <!-- Tarjeta de Foto de Perfil -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:visibility="gone">
-                
-                <com.google.android.material.card.MaterialCardView
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white"
+                android:layout_marginBottom="120dp">
+
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="2dp">
-                
-                    <ImageView
-                        android:id="@+id/preview_foto_perfil"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Header con icono -->
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:scaleType="centerCrop"
-                        android:background="#E5EDF1"
-                        android:contentDescription="Preview foto de perfil"/>
-                </com.google.android.material.card.MaterialCardView>
-                    
-                <FrameLayout
-                    android:id="@+id/btn_eliminar_foto_perfil"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_margin="12dp"
-                    android:elevation="4dp"
-                    android:background="@drawable/bg_circle_soft"
-                    android:backgroundTint="#CCFFFFFF">
-                    
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_close"
-                        app:tint="@color/red_error" />
-                </FrameLayout>
-            </RelativeLayout>
-            
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="80dp"/>
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_avatar_circle"
+                            android:backgroundTint="#E8F5E9">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_user_placeholder"
+                                android:layout_gravity="center"
+                                app:tint="@color/green_success"/>
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Foto de Perfil"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/gray_dark"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Para que otros te reconozcan"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_text"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Contenedor de preview -->
+                    <RelativeLayout
+                        android:id="@+id/container_preview_foto_perfil"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="gone">
+
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="0dp">
+
+                            <ImageView
+                                android:id="@+id/preview_foto_perfil"
+                                android:layout_width="match_parent"
+                                android:layout_height="240dp"
+                                android:scaleType="centerCrop"
+                                android:contentDescription="Preview foto de perfil"/>
+                        </androidx.cardview.widget.CardView>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_eliminar_foto_perfil"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:layout_alignParentEnd="true"
+                            android:layout_margin="12dp"
+                            android:text="Eliminar"
+                            android:textSize="12sp"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            app:backgroundTint="@color/red_error"
+                            app:cornerRadius="8dp"
+                            app:icon="@drawable/ic_close"
+                            app:iconGravity="textStart"
+                            app:iconSize="16dp"
+                            app:iconTint="@color/white"/>
+                    </RelativeLayout>
+
+                    <!-- Botones de foto de perfil -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:weightSum="2">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_elegir_foto"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:text="Galería"
+                            android:textAllCaps="false"
+                            android:textStyle="bold"
+                            android:textColor="@color/blue_primary"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            app:strokeColor="@color/blue_primary"
+                            app:strokeWidth="2dp"
+                            app:cornerRadius="12dp"
+                            app:icon="@drawable/ic_gallery"
+                            app:iconGravity="textStart"
+                            app:iconTint="@color/blue_primary"
+                            android:stateListAnimator="@animator/fab_press_scale"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_tomar_foto"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="Cámara"
+                            android:textAllCaps="false"
+                            android:textStyle="bold"
+                            android:textColor="@color/white"
+                            app:backgroundTint="@color/green_success"
+                            app:cornerRadius="12dp"
+                            app:icon="@drawable/ic_camera"
+                            app:iconGravity="textStart"
+                            app:iconTint="@color/white"
+                            android:stateListAnimator="@animator/fab_press_scale"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-    <LinearLayout
-        android:id="@+id/bottom_bar"
+    <!-- Botón fijo en la parte inferior con mensaje de validación -->
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:padding="16dp"
-        android:background="#F7FAFC"
-        android:orientation="vertical">
-        
-        <!-- Mensajes de validación -->
-        <TextView
-            android:id="@+id/tv_validation_messages"
+        android:layout_gravity="bottom"
+        app:cardElevation="8dp"
+        app:cardCornerRadius="0dp">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:textAlignment="center"
-            android:textColor="@color/colorError"
-            android:visibility="gone"
-            android:text="Faltan campos por completar"/>
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <!-- Botón para continuar al paso 3 -->
-        <Button
-            android:id="@+id/btn_continuar_paso3"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Continuar al Paso 3"
-            android:visibility="gone"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:cornerRadius="16dp"
-            style="@style/Widget.Mascota.PrimaryButton"/>
+            <!-- Mensaje de validación -->
+            <TextView
+                android:id="@+id/tv_validation_messages"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:textAlignment="center"
+                android:textColor="@color/colorError"
+                android:textSize="13sp"
+                android:visibility="gone"/>
 
-    </LinearLayout>
+            <!-- Botón continuar -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_continuar_paso3"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Continuar"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:visibility="gone"
+                app:backgroundTint="@color/blue_primary"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_arrow_forward"
+                app:iconGravity="end"
+                app:iconTint="@color/white"
+                android:stateListAnimator="@animator/fab_press_scale"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-</RelativeLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

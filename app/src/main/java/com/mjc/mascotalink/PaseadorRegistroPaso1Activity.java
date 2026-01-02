@@ -17,12 +17,12 @@ import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.View;
+import android.text.InputFilter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,6 +33,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.NestedScrollView;
 
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -62,8 +63,9 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     private static final String PREFS = "WizardPaseador";
     private static final long DEBOUNCE_DELAY_MS = 500;
 
+    private NestedScrollView scrollView;
+    private TextInputLayout tilNombre, tilApellido, tilCedula, tilFechaNacimiento, tilDomicilio, tilTelefono, tilEmail, tilPassword;
     private EditText etNombre, etApellido, etCedula, etFechaNac, etDomicilio, etTelefono, etEmail, etPassword;
-    private TextInputLayout tilPassword;
     private CheckBox cbAceptaTerminos;
     private Button btnContinuar;
     private ImageView ivGeolocate;
@@ -103,6 +105,17 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void bindViews() {
+        scrollView = findViewById(R.id.scroll);
+
+        tilNombre = findViewById(R.id.til_nombre);
+        tilApellido = findViewById(R.id.til_apellido);
+        tilCedula = findViewById(R.id.til_cedula);
+        tilFechaNacimiento = findViewById(R.id.til_fecha_nacimiento);
+        tilDomicilio = findViewById(R.id.til_domicilio);
+        tilTelefono = findViewById(R.id.til_telefono);
+        tilEmail = findViewById(R.id.til_email);
+        tilPassword = findViewById(R.id.til_password);
+
         etNombre = findViewById(R.id.et_nombre);
         etApellido = findViewById(R.id.et_apellido);
         etCedula = findViewById(R.id.et_cedula);
@@ -111,11 +124,29 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         etTelefono = findViewById(R.id.et_telefono);
         etEmail = findViewById(R.id.et_email);
         etPassword = findViewById(R.id.et_password);
-        tilPassword = findViewById(R.id.til_password);
+
         cbAceptaTerminos = findViewById(R.id.cb_acepta_terminos);
         btnContinuar = findViewById(R.id.btn_continuar);
         ivGeolocate = findViewById(R.id.iv_geolocate);
         pbGeolocate = findViewById(R.id.pb_geolocate);
+
+        setupInputFilters();
+    }
+
+    private void setupInputFilters() {
+        // InputFilter para nombres - solo letras y espacios
+        InputFilter letterFilter = (source, start, end, dest, dstart, dend) -> {
+            for (int i = start; i < end; i++) {
+                char c = source.charAt(i);
+                if (!Character.isLetter(c) && !Character.isSpaceChar(c)) {
+                    return "";
+                }
+            }
+            return null;
+        };
+
+        etNombre.setFilters(new InputFilter[]{letterFilter, new InputFilter.LengthFilter(50)});
+        etApellido.setFilters(new InputFilter[]{letterFilter, new InputFilter.LengthFilter(50)});
     }
 
     private void setupListeners() {
@@ -123,7 +154,9 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         btnContinuar.setOnClickListener(InputUtils.createSafeClickListener(v -> onContinuar()));
         etFechaNac.setOnClickListener(v -> openDatePicker());
         etDomicilio.setOnClickListener(v -> launchAutocomplete());
-        ivGeolocate.setOnClickListener(v -> onGeolocateClick());
+
+        // Click en el endIcon de domicilio para geolocalizar
+        tilDomicilio.setEndIconOnClickListener(v -> onGeolocateClick());
 
         findViewById(R.id.tv_login_link).setOnClickListener(v -> {
             startActivity(new Intent(this, LoginActivity.class));
@@ -296,8 +329,7 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
 
     private void onContinuar() {
         // Rate limiting ya integrado en SafeClickListener
-        if (!validarCamposPantalla1()) {
-            Toast.makeText(this, "Por favor corrige los errores antes de continuar", Toast.LENGTH_SHORT).show();
+        if (!validarCamposDetallado()) {
             return;
         }
 
@@ -359,6 +391,144 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
         if (!InputUtils.isValidPassword(etPassword.getText().toString())) return false;
         if (!cbAceptaTerminos.isChecked()) return false;
         return true;
+    }
+
+    private boolean validarCamposDetallado() {
+        boolean isValid = true;
+        View firstErrorView = null;
+
+        // Validar nombre
+        String nombre = etNombre.getText().toString().trim();
+        if (nombre.isEmpty()) {
+            tilNombre.setError("El nombre no puede estar vacío");
+            if (firstErrorView == null) firstErrorView = tilNombre;
+            isValid = false;
+        } else if (!InputUtils.isValidName(nombre, 2, 50)) {
+            tilNombre.setError("Nombre inválido (solo letras, 2-50 caracteres)");
+            if (firstErrorView == null) firstErrorView = tilNombre;
+            isValid = false;
+        } else {
+            tilNombre.setError(null);
+        }
+
+        // Validar apellido
+        String apellido = etApellido.getText().toString().trim();
+        if (apellido.isEmpty()) {
+            tilApellido.setError("El apellido no puede estar vacío");
+            if (firstErrorView == null) firstErrorView = tilApellido;
+            isValid = false;
+        } else if (!InputUtils.isValidName(apellido, 2, 50)) {
+            tilApellido.setError("Apellido inválido (solo letras, 2-50 caracteres)");
+            if (firstErrorView == null) firstErrorView = tilApellido;
+            isValid = false;
+        } else {
+            tilApellido.setError(null);
+        }
+
+        // Validar cédula
+        String cedula = etCedula.getText().toString().trim();
+        if (cedula.isEmpty()) {
+            tilCedula.setError("La cédula no puede estar vacía");
+            if (firstErrorView == null) firstErrorView = tilCedula;
+            isValid = false;
+        } else if (!InputUtils.isValidCedulaEcuador(cedula)) {
+            tilCedula.setError("Cédula inválida (10 dígitos válidos)");
+            if (firstErrorView == null) firstErrorView = tilCedula;
+            isValid = false;
+        } else {
+            tilCedula.setError(null);
+        }
+
+        // Validar fecha de nacimiento
+        String fechaStr = etFechaNac.getText().toString().trim();
+        if (fechaStr.isEmpty()) {
+            tilFechaNacimiento.setError("Selecciona tu fecha de nacimiento");
+            if (firstErrorView == null) firstErrorView = tilFechaNacimiento;
+            isValid = false;
+        } else {
+            Date fecha = parseFecha(fechaStr);
+            if (fecha == null || !validarEdad(fecha)) {
+                tilFechaNacimiento.setError("Debes ser mayor de 18 años");
+                if (firstErrorView == null) firstErrorView = tilFechaNacimiento;
+                isValid = false;
+            } else {
+                tilFechaNacimiento.setError(null);
+            }
+        }
+
+        // Validar domicilio
+        if (domicilio == null || domicilio.trim().isEmpty()) {
+            tilDomicilio.setError("Ingresa tu domicilio");
+            if (firstErrorView == null) firstErrorView = tilDomicilio;
+            isValid = false;
+        } else {
+            tilDomicilio.setError(null);
+        }
+
+        // Validar teléfono
+        String telefono = etTelefono.getText().toString().trim();
+        if (telefono.isEmpty()) {
+            tilTelefono.setError("El teléfono no puede estar vacío");
+            if (firstErrorView == null) firstErrorView = tilTelefono;
+            isValid = false;
+        } else if (!InputUtils.isValidTelefonoEcuador(telefono)) {
+            tilTelefono.setError("Teléfono inválido (10 dígitos)");
+            if (firstErrorView == null) firstErrorView = tilTelefono;
+            isValid = false;
+        } else {
+            tilTelefono.setError(null);
+        }
+
+        // Validar email
+        String email = etEmail.getText().toString().trim();
+        if (email.isEmpty()) {
+            tilEmail.setError("El email no puede estar vacío");
+            if (firstErrorView == null) firstErrorView = tilEmail;
+            isValid = false;
+        } else if (!InputUtils.isValidEmail(email)) {
+            tilEmail.setError("Email inválido");
+            if (firstErrorView == null) firstErrorView = tilEmail;
+            isValid = false;
+        } else {
+            tilEmail.setError(null);
+        }
+
+        // Validar contraseña
+        String password = etPassword.getText().toString().trim();
+        if (password.isEmpty()) {
+            tilPassword.setError("La contraseña no puede estar vacía");
+            if (firstErrorView == null) firstErrorView = tilPassword;
+            isValid = false;
+        } else if (!InputUtils.isValidPassword(password)) {
+            tilPassword.setError("Contraseña inválida (mínimo 6 caracteres)");
+            if (firstErrorView == null) firstErrorView = tilPassword;
+            isValid = false;
+        } else {
+            tilPassword.setError(null);
+        }
+
+        // Validar términos
+        if (!cbAceptaTerminos.isChecked()) {
+            Toast.makeText(this, "Debes aceptar los términos y condiciones", Toast.LENGTH_SHORT).show();
+            isValid = false;
+        }
+
+        // Scroll al primer error
+        if (!isValid && firstErrorView != null) {
+            scrollToView(firstErrorView);
+        }
+
+        return isValid;
+    }
+
+    private void scrollToView(View view) {
+        if (scrollView != null && view != null) {
+            scrollView.post(() -> {
+                int scrollY = view.getTop() - 100;
+                scrollView.smoothScrollTo(0, scrollY);
+                view.requestFocus();
+            });
+        }
     }
 
     private boolean validarEdad(Date nacimiento) {

@@ -20,10 +20,13 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.utils.InputUtils;
 
@@ -42,10 +45,12 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
     private static final String DEBOUNCE_KEY = "paso4_save";
 
     private final ArrayList<Uri> localUris = new ArrayList<>();
+    private NestedScrollView scrollView;
     private ImageView img1, img2, img3;
     private ImageView ivQuizCompletedCheck;
     private Spinner spinnerAnosExperiencia;
-    private EditText etMotivacion;
+    private TextInputLayout tilMotivacion;
+    private TextInputEditText etMotivacion;
     private Button btnQuiz, btnGuardar;
     private TextView tvValidationMessages;
 
@@ -81,6 +86,7 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
+        scrollView = findViewById(R.id.scroll_view);
         img1 = findViewById(R.id.placeholder_img1);
         img2 = findViewById(R.id.placeholder_img2);
         img3 = findViewById(R.id.placeholder_img3);
@@ -89,6 +95,7 @@ public class PaseadorRegistroPaso4Activity extends AppCompatActivity {
         btnGuardar = findViewById(R.id.btn_guardar_continuar);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
         spinnerAnosExperiencia = findViewById(R.id.spinner_anos_experiencia);
+        tilMotivacion = findViewById(R.id.til_motivacion);
         etMotivacion = findViewById(R.id.et_motivacion);
 
         // Configurar el adapter del spinner

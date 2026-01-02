@@ -23,12 +23,14 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -65,9 +67,11 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseStorage storage;
 
+    private NestedScrollView scrollView;
     private Button btnGuardar;
     private TextView tvValidationMessages;
     private ImageView ivPagoCheck, ivDisponibilidadCheck, ivPerrosCheck, ivZonasCheck;
+    private TextInputLayout tilPrecioHora;
     private TextInputEditText etPrecioHora;
     private View layoutVideoEmpty;
 
@@ -115,12 +119,14 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
+        scrollView = findViewById(R.id.scroll_view);
         btnGuardar = findViewById(R.id.btn_guardar_continuar);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
         ivPagoCheck = findViewById(R.id.iv_pago_check);
         ivDisponibilidadCheck = findViewById(R.id.iv_disponibilidad_check);
         ivPerrosCheck = findViewById(R.id.iv_perros_check);
         ivZonasCheck = findViewById(R.id.iv_zonas_check);
+        tilPrecioHora = findViewById(R.id.til_precio_hora);
         etPrecioHora = findViewById(R.id.et_precio_hora);
         layoutVideoEmpty = findViewById(R.id.layout_video_empty);
     }

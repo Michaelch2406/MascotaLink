@@ -17,6 +17,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -31,6 +32,7 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
 
     private static final String PREFS = "WizardPaseador";
 
+    private NestedScrollView scrollView;
     private TextView tvValidationMessages;
     private Button btnContinuarPaso4;
 
@@ -56,6 +58,7 @@ public class PaseadorRegistroPaso3Activity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         // Vistas
+        scrollView = findViewById(R.id.scroll_view);
         tvValidationMessages = findViewById(R.id.tv_validation_messages);
         btnContinuarPaso4 = findViewById(R.id.btn_enviar_verificacion); // ID del XML
 
