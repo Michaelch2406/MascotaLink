@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/white"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Custom Toolbar Skeleton -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/white"
+        app:cardCornerRadius="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:orientation="horizontal">
+
+            <!-- Botón Atrás Skeleton -->
+            <View
+                android:id="@+id/skeleton_btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_skeleton_circle"/>
+
+            <!-- Avatar Skeleton -->
+            <View
+                android:id="@+id/skeleton_avatar_chat"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_skeleton_circle"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <!-- Nombre Skeleton -->
+                <View
+                    android:id="@+id/skeleton_nombre_chat"
+                    android:layout_width="140dp"
+                    android:layout_height="16dp"
+                    android:background="@drawable/bg_skeleton_rounded"/>
+
+                <!-- Estado Skeleton -->
+                <View
+                    android:id="@+id/skeleton_estado_chat"
+                    android:layout_width="80dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_skeleton_rounded"/>
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Chat Area Skeleton -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/skeleton_recycler_mensajes"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp"
+        android:paddingTop="16dp"/>
+
+    <!-- Input Area Skeleton -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/white"
+        app:cardCornerRadius="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="bottom"
+            android:padding="8dp"
+            android:orientation="horizontal">
+
+            <!-- Botón Adjuntar Skeleton -->
+            <View
+                android:id="@+id/skeleton_btn_adjuntos"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginBottom="4dp"
+                android:background="@drawable/bg_skeleton_circle"/>
+
+            <!-- Input Skeleton -->
+            <View
+                android:id="@+id/skeleton_input_mensaje"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="8dp"
+                android:background="@drawable/bg_skeleton_rounded"/>
+
+            <!-- Botón Enviar Skeleton -->
+            <View
+                android:id="@+id/skeleton_btn_enviar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_skeleton_circle"/>
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

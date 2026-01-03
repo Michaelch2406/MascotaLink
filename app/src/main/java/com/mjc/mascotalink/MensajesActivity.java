@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
@@ -49,6 +50,14 @@ public class MensajesActivity extends AppCompatActivity {
 
     private Map<String, CachedUser> userCache = new HashMap<>();
     private static final long CACHE_TTL_MS = 5 * 60 * 1000;
+
+    // Skeleton Loading
+    private View skeletonLayout;
+    private RecyclerView skeletonRecyclerConversaciones;
+    private ConversacionSkeletonAdapter skeletonAdapter;
+    private boolean isInitialLoadComplete = false;
+    private long skeletonShowTime = 0;
+    private static final long MIN_SKELETON_DISPLAY_TIME_MS = 800;
 
     private static class CachedUser {
         String nombre;
@@ -121,10 +130,16 @@ public class MensajesActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progress_bar);
         swipeRefresh = findViewById(R.id.swipe_refresh); // Optional if wrapped
         bottomNav = findViewById(R.id.bottom_nav);
-        
+
+        // Skeleton views
+        skeletonLayout = findViewById(R.id.skeleton_layout);
+        skeletonRecyclerConversaciones = skeletonLayout.findViewById(R.id.skeleton_recycler_conversaciones);
+
         if (swipeRefresh != null) {
             swipeRefresh.setOnRefreshListener(this::cargarConversaciones);
         }
+
+        setupSkeletonLoader();
     }
 
     private void setupBottomNavigation() {
@@ -179,6 +194,9 @@ public class MensajesActivity extends AppCompatActivity {
                 .addSnapshotListener((snapshot, error) -> {
                     if (progressBar != null) progressBar.setVisibility(View.GONE);
                     if (swipeRefresh != null) swipeRefresh.setRefreshing(false);
+
+                    // Ocultar skeleton cuando los datos lleguen
+                    hideSkeleton();
 
                     if (error != null) {
                         // Si el usuario ya cerró sesión, ignorar el error de permisos
@@ -339,6 +357,67 @@ public class MensajesActivity extends AppCompatActivity {
     private void stopPeriodicUpdate() {
         if (updateHandler != null && updateRunnable != null) {
             updateHandler.removeCallbacks(updateRunnable);
+        }
+    }
+
+    private void setupSkeletonLoader() {
+        // Configurar el RecyclerView del skeleton con 6 items
+        if (skeletonRecyclerConversaciones != null) {
+            skeletonRecyclerConversaciones.setLayoutManager(new LinearLayoutManager(this));
+            skeletonAdapter = new ConversacionSkeletonAdapter(6);
+            skeletonRecyclerConversaciones.setAdapter(skeletonAdapter);
+        }
+
+        // Aplicar animación shimmer
+        if (skeletonLayout != null) {
+            applyShimmerAnimation(skeletonLayout);
+        }
+
+        // Registrar tiempo de inicio
+        skeletonShowTime = System.currentTimeMillis();
+        Log.d("Mensajes", "setupSkeletonLoader: Skeleton inicializado y visible");
+    }
+
+    private void applyShimmerAnimation(View view) {
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                applyShimmerAnimation(viewGroup.getChildAt(i));
+            }
+        } else {
+            if (view.getId() != View.NO_ID) {
+                try {
+                    String resourceName = getResources().getResourceEntryName(view.getId());
+                    if (resourceName != null && resourceName.startsWith("skeleton_")) {
+                        android.view.animation.Animation shimmer = android.view.animation.AnimationUtils.loadAnimation(
+                            this, R.anim.shimmer_animation);
+                        view.startAnimation(shimmer);
+                    }
+                } catch (Exception e) {
+                    // Ignore if resource name cannot be retrieved
+                }
+            }
+        }
+    }
+
+    private void hideSkeleton() {
+        if (!isInitialLoadComplete && skeletonLayout != null) {
+            long elapsedTime = System.currentTimeMillis() - skeletonShowTime;
+            long remainingTime = MIN_SKELETON_DISPLAY_TIME_MS - elapsedTime;
+
+            if (remainingTime > 0) {
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    isInitialLoadComplete = true;
+                    if (skeletonLayout != null) {
+                        skeletonLayout.setVisibility(View.GONE);
+                    }
+                    Log.d("Mensajes", "hideSkeleton: Skeleton ocultado (con delay)");
+                }, remainingTime);
+            } else {
+                isInitialLoadComplete = true;
+                skeletonLayout.setVisibility(View.GONE);
+                Log.d("Mensajes", "hideSkeleton: Skeleton ocultado (inmediato)");
+            }
         }
     }
 }

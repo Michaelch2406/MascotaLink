@@ -18,7 +18,9 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -132,6 +134,14 @@ public class ChatActivity extends AppCompatActivity {
 
     private ActivityResultLauncher<Intent> cameraLauncher;
     private ActivityResultLauncher<Intent> galleryLauncher;
+
+    // Skeleton Loading
+    private FrameLayout skeletonLayout;
+    private RecyclerView skeletonRecyclerMensajes;
+    private ChatMessageSkeletonAdapter skeletonAdapter;
+    private boolean isInitialLoadComplete = false;
+    private long skeletonShowTime = 0;
+    private static final long MIN_SKELETON_DISPLAY_TIME_MS = 800;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -422,8 +432,15 @@ public class ChatActivity extends AppCompatActivity {
         ivAvatarChat = findViewById(R.id.iv_avatar_chat);
         progressLoadMore = findViewById(R.id.progress_load_more);
 
+        // Skeleton views
+        skeletonLayout = findViewById(R.id.skeleton_layout);
+        if (skeletonLayout != null) {
+            skeletonRecyclerMensajes = skeletonLayout.findViewById(R.id.skeleton_recycler_mensajes);
+        }
+
         setupScrollButton();
         setupQuickReplies();
+        setupSkeletonLoader();
     }
 
     private void setupRecyclerView() {
@@ -949,6 +966,9 @@ public class ChatActivity extends AppCompatActivity {
         isLoadingMore = false;
         showLoadingOlder(false);
 
+        // Ocultar skeleton cuando los datos lleguen
+        hideSkeleton();
+
         if (snapshot == null || snapshot.isEmpty()) {
             hasMoreMessages = false;
             return;
@@ -1000,6 +1020,10 @@ public class ChatActivity extends AppCompatActivity {
     private void handleMessagesLoadError(Exception e) {
         isLoadingMore = false;
         showLoadingOlder(false);
+
+        // Ocultar skeleton en caso de error
+        hideSkeleton();
+
         Log.e(TAG, "Error cargando mensajes iniciales", e);
 
         String errorMsg = "Error al cargar mensajes";
@@ -1623,5 +1647,69 @@ public class ChatActivity extends AppCompatActivity {
         socketManager.off("user_connected");
         socketManager.off("user_disconnected");
         socketManager.off("online_users_response");
+    }
+
+    // ==================== SKELETON LOADING ====================
+
+    private void setupSkeletonLoader() {
+        // Configurar el RecyclerView del skeleton con 8 items
+        // Patrón adaptivo: muestra suficientes mensajes para llenar la pantalla visible
+        if (skeletonRecyclerMensajes != null) {
+            skeletonRecyclerMensajes.setLayoutManager(new LinearLayoutManager(this));
+            skeletonAdapter = new ChatMessageSkeletonAdapter(8);
+            skeletonRecyclerMensajes.setAdapter(skeletonAdapter);
+        }
+
+        // Aplicar animación shimmer
+        if (skeletonLayout != null) {
+            applyShimmerAnimation(skeletonLayout);
+        }
+
+        // Registrar tiempo de inicio
+        skeletonShowTime = System.currentTimeMillis();
+        Log.d(TAG, "setupSkeletonLoader: Skeleton inicializado y visible");
+    }
+
+    private void applyShimmerAnimation(View view) {
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                applyShimmerAnimation(viewGroup.getChildAt(i));
+            }
+        } else {
+            if (view.getId() != View.NO_ID) {
+                try {
+                    String resourceName = getResources().getResourceEntryName(view.getId());
+                    if (resourceName != null && resourceName.startsWith("skeleton_")) {
+                        android.view.animation.Animation shimmer = android.view.animation.AnimationUtils.loadAnimation(
+                            this, R.anim.shimmer_animation);
+                        view.startAnimation(shimmer);
+                    }
+                } catch (Exception e) {
+                    // Ignore if resource name cannot be retrieved
+                }
+            }
+        }
+    }
+
+    private void hideSkeleton() {
+        if (!isInitialLoadComplete && skeletonLayout != null) {
+            long elapsedTime = System.currentTimeMillis() - skeletonShowTime;
+            long remainingTime = MIN_SKELETON_DISPLAY_TIME_MS - elapsedTime;
+
+            if (remainingTime > 0) {
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    isInitialLoadComplete = true;
+                    if (skeletonLayout != null) {
+                        skeletonLayout.setVisibility(View.GONE);
+                    }
+                    Log.d(TAG, "hideSkeleton: Skeleton ocultado (con delay)");
+                }, remainingTime);
+            } else {
+                isInitialLoadComplete = true;
+                skeletonLayout.setVisibility(View.GONE);
+                Log.d(TAG, "hideSkeleton: Skeleton ocultado (inmediato)");
+            }
+        }
     }
 }
