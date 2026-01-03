@@ -6,20 +6,22 @@
     android:layout_height="wrap_content"
     android:layout_marginEnd="12dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="12dp"
+        android:background="@color/white">
 
         <View
             android:id="@+id/skeleton_avatar"
             android:layout_width="60dp"
             android:layout_height="60dp"
             android:layout_gravity="center_horizontal"
-            android:background="@drawable/bg_avatar_circle_skeleton"/>
+            android:background="@drawable/bg_skeleton_circle"/>
 
         <View
             android:id="@+id/skeleton_nombre"
@@ -27,7 +29,7 @@
             android:layout_height="14dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="8dp"
-            android:background="@color/skeleton_color"/>
+            android:background="@drawable/bg_skeleton_rounded"/>
 
         <View
             android:id="@+id/skeleton_zona"
@@ -35,7 +37,7 @@
             android:layout_height="12dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="4dp"
-            android:background="@color/skeleton_color"/>
+            android:background="@drawable/bg_skeleton_rounded"/>
 
         <View
             android:id="@+id/skeleton_rating"
@@ -43,7 +45,7 @@
             android:layout_height="12dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="4dp"
-            android:background="@color/skeleton_color"/>
+            android:background="@drawable/bg_skeleton_rounded"/>
 
         <View
             android:id="@+id/skeleton_precio"
@@ -51,7 +53,7 @@
             android:layout_height="14dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="8dp"
-            android:background="@color/skeleton_color"/>
+            android:background="@drawable/bg_skeleton_rounded"/>
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

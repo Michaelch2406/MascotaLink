@@ -192,6 +192,18 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     // Recomendación de IA
     private LinearLayout btnBuscarConIA;
 
+    // Skeleton Loading
+    private View skeletonLayout;
+    private RecyclerView skeletonRecyclerPopulares;
+    private PaseadorPopularSkeletonAdapter skeletonAdapter;
+    private boolean isInitialLoadComplete = false;
+    private long skeletonShowTime = 0;
+    private static final long MIN_SKELETON_DISPLAY_TIME_MS = 800; // Mínimo 800ms para que se vea el skeleton
+
+    // Views que se ocultan durante skeleton
+    private View searchContainer;
+    private View filterChipsScroll;
+
     // Handler y Runnable para la actualización periódica del mapa
     private final Handler periodicRefreshHandler = new Handler(Looper.getMainLooper());
     private Runnable periodicRefreshRunnable;
@@ -266,6 +278,14 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
         // Botón de Búsqueda con IA
         btnBuscarConIA = findViewById(R.id.btn_buscar_con_ia);
+
+        // Skeleton Views
+        skeletonLayout = findViewById(R.id.skeleton_layout);
+        skeletonRecyclerPopulares = skeletonLayout.findViewById(R.id.skeleton_recycler_populares);
+
+        // Views que se ocultan durante skeleton
+        searchContainer = findViewById(R.id.search_container);
+        filterChipsScroll = findViewById(R.id.filter_chips_scroll);
     }
 
     private void setupUIComponents() {
@@ -280,6 +300,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         setupMapInteraction();
         setupRetryButton();
         setupMapFragment();
+        setupSkeletonLoader();
     }
 
     private void setupFabRefreshMap() {
@@ -913,10 +934,24 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     private void setupObservers() {
         viewModel.getPaseadoresPopularesState().observe(this, uiState -> {
             if (uiState instanceof UiState.Loading) {
-                // El adapter ya está configurado, solo mostramos lista vacía mientras carga
+                // Durante la carga inicial, el skeleton ya está visible
+                Log.d(TAG, "setupObservers: Cargando paseadores populares...");
                 popularesAdapter.submitList(null);
             } else if (uiState instanceof UiState.Success) {
+                // Ocultar skeleton y mostrar contenido cuando los datos estén listos
+                Log.d(TAG, "setupObservers: Paseadores populares cargados exitosamente");
+                if (!isInitialLoadComplete) {
+                    hideSkeleton();
+                    // Mostrar el contenido real después de ocultar el skeleton
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        contentScrollView.setVisibility(View.VISIBLE);
+                    }, 100);
+                }
                 popularesAdapter.submitList(((UiState.Success<java.util.List<PaseadorResultado>>) uiState).getData());
+            } else if (uiState instanceof UiState.Error) {
+                // Si hay error, también ocultar skeleton
+                Log.e(TAG, "setupObservers: Error al cargar paseadores populares");
+                hideSkeleton();
             }
         });
 
@@ -939,6 +974,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void showSuccessSearchResults(java.util.List<PaseadorResultado> data) {
         // El adapter ya está configurado en setupRecyclerViews()
+        hideSkeleton();
         recyclerViewResultados.setVisibility(View.VISIBLE);
         contentScrollView.setVisibility(View.GONE);
         emptyStateView.setVisibility(View.GONE);
@@ -950,6 +986,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
 
     private void showLoading() {
         // No cambiar el adapter, solo mostrar estado de carga
+        hideSkeleton();
         resultadosAdapter.submitList(null); // Vaciar lista mientras carga
         recyclerViewResultados.setVisibility(View.VISIBLE);
         contentScrollView.setVisibility(View.VISIBLE);
@@ -969,6 +1006,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void showError(String message) {
+        hideSkeleton();
         progressBar.setVisibility(View.GONE);
         contentScrollView.setVisibility(View.GONE);
         recyclerViewResultados.setVisibility(View.GONE);
@@ -978,6 +1016,7 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
       private void showEmpty() {
+          hideSkeleton();
           progressBar.setVisibility(View.GONE);
           contentScrollView.setVisibility(View.GONE);
           recyclerViewResultados.setVisibility(View.GONE);
@@ -1181,7 +1220,100 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
           Log.d(TAG, "🌐 NetworkMonitorHelper iniciado - reconexión automática habilitada");
       }
 
+      private void setupSkeletonLoader() {
+          // Configurar el RecyclerView del skeleton con 4 items
+          if (skeletonRecyclerPopulares != null) {
+              skeletonRecyclerPopulares.setLayoutManager(
+                  new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+              );
+              skeletonAdapter = new PaseadorPopularSkeletonAdapter(4);
+              skeletonRecyclerPopulares.setAdapter(skeletonAdapter);
+          }
+
+          // Aplicar animación shimmer a todas las vistas skeleton
+          if (skeletonLayout != null) {
+              applyShimmerAnimation(skeletonLayout);
+          }
+
+          // El skeleton ya está visible en el XML, solo registramos el tiempo de inicio
+          skeletonShowTime = System.currentTimeMillis();
+
+          // Ocultar la barra de búsqueda y chips reales inicialmente
+          if (searchContainer != null) searchContainer.setVisibility(View.GONE);
+          if (filterChipsScroll != null) filterChipsScroll.setVisibility(View.GONE);
+
+          Log.d(TAG, "setupSkeletonLoader: Skeleton inicializado y visible, barra y chips ocultados");
+      }
+
+      private void applyShimmerAnimation(View view) {
+          if (view instanceof ViewGroup) {
+              ViewGroup viewGroup = (ViewGroup) view;
+              for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                  applyShimmerAnimation(viewGroup.getChildAt(i));
+              }
+          } else {
+              // Aplicar animación solo a las vistas que tienen el tag "skeleton"
+              if (view.getId() != View.NO_ID) {
+                  String resourceName = getResources().getResourceEntryName(view.getId());
+                  if (resourceName != null && resourceName.startsWith("skeleton_")) {
+                      android.view.animation.Animation shimmer = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.shimmer_animation);
+                      view.startAnimation(shimmer);
+                  }
+              }
+          }
+      }
+
+      private void showSkeleton() {
+          if (!isInitialLoadComplete) {
+              skeletonShowTime = System.currentTimeMillis();
+              skeletonLayout.setVisibility(View.VISIBLE);
+              contentScrollView.setVisibility(View.GONE);
+              recyclerViewResultados.setVisibility(View.GONE);
+              emptyStateView.setVisibility(View.GONE);
+              errorStateView.setVisibility(View.GONE);
+              progressBar.setVisibility(View.GONE);
+
+              // Ocultar barra de búsqueda y chips reales
+              if (searchContainer != null) searchContainer.setVisibility(View.GONE);
+              if (filterChipsScroll != null) filterChipsScroll.setVisibility(View.GONE);
+
+              Log.d(TAG, "Skeleton mostrado");
+          }
+      }
+
+      private void hideSkeleton() {
+          if (!isInitialLoadComplete) {
+              long elapsedTime = System.currentTimeMillis() - skeletonShowTime;
+              long remainingTime = MIN_SKELETON_DISPLAY_TIME_MS - elapsedTime;
+
+              if (remainingTime > 0) {
+                  // Esperar el tiempo restante antes de ocultar el skeleton
+                  new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                      isInitialLoadComplete = true;
+                      skeletonLayout.setVisibility(View.GONE);
+
+                      // Mostrar barra de búsqueda y chips reales
+                      if (searchContainer != null) searchContainer.setVisibility(View.VISIBLE);
+                      if (filterChipsScroll != null) filterChipsScroll.setVisibility(View.VISIBLE);
+
+                      Log.d(TAG, "Skeleton ocultado (con delay)");
+                  }, remainingTime);
+              } else {
+                  // Ya pasó suficiente tiempo, ocultar inmediatamente
+                  isInitialLoadComplete = true;
+                  skeletonLayout.setVisibility(View.GONE);
+
+                  // Mostrar barra de búsqueda y chips reales
+                  if (searchContainer != null) searchContainer.setVisibility(View.VISIBLE);
+                  if (filterChipsScroll != null) filterChipsScroll.setVisibility(View.VISIBLE);
+
+                  Log.d(TAG, "Skeleton ocultado (inmediato)");
+              }
+          }
+      }
+
       private void showBaseState() {
+          hideSkeleton();
           progressBar.setVisibility(View.GONE);
           contentScrollView.setVisibility(View.VISIBLE);
           recyclerViewResultados.setVisibility(View.GONE);
