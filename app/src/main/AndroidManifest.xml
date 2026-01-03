@@ -441,7 +441,6 @@
             android:name=".ResetPasswordActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MascotaLink">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

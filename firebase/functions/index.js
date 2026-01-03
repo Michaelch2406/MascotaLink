@@ -4891,13 +4891,13 @@ exports.notifyNearbyWalkersScheduled = onSchedule("0 8,12,17 * * *", async (even
 /**
  * Cloud Function para migrar reseñas existentes a formato desnormalizado
  *
- * Uso desde Firebase Console o CLI:
- * firebase functions:call migrarResenasADesnormalizado
+ * Uso local: http://127.0.0.1:5001/mascotalink-2d9da/us-central1/migrarResenasADesnormalizado
+ * Uso producción: firebase functions:call migrarResenasADesnormalizado
  */
-exports.migrarResenasADesnormalizado = onCall({
+exports.migrarResenasADesnormalizado = onRequest({
   timeoutSeconds: 540,
   memory: "512MiB"
-}, async (request) => {
+}, async (req, res) => {
   try {
       console.log("🚀 Iniciando migración de reseñas...");
 
@@ -4920,7 +4920,7 @@ exports.migrarResenasADesnormalizado = onCall({
                   continue;
               }
 
-              if (resenaData.autorNombre && resenaData.autorFotoUrl) {
+              if (resenaData.autorNombre && resenaData.autorFotoUrl && resenaData.autorId && resenaData.autorRol) {
                   continue;
               }
 
@@ -4934,8 +4934,10 @@ exports.migrarResenasADesnormalizado = onCall({
 
               const autorData = autorDoc.data();
               await resenaDoc.ref.update({
+                  autorId: autorId,
                   autorNombre: autorData.nombre_display || 'Paseador',
-                  autorFotoUrl: autorData.foto_perfil || null
+                  autorFotoUrl: autorData.foto_perfil || null,
+                  autorRol: 'paseador'
               });
 
               totalMigradas++;
@@ -4960,7 +4962,7 @@ exports.migrarResenasADesnormalizado = onCall({
                   continue;
               }
 
-              if (resenaData.autorNombre && resenaData.autorFotoUrl) {
+              if (resenaData.autorNombre && resenaData.autorFotoUrl && resenaData.autorId && resenaData.autorRol) {
                   continue;
               }
 
@@ -4974,8 +4976,10 @@ exports.migrarResenasADesnormalizado = onCall({
 
               const autorData = autorDoc.data();
               await resenaDoc.ref.update({
+                  autorId: autorId,
                   autorNombre: autorData.nombre_display || 'Usuario de Walki',
-                  autorFotoUrl: autorData.foto_perfil || null
+                  autorFotoUrl: autorData.foto_perfil || null,
+                  autorRol: 'dueno'
               });
 
               totalMigradas++;
@@ -4994,11 +4998,14 @@ exports.migrarResenasADesnormalizado = onCall({
       };
 
       console.log("🎉 " + resultado.mensaje);
-      return resultado;
+      res.status(200).json(resultado);
 
   } catch (error) {
       console.error("❌ Error fatal en migración:", error);
-      throw new Error(`Error en migración: ${error.message}`);
+      res.status(500).json({
+          exito: false,
+          mensaje: `Error en migración: ${error.message}`
+      });
   }
 });
 
@@ -5020,8 +5027,10 @@ exports.desnormalizarResenasDuenos = onDocumentCreated(
           const autorData = autorDoc.data();
 
           await event.data.ref.update({
+              autorId: autorId,
               autorNombre: autorData.nombre_display || 'Paseador',
-              autorFotoUrl: autorData.foto_perfil || null
+              autorFotoUrl: autorData.foto_perfil || null,
+              autorRol: 'paseador'
           });
 
           console.log(`✓ Reseña de dueño ${event.params.resenaId} desnormalizada`);
@@ -5049,8 +5058,10 @@ exports.desnormalizarResenasPaseadores = onDocumentCreated(
           const autorData = autorDoc.data();
 
           await event.data.ref.update({
+              autorId: autorId,
               autorNombre: autorData.nombre_display || 'Usuario de Walki',
-              autorFotoUrl: autorData.foto_perfil || null
+              autorFotoUrl: autorData.foto_perfil || null,
+              autorRol: 'dueno'
           });
 
           console.log(`✓ Reseña de paseador ${event.params.resenaId} desnormalizada`);

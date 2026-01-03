@@ -237,23 +237,65 @@ public class HomeFragment extends Fragment {
 
         View btnFavoritos = view.findViewById(R.id.btn_mis_favoritos);
         View btnHistorial = view.findViewById(R.id.btn_historial);
+        View btnMisMascotas = view.findViewById(R.id.btn_mis_mascotas);
 
+        android.util.Log.d("HomeFragment", "btnFavoritos: " + (btnFavoritos != null));
+        android.util.Log.d("HomeFragment", "btnHistorial: " + (btnHistorial != null));
+        android.util.Log.d("HomeFragment", "btnMisMascotas: " + (btnMisMascotas != null));
+
+        // Favoritos
         if (btnFavoritos != null) {
-            btnFavoritos.setOnClickListener(v -> {
+            View.OnClickListener favoritosListener = v -> {
+                android.util.Log.d("HomeFragment", "Click en Favoritos");
                 if (isAdded() && getContext() != null) {
                     startActivity(new Intent(requireContext(), FavoritosActivity.class));
                 }
-            });
+            };
+            btnFavoritos.setOnClickListener(favoritosListener);
+            // También poner el listener en los hijos para interceptar clicks
+            if (btnFavoritos instanceof android.view.ViewGroup) {
+                for (int i = 0; i < ((android.view.ViewGroup) btnFavoritos).getChildCount(); i++) {
+                    ((android.view.ViewGroup) btnFavoritos).getChildAt(i).setOnClickListener(favoritosListener);
+                }
+            }
         }
 
+        // Historial
         if (btnHistorial != null) {
-            btnHistorial.setOnClickListener(v -> {
+            View.OnClickListener historialListener = v -> {
+                android.util.Log.d("HomeFragment", "Click en Historial");
                 if (isAdded() && getContext() != null) {
                     Intent intent = new Intent(requireContext(), HistorialPaseosActivity.class);
                     intent.putExtra("rol_usuario", "DUEÑO");
                     startActivity(intent);
                 }
-            });
+            };
+            btnHistorial.setOnClickListener(historialListener);
+            // También poner el listener en los hijos para interceptar clicks
+            if (btnHistorial instanceof android.view.ViewGroup) {
+                for (int i = 0; i < ((android.view.ViewGroup) btnHistorial).getChildCount(); i++) {
+                    ((android.view.ViewGroup) btnHistorial).getChildAt(i).setOnClickListener(historialListener);
+                }
+            }
+        }
+
+        // Mis Mascotas
+        if (btnMisMascotas != null) {
+            View.OnClickListener mascotasListener = v -> {
+                android.util.Log.d("HomeFragment", "Click en Mis Mascotas");
+                if (isAdded() && getContext() != null && userId != null) {
+                    Intent intent = new Intent(requireContext(), com.mjc.mascotalink.MisMascotasActivity.class);
+                    intent.putExtra("dueno_id", userId);
+                    startActivity(intent);
+                }
+            };
+            btnMisMascotas.setOnClickListener(mascotasListener);
+            // También poner el listener en los hijos para interceptar clicks
+            if (btnMisMascotas instanceof android.view.ViewGroup) {
+                for (int i = 0; i < ((android.view.ViewGroup) btnMisMascotas).getChildCount(); i++) {
+                    ((android.view.ViewGroup) btnMisMascotas).getChildAt(i).setOnClickListener(mascotasListener);
+                }
+            }
         }
     }
 

@@ -26,10 +26,19 @@ public class ResenaAdapter extends RecyclerView.Adapter<ResenaAdapter.ResenaView
 
     private final Context context;
     private final List<Resena> resenas;
+    private OnResenaAutorClickListener listener;
+
+    public interface OnResenaAutorClickListener {
+        void onAutorClick(String autorId, String autorRol);
+    }
 
     public ResenaAdapter(Context context, List<Resena> resenas) {
         this.context = context;
         this.resenas = resenas;
+    }
+
+    public void setOnResenaAutorClickListener(OnResenaAutorClickListener listener) {
+        this.listener = listener;
     }
 
     @NonNull
@@ -61,6 +70,14 @@ public class ResenaAdapter extends RecyclerView.Adapter<ResenaAdapter.ResenaView
                 .error(R.drawable.ic_person)
                 .thumbnail(0.1f)
                 .into(holder.ivAutor);
+
+        // Click listener para la foto del autor
+        holder.ivAutor.setOnClickListener(v -> {
+            android.util.Log.d("ResenaAdapter", "Click en foto - autorId: " + resena.getAutorId() + ", autorRol: " + resena.getAutorRol());
+            if (listener != null && resena.getAutorId() != null && !resena.getAutorId().isEmpty()) {
+                listener.onAutorClick(resena.getAutorId(), resena.getAutorRol());
+            }
+        });
 
         preloadNextImages(position);
     }

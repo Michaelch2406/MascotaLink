@@ -4,8 +4,10 @@ import com.google.firebase.Timestamp;
 
 public class Resena {
     private String id;
+    private String autorId;
     private String autorNombre;
     private String autorFotoUrl;
+    private String autorRol;
     private float calificacion;
     private String comentario;
     private Timestamp fecha;
@@ -19,6 +21,14 @@ public class Resena {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getAutorId() {
+        return autorId;
+    }
+
+    public void setAutorId(String autorId) {
+        this.autorId = autorId;
     }
 
     public String getAutorNombre() {
@@ -35,6 +45,14 @@ public class Resena {
 
     public void setAutorFotoUrl(String autorFotoUrl) {
         this.autorFotoUrl = autorFotoUrl;
+    }
+
+    public String getAutorRol() {
+        return autorRol;
+    }
+
+    public void setAutorRol(String autorRol) {
+        this.autorRol = autorRol;
     }
 
     public float getCalificacion() {

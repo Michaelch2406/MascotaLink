@@ -425,6 +425,28 @@ public class PerfilDuenoActivity extends AppCompatActivity {
     private void setupResenasRecyclerView() {
         recyclerViewResenas.setLayoutManager(new LinearLayoutManager(this));
         resenaAdapter = new ResenaAdapter(this, resenasList);
+        resenaAdapter.setOnResenaAutorClickListener((autorId, autorRol) -> {
+            Log.d(TAG, "Callback reseña - autorId: " + autorId + ", autorRol: " + autorRol);
+
+            if (autorId == null || autorId.isEmpty()) {
+                Toast.makeText(this, "No se puede abrir el perfil del usuario", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Intent intent;
+            if ("paseador".equals(autorRol)) {
+                intent = new Intent(PerfilDuenoActivity.this, PerfilPaseadorActivity.class);
+                intent.putExtra("paseadorId", autorId);
+            } else if ("dueno".equals(autorRol)) {
+                intent = new Intent(PerfilDuenoActivity.this, PerfilDuenoActivity.class);
+                intent.putExtra("id_dueno", autorId);
+            } else {
+                Log.e(TAG, "AutorRol no reconocido: '" + autorRol + "'");
+                Toast.makeText(this, "Tipo de usuario desconocido", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            startActivity(intent);
+        });
         recyclerViewResenas.setAdapter(resenaAdapter);
     }
 
@@ -499,6 +521,7 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 btnCerrarSesion.setVisibility(View.VISIBLE);
                 bottomNavRole = "Dueño";
                 bottomNavSelectedItem = R.id.menu_perfil;
+                bottomNav.setVisibility(View.VISIBLE);
             } else {
                 toolbarTitle.setText("Dueño");
                 // No mostrar botones aún, se mostrarán cuando se carguen los datos
@@ -506,9 +529,10 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 soporte_section.setVisibility(View.GONE);
                 btnCerrarSesion.setVisibility(View.GONE);
 
-                // Assuming viewing as Walker
-                bottomNavRole = currentUserRole != null ? currentUserRole : "PASEADOR";
-                bottomNavSelectedItem = R.id.menu_search;
+                // Ocultar barra de navegación cuando ves el perfil de otro usuario
+                bottomNav.setVisibility(View.GONE);
+                bottomNavRole = null;
+                bottomNavSelectedItem = 0;
             }
             com.mjc.mascotalink.util.UnreadBadgeManager.start(currentUserId);
             setupBottomNavigation();
@@ -696,15 +720,19 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 resena.setCalificacion(calif != null ? calif.floatValue() : 0f);
                 resena.setFecha(doc.getTimestamp("timestamp"));
 
+                String autorId = doc.getString("autorId");
                 String autorNombre = doc.getString("autorNombre");
                 String autorFotoUrl = doc.getString("autorFotoUrl");
+                String autorRol = doc.getString("autorRol");
 
                 if (autorNombre == null || autorNombre.isEmpty()) {
                     autorNombre = "Paseador";
                 }
 
+                resena.setAutorId(autorId);
                 resena.setAutorNombre(autorNombre);
                 resena.setAutorFotoUrl(autorFotoUrl);
+                resena.setAutorRol(autorRol);
 
                 nuevasResenas.add(resena);
             }
