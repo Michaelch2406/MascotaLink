@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -632,30 +631,25 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         String userId = currentUser.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        db.collection(FirestoreConstants.COLLECTION_USUARIOS)
+        db.collection(FirestoreConstants.COLLECTION_DUENOS)
                 .document(userId)
-                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
-                .document(paseadorId)
                 .get()
                 .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        db.collection(FirestoreConstants.COLLECTION_USUARIOS)
+                    List<String> favoritos = (List<String>) doc.get(FirestoreConstants.FIELD_PASEADORES_FAVORITOS);
+                    if (favoritos == null) {
+                        favoritos = new java.util.ArrayList<>();
+                    }
+
+                    if (favoritos.contains(paseadorId)) {
+                        db.collection(FirestoreConstants.COLLECTION_DUENOS)
                                 .document(userId)
-                                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
-                                .document(paseadorId)
-                                .delete()
+                                .update(FirestoreConstants.FIELD_PASEADORES_FAVORITOS, FieldValue.arrayRemove(paseadorId))
                                 .addOnSuccessListener(v -> Toast.makeText(getContext(), "Eliminado de favoritos", Toast.LENGTH_SHORT).show())
                                 .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al eliminar de favoritos", Toast.LENGTH_SHORT).show());
                     } else {
-                        Map<String, Object> favoritoData = new HashMap<>();
-                        favoritoData.put(FirestoreConstants.FIELD_PASEADOR_ID, paseadorId);
-                        favoritoData.put(FirestoreConstants.FIELD_TIMESTAMP, FieldValue.serverTimestamp());
-
-                        db.collection(FirestoreConstants.COLLECTION_USUARIOS)
+                        db.collection(FirestoreConstants.COLLECTION_DUENOS)
                                 .document(userId)
-                                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
-                                .document(paseadorId)
-                                .set(favoritoData)
+                                .update(FirestoreConstants.FIELD_PASEADORES_FAVORITOS, FieldValue.arrayUnion(paseadorId))
                                 .addOnSuccessListener(v -> Toast.makeText(getContext(), "Agregado a favoritos", Toast.LENGTH_SHORT).show())
                                 .addOnFailureListener(e -> Toast.makeText(getContext(), "Error al agregar a favoritos", Toast.LENGTH_SHORT).show());
                     }
@@ -675,6 +669,481 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         startActivity(Intent.createChooser(shareIntent, "Compartir recomendación"));
     }
 
+    private void setupViewProfileButton(String paseadorId) {
+        String ubicacion = extractUbicacion(paseadorData, tags);
+        tvLocation.setText(ubicacion != null ? ubicacion : "Ubicación no especificada");
+        adjustLocationLayout(ubicacion);
+    }
+
+    private String extractUbicacion(Map<String, Object> paseadorData, List<String> tags) {
+        List<String> zonasPrincipales = (List<String>) paseadorData.get(FirestoreConstants.FIELD_ZONAS_PRINCIPALES);
+        if (zonasPrincipales != null && !zonasPrincipales.isEmpty()) {
+            return zonasPrincipales.get(0);
+        }
+
+        if (tags != null) {
+            for (String tag : tags) {
+                if (tag != null && tag.contains("km")) {
+                    return tag;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void adjustLocationLayout(String ubicacion) {
+        View llLocationExperience = getView().findViewById(R.id.llLocationExperience);
+        View llExperience = getView().findViewById(R.id.llExperience);
+        View tvSeparator = getView().findViewById(R.id.tvLocationSeparator);
+
+        if (!(llLocationExperience instanceof LinearLayout) || llExperience == null) return;
+
+        LinearLayout layoutPadre = (LinearLayout) llLocationExperience;
+        if (ubicacion != null && ubicacion.length() <= 20) {
+            setHorizontalLayout(layoutPadre, llExperience, tvSeparator);
+        } else {
+            setVerticalLayout(layoutPadre, llExperience, tvSeparator);
+        }
+    }
+
+    private void setHorizontalLayout(LinearLayout parent, View experience, View separator) {
+        parent.setOrientation(LinearLayout.HORIZONTAL);
+        parent.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        if (separator != null) separator.setVisibility(View.VISIBLE);
+        setMarginTop(experience, 0);
+    }
+
+    private void setVerticalLayout(LinearLayout parent, View experience, View separator) {
+        parent.setOrientation(LinearLayout.VERTICAL);
+        parent.setGravity(android.view.Gravity.CENTER);
+        if (separator != null) separator.setVisibility(View.GONE);
+        setMarginTop(experience, (int) (4 * getResources().getDisplayMetrics().density));
+    }
+
+    private void setMarginTop(View view, int marginTop) {
+        if (view.getLayoutParams() instanceof LinearLayout.LayoutParams) {
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) view.getLayoutParams();
+            params.topMargin = marginTop;
+            view.setLayoutParams(params);
+        }
+    }
+
+    private void bindExperienceAndSpecialty(Map<String, Object> paseadorData, List<String> tags) {
+        int experiencia = getIntValue(paseadorData.get(FirestoreConstants.FIELD_ANOS_EXPERIENCIA));
+        tvExperience.setText(experiencia + " años exp.");
+
+        String especialidad = extractEspecialidad(paseadorData, tags);
+        tvSpecialty.setText(especialidad != null ? especialidad : "Paseador Profesional");
+    }
+
+    private String extractEspecialidad(Map<String, Object> paseadorData, List<String> tags) {
+        if (tags != null) {
+            for (String tag : tags) {
+                if (tag != null && isSpecialtyTag(tag)) {
+                    return tag;
+                }
+            }
+        }
+
+        List<String> tiposAceptados = (List<String>) paseadorData.get(FirestoreConstants.FIELD_TIPOS_PERRO_ACEPTADOS);
+        if (tiposAceptados != null && !tiposAceptados.isEmpty()) {
+            String primerTipo = tiposAceptados.get(0);
+            if (primerTipo != null && !primerTipo.isEmpty()) {
+                return "Especialista en " + primerTipo;
+            }
+        }
+
+        String tipoMascota = (String) paseadorData.get(FirestoreConstants.FIELD_ESPECIALIDAD_TIPO_MASCOTA);
+        if (tipoMascota != null && !tipoMascota.isEmpty()) {
+            return "Especialista en " + tipoMascota;
+        }
+
+        return null;
+    }
+
+    private boolean isSpecialtyTag(String tag) {
+        return tag.contains("Acepta") || tag.contains("🐕") ||
+               tag.contains("Grande") || tag.contains("Mediano") ||
+               tag.contains("Pequeño") || tag.contains("Especialista") ||
+               tag.contains("perro");
+    }
+
+    private void bindMatchAndRating(Map<String, Object> recommendation, Map<String, Object> paseadorData) {
+        tvMatchScore.setText(matchScore + "% Match");
+
+        double calificacion = getDoubleValue(paseadorData.get(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO));
+        tvRating.setText(String.format(Locale.getDefault(), "%.1f", calificacion));
+
+        int servicios = getIntValue(paseadorData.get(FirestoreConstants.FIELD_NUM_SERVICIOS_COMPLETADOS));
+        tvReviewCount.setText("(" + servicios + " reseñas)");
+    }
+
+    private void bindPhoto(Map<String, Object> paseadorData) {
+        String fotoUrl = (String) paseadorData.get(FirestoreConstants.FIELD_FOTO_URL);
+        if (fotoUrl != null && !fotoUrl.isEmpty()) {
+            Glide.with(this)
+                    .load(fotoUrl)
+                    .placeholder(R.drawable.bg_avatar_circle)
+                    .error(R.drawable.bg_avatar_circle)
+                    .circleCrop()
+                    .into(ivProfilePhoto);
+        }
+    }
+
+    private void bindVerifiedBadge(Map<String, Object> paseadorData) {
+        String verificacionEstado = (String) paseadorData.get(FirestoreConstants.FIELD_VERIFICACION_ESTADO);
+        boolean esVerificado = FirestoreConstants.STATUS_APROBADO.equalsIgnoreCase(verificacionEstado);
+
+        if (ivVerifiedBadge != null) {
+            ivVerifiedBadge.setVisibility(esVerificado ? View.VISIBLE : View.GONE);
+            if (ivVerifiedBadge.getParent() instanceof View) {
+                ((View) ivVerifiedBadge.getParent()).setVisibility(esVerificado ? View.VISIBLE : View.GONE);
+            }
+        }
+    }
+
+    private void bindReason(Map<String, Object> recommendation) {
+        String razonIA = (String) recommendation.get(FirestoreConstants.FIELD_RAZON_IA);
+        if (tvRazonIA != null) {
+            if (razonIA != null && !razonIA.isEmpty()) {
+                tvRazonIA.setText(razonIA);
+                tvRazonIA.setVisibility(View.VISIBLE);
+            } else {
+                tvRazonIA.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void bindTags(List<String> tags) {
+        chipGroupReasons.removeAllViews();
+        if (tags != null) {
+            for (String tag : tags) {
+                Chip chip = new Chip(requireContext());
+                chip.setText(tag);
+                chip.setClickable(false);
+                chip.setCheckable(false);
+                chipGroupReasons.addView(chip);
+            }
+        }
+    }
+
+    private void setupActionButtons(String paseadorId, Map<String, Object> paseadorData) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (currentUser != null) {
+            checkAndUpdateFavoriteStatus(currentUser, paseadorId);
+        }
+
+        setupViewProfileButton(paseadorId);
+        setupFavoriteButton(currentUser, paseadorId, paseadorData);
+        setupShareButton(paseadorId);
+        setupNotInterestedButton(paseadorId);
+    }
+
+    private void checkAndUpdateFavoriteStatus(FirebaseUser currentUser, String paseadorId) {
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    isFavorite = doc.exists();
+                    updateFavoriteIcon();
+                });
+    }
+
+    private void setupViewProfileButton(String paseadorId) {
+        btnViewProfile.setOnClickListener(v -> {
+            registrarEventoTelemetria("ver_perfil", paseadorId, matchScore, null);
+            dismiss();
+            Intent intent = new Intent(requireActivity(), PerfilPaseadorActivity.class);
+            intent.putExtra("paseador_id", paseadorId);
+            startActivity(intent);
+        });
+    }
+
+    private void setupFavoriteButton(FirebaseUser currentUser, String paseadorId, Map<String, Object> paseadorData) {
+        btnFavorite.setOnClickListener(v -> {
+            if (currentUser == null) return;
+            toggleFavorite(currentUser, paseadorId, paseadorData);
+        });
+    }
+
+    private void toggleFavorite(FirebaseUser currentUser, String paseadorId, Map<String, Object> paseadorData) {
+        if (isFavorite) {
+            removeFavorite(currentUser, paseadorId);
+        } else {
+            addFavorite(currentUser, paseadorId, paseadorData);
+        }
+    }
+
+    private void removeFavorite(FirebaseUser currentUser, String paseadorId) {
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    isFavorite = false;
+                    updateFavoriteIcon();
+                    Toast.makeText(requireContext(), "Eliminado de favoritos", Toast.LENGTH_SHORT).show();
+                    registrarEventoTelemetria("quitar_favorito", paseadorId, matchScore, null);
+                });
+    }
+
+    private void addFavorite(FirebaseUser currentUser, String paseadorId, Map<String, Object> paseadorData) {
+        Map<String, Object> favData = new HashMap<>();
+        favData.put(FirestoreConstants.FIELD_ID, paseadorId);
+        favData.put(FirestoreConstants.FIELD_NOMBRE, paseadorData.get(FirestoreConstants.FIELD_NOMBRE));
+        favData.put(FirestoreConstants.FIELD_FOTO_URL, paseadorData.get(FirestoreConstants.FIELD_FOTO_URL));
+        favData.put("calificacion", paseadorData.get(FirestoreConstants.FIELD_CALIFICACION_PROMEDIO));
+        favData.put(FirestoreConstants.FIELD_TIMESTAMP, FieldValue.serverTimestamp());
+
+        FirebaseFirestore.getInstance()
+                .collection(FirestoreConstants.COLLECTION_USUARIOS)
+                .document(currentUser.getUid())
+                .collection(FirestoreConstants.COLLECTION_FAVORITOS)
+                .document(paseadorId)
+                .set(favData)
+                .addOnSuccessListener(aVoid -> {
+                    isFavorite = true;
+                    updateFavoriteIcon();
+                    Toast.makeText(requireContext(), "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                    registrarEventoTelemetria("favorito", paseadorId, matchScore, null);
+                });
+    }
+
+    private void setupShareButton(String paseadorId) {
+        btnShare.setOnClickListener(v -> {
+            registrarEventoTelemetria("compartir", paseadorId, matchScore, null);
+            compartirComoImagen();
+        });
+    }
+
+    private void setupNotInterestedButton(String paseadorId) {
+        btnNotInterested.setOnClickListener(v -> mostrarDialogNoMeInteresa(paseadorId));
+    }
+
+    private void updateFavoriteIcon() {
+        if (btnFavorite != null) {
+            if (isFavorite) {
+                btnFavorite.setIconResource(R.drawable.ic_favorite_filled);
+                btnFavorite.setIconTint(null);
+            } else {
+                btnFavorite.setIconResource(R.drawable.ic_favorite);
+                btnFavorite.setIconTint(android.content.res.ColorStateList.valueOf(0xFF64748B));
+            }
+        }
+    }
+
+    private void compartirComoImagen() {
+        View rootView = getView();
+        if (!validateViewsForCapture(rootView)) return;
+
+        try {
+            Log.d(TAG, "Preparando captura para compartir...");
+            ViewVisibilityState state = new ViewVisibilityState(rootView);
+            state.prepareForCapture();
+
+            rootView.requestLayout();
+            rootView.post(() -> captureAndShare(rootView, state));
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error al preparar captura", e);
+            Toast.makeText(requireContext(), "Error al compartir imagen", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private boolean validateViewsForCapture(View rootView) {
+        if (rootView == null || cardMainRecommendation == null) {
+            Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "rootView o cardMainRecommendation es null");
+            return false;
+        }
+
+        if (cardMainRecommendation.getVisibility() != View.VISIBLE) {
+            Toast.makeText(requireContext(), "El contenido no está visible", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "cardMainRecommendation no está visible");
+            return false;
+        }
+
+        if (cardMainRecommendation.getWidth() == 0 || cardMainRecommendation.getHeight() == 0) {
+            Toast.makeText(requireContext(), "Error: el contenido no tiene dimensiones", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "cardMainRecommendation no tiene dimensiones");
+            return false;
+        }
+
+        return true;
+    }
+
+    private void captureAndShare(View rootView, ViewVisibilityState state) {
+        try {
+            Log.d(TAG, "Capturando layout completo con logo...");
+            Bitmap bitmap = capturarViewComoBitmap(rootView);
+            Log.d(TAG, "Bitmap capturado correctamente: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+
+            state.restore();
+            guardarYCompartirImagen(bitmap);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error al capturar imagen", e);
+            Toast.makeText(requireContext(), "Error al capturar imagen", Toast.LENGTH_SHORT).show();
+            state.restore();
+        }
+    }
+
+    private class ViewVisibilityState {
+        private View rootView;
+        private View ivWalkiLogo, cardAiReasoning, llActionButtons, btnNoMeInteresa;
+        private View vBottomGradient, llHintText, tvHeadlineTitle, tvHeadlineSubtitle, btnClose;
+        private int logoVis, aiReasoningVis, actionButtonsVis, noInterestedVis;
+        private int gradientVis, hintVis, titleVis, subtitleVis, closeVis;
+
+        ViewVisibilityState(View rootView) {
+            this.rootView = rootView;
+            findViews();
+            saveVisibility();
+        }
+
+        private void findViews() {
+            ivWalkiLogo = rootView.findViewById(R.id.ivWalkiLogoShare);
+            cardAiReasoning = rootView.findViewById(R.id.cardAiReasoning);
+            llActionButtons = rootView.findViewById(R.id.llActionButtons);
+            btnNoMeInteresa = rootView.findViewById(R.id.btnNoMeInteresa);
+            vBottomGradient = rootView.findViewById(R.id.vBottomGradient);
+            llHintText = rootView.findViewById(R.id.llHintText);
+            tvHeadlineTitle = rootView.findViewById(R.id.tvHeadlineTitle);
+            tvHeadlineSubtitle = rootView.findViewById(R.id.tvHeadlineSubtitle);
+            btnClose = rootView.findViewById(R.id.btnClose);
+        }
+
+        private void saveVisibility() {
+            logoVis = getVisibility(ivWalkiLogo);
+            aiReasoningVis = getVisibility(cardAiReasoning);
+            actionButtonsVis = getVisibility(llActionButtons);
+            noInterestedVis = getVisibility(btnNoMeInteresa);
+            gradientVis = getVisibility(vBottomGradient);
+            hintVis = getVisibility(llHintText);
+            titleVis = getVisibility(tvHeadlineTitle);
+            subtitleVis = getVisibility(tvHeadlineSubtitle);
+            closeVis = getVisibility(btnClose);
+        }
+
+        private int getVisibility(View view) {
+            return view != null ? view.getVisibility() : View.GONE;
+        }
+
+        void prepareForCapture() {
+            setVisibility(ivWalkiLogo, View.VISIBLE);
+            setVisibility(cardAiReasoning, View.GONE);
+            setVisibility(llActionButtons, View.GONE);
+            setVisibility(btnNoMeInteresa, View.GONE);
+            setVisibility(vBottomGradient, View.GONE);
+            setVisibility(llHintText, View.GONE);
+            setVisibility(tvHeadlineTitle, View.GONE);
+            setVisibility(tvHeadlineSubtitle, View.GONE);
+            setVisibility(btnClose, View.GONE);
+
+            if (cardMainRecommendation != null && ivWalkiLogo != null) {
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                    (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
+                params.topToBottom = R.id.ivWalkiLogoShare;
+                cardMainRecommendation.setLayoutParams(params);
+            }
+        }
+
+        void restore() {
+            setVisibility(ivWalkiLogo, logoVis);
+            setVisibility(cardAiReasoning, aiReasoningVis);
+            setVisibility(llActionButtons, actionButtonsVis);
+            setVisibility(btnNoMeInteresa, noInterestedVis);
+            setVisibility(vBottomGradient, gradientVis);
+            setVisibility(llHintText, hintVis);
+            setVisibility(tvHeadlineTitle, titleVis);
+            setVisibility(tvHeadlineSubtitle, subtitleVis);
+            setVisibility(btnClose, closeVis);
+
+            if (cardMainRecommendation != null) {
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                    (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) cardMainRecommendation.getLayoutParams();
+                params.topToBottom = R.id.tvHeadlineSubtitle;
+                cardMainRecommendation.setLayoutParams(params);
+            }
+        }
+
+        private void setVisibility(View view, int visibility) {
+            if (view != null) view.setVisibility(visibility);
+        }
+    }
+
+    private void guardarYCompartirImagen(Bitmap bitmap) {
+        try {
+            File cachePath = new File(requireContext().getCacheDir(), "images");
+            cachePath.mkdirs();
+            File imageFile = new File(cachePath, "recomendacion_ia_" + System.currentTimeMillis() + ".png");
+
+            Log.d(TAG, "Guardando imagen en: " + imageFile.getAbsolutePath());
+
+            FileOutputStream stream = new FileOutputStream(imageFile);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            stream.close();
+
+            Log.d(TAG, "Imagen guardada correctamente. Tamaño: " + imageFile.length() + " bytes");
+
+            String authority = requireContext().getPackageName() + ".provider";
+            Uri imageUri = FileProvider.getUriForFile(requireContext(), authority, imageFile);
+
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("image/png");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
+            shareIntent.putExtra(Intent.EXTRA_TEXT, "🤖 ¡La IA de Walki me recomendó este paseador perfecto para mi perro!\n\nDescarga la app: https://walki.app");
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            startActivity(Intent.createChooser(shareIntent, "Compartir recomendación"));
+            Toast.makeText(requireContext(), "Imagen capturada correctamente", Toast.LENGTH_SHORT).show();
+
+        } catch (IOException e) {
+            Log.e(TAG, "Error al compartir imagen", e);
+            Toast.makeText(requireContext(), "Error al compartir imagen", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private Bitmap capturarViewComoBitmap(View view) {
+        view.measure(
+                View.MeasureSpec.makeMeasureSpec(view.getWidth(), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(view.getHeight(), View.MeasureSpec.EXACTLY)
+        );
+        view.layout(view.getLeft(), view.getTop(), view.getRight(), view.getBottom());
+
+        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(android.graphics.Color.WHITE);
+        view.draw(canvas);
+
+        return bitmap;
+    }
+
+    private void mostrarDialogNoMeInteresa(String paseadorId) {
+        String[] razones = {
+                "Muy caro",
+                "Muy lejos",
+                "Prefiero más experiencia",
+                "No me convence su perfil",
+                "Otro"
+        };
+
+        new android.app.AlertDialog.Builder(requireContext())
+                .setTitle("¿Por qué no te interesa?")
+                .setItems(razones, (dialog, which) -> {
+                    String razonSeleccionada = razones[which];
+                    registrarEventoTelemetria("no_me_interesa", paseadorId, matchScore, razonSeleccionada);
+                    dismiss();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
 
     private void registrarEventoTelemetria(String evento, String paseadorId, Integer matchScore, String errorMsg) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();

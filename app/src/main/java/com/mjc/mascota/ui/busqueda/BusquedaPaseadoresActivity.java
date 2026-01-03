@@ -316,11 +316,19 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
     }
 
     private void setupBuscarConIA() {
-        btnBuscarConIA.setOnClickListener(v -> {
+        // Rate limiting para prevenir clicks múltiples y creación de diálogos duplicados
+        btnBuscarConIA.setOnClickListener(com.mjc.mascotalink.utils.InputUtils.createSafeClickListener(2000, v -> {
+            // Verificar si ya hay un diálogo abierto
+            androidx.fragment.app.Fragment existing = getSupportFragmentManager().findFragmentByTag("RecomendacionIADialog");
+            if (existing != null && existing.isVisible()) {
+                Toast.makeText(this, "Ya hay una búsqueda en progreso", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             Log.d(TAG, "Botón Buscar con IA presionado");
             RecomendacionIADialogFragment dialog = new RecomendacionIADialogFragment();
             dialog.show(getSupportFragmentManager(), "RecomendacionIADialog");
-        });
+        }));
     }
 
     private void setupFilterChips() {

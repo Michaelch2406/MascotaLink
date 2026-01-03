@@ -47,6 +47,14 @@ const db = admin.firestore();
 
 const getIdValue = (value) => (value && typeof value === "object" && value.id ? value.id : value);
 
+// Helper para logs de debug (solo en desarrollo)
+const isProduction = process.env.NODE_ENV === 'production' || process.env.GCLOUD_PROJECT === 'mascotalink-e44a7';
+function logDebug(message) {
+  if (!isProduction) {
+    console.log(message);
+  }
+}
+
 /**
  * Helper to format time from Firestore Timestamp with Ecuador timezone
  * @param {admin.firestore.Timestamp} timestamp - Firestore timestamp
@@ -232,43 +240,68 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return distance;
 }
 
-// 🆕 MEJORA #6: Cache de recomendaciones en memoria
-// Evita llamar a Gemini múltiples veces para el mismo usuario en poco tiempo
-const recommendationCache = new Map(); // userId -> { recommendations, timestamp, petId }
-const CACHE_TTL = 15 * 60 * 1000; // 🔥 OPTIMIZADO: 15 minutos (antes 5) para ahorrar créditos
+// Cache de recomendaciones usando Firestore (persistente, no se pierde en cold starts)
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutos para ahorrar créditos de Gemini
 
 /**
- * Limpia entradas expiradas del cache (ejecuta cada 10 minutos)
+ * Obtiene recomendaciones desde cache de Firestore
  */
-function cleanExpiredCache() {
-  const now = Date.now();
-  let cleaned = 0;
+async function getCachedRecommendations(userId, petId) {
+  try {
+    const cacheRef = db.collection('recommendation_cache').doc(userId);
+    const cacheDoc = await cacheRef.get();
 
-  for (const [userId, data] of recommendationCache.entries()) {
-    if (now - data.timestamp > CACHE_TTL) {
-      recommendationCache.delete(userId);
-      cleaned++;
+    if (!cacheDoc.exists) {
+      return null;
     }
-  }
 
-  if (cleaned > 0) {
-    console.log(`🧹 Cache limpiado: ${cleaned} entradas expiradas eliminadas`);
+    const cached = cacheDoc.data();
+    const now = Date.now();
+
+    // Verificar si el cache expiró
+    if (now - cached.timestamp > CACHE_TTL) {
+      await cacheRef.delete();
+      return null;
+    }
+
+    // Verificar que sea para la misma mascota
+    if (cached.petId !== petId) {
+      return null;
+    }
+
+    return cached.recommendations;
+  } catch (error) {
+    console.error('Error leyendo cache:', error);
+    return null;
   }
 }
 
-// Ejecutar limpieza cada 10 minutos
-setInterval(cleanExpiredCache, 10 * 60 * 1000);
+/**
+ * Guarda recomendaciones en cache de Firestore
+ */
+async function saveCachedRecommendations(userId, petId, recommendations) {
+  try {
+    const cacheRef = db.collection('recommendation_cache').doc(userId);
+    await cacheRef.set({
+      recommendations: recommendations,
+      timestamp: Date.now(),
+      petId: petId
+    });
+  } catch (error) {
+    console.error('Error guardando cache:', error);
+  }
+}
 
 /**
  * Cloud Function to recommend walkers based on user and pet criteria using Gemini AI.
  * This is a callable function, invoked directly from the Android app.
  */
 exports.recomendarPaseadores = onCall(async (request) => {
-  console.log(` DEBUG: Función recomendarPaseadores invocada`);
+  logDebug(` DEBUG: Función recomendarPaseadores invocada`);
 
   // Inicializar Gemini AI si aún no está inicializado
   initializeGemini();
-  console.log(` DEBUG: Gemini inicializado. Model existe: ${model ? 'YES' : 'NO'}`);
+  logDebug(` DEBUG: Gemini inicializado. Model existe: ${model ? 'YES' : 'NO'}`);
 
   if (!model) {
     console.error("Gemini AI model is not initialized. Check GEMINI_API_KEY.");
@@ -277,10 +310,64 @@ exports.recomendarPaseadores = onCall(async (request) => {
 
   const { userData, petData, userLocation } = request.data;
   const userId = request.auth?.uid;
-  console.log(` DEBUG: User ID: ${userId}, Datos recibidos: userData=${!!userData}, petData=${!!petData}, userLocation=${!!userLocation}`);
+  logDebug(` DEBUG: User ID: ${userId}, Datos recibidos: userData=${!!userData}, petData=${!!petData}, userLocation=${!!userLocation}`);
 
   if (!userId) {
     throw new HttpsError('unauthenticated', 'El usuario no está autenticado.');
+  }
+
+  // Validar rol de usuario - solo dueños pueden solicitar recomendaciones
+  const userDoc = await db.collection('usuarios').doc(userId).get();
+  if (!userDoc.exists) {
+    throw new HttpsError('not-found', 'No se encontró tu perfil de usuario.');
+  }
+
+  const userRole = userDoc.data().role || userDoc.data().rol;
+  if (userRole !== 'dueño') {
+    throw new HttpsError('permission-denied',
+      'Solo los dueños de mascotas pueden solicitar recomendaciones con IA.');
+  }
+  console.log(` Validación de rol exitosa: ${userRole}`);
+
+  // Rate limiting - máximo 10 recomendaciones por hora
+  const rateLimitRef = db.collection('rate_limiting_ia').doc(userId);
+  const rateLimitDoc = await rateLimitRef.get();
+  const now = Date.now();
+  const ONE_HOUR = 60 * 60 * 1000;
+  const MAX_CALLS_PER_HOUR = 10;
+
+  if (rateLimitDoc.exists) {
+    const { count, resetTime } = rateLimitDoc.data();
+    if (now < resetTime && count >= MAX_CALLS_PER_HOUR) {
+      const minutesRemaining = Math.ceil((resetTime - now) / 60000);
+      throw new HttpsError('resource-exhausted',
+        `Has alcanzado el límite de ${MAX_CALLS_PER_HOUR} recomendaciones por hora. Intenta en ${minutesRemaining} minutos.`);
+    }
+
+    // Resetear contador si pasó la hora
+    if (now >= resetTime) {
+      await rateLimitRef.set({
+        count: 1,
+        resetTime: now + ONE_HOUR,
+        lastCall: now
+      });
+      console.log(` Rate limit reseteado para usuario ${userId}`);
+    } else {
+      // Incrementar contador
+      await rateLimitRef.update({
+        count: FieldValue.increment(1),
+        lastCall: now
+      });
+      console.log(` Rate limit: ${count + 1}/${MAX_CALLS_PER_HOUR} llamadas`);
+    }
+  } else {
+    // Primera llamada del usuario
+    await rateLimitRef.set({
+      count: 1,
+      resetTime: now + ONE_HOUR,
+      lastCall: now
+    });
+    console.log(` Rate limit inicializado para usuario ${userId}`);
   }
 
   if (!userData || !petData || !userLocation) {
@@ -337,31 +424,22 @@ exports.recomendarPaseadores = onCall(async (request) => {
   }
 
   console.log(` Validación exitosa - Recomendación para usuario ${userId}, mascota ${petData.nombre} (${petData.tamano})`);
-  console.log(` DEBUG: Iniciando lógica de recomendación...`);
+  logDebug(` DEBUG: Iniciando lógica de recomendación...`);
 
-  // 🆕 MEJORA #6: Verificar cache antes de llamar a Gemini
-  console.log(` DEBUG: Verificando cache...`);
-  const cacheKey = userId;
-  const petId = petData.id || petData.nombre; // Identificador de mascota
-  const cached = recommendationCache.get(cacheKey);
-  console.log(` DEBUG: Cache key: ${cacheKey}, Pet ID: ${petId}, Cache hit: ${cached ? 'YES' : 'NO'}`);
+  // Verificar cache de Firestore antes de llamar a Gemini
+  const petId = petData.id || petData.nombre;
+  const cachedRecommendations = await getCachedRecommendations(userId, petId);
 
-  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-    // Verificar que sea para la misma mascota
-    if (cached.petId === petId) {
-      console.log(`💾 Retornando recomendaciones desde cache (${Math.floor((CACHE_TTL - (Date.now() - cached.timestamp)) / 1000)}s restantes)`);
-      return {
-        recommendations: cached.recommendations,
-        message: "Recomendaciones obtenidas (cache)",
-        cached: true
-      };
-    } else {
-      console.log(`🔄 Cache invalidado: cambió la mascota (${cached.petId} → ${petId})`);
-      recommendationCache.delete(cacheKey);
-    }
+  if (cachedRecommendations) {
+    console.log(`💾 Retornando recomendaciones desde cache de Firestore`);
+    return {
+      recommendations: cachedRecommendations,
+      message: "Recomendaciones obtenidas (cache)",
+      cached: true
+    };
   }
 
-  console.log(` DEBUG: Cache no encontrado, continuando con búsqueda...`);
+  logDebug(` DEBUG: Cache no encontrado, continuando con búsqueda...`);
 
   const userLat = userLocation.latitude;
   const userLng = userLocation.longitude;
@@ -370,20 +448,21 @@ exports.recomendarPaseadores = onCall(async (request) => {
 
   let potentialWalkers = [];
 
-  console.log(` DEBUG: Iniciando bloque try para búsqueda de paseadores...`);
+  logDebug(` DEBUG: Iniciando bloque try para búsqueda de paseadores...`);
   try {
-    console.log(` DEBUG: Ejecutando query a paseadores_search...`);
-    // 1. Fetch potential walkers from paseadores_search collection
-    // This collection is denormalized and contains searchable walker data.
+    logDebug(` DEBUG: Ejecutando query a paseadores_search...`);
+    // Fetch potential walkers from paseadores_search collection (denormalizado)
+    // Agregar límite y ordenamiento para optimizar query
     const searchSnapshot = await db.collection("paseadores_search")
       .where("activo", "==", true)
-      // Buscar tanto "APROBADO" como "aprobado" (hay inconsistencia en la BD)
+      .orderBy("calificacion_promedio", "desc")
+      .limit(50) // Máximo 50 candidatos iniciales para optimizar
       .get();
 
-    console.log(` DEBUG: Query completada. Documentos encontrados: ${searchSnapshot.size}`);
+    logDebug(` DEBUG: Query completada. Documentos encontrados: ${searchSnapshot.size}`);
 
     const walkerIds = [];
-    const walkerDataMap = {}; // To store full walker data
+    const walkerDataMap = {};
 
     for (const doc of searchSnapshot.docs) {
       const walkerSearchData = doc.data();
@@ -396,36 +475,35 @@ exports.recomendarPaseadores = onCall(async (request) => {
         walkerIds.push(walkerId);
         walkerDataMap[walkerId] = walkerSearchData;
       } else {
-        console.log(`  ⏭️ Saltando paseador ${walkerId}: verificacion_estado = "${verificacionEstado}"`);
+        logDebug(`  ⏭️ Saltando paseador ${walkerId}: verificacion_estado = "${verificacionEstado}"`);
       }
     }
 
-    console.log(` DEBUG: Total de IDs de paseadores verificados/aprobados: ${walkerIds.length}`);
+    logDebug(` DEBUG: Total de IDs de paseadores verificados/aprobados: ${walkerIds.length}`);
 
     if (walkerIds.length === 0) {
       console.log(` No se encontraron paseadores activos y verificados`);
       return { recommendations: [], message: "No se encontraron paseadores activos y verificados." };
     }
 
-    console.log(` DEBUG: Obteniendo datos completos de ${walkerIds.length} paseadores...`);
-    console.log(` DEBUG: IDs a consultar: ${walkerIds.join(', ')}`);
+    logDebug(` DEBUG: Obteniendo datos completos de ${walkerIds.length} paseadores...`);
 
-    // 2. Fetch full paseador profile data and user display name for prompt
+    // Fetch full paseador profile data and user display name
     const fullWalkerPromises = walkerIds.map(id => db.collection("paseadores").doc(id).get());
     const userDisplayPromises = walkerIds.map(id => db.collection("usuarios").doc(id).get());
 
-    console.log(` DEBUG: Ejecutando queries paralelas a paseadores y usuarios...`);
+    logDebug(` DEBUG: Ejecutando queries paralelas a paseadores y usuarios...`);
 
     const [fullWalkerDocs, userDisplayDocs] = await Promise.all([
       Promise.all(fullWalkerPromises),
       Promise.all(userDisplayPromises)
     ]);
 
-    console.log(` DEBUG: Queries completadas. fullWalkerDocs: ${fullWalkerDocs.length}, userDisplayDocs: ${userDisplayDocs.length}`);
+    logDebug(` DEBUG: Queries completadas. fullWalkerDocs: ${fullWalkerDocs.length}, userDisplayDocs: ${userDisplayDocs.length}`);
 
     const paseadoresForAI = [];
 
-    console.log(` DEBUG: Procesando ${walkerIds.length} paseadores y calculando distancias...`);
+    logDebug(` DEBUG: Procesando ${walkerIds.length} paseadores y calculando distancias...`);
 
     for (let i = 0; i < walkerIds.length; i++) {
       const walkerId = walkerIds[i];
@@ -433,35 +511,29 @@ exports.recomendarPaseadores = onCall(async (request) => {
       const fullWalkerData = fullWalkerDocs[i].exists ? fullWalkerDocs[i].data() : {};
       const userData = userDisplayDocs[i].exists ? userDisplayDocs[i].data() : {};
 
-      console.log(`   Procesando paseador ${i + 1}/${walkerIds.length}: ${walkerId}`);
+      logDebug(`   Procesando paseador ${i + 1}/${walkerIds.length}: ${walkerId}`);
 
       // Buscar ubicación en varios lugares posibles
       let walkerLocation = null;
 
-      // Intento 1: ubicacion_actual en usuarios (campo principal)
       if (userData.ubicacion_actual) {
         walkerLocation = userData.ubicacion_actual;
-        console.log(`    📍 Ubicación encontrada en usuarios.ubicacion_actual`);
-      }
-      // Intento 2: ubicacion_principal.geopoint en paseadores
-      else if (fullWalkerData.ubicacion_principal?.geopoint) {
+        logDebug(`    📍 Ubicación encontrada en usuarios.ubicacion_actual`);
+      } else if (fullWalkerData.ubicacion_principal?.geopoint) {
         walkerLocation = fullWalkerData.ubicacion_principal.geopoint;
-        console.log(`    📍 Ubicación encontrada en paseadores.ubicacion_principal.geopoint`);
-      }
-      // Intento 3: ubicacion directa en usuarios
-      else if (userData.ubicacion) {
+        logDebug(`    📍 Ubicación encontrada en paseadores.ubicacion_principal.geopoint`);
+      } else if (userData.ubicacion) {
         walkerLocation = userData.ubicacion;
-        console.log(`    📍 Ubicación encontrada en usuarios.ubicacion`);
+        logDebug(`    📍 Ubicación encontrada en usuarios.ubicacion`);
       }
 
       if (!walkerLocation || !walkerLocation.latitude || !walkerLocation.longitude) {
-        console.log(`     Sin ubicación válida en ningún campo, saltando`);
+        logDebug(`     Sin ubicación válida en ningún campo, saltando`);
         continue;
       }
 
-      // Filter by distance if location is available
       const distance = calculateDistance(userLat, userLng, walkerLocation.latitude, walkerLocation.longitude);
-      console.log(`    📍 Distancia: ${distance.toFixed(2)}km (radio máx: ${radiusKm}km)`);
+      logDebug(`    📍 Distancia: ${distance.toFixed(2)}km (radio máx: ${radiusKm}km)`);
 
       if (distance <= radiusKm) {
           paseadoresForAI.push({
@@ -474,17 +546,13 @@ exports.recomendarPaseadores = onCall(async (request) => {
             anos_experiencia: searchData.anos_experiencia || 0,
             verificacion_estado: searchData.verificacion_estado || "pendiente",
             distancia_km: parseFloat(distance.toFixed(2)),
-
-            // 🆕 Campos denormalizados desde paseadores_search (ya no necesitamos consultar /paseadores/)
-            motivacion: searchData.motivacion || "",
-            top_resenas: searchData.top_resenas || [],
-            zonas_principales: searchData.zonas_principales || [],
-            disponibilidad_general: searchData.disponibilidad_general || "No especificada",
-            //  ELIMINADO: experiencia_general (redundante con anos_experiencia)
+            // Campos adicionales optimizados (solo los que Gemini realmente usa)
+            top_resenas: (searchData.top_resenas || []).slice(0, 2), // Solo 2 reseñas en vez de todas
+            zonas_principales: (searchData.zonas_principales || []).slice(0, 2) // Solo 2 zonas
           });
-          console.log(`     Agregado a lista de candidatos`);
+          logDebug(`     Agregado a lista de candidatos`);
         } else {
-          console.log(`     Fuera de rango (>${radiusKm}km)`);
+          logDebug(`     Fuera de rango (>${radiusKm}km)`);
         }
     }
 
@@ -690,11 +758,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
       };
 
       // Guardar en cache
-      recommendationCache.set(cacheKey, {
-        recommendations: [directRecommendation],
-        timestamp: Date.now(),
-        petId: petId
-      });
+      await saveCachedRecommendations(userId, petId, [directRecommendation]);
 
       return {
         recommendations: [directRecommendation],
@@ -721,11 +785,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
       };
 
       // Guardar en cache
-      recommendationCache.set(cacheKey, {
-        recommendations: [fallbackRecommendation],
-        timestamp: Date.now(),
-        petId: petId
-      });
+      await saveCachedRecommendations(userId, petId, [fallbackRecommendation]);
 
       return {
         recommendations: [fallbackRecommendation],
@@ -733,91 +793,54 @@ exports.recomendarPaseadores = onCall(async (request) => {
       };
     }
 
-    // Construct the prompt for Gemini AI
-    console.log(` DEBUG: Construyendo prompt para Gemini AI...`);
-    const prompt = `Eres un asistente experto en matching de paseadores de perros para la app Walki.
+    // Construct the prompt for Gemini AI (optimizado para reducir tokens)
+    logDebug(` DEBUG: Construyendo prompt para Gemini AI...`);
 
-**ESQUEMA DE DATOS:**
+    // Simplificar datos de candidatos (solo lo necesario para Gemini)
+    const candidatosSimplificados = candidatosParaIA.map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      cal: p.calificacion_promedio, // Nombre corto
+      serv: p.num_servicios_completados,
+      precio: p.precio_hora,
+      exp: p.anos_experiencia,
+      tipos: p.tipos_perro_aceptados,
+      dist: p.distancia_km,
+      score: Math.round(p.pre_score) // Pre-score ya calculado
+    }));
 
-Mascota (petData):
-- nombre: string
-- tamano: "Pequeños" | "Medianos" | "Grandes" | "Gigantes"
-- raza: string (opcional)
-- edad_meses: number
-- temperamento: string (opcional)
+    const prompt = `Experto en matching de paseadores. Analiza y recomienda.
 
-Paseador (candidatos):
-- id: string
-- nombre: string
-- calificacion_promedio: 0-5 (float) - promedio de todas las reseñas
-- num_servicios_completados: number - total de paseos realizados
-- precio_hora: number (USD)
-- anos_experiencia: number - años trabajando con perros
-- tipos_perro_aceptados: ["Pequeños", "Medianos", "Grandes"] - DEBE coincidir con tamano
-- distancia_km: number - distancia ya calculada (máx 10km)
-- verificacion_estado: "verificado" | "pendiente"
-- motivacion: string - por qué es paseador
-- top_resenas: [{texto: string, calificacion: number}] - últimas 3 reseñas reales
-- zonas_principales: [string] - zonas de cobertura
-- disponibilidad_general: string - resumen de horarios
+MASCOTA: ${petData.nombre}, ${petData.tamano}, ${petData.raza || 'sin raza'}
 
-**CRITERIOS DE MATCH (ponderación):**
+CRITERIOS:
+1. Tamaño DEBE coincidir (40%)
+2. Reputación: cal>=4.5, serv>=10 (25%)
+3. Distancia: <2km excelente (20%)
+4. Experiencia: exp>=3 ideal (10%)
+5. Precio vs calidad (5%)
 
-1. **Compatibilidad de tamaño (40% del score)**:
-   - El tamano DEBE estar en tipos_perro_aceptados
-   - Si NO coincide → match_score = 0 (NO recomendar NUNCA)
+REGLAS:
+- NO recomendar si tamano no coincide
+- NO si match_score < 50
+- MAX 2 recomendaciones
+- Si empate: priorizar menor distancia
 
-2. **Reputación (25%)**:
-   - calificacion_promedio >= 4.5 es excelente
-   - num_servicios_completados >= 10 es confiable
-   - Combinar: paseador 5.0★ con 20 servicios > 4.8★ con 5 servicios
-   - Leer top_resenas para validar calidad real
+CANDIDATOS:
+${JSON.stringify(candidatosSimplificados)}
 
-3. **Distancia (20%)**:
-   - < 2 km = excelente (+20 puntos)
-   - 2-5 km = bueno (+15 puntos)
-   - 5-10 km = aceptable (+10 puntos)
-
-4. **Experiencia (10%)**:
-   - anos_experiencia >= 3 es ideal
-   - anos_experiencia >= 1 es aceptable
-
-5. **Precio (5%)**:
-   - Relación calidad-precio (no solo el más barato)
-   - Precio bajo + poca experiencia = red flag
-   - Precio alto + alta calificación = justificado
-
-**REGLAS ESTRICTAS:**
-- NUNCA recomendar si tamano NO está en tipos_perro_aceptados
-- NUNCA recomendar si match_score < 50
-- NUNCA recomendar si verificacion_estado != "verificado" y != "APROBADO"
-- MÁXIMO 2 recomendaciones (preferiblemente 1 si es match excelente)
-- Si hay empate en score, priorizar menor distancia
-- Usa top_resenas para fundamentar la recomendación
-
-**DATOS DEL USUARIO:**
-Dueño: ${JSON.stringify(userData, null, 2)}
-
-Mascota: ${JSON.stringify(petData, null, 2)}
-
-**CANDIDATOS (ya filtrados y ordenados por cercanía):**
-${JSON.stringify(candidatosParaIA, null, 2)}
-
-**FORMATO DE SALIDA (JSON puro sin markdown):**
+SALIDA (JSON puro):
 [
   {
     "id": "walker_id",
     "nombre": "Nombre",
-    "razon_ia": "Una frase concisa explicando el match (máx 100 caracteres)",
+    "razon_ia": "Explicación concisa (máx 100 chars)",
     "match_score": 85,
-    "tags": ["📍 A 2.5 km", "⭐ 4.9/5 (50 paseos)", "🐕 Acepta ${petData.tamano}"]
+    "tags": ["📍 2.5km", "⭐ 4.9", "🐕 ${petData.tamano}"]
   }
 ]
 
-**IMPORTANTE:**
-- Devuelve SOLO el array JSON, sin texto adicional ni bloques de código markdown
-- Si no hay buenos matches (score >= 50), devuelve array vacío: []
-- Los tags deben ser MUY concisos (máx 3 palabras cada uno)`;
+Devuelve SOLO JSON. Si no hay matches >= 50: []`;
 
     console.log(` DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
     const result = await model.generateContent(prompt);
@@ -894,12 +917,8 @@ ${JSON.stringify(candidatosParaIA, null, 2)}
       }
     }
 
-    // 🆕 MEJORA #6: Guardar en cache antes de retornar
-    recommendationCache.set(cacheKey, {
-      recommendations: recommendations,
-      timestamp: Date.now(),
-      petId: petId
-    });
+    // Guardar en cache de Firestore antes de retornar
+    await saveCachedRecommendations(userId, petId, recommendations);
     console.log(` DEBUG: 💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
 
     console.log(` DEBUG: ✅✅✅ FUNCIÓN COMPLETADA EXITOSAMENTE - Retornando ${recommendations.length} recomendaciones`);

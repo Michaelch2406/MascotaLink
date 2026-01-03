@@ -41,21 +41,104 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <!-- 🆕 ESTADO: LOADING (Skeleton) -->
-                    <include
+                    <!-- ESTADO: LOADING (Skeleton con mensaje de progreso) -->
+                    <LinearLayout
                         android:id="@+id/layoutSkeleton"
-                        layout="@layout/item_paseador_recomendacion_ia_skeleton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:visibility="visible" />
+                        android:orientation="vertical"
+                        android:visibility="visible">
 
-                    <!-- 🆕 ESTADO: CONTENT (Item real) -->
-                    <include
+                        <!-- Mensaje de progreso mejorado con icono Material -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:padding="24dp"
+                            android:background="#F8FAFC">
+
+                            <!-- Icono animado del paso actual (Material Icon) -->
+                            <ImageView
+                                android:id="@+id/ivLoadingIcon"
+                                android:layout_width="56dp"
+                                android:layout_height="56dp"
+                                android:src="@drawable/ic_location_on"
+                                android:tint="#6366F1"
+                                android:layout_marginBottom="16dp"
+                                android:contentDescription="Icono de progreso" />
+
+                            <!-- Mensaje de progreso -->
+                            <TextView
+                                android:id="@+id/tvLoadingMessage"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Obteniendo tu ubicación..."
+                                android:textSize="16sp"
+                                android:textColor="#1E293B"
+                                android:fontFamily="sans-serif-medium"
+                                android:textAlignment="center"
+                                android:gravity="center" />
+
+                            <!-- Submensaje opcional -->
+                            <TextView
+                                android:id="@+id/tvLoadingSubtext"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Esto tomará solo unos segundos"
+                                android:textSize="13sp"
+                                android:textColor="#64748B"
+                                android:textAlignment="center"
+                                android:gravity="center"
+                                android:layout_marginTop="6dp" />
+
+                        </LinearLayout>
+
+                        <!-- Skeleton -->
+                        <include
+                            layout="@layout/item_paseador_recomendacion_ia_skeleton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+
+                        <!-- Botón Cancelar -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCancelSearch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="Cancelar"
+                            android:layout_margin="16dp"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+
+                    <!-- ESTADO: CONTENT (ViewPager2 para múltiples recomendaciones) -->
+                    <LinearLayout
                         android:id="@+id/layoutContent"
-                        layout="@layout/item_paseador_recomendacion_ia"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:visibility="gone" />
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <!-- ViewPager2 para swipear entre recomendaciones -->
+                        <androidx.viewpager2.widget.ViewPager2
+                            android:id="@+id/viewPagerRecommendations"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+
+                        <!-- Indicador de páginas (dots) -->
+                        <LinearLayout
+                            android:id="@+id/layoutPageIndicator"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center"
+                            android:padding="16dp"
+                            android:visibility="gone">
+                            <!-- Los dots se crearán dinámicamente en el código -->
+                        </LinearLayout>
+
+                    </LinearLayout>
 
                     <!-- 🆕 ESTADO: ERROR -->
                     <LinearLayout
