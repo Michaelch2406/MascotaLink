@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:clickable="true"
+    android:focusable="true"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Header Skeleton -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="32dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Saludo Skeleton -->
+                <View
+                    android:id="@+id/skeleton_saludo_paseador"
+                    android:layout_width="80dp"
+                    android:layout_height="18dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="@drawable/bg_skeleton_rounded"/>
+
+                <!-- Nombre Usuario Skeleton -->
+                <View
+                    android:id="@+id/skeleton_nombre_paseador"
+                    android:layout_width="180dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/bg_skeleton_rounded"/>
+            </LinearLayout>
+
+            <!-- Avatar Skeleton -->
+            <View
+                android:id="@+id/skeleton_avatar_paseador"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_skeleton_circle"/>
+        </LinearLayout>
+
+        <!-- Título "Estado del Servicio" Skeleton -->
+        <View
+            android:id="@+id/skeleton_titulo_servicio"
+            android:layout_width="160dp"
+            android:layout_height="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_skeleton_rounded"/>
+
+        <!-- Card Estado Servicio Skeleton -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginBottom="32dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="@color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <!-- Header de la card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_skeleton_circle"/>
+
+                    <View
+                        android:layout_width="130dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@drawable/bg_skeleton_rounded"/>
+                </LinearLayout>
+
+                <!-- Contenido de la card -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="@drawable/bg_skeleton_rounded"/>
+
+                <View
+                    android:layout_width="220dp"
+                    android:layout_height="16dp"
+                    android:background="@drawable/bg_skeleton_rounded"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Título "Estadísticas" Skeleton -->
+        <View
+            android:id="@+id/skeleton_titulo_stats"
+            android:layout_width="110dp"
+            android:layout_height="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_skeleton_rounded"/>
+
+        <!-- Grid de Estadísticas Skeleton -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- Stat Card 1 Skeleton -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="100dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="4dp"
+                    app:cardBackgroundColor="@color/white">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="16dp">
+
+                        <View
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_skeleton_circle"/>
+
+                        <View
+                            android:layout_width="60dp"
+                            android:layout_height="12dp"
+                            android:background="@drawable/bg_skeleton_rounded"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Stat Card 2 Skeleton -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="100dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="4dp"
+                    app:cardBackgroundColor="@color/white">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="16dp">
+
+                        <View
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_skeleton_circle"/>
+
+                        <View
+                            android:layout_width="60dp"
+                            android:layout_height="12dp"
+                            android:background="@drawable/bg_skeleton_rounded"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

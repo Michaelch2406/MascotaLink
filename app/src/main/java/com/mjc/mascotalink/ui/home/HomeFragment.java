@@ -37,6 +37,7 @@ public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
     private static final long MIN_REFRESH_INTERVAL_MS = 2000;
+    private static final long MIN_SKELETON_DISPLAY_TIME_MS = 800;
 
     private HomeViewModel viewModel;
     private String userId;
@@ -46,6 +47,12 @@ public class HomeFragment extends Fragment {
     private SwipeRefreshLayout swipeRefresh;
     private ReservationCardHelper cardHelper;
     private long lastRefreshTime = 0;
+
+    // Skeleton Loading
+    private FrameLayout skeletonContainer;
+    private View skeletonView;
+    private boolean isInitialLoadComplete = false;
+    private long skeletonShowTime = 0;
 
     @Nullable
     @Override
@@ -61,6 +68,7 @@ public class HomeFragment extends Fragment {
         container = view.findViewById(R.id.home_container);
         pbLoading = view.findViewById(R.id.pb_loading_home);
         swipeRefresh = view.findViewById(R.id.swipe_refresh_home);
+        skeletonContainer = view.findViewById(R.id.skeleton_container);
 
         viewModel = new ViewModelProvider(this).get(HomeViewModel.class);
 
@@ -82,6 +90,7 @@ public class HomeFragment extends Fragment {
 
             cardHelper = new ReservationCardHelper(requireContext(), roleType, timerHandler);
 
+            setupSkeleton(userRole);
             setupRoleBasedUI(userRole);
             loadData();
         } else {
@@ -93,10 +102,15 @@ public class HomeFragment extends Fragment {
         viewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
             if (isLoading != null) {
                 if (isLoading) {
-                    pbLoading.setVisibility(View.VISIBLE);
+                    // Solo mostrar progressBar en recargas, no en carga inicial (skeleton se muestra)
+                    if (isInitialLoadComplete) {
+                        pbLoading.setVisibility(View.VISIBLE);
+                    }
                 } else {
                     pbLoading.setVisibility(View.GONE);
                     swipeRefresh.setRefreshing(false);
+                    // Ocultar skeleton cuando termine de cargar
+                    hideSkeleton();
                 }
             }
         });
@@ -354,6 +368,68 @@ public class HomeFragment extends Fragment {
                 cardHelper.updateCard(view, reservation);
             }
         });
+    }
+
+    private void setupSkeleton(String role) {
+        if (!isAdded() || getContext() == null || skeletonContainer == null) return;
+
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        int skeletonLayout = "PASEADOR".equals(role)
+            ? R.layout.skeleton_home_paseador
+            : R.layout.skeleton_home_dueno;
+
+        skeletonView = inflater.inflate(skeletonLayout, skeletonContainer, false);
+        skeletonContainer.addView(skeletonView);
+
+        // Aplicar animación shimmer
+        applyShimmerAnimation(skeletonView);
+
+        // Registrar tiempo de inicio
+        skeletonShowTime = System.currentTimeMillis();
+        Log.d(TAG, "setupSkeleton: Skeleton inicializado para rol " + role);
+    }
+
+    private void applyShimmerAnimation(View view) {
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                applyShimmerAnimation(viewGroup.getChildAt(i));
+            }
+        } else {
+            if (view.getId() != View.NO_ID && isAdded()) {
+                try {
+                    String resourceName = getResources().getResourceEntryName(view.getId());
+                    if (resourceName != null && resourceName.startsWith("skeleton_")) {
+                        android.view.animation.Animation shimmer = android.view.animation.AnimationUtils.loadAnimation(
+                            requireContext(), R.anim.shimmer_animation);
+                        view.startAnimation(shimmer);
+                    }
+                } catch (Exception e) {
+                    // Ignore if resource name cannot be retrieved
+                }
+            }
+        }
+    }
+
+    private void hideSkeleton() {
+        if (!isInitialLoadComplete && skeletonContainer != null) {
+            long elapsedTime = System.currentTimeMillis() - skeletonShowTime;
+            long remainingTime = MIN_SKELETON_DISPLAY_TIME_MS - elapsedTime;
+
+            if (remainingTime > 0) {
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    isInitialLoadComplete = true;
+                    if (skeletonContainer != null) {
+                        skeletonContainer.setVisibility(View.GONE);
+                    }
+                    Log.d(TAG, "hideSkeleton: Skeleton ocultado (con delay)");
+                }, remainingTime);
+            } else {
+                isInitialLoadComplete = true;
+                skeletonContainer.setVisibility(View.GONE);
+                Log.d(TAG, "hideSkeleton: Skeleton ocultado (inmediato)");
+            }
+        }
     }
 
     @Override
