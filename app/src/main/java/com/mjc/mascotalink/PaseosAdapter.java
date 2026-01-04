@@ -58,10 +58,56 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
     public void updateList(List<Paseo> newList) {
         // Agrupar la nueva lista
         List<PaseoItem> newItems = PaseoItem.agruparReservas(newList);
-        // TODO: Implementar DiffUtil para PaseoItem si es necesario
+        
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+            @Override
+            public int getOldListSize() {
+                return paseoItems.size();
+            }
+
+            @Override
+            public int getNewListSize() {
+                return newItems.size();
+            }
+
+            @Override
+            public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+                PaseoItem oldItem = paseoItems.get(oldItemPosition);
+                PaseoItem newItem = newItems.get(newItemPosition);
+                
+                // Comparar por ID de reserva principal
+                String oldId = oldItem.esGrupo() ? 
+                    oldItem.getPrimerPaseo().getGrupo_reserva_id() : 
+                    oldItem.getPaseoIndividual().getReservaId();
+                    
+                String newId = newItem.esGrupo() ? 
+                    newItem.getPrimerPaseo().getGrupo_reserva_id() : 
+                    newItem.getPaseoIndividual().getReservaId();
+                    
+                return oldId != null && oldId.equals(newId);
+            }
+
+            @Override
+            public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+                PaseoItem oldItem = paseoItems.get(oldItemPosition);
+                PaseoItem newItem = newItems.get(newItemPosition);
+                
+                // Comparar estado y datos relevantes para la UI
+                String oldState = oldItem.getEstadoEfectivo();
+                String newState = newItem.getEstadoEfectivo();
+                
+                if (oldState == null || !oldState.equals(newState)) return false;
+                
+                // Si es grupo, verificar cantidad de días
+                if (oldItem.esGrupo() && oldItem.getCantidadDias() != newItem.getCantidadDias()) return false;
+                
+                return true; 
+            }
+        });
+
         this.paseoItems.clear();
         this.paseoItems.addAll(newItems);
-        notifyDataSetChanged();
+        diffResult.dispatchUpdatesTo(this);
     }
 
     @Override

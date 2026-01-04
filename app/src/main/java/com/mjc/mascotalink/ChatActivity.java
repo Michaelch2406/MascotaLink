@@ -481,6 +481,28 @@ public class ChatActivity extends AppCompatActivity {
         btnAdjuntos.setOnClickListener(v -> mostrarOpcionesAdjuntos());
         btnEnviar.setOnClickListener(v -> handleSendButtonClick());
         etMensaje.addTextChangedListener(createTypingWatcher());
+
+        // Navegación al perfil del otro usuario
+        View.OnClickListener profileClickListener = v -> {
+            if (otroUsuarioId == null) return;
+
+            String userRole = BottomNavManager.getUserRole(this);
+            Intent intent;
+
+            if (FirestoreConstants.ROLE_PASEADOR.equals(userRole)) {
+                // Si soy paseador, veo el perfil del dueño
+                intent = new Intent(ChatActivity.this, PerfilDuenoActivity.class);
+                intent.putExtra("id_dueno", otroUsuarioId);
+            } else {
+                // Si soy dueño, veo el perfil del paseador
+                intent = new Intent(ChatActivity.this, PerfilPaseadorActivity.class);
+                intent.putExtra("paseadorId", otroUsuarioId);
+            }
+            startActivity(intent);
+        };
+
+        ivAvatarChat.setOnClickListener(profileClickListener);
+        tvNombreChat.setOnClickListener(profileClickListener);
     }
 
     private void handleSendButtonClick() {

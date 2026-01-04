@@ -468,7 +468,7 @@ public class PaseosActivity extends AppCompatActivity {
                  return;
             }
 
-            if (querySnapshot.isEmpty()) {
+            if (querySnapshot == null || querySnapshot.isEmpty()) {
                 paseosList.clear();
                 if (paseosAdapter != null) {
                     paseosAdapter.updateList(paseosList);
@@ -477,8 +477,41 @@ public class PaseosActivity extends AppCompatActivity {
                 return;
             }
 
-            List<Paseo> paseosTemporales = new ArrayList<>();
+            // DETECCIÓN DE CAMBIOS DE ESTADO PARA NAVEGACIÓN AUTOMÁTICA
+            for (com.google.firebase.firestore.DocumentChange dc : querySnapshot.getDocumentChanges()) {
+                Log.d(TAG, "Cambio detectado: " + dc.getType() + " ID: " + dc.getDocument().getId());
+                
+                String newState = dc.getDocument().getString("estado");
+                if (newState == null) continue;
+
+                // Detectar si el item DEJA de pertenecer a esta lista (REMOVED) o CAMBIA de estado (MODIFIED)
+                if (dc.getType() == com.google.firebase.firestore.DocumentChange.Type.REMOVED || 
+                    dc.getType() == com.google.firebase.firestore.DocumentChange.Type.MODIFIED) {
+                    
+                    Log.d(TAG, "Evaluando redirección. Estado actual tab: " + estadoActual + ", Nuevo estado doc: " + newState);
+
+                    if (!newState.equals(estadoActual)) {
+                        if (ReservaEstadoValidator.ESTADO_CONFIRMADO.equals(newState) 
+                                && ReservaEstadoValidator.ESTADO_ACEPTADO.equals(estadoActual)) {
+                             Log.d(TAG, "Redirigiendo a Tab Programados (1)");
+                             if (tabLayout != null) {
+                                 TabLayout.Tab tab = tabLayout.getTabAt(1);
+                                 if (tab != null && !tab.isSelected()) tab.select();
+                             }
+                        } else if (("LISTO_PARA_INICIAR".equals(newState) || "EN_CURSO".equals(newState))
+                                && !estadoActual.equals("EN_CURSO")) {
+                             Log.d(TAG, "Redirigiendo a Tab En Curso (2)");
+                             if (tabLayout != null) {
+                                 TabLayout.Tab tab = tabLayout.getTabAt(2);
+                                 if (tab != null && !tab.isSelected()) tab.select();
+                             }
+                        }
+                    }
+                }
+            }
+
             List<Task<DocumentSnapshot>> tareas = new ArrayList<>();
+            List<Paseo> paseosTemporales = new ArrayList<>();
 
             // 1. Carga INMEDIATA de datos básicos (hace que la lista sea responsiva)
             for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
