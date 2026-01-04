@@ -212,12 +212,9 @@ public class ReservationCardHelper {
                 vh.desc.setText(R.string.walk_confirmed_desc_fallback);
             }
 
-            vh.btn.setText(R.string.walk_view_details);
-            vh.btn.setTextColor(context.getColor(R.color.teal_primary));
-
             vh.btn.setOnClickListener(v -> {
                 if (context != null) {
-                    Intent intent = new Intent(context, PaseoEnCursoDuenoActivity.class);
+                    Intent intent = new Intent(context, com.mjc.mascotalink.DetallePaseoActivity.class);
                     intent.putExtra("id_reserva", resId);
                     context.startActivity(intent);
                 }
@@ -245,7 +242,7 @@ public class ReservationCardHelper {
 
             vh.btn.setOnClickListener(v -> {
                 if (context != null) {
-                    Intent intent = new Intent(context, PaseoEnCursoActivity.class);
+                    Intent intent = new Intent(context, com.mjc.mascotalink.DetallePaseoActivity.class);
                     intent.putExtra("id_reserva", resId);
                     context.startActivity(intent);
                 }
@@ -322,11 +319,12 @@ public class ReservationCardHelper {
                 if (roleType == RoleType.DUENO) {
                     // Para el dueño en estado ACEPTADO, abrir pantalla de confirmar pago
                     intent = new Intent(context, ConfirmarPagoActivity.class);
+                    intent.putExtra("reserva_id", resId);
                 } else {
-                    // Para el paseador, abrir detalles del paseo
-                    intent = new Intent(context, PaseoEnCursoActivity.class);
+                    // Para el paseador, abrir detalles del paseo (estado ACEPTADO)
+                    intent = new Intent(context, com.mjc.mascotalink.DetallePaseoActivity.class);
+                    intent.putExtra("id_reserva", resId);
                 }
-                intent.putExtra("id_reserva", resId);
                 context.startActivity(intent);
             }
         });

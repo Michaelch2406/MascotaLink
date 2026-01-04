@@ -375,6 +375,11 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MascotaLink" />
         <activity
+            android:name=".DetalleHistorialActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MascotaLink" />
+        <activity
             android:name=".DetallePaseoActivity"
             android:exported="false"
             android:screenOrientation="portrait"

@@ -161,7 +161,7 @@ public class HistorialPaseosActivity extends AppCompatActivity {
     }
 
     private void abrirDetallePaseo(Paseo paseo) {
-        Intent intent = new Intent(this, DetallePaseoActivity.class);
+        Intent intent = new Intent(this, DetalleHistorialActivity.class);
         intent.putExtra("id_reserva", paseo.getReservaId());
         intent.putExtra("rol_usuario", userRole);
         // NO pasar el objeto completo porque contiene GeoPoint no serializable
