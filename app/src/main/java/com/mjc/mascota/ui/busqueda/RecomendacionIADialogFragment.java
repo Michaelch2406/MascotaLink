@@ -792,6 +792,26 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             // Dibujar la vista (el fondo se dibuja automáticamente)
             cardView.draw(canvas);
 
+            // Crear un Path con bordes redondeados SOLO en la parte inferior
+            android.graphics.Path path = new android.graphics.Path();
+            float radius = 32f; // Mismo radio que app:cardCornerRadius="32dp"
+
+            // Path: recto arriba, redondeado abajo
+            path.moveTo(0, 0); // Esquina superior izquierda
+            path.lineTo(width, 0); // Línea superior recta
+            path.lineTo(width, captureHeight - radius); // Línea recta derecha hasta antes de la curva
+            path.arcTo(width - radius * 2, captureHeight - radius * 2, width, captureHeight, 0, 90, false); // Arco esquina inferior derecha
+            path.lineTo(radius, captureHeight); // Línea inferior
+            path.arcTo(0, captureHeight - radius * 2, radius * 2, captureHeight, 90, 90, false); // Arco esquina inferior izquierda
+            path.lineTo(0, 0); // Línea izquierda recta
+            path.close();
+
+            // Hacer clip del canvas con el path
+            canvas.clipPath(path);
+
+            // Volver a dibujar la vista con el clip aplicado
+            cardView.draw(canvas);
+
             return bitmap;
         } catch (Exception e) {
             Log.e("ShareRecommendation", "Error creating bitmap from view", e);
