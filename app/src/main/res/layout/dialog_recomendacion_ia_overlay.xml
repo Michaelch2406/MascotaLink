@@ -94,12 +94,6 @@
 
                         </LinearLayout>
 
-                        <!-- Skeleton -->
-                        <include
-                            layout="@layout/item_paseador_recomendacion_ia_skeleton"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
-
                         <!-- Botón Cancelar -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnCancelSearch"

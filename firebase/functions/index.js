@@ -323,7 +323,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
   }
 
   const userRole = userDoc.data().role || userDoc.data().rol;
-  if (userRole !== 'dueño') {
+  if (userRole?.toUpperCase() !== 'DUEÑO') {
     throw new HttpsError('permission-denied',
       'Solo los dueños de mascotas pueden solicitar recomendaciones con IA.');
   }
@@ -444,7 +444,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
   const userLat = userLocation.latitude;
   const userLng = userLocation.longitude;
   const radiusKm = 10; // Search within 10 km radius
-  console.log(` DEBUG: Ubicación usuario: ${userLat}, ${userLng} - Radio: ${radiusKm}km`);
+  logDebug(` DEBUG: Ubicación usuario: ${userLat}, ${userLng} - Radio: ${radiusKm}km`);
 
   let potentialWalkers = [];
 
@@ -556,7 +556,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
         }
     }
 
-    console.log(` DEBUG: Total de paseadores dentro del radio: ${paseadoresForAI.length}`);
+    logDebug(` DEBUG: Total de paseadores dentro del radio: ${paseadoresForAI.length}`);
 
     if (paseadoresForAI.length === 0) {
       console.log(` No se encontraron paseadores cerca de la ubicación`);
@@ -565,7 +565,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
 
     // 🆕 MEJORA #4: Pre-scoring híbrido (distancia + calificación + experiencia)
     // En lugar de solo ordenar por distancia, calculamos un score que combina múltiples factores
-    console.log(` DEBUG: Calculando pre-score para ${paseadoresForAI.length} candidatos...`);
+    logDebug(` DEBUG: Calculando pre-score para ${paseadoresForAI.length} candidatos...`);
 
     paseadoresForAI.forEach(paseador => {
       // Componentes del score (0-100):
@@ -590,15 +590,15 @@ exports.recomendarPaseadores = onCall(async (request) => {
       }
     });
 
-    console.log(` DEBUG: Pre-scoring completado`);
+    logDebug(` DEBUG: Pre-scoring completado`);
 
     // 🆕 MEJORA C: Personalización basada en historial del usuario
     // Consultar reservas anteriores para identificar preferencias
-    console.log(" DEBUG: 🎯 Analizando historial de usuario para personalización...");
+    logDebug(" DEBUG: 🎯 Analizando historial de usuario para personalización...");
 
     try {
       const userId = request.auth.uid;
-      console.log(` DEBUG: Consultando historial de reservas para usuario ${userId}...`);
+      logDebug(` DEBUG: Consultando historial de reservas para usuario ${userId}...`);
       const historialSnapshot = await db.collection("reservas")
         .where("dueno_id", "==", userId)
         .where("estado", "==", "completada")
@@ -719,7 +719,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
       return aceptaTamano;
     });
 
-    console.log(` DEBUG: Candidatos compatibles con ${tamanoMascota}: ${candidatosCompatibles.length} de ${paseadoresForAI.length}`);
+    logDebug(` DEBUG: Candidatos compatibles con ${tamanoMascota}: ${candidatosCompatibles.length} de ${paseadoresForAI.length}`);
 
     // Si no hay candidatos compatibles, devolver mensaje específico
     if (candidatosCompatibles.length === 0) {
@@ -733,11 +733,11 @@ exports.recomendarPaseadores = onCall(async (request) => {
     // 🔥 OPTIMIZACIÓN: Limitar a máximo 8 candidatos (reducido para ahorrar tokens/créditos)
     const candidatosParaIA = candidatosCompatibles.slice(0, 8);
 
-    console.log(` DEBUG:  Top 3 candidatos por pre-score:`);
+    logDebug(` DEBUG:  Top 3 candidatos por pre-score:`);
     candidatosParaIA.slice(0, 3).forEach((p, i) => {
-      console.log(`  ${i+1}. ${p.nombre} - Score: ${p.pre_score.toFixed(1)} (${p.calificacion_promedio}⭐, ${p.distancia_km}km, ${p.anos_experiencia}años exp)`);
+      logDebug(`  ${i+1}. ${p.nombre} - Score: ${p.pre_score.toFixed(1)} (${p.calificacion_promedio}⭐, ${p.distancia_km}km, ${p.anos_experiencia}años exp)`);
     });
-    console.log(` DEBUG: Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
+    logDebug(` DEBUG: Enviando ${candidatosParaIA.length} candidatos a Gemini AI (de ${paseadoresForAI.length} totales)`);
 
     // 🔥 OPTIMIZACIÓN: Skip Gemini en casos obvios para ahorrar créditos
     // Caso 1: Solo hay 1 candidato con score decente (>= 60)
@@ -754,7 +754,17 @@ exports.recomendarPaseadores = onCall(async (request) => {
           `📍 ${candidato.distancia_km}km`,
           `⭐ ${candidato.calificacion_promedio.toFixed(1)}/5`,
           `🐕 ${candidato.num_servicios_completados} paseos`
-        ]
+        ],
+        foto_perfil: candidato.foto_perfil || '',
+        ubicacion: candidato.ubicacion || '',
+        anos_experiencia: candidato.anos_experiencia || 0,
+        calificacion_promedio: candidato.calificacion_promedio || 0,
+        total_resenas: candidato.total_resenas || 0,
+        precio_hora: candidato.precio_hora || 0,
+        especialidad: candidato.especialidad || '',
+        tipos_perro_aceptados: candidato.tipos_perro_aceptados || [],
+        distancia_km: candidato.distancia_km || 0,
+        num_servicios_completados: candidato.num_servicios_completados || 0
       };
 
       // Guardar en cache
@@ -781,7 +791,17 @@ exports.recomendarPaseadores = onCall(async (request) => {
           `⭐ ${mejorCandidato.calificacion_promedio.toFixed(1)}/5`,
           `🐕 ${mejorCandidato.num_servicios_completados} paseos`
         ],
-        is_fallback: true
+        is_fallback: true,
+        foto_perfil: mejorCandidato.foto_perfil || '',
+        ubicacion: mejorCandidato.ubicacion || '',
+        anos_experiencia: mejorCandidato.anos_experiencia || 0,
+        calificacion_promedio: mejorCandidato.calificacion_promedio || 0,
+        total_resenas: mejorCandidato.total_resenas || 0,
+        precio_hora: mejorCandidato.precio_hora || 0,
+        especialidad: mejorCandidato.especialidad || '',
+        tipos_perro_aceptados: mejorCandidato.tipos_perro_aceptados || [],
+        distancia_km: mejorCandidato.distancia_km || 0,
+        num_servicios_completados: mejorCandidato.num_servicios_completados || 0
       };
 
       // Guardar en cache
@@ -842,14 +862,14 @@ SALIDA (JSON puro):
 
 Devuelve SOLO JSON. Si no hay matches >= 50: []`;
 
-    console.log(` DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
+    logDebug(` DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
     const result = await model.generateContent(prompt);
-    console.log(` DEBUG:  Respuesta de Gemini recibida`);
+    logDebug(` DEBUG:  Respuesta de Gemini recibida`);
 
     const response = result.response;
     const text = response.text();
 
-    console.log(` DEBUG: Respuesta de Gemini AI (raw, primeros 500 chars): ${text.substring(0, 500)}`);
+    logDebug(` DEBUG: Respuesta de Gemini AI (raw, primeros 500 chars): ${text.substring(0, 500)}`);
 
     let recommendations = [];
     try {
@@ -885,7 +905,28 @@ Devuelve SOLO JSON. Si no hay matches >= 50: []`;
       }
     });
 
-    console.log(` DEBUG: Recomendaciones parseadas de Gemini AI:`, JSON.stringify(recommendations, null, 2));
+    logDebug(` DEBUG: Recomendaciones parseadas de Gemini AI:`, JSON.stringify(recommendations, null, 2));
+
+    // 🆕 ENRIQUECIMIENTO: Agregar datos completos del paseador a cada recomendación
+    recommendations = recommendations.map(rec => {
+      const paseadorCompleto = candidatosParaIA.find(p => p.id === rec.id);
+      if (paseadorCompleto) {
+        return {
+          ...rec,
+          foto_perfil: paseadorCompleto.foto_perfil || '',
+          ubicacion: paseadorCompleto.ubicacion || '',
+          anos_experiencia: paseadorCompleto.anos_experiencia || 0,
+          calificacion_promedio: paseadorCompleto.calificacion_promedio || 0,
+          total_resenas: paseadorCompleto.total_resenas || 0,
+          precio_hora: paseadorCompleto.precio_hora || 0,
+          especialidad: paseadorCompleto.especialidad || '',
+          tipos_perro_aceptados: paseadorCompleto.tipos_perro_aceptados || [],
+          distancia_km: paseadorCompleto.distancia_km || 0,
+          num_servicios_completados: paseadorCompleto.num_servicios_completados || 0
+        };
+      }
+      return rec;
+    });
 
     // 🆕 OPTIMIZACIÓN: Si Gemini no devuelve matches, usar fallback con el mejor candidato
     if (!recommendations || recommendations.length === 0) {
@@ -906,7 +947,17 @@ Devuelve SOLO JSON. Si no hay matches >= 50: []`;
             `⭐ ${mejorCandidato.calificacion_promedio.toFixed(1)}/5`,
             `🐕 ${mejorCandidato.num_servicios_completados} paseos`
           ],
-          is_fallback: true // Marcar como fallback
+          is_fallback: true, // Marcar como fallback
+          foto_perfil: mejorCandidato.foto_perfil || '',
+          ubicacion: mejorCandidato.ubicacion || '',
+          anos_experiencia: mejorCandidato.anos_experiencia || 0,
+          calificacion_promedio: mejorCandidato.calificacion_promedio || 0,
+          total_resenas: mejorCandidato.total_resenas || 0,
+          precio_hora: mejorCandidato.precio_hora || 0,
+          especialidad: mejorCandidato.especialidad || '',
+          tipos_perro_aceptados: mejorCandidato.tipos_perro_aceptados || [],
+          distancia_km: mejorCandidato.distancia_km || 0,
+          num_servicios_completados: mejorCandidato.num_servicios_completados || 0
         };
 
         recommendations = [fallbackRecommendation];
@@ -919,9 +970,9 @@ Devuelve SOLO JSON. Si no hay matches >= 50: []`;
 
     // Guardar en cache de Firestore antes de retornar
     await saveCachedRecommendations(userId, petId, recommendations);
-    console.log(` DEBUG: 💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
+    logDebug(` DEBUG: 💾 Recomendaciones guardadas en cache (válido por ${CACHE_TTL / 1000}s)`);
 
-    console.log(` DEBUG: ✅✅✅ FUNCIÓN COMPLETADA EXITOSAMENTE - Retornando ${recommendations.length} recomendaciones`);
+    logDebug(` DEBUG: ✅✅✅ FUNCIÓN COMPLETADA EXITOSAMENTE - Retornando ${recommendations.length} recomendaciones`);
     return {
       recommendations: recommendations,
       message: recommendations[0]?.is_fallback

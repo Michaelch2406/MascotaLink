@@ -15,7 +15,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -59,7 +58,6 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     private View layoutSkeleton;
     private View layoutContent;
     private LinearLayout layoutError;
-    private ImageButton btnClose;
 
     private androidx.viewpager2.widget.ViewPager2 viewPagerRecommendations;
     private LinearLayout layoutPageIndicator;
@@ -150,7 +148,6 @@ public class RecomendacionIADialogFragment extends DialogFragment {
         layoutSkeleton = view.findViewById(R.id.layoutSkeleton);
         layoutContent = view.findViewById(R.id.layoutContent);
         layoutError = view.findViewById(R.id.layoutError);
-        btnClose = view.findViewById(R.id.btnClose);
 
         viewPagerRecommendations = view.findViewById(R.id.viewPagerRecommendations);
         layoutPageIndicator = view.findViewById(R.id.layoutPageIndicator);
@@ -168,18 +165,22 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             getView().setOnClickListener(v -> dismiss());
         }
 
-        View cardView = getView().findViewById(R.id.cardMain);
+        View cardView = getView() != null ? getView().findViewById(R.id.cardMain) : null;
         if (cardView != null) {
             cardView.setOnClickListener(v -> {});
         }
 
-        btnClose.setOnClickListener(v -> dismiss());
-        btnRetry.setOnClickListener(v -> buscarRecomendaciones());
-        btnCancelSearch.setOnClickListener(v -> {
-            Log.d(TAG, "Usuario canceló la búsqueda");
-            registrarEventoTelemetria("cancelar", null, null, "Usuario canceló búsqueda");
-            dismiss();
-        });
+        if (btnRetry != null) {
+            btnRetry.setOnClickListener(v -> buscarRecomendaciones());
+        }
+
+        if (btnCancelSearch != null) {
+            btnCancelSearch.setOnClickListener(v -> {
+                Log.d(TAG, "Usuario canceló la búsqueda");
+                registrarEventoTelemetria("cancelar", null, null, "Usuario canceló búsqueda");
+                dismiss();
+            });
+        }
     }
 
     private void showSkeleton() {

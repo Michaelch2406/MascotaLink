@@ -34,10 +34,10 @@ public class NetworkMonitorHelper {
     private static final String TAG = "NetworkMonitorHelper";
 
     // Configuración de reconexión
-    private static final long MIN_RECONNECT_INTERVAL = 5000; // 5s mínimo entre reconexiones
+    private static final long MIN_RECONNECT_INTERVAL = 2000; // 2s mínimo entre reconexiones (más rápido)
     private static final long NETWORK_VERIFICATION_DELAY = 2000; // 2s para verificar pérdida de red
-    private static final long RECONNECT_TIMEOUT = 10000; // 10s timeout para reconexión
-    private static final int MAX_RETRY_ATTEMPTS = 5; // Máximo 5 intentos antes de esperar más
+    private static final long RECONNECT_TIMEOUT = 15000; // 15s timeout para reconexión (más tiempo)
+    private static final int MAX_RETRY_ATTEMPTS = 10; // Máximo 10 intentos antes de esperar más (duplicado)
     private static final long MAX_BACKOFF_DELAY = 60000; // Máximo 60s de delay
 
     // Configuración de ping (optimizado para detección rápida)

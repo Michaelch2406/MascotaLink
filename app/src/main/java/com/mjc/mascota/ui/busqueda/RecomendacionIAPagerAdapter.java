@@ -104,6 +104,15 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
             int matchScore = getIntValue(recommendation.get("match_score"));
             List<String> tags = (List<String>) recommendation.get("tags");
 
+            // Datos adicionales del paseador
+            String fotoPerfil = (String) recommendation.get("foto_perfil");
+            String ubicacion = (String) recommendation.get("ubicacion");
+            int anosExperiencia = getIntValue(recommendation.get("anos_experiencia"));
+            double calificacionPromedio = getDoubleValue(recommendation.get("calificacion_promedio"));
+            int totalResenas = getIntValue(recommendation.get("total_resenas"));
+            double precioHora = getDoubleValue(recommendation.get("precio_hora"));
+            String especialidad = (String) recommendation.get("especialidad");
+
             // Indicador de posición (ej: "Opción 1 de 2")
             if (tvRecommendationNumber != null) {
                 if (total > 1) {
@@ -118,6 +127,44 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
             if (tvName != null) tvName.setText(nombre);
             if (tvReasonIA != null) tvReasonIA.setText(razonIA);
             if (tvMatchScore != null) tvMatchScore.setText(matchScore + "%");
+
+            // Foto de perfil
+            if (ivProfilePic != null && fotoPerfil != null && !fotoPerfil.isEmpty()) {
+                Glide.with(itemView.getContext())
+                    .load(fotoPerfil)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .circleCrop()
+                    .into(ivProfilePic);
+            }
+
+            // Ubicación
+            if (tvLocation != null && ubicacion != null && !ubicacion.isEmpty()) {
+                tvLocation.setText(ubicacion);
+            }
+
+            // Experiencia
+            if (tvExperience != null) {
+                if (anosExperiencia > 0) {
+                    tvExperience.setText(anosExperiencia + " años de experiencia");
+                } else {
+                    tvExperience.setText("Nuevo paseador");
+                }
+            }
+
+            // Calificación
+            if (tvRating != null) {
+                tvRating.setText(String.format("%.1f", calificacionPromedio));
+            }
+
+            // Número de reseñas
+            if (tvReviews != null) {
+                tvReviews.setText("(" + totalResenas + " reseñas)");
+            }
+
+            // Precio
+            if (tvPrice != null && precioHora > 0) {
+                tvPrice.setText(String.format("$%.2f", precioHora));
+            }
 
             // Tags
             if (chipGroup != null && tags != null) {
@@ -165,6 +212,18 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
                 return Integer.parseInt(obj.toString());
             } catch (NumberFormatException e) {
                 return 0;
+            }
+        }
+
+        private double getDoubleValue(Object obj) {
+            if (obj == null) return 0.0;
+            if (obj instanceof Number) {
+                return ((Number) obj).doubleValue();
+            }
+            try {
+                return Double.parseDouble(obj.toString());
+            } catch (NumberFormatException e) {
+                return 0.0;
             }
         }
     }

@@ -1195,6 +1195,14 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
               @Override
               public void onReconnectionFailed(int attempts) {
                   Log.w(TAG, " Reconexión fallida tras " + attempts + " intentos");
+
+                  // Solo mostrar Snackbar si han fallado muchos intentos (7+)
+                  // Esto evita molestar al usuario durante la conexión inicial
+                  if (attempts < 7) {
+                      Log.d(TAG, " Esperando más intentos antes de notificar al usuario...");
+                      return;
+                  }
+
                   runOnUiThread(() -> {
                       if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
                           reconnectSnackbar.dismiss();
