@@ -356,11 +356,9 @@ public class ReservationCardHelper {
 
             vh.btn.setText(R.string.walk_view_status);
             vh.btn.setTextColor(context.getColor(R.color.amber_dark));
-            vh.icon.setImageResource(R.drawable.ic_access_time);
-
             vh.btn.setOnClickListener(v -> {
                 if (context != null) {
-                    Intent intent = new Intent(context, PaseoEnCursoDuenoActivity.class);
+                    Intent intent = new Intent(context, com.mjc.mascotalink.SolicitudDetalleActivity.class);
                     intent.putExtra("id_reserva", resId);
                     context.startActivity(intent);
                 }

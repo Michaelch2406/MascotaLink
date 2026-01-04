@@ -1,280 +1,463 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#FAFAFA">
+    android:background="@color/background_light"
+    tools:context=".SolicitudDetalleActivity">
 
-    <!-- Header -->
-    <LinearLayout
+    <!-- Top App Bar -->
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="16dp">
+        android:background="@color/white"
+        app:elevation="0dp">
 
-        <!-- Botón atrás -->
-        <ImageButton
-            android:id="@+id/iv_back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="#111827"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Volver"
-            android:layout_marginEnd="8dp" />
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/white"
+            app:contentInsetStart="0dp">
 
-        <!-- Título -->
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Solicitudes"
-            android:textColor="@android:color/black"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
-        <!-- Spacer para centrar título con simetría -->
-        <View
-            android:layout_width="48dp"
-            android:layout_height="48dp" />
+                <ImageButton
+                    android:id="@+id/iv_back"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_arrow_back"
+                    app:tint="@color/black"
+                    android:contentDescription="Volver" />
 
-    </LinearLayout>
+                <TextView
+                    android:id="@+id/toolbar_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:text="Detalle de Solicitud"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
-    <!-- Divider -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E5E7EB" />
+            </RelativeLayout>
+        </com.google.android.material.appbar.MaterialToolbar>
+    </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- ScrollView para contenido -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingBottom="100dp">
 
-            <!-- Sección A: Encabezado - Información del dueño -->
-            <LinearLayout
+            <!-- Estado de la Solicitud -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:paddingBottom="24dp">
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
 
-                <!-- Foto circular del dueño -->
-                <de.hdodenhof.circleimageview.CircleImageView
-                    android:id="@+id/iv_dueno_foto"
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
-                    android:src="@drawable/ic_person"
-                    app:civ_border_width="3dp"
-                    app:civ_border_color="#E5E7EB"
-                    android:layout_marginBottom="16dp" />
-
-                <!-- Nombre completo del dueño -->
-                <TextView
-                    android:id="@+id/tv_dueno_nombre"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Sofía Ramírez"
-                    android:textColor="#000000"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp" />
+                    android:background="@drawable/bg_gradient_orange_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
 
-                <!-- Fecha y Horario del paseo -->
-                <TextView
-                    android:id="@+id/tv_fecha_horario"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="12 de junio, 10:00 AM - 11:00 AM"
-                    android:textColor="#757575"
-                    android:textSize="13sp" />
+                    <FrameLayout
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_circle_white_alpha">
 
-            </LinearLayout>
+                        <ImageView
+                            android:id="@+id/iv_status_icon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_access_time"
+                            app:tint="@color/white" />
+                    </FrameLayout>
 
-            <!-- Divisor -->
-            <View
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_status_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Solicitud Enviada"
+                            android:textColor="@color/white"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_status_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Esperando respuesta"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            android:alpha="0.9"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Perfil del Usuario (Paseador o Dueño) -->
+            <TextView
+                android:id="@+id/tv_label_perfil"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp"
+                android:text="Información del usuario"
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#E5E7EB"
-                android:layout_marginBottom="24dp" />
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
 
-            <!-- Sección B: Información de la mascota (Una sola mascota) -->
-            <LinearLayout
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <de.hdodenhof.circleimageview.CircleImageView
+                        android:id="@+id/iv_perfil_foto"
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:src="@drawable/ic_user_placeholder"
+                        app:civ_border_color="@color/gray_100"
+                        app:civ_border_width="1dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_perfil_nombre"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Cargando..."
+                            android:textColor="@color/black"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_perfil_subtitulo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Ver perfil completo"
+                            android:textColor="@color/blue_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        app:tint="@color/gray_disabled" />
+
+                </LinearLayout>
+                
+                <!-- Overlay clickable para ir al perfil -->
+                <View
+                    android:id="@+id/btn_ver_perfil_overlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Detalles del Servicio -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp"
+                android:text="Detalles del servicio"
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Fecha y Hora -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_calendar"
+                            app:tint="@color/blue_primary"/>
+
+                        <TextView
+                            android:id="@+id/tv_detalle_fecha"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="Fecha y hora cargando..."
+                            android:textColor="@color/black"
+                            android:textSize="15sp"/>
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="12dp"
+                        android:background="@color/gray_100"/>
+
+                    <!-- Ubicación -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_location"
+                            app:tint="@color/red_error"/>
+
+                        <TextView
+                            android:id="@+id/tv_detalle_direccion"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="Ubicación del cliente"
+                            android:textColor="@color/black"
+                            android:textSize="15sp"/>
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="12dp"
+                        android:background="@color/gray_100"/>
+
+                    <!-- Precio -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_attach_money"
+                            app:tint="@color/green_success"/>
+
+                        <TextView
+                            android:id="@+id/tv_detalle_precio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="Precio total"
+                            android:textColor="@color/black"
+                            android:textSize="15sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Mascotas -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp"
+                android:text="Mascotas"
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- Layout para mascota individual (Diseño modernizado) -->
+            <androidx.cardview.widget.CardView
                 android:id="@+id/layout_mascota_individual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="24dp"
-                android:visibility="visible">
+                android:layout_marginHorizontal="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                android:visibility="gone">
 
-                <!-- Mascota -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingVertical="12dp"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Mascota:"
-                        android:textColor="#757575"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                            
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Nombre"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_dark"/>
+                            <TextView
+                                android:id="@+id/tv_mascota_nombre"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="18sp"
+                                android:textColor="@color/black"
+                                android:textStyle="bold"
+                                tools:text="Max"/>
+                        </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/tv_mascota_nombre"
-                        android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Raza"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_dark"/>
+                            <TextView
+                                android:id="@+id/tv_mascota_raza"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="16sp"
+                                android:textColor="@color/black"
+                                tools:text="Golden"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                    
+                    <!-- Detalles adicionales (Edad y Peso) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Max"
-                        android:textColor="#000000"
-                        android:textSize="13sp"
-                        android:gravity="end" />
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp">
+                        
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                            
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Edad"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_dark"/>
+                            <TextView
+                                android:id="@+id/tv_mascota_edad"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="16sp"
+                                android:textColor="@color/black"
+                                tools:text="3 años"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Peso"
+                                android:textSize="12sp"
+                                android:textColor="@color/gray_dark"/>
+                            <TextView
+                                android:id="@+id/tv_mascota_peso"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="16sp"
+                                android:textColor="@color/black"
+                                tools:text="25 kg"/>
+                        </LinearLayout>
+                    </LinearLayout>
 
                 </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-                <!-- Divisor -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#E5E7EB" />
-
-                <!-- Raza -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingVertical="12dp"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Raza:"
-                        android:textColor="#757575"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_mascota_raza"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Golden Retriever"
-                        android:textColor="#000000"
-                        android:textSize="13sp"
-                        android:gravity="end" />
-
-                </LinearLayout>
-
-                <!-- Divisor -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#E5E7EB" />
-
-                <!-- Edad -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingVertical="12dp"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Edad:"
-                        android:textColor="#757575"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_mascota_edad"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="3 años"
-                        android:textColor="#000000"
-                        android:textSize="13sp"
-                        android:gravity="end" />
-
-                </LinearLayout>
-
-                <!-- Divisor -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#E5E7EB" />
-
-                <!-- Peso -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingVertical="12dp"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Peso:"
-                        android:textColor="#757575"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_mascota_peso"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="25 kg"
-                        android:textColor="#000000"
-                        android:textSize="13sp"
-                        android:gravity="end" />
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <!-- Sección B: Múltiples mascotas (RecyclerView) -->
+            <!-- Layout para múltiples mascotas (NO MODIFICADO, SOLO CONTENEDOR) -->
             <LinearLayout
                 android:id="@+id/layout_mascotas_multiples"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginBottom="24dp"
+                android:layout_marginHorizontal="8dp"
                 android:visibility="gone">
 
-                <!-- Título -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Mascotas en esta reserva:"
-                    android:textColor="#000000"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp"/>
-
-                <!-- RecyclerView para las cards de mascotas -->
+                <!-- RecyclerView existente -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_mascotas"
                     android:layout_width="match_parent"
@@ -283,153 +466,102 @@
 
             </LinearLayout>
 
-            <!-- Divisor -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#E5E7EB"
-                android:layout_marginBottom="24dp" />
+            <!-- Notas -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp"
+                android:text="Notas adicionales"
+                android:textColor="@color/gray_dark"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-            <!-- Sección C: Notas del dueño -->
-            <LinearLayout
-                android:id="@+id/layout_notas_reserva"
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="24dp">
+                android:layout_marginHorizontal="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
 
-                <!-- Encabezado "Notas:" -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Notas:"
-                    android:textColor="#757575"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp" />
-
-                <!-- Contenido de notas -->
                 <TextView
                     android:id="@+id/tv_notas"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Max es muy amigable y le encanta jugar con otros perros."
-                    android:textColor="#333333"
-                    android:textSize="13sp"
-                    android:background="#F5F5F5"
-                    android:padding="12dp"
-                    android:minHeight="60dp"
-                    android:gravity="center_vertical" />
+                    android:padding="16dp"
+                    android:text="Sin notas adicionales."
+                    android:textColor="@color/gray_dark"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="4dp"/>
 
-            </LinearLayout>
-
-            <!-- Espaciador para botones -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="16dp" />
+            </androidx.cardview.widget.CardView>
 
         </LinearLayout>
-
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Sección D: Botones de acción (fuera del ScrollView) -->
+    <!-- Bottom Actions Container -->
     <LinearLayout
+        android:id="@+id/layout_bottom_actions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
         android:orientation="vertical"
+        android:background="@color/white"
         android:padding="16dp"
-        android:background="@android:color/white">
+        android:elevation="16dp">
 
-        <!-- Botón Agregar al Calendario (Visible solo si aceptada/confirmada) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_calendar"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginBottom="12dp"
-            android:text="Agregar al Calendario"
-            android:textColor="#4CAF50"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:visibility="gone"
-            app:icon="@drawable/ic_calendar"
-            app:iconTint="#4CAF50"
-            app:iconGravity="textStart"
-            android:backgroundTint="@android:color/white"
-            app:strokeColor="#4CAF50"
-            app:strokeWidth="1dp"
-            app:cornerRadius="8dp" />
-
-        <!-- Fila de botones: Ver Perfil + Rechazar -->
+        <!-- Botones para Paseador (Aceptar/Rechazar) -->
         <LinearLayout
+            android:id="@+id/layout_actions_paseador"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:visibility="gone">
 
-            <!-- Botón Ver Perfil -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_ver_perfil"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:text="Ver perfil"
-                android:textColor="#12A3ED"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:backgroundTint="@android:color/white"
-                app:strokeColor="#12A3ED"
-                app:strokeWidth="1dp"
-                app:cornerRadius="8dp" />
-
-            <!-- Botón Rechazar -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_rechazar"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="56dp"
                 android:layout_weight="1"
-                android:layout_marginStart="6dp"
+                android:layout_marginEnd="8dp"
                 android:text="Rechazar"
-                android:textColor="#F44336"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:backgroundTint="@android:color/white"
-                app:strokeColor="#F44336"
-                app:strokeWidth="1dp"
-                app:cornerRadius="8dp" />
+                android:textColor="@color/red_error"
+                app:strokeColor="@color/red_error"
+                app:cornerRadius="12dp"/>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_aceptar"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="Aceptar"
+                app:backgroundTint="@color/blue_primary"
+                app:cornerRadius="12dp"/>
         </LinearLayout>
 
-        <!-- Botón Aceptar (ancho completo) -->
-        <Button
-            android:id="@+id/btn_aceptar"
+        <!-- Botón para Dueño (Cancelar Solicitud) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancelar_solicitud"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:text="Aceptar"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:backgroundTint="#12A3ED" />
+            android:layout_height="56dp"
+            android:text="Cancelar Solicitud"
+            android:textColor="@color/gray_dark"
+            app:strokeColor="@color/gray_disabled"
+            app:cornerRadius="12dp"
+            android:visibility="visible"/>
+            
+        <!-- View placeholders for logic compatibility (Hidden) -->
+        <View android:id="@+id/btn_ver_perfil" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
+        <View android:id="@+id/btn_calendar" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
+        <View android:id="@+id/iv_dueno_foto" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
+        <View android:id="@+id/tv_dueno_nombre" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
+        <View android:id="@+id/tv_fecha_horario" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone"/>
 
     </LinearLayout>
 
-    <!-- Divider superior de bottom nav -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E5E7EB" />
-
-    <!-- Bottom Navigation -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_nav"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#FAFAFA"
-        app:menu="@menu/menu_bottom_nav_new"
-        app:labelVisibilityMode="labeled"
-        app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color"
-        app:itemActiveIndicatorStyle="@null" />
-
-</LinearLayout>
-
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
