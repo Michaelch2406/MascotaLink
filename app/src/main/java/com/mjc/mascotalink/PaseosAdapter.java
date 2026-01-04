@@ -520,8 +520,8 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
         holder.btnAccion2.setVisibility(View.GONE); // Hide secondary by default
 
         if (estado != null) {
-            // CONFIRMADO - Mostrar boton de ver detalles (el estado cambiará automáticamente a LISTO_PARA_INICIAR cuando falten 15 minutos)
-            if (estado.equals("CONFIRMADO") && userRole != null && userRole.equalsIgnoreCase("PASEADOR")) {
+            // CONFIRMADO - Mostrar boton de ver detalles para AMBOS roles
+            if (estado.equals("CONFIRMADO")) {
                 holder.btnAccion1.setText("Ver Detalles");
                 holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
             }

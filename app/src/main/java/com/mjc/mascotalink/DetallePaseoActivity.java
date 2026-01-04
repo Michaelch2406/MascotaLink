@@ -3,6 +3,8 @@ package com.mjc.mascotalink;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
@@ -21,7 +23,6 @@ import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.mjc.mascotalink.util.BottomNavManager;
 import com.mjc.mascotalink.util.ChatHelper;
@@ -85,11 +86,18 @@ public class DetallePaseoActivity extends AppCompatActivity {
     private String targetProfileId;
     private String estadoActual;
 
+    // Skeleton
+    private View skeletonLayout;
+    private View scrollViewContent;
+    private static final long MIN_SKELETON_TIME = 800;
+    private long startTimeMillis;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detalle_paseo);
 
+        startTimeMillis = System.currentTimeMillis();
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -117,12 +125,15 @@ public class DetallePaseoActivity extends AppCompatActivity {
         }
 
         initViews();
+        showSkeleton();
         setupListeners();
         cargarDatosReserva();
     }
 
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
+        skeletonLayout = findViewById(R.id.skeleton_layout);
+        scrollViewContent = findViewById(R.id.scroll_view_content);
         
         // Status
         layoutStatusHeader = findViewById(R.id.layout_status_header);
@@ -259,7 +270,45 @@ public class DetallePaseoActivity extends AppCompatActivity {
                 singleList.add(idMascotaLegacy);
                 cargarMascotas(idDueno, singleList);
             }
+            
+            hideSkeleton();
         });
+    }
+
+    private void showSkeleton() {
+        if (skeletonLayout != null) {
+            skeletonLayout.setVisibility(View.VISIBLE);
+            applyShimmer(skeletonLayout);
+        }
+        if (scrollViewContent != null) {
+            scrollViewContent.setVisibility(View.GONE);
+        }
+    }
+
+    private void hideSkeleton() {
+        long elapsedTime = System.currentTimeMillis() - startTimeMillis;
+        long delay = Math.max(0, MIN_SKELETON_TIME - elapsedTime);
+
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (skeletonLayout != null) skeletonLayout.setVisibility(View.GONE);
+            if (scrollViewContent != null) scrollViewContent.setVisibility(View.VISIBLE);
+        }, delay);
+    }
+
+    private void applyShimmer(View view) {
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                applyShimmer(group.getChildAt(i));
+            }
+        } else if (view.getBackground() != null) {
+            try {
+                android.view.animation.Animation anim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.shimmer_animation);
+                view.startAnimation(anim);
+            } catch (Exception e) {
+                // Ignore if anim resource not found
+            }
+        }
     }
 
     private void configurarEstadoVisual(String estado) {
