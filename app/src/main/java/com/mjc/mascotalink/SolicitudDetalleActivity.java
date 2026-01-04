@@ -94,11 +94,18 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
     private String idPaseador;
     private String targetProfileId; // ID del perfil a mostrar (el "otro" usuario)
 
+    // Skeleton
+    private View skeletonLayout;
+    private View scrollViewContent;
+    private static final long MIN_SKELETON_TIME = 800; // Tiempo mínimo para evitar parpadeo
+    private long startTimeMillis;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_solicitud_detalle);
 
+        startTimeMillis = System.currentTimeMillis();
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -123,12 +130,15 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
         }
 
         initViews();
+        showSkeleton();
         setupListeners();
         cargarDatosReserva();
     }
 
     private void initViews() {
         ivBack = findViewById(R.id.iv_back);
+        skeletonLayout = findViewById(R.id.skeleton_layout);
+        scrollViewContent = findViewById(R.id.scroll_view_content);
         
         // Status
         tvStatusTitle = findViewById(R.id.tv_status_title);
@@ -302,11 +312,47 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
                         cargarMascotaIndividual(idDueno, targetMascotaId);
                     }
                 }
+                
+                hideSkeleton();
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Error cargando reserva", e);
                 Toast.makeText(this, "Error al cargar datos", Toast.LENGTH_SHORT).show();
+                hideSkeleton();
             });
+    }
+
+    private void showSkeleton() {
+        if (skeletonLayout != null) {
+            skeletonLayout.setVisibility(View.VISIBLE);
+            applyShimmer(skeletonLayout);
+        }
+        if (scrollViewContent != null) {
+            scrollViewContent.setVisibility(View.GONE);
+        }
+    }
+
+    private void hideSkeleton() {
+        long elapsedTime = System.currentTimeMillis() - startTimeMillis;
+        long delay = Math.max(0, MIN_SKELETON_TIME - elapsedTime);
+
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            if (skeletonLayout != null) skeletonLayout.setVisibility(View.GONE);
+            if (scrollViewContent != null) scrollViewContent.setVisibility(View.VISIBLE);
+        }, delay);
+    }
+
+    private void applyShimmer(View view) {
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                applyShimmer(group.getChildAt(i));
+            }
+        } else if (view.getBackground() != null) {
+            // Si tiene fondo de esqueleto, aplicar animación
+            android.view.animation.Animation anim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.shimmer_animation);
+            view.startAnimation(anim);
+        }
     }
 
     private void cargarDatosUsuario(String userId, String collection) {
