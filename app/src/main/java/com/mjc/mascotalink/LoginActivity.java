@@ -455,31 +455,20 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         if (intent == null) {
-            switch (normalizedRol) {
-                case "PASEADOR":
-                    if ("APROBADO".equals(estadoVerificacion)) {
-                        intent = new Intent(this, PerfilPaseadorActivity.class);
-                    } else if ("PENDIENTE".equals(estadoVerificacion)){
-                        mostrarMensaje("Tu perfil está en revisión. Te notificaremos cuando sea aprobado.");
-                    } else {
-                        mostrarMensaje("Tu perfil fue rechazado o está inactivo. Contacta a soporte.");
-                    }
-                    break;
-                case "DUEÑO":
-                    if ("APROBADO".equals(estadoVerificacion)) {
-                        intent = new Intent(this, PerfilDuenoActivity.class);
-                    } else if ("PENDIENTE".equals(estadoVerificacion)) {
-                        mostrarMensaje("Tu perfil de dueño está en revisión. Te notificaremos cuando sea aprobado.");
-                    } else {
-                        mostrarMensaje("Tu perfil de dueño fue rechazado o está inactivo. Contacta a soporte.");
-                    }
-                    break;
-                case "ADMIN":
-                    intent = new Intent(this, MainActivity.class);
-                    break;
-                default:
-                    mostrarError("Rol de usuario desconocido: '" + rol + "'");
-                    break;
+            // Lógica unificada: Todos los roles aprobados van al Home (MainActivity)
+            if ("APROBADO".equals(estadoVerificacion)) {
+                intent = new Intent(this, MainActivity.class);
+            } else if ("PENDIENTE".equals(estadoVerificacion)) {
+                mostrarMensaje("Tu perfil está en revisión. Te notificaremos cuando sea aprobado.");
+            } else if ("RECHAZADO".equals(estadoVerificacion)) {
+                mostrarMensaje("Tu perfil fue rechazado o está inactivo. Contacta a soporte.");
+            } else if ("ADMIN".equals(normalizedRol)) {
+                intent = new Intent(this, MainActivity.class);
+            } else {
+                // Caso fallback para usuarios legacy sin campo verificacion_estado
+                // Asumimos aprobado si no hay estado explícito negativo
+                Log.w(TAG, "Estado verificación nulo para rol: " + normalizedRol + ". Asumiendo aprobado por compatibilidad.");
+                intent = new Intent(this, MainActivity.class);
             }
         }
 
