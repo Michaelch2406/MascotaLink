@@ -71,6 +71,7 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     private MaterialButton btnCancelSearch;
 
     private FusedLocationProviderClient fusedLocationClient;
+    private String tamanoPetActual; // Guardar el tamaño del perro para usarlo al mostrar recomendaciones
 
     // Tracking de tareas asíncronas para cancelarlas en onDestroyView y prevenir memory leaks
     private com.google.android.gms.tasks.Task<Location> locationTask;
@@ -474,6 +475,9 @@ public class RecomendacionIADialogFragment extends DialogFragment {
 
     private void llamarCloudFunction(Map<String, Object> userData, Map<String, Object> petData,
                                       Map<String, Object> userLocation) {
+        // Guardar el tamaño del perro para usarlo cuando se muestren las recomendaciones
+        tamanoPetActual = (String) petData.get("tamano");
+
         updateLoadingStep(R.drawable.ic_auto_awesome,
             "Generando recomendación con IA...",
             "Analizando el mejor match para tu mascota");
@@ -531,13 +535,13 @@ public class RecomendacionIADialogFragment extends DialogFragment {
             return;
         }
 
-        loadAllRecommendations(recommendations);
+        loadAllRecommendations(recommendations, tamanoPetActual);
     }
 
-    private void loadAllRecommendations(List<Map<String, Object>> recommendations) {
+    private void loadAllRecommendations(List<Map<String, Object>> recommendations, String tamanoPet) {
         showContent();
 
-        pagerAdapter = new RecomendacionIAPagerAdapter(recommendations, new RecomendacionIAPagerAdapter.OnRecommendationActionListener() {
+        pagerAdapter = new RecomendacionIAPagerAdapter(recommendations, tamanoPet, new RecomendacionIAPagerAdapter.OnRecommendationActionListener() {
             @Override
             public void onViewProfile(String paseadorId, int matchScore) {
                 registrarEventoTelemetria("ver_perfil", paseadorId, matchScore, null);
@@ -572,6 +576,11 @@ public class RecomendacionIADialogFragment extends DialogFragment {
                 } else {
                     updatePageIndicators(recommendations.size());
                 }
+            }
+
+            @Override
+            public void onCloseDialog() {
+                dismiss();
             }
         });
 
@@ -667,13 +676,144 @@ public class RecomendacionIADialogFragment extends DialogFragment {
     private void shareRecommendation(String paseadorId) {
         Toast.makeText(getContext(), "Preparando para compartir...", Toast.LENGTH_SHORT).show();
 
+        // Obtener la vista actual del ViewPager de forma más confiable
+        int currentPosition = viewPagerRecommendations.getCurrentItem();
+        View cardView = getViewPagerCurrentView(currentPosition);
+
+        if (cardView == null) {
+            Toast.makeText(getContext(), "Error al preparar la captura", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Crear un Bitmap de la tarjeta
+        Bitmap cardBitmap = createBitmapFromView(cardView);
+
+        if (cardBitmap == null) {
+            Toast.makeText(getContext(), "Error al capturar la tarjeta", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Guardar el bitmap en un archivo temporal
+        File imageFile = saveBitmapToFile(cardBitmap);
+
+        if (imageFile == null) {
+            Toast.makeText(getContext(), "Error al guardar la imagen", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Obtener el URI del archivo
+        Uri imageUri = FileProvider.getUriForFile(getContext(),
+            getContext().getPackageName() + ".provider", imageFile);
+
+        // Crear intent para compartir imagen + texto
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.setType("text/plain");
+        shareIntent.setType("image/png");
+        shareIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
         shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Recomendación de Paseador - Walki");
         shareIntent.putExtra(Intent.EXTRA_TEXT,
-            "¡Encontré un excelente paseador en Walki! Revisa su perfil: https://walki.app/paseador/" + paseadorId);
+            "🤖 ¡La IA de Walki me recomendó este paseador perfecto para mi perro! https://walki.app/");
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
         startActivity(Intent.createChooser(shareIntent, "Compartir recomendación"));
+    }
+
+    private View getViewPagerCurrentView(int position) {
+        try {
+            // Intentar obtener el RecyclerView del ViewPager2
+            androidx.recyclerview.widget.RecyclerView recyclerView = null;
+            for (int i = 0; i < viewPagerRecommendations.getChildCount(); i++) {
+                View child = viewPagerRecommendations.getChildAt(i);
+                if (child instanceof androidx.recyclerview.widget.RecyclerView) {
+                    recyclerView = (androidx.recyclerview.widget.RecyclerView) child;
+                    break;
+                }
+            }
+
+            if (recyclerView != null) {
+                androidx.recyclerview.widget.RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
+                if (holder != null) {
+                    return holder.itemView;
+                }
+            }
+
+            // Fallback: intentar obtener directamente
+            for (int i = 0; i < viewPagerRecommendations.getChildCount(); i++) {
+                View child = viewPagerRecommendations.getChildAt(i);
+                if (child != null) {
+                    return child;
+                }
+            }
+
+            return null;
+        } catch (Exception e) {
+            Log.e("ShareRecommendation", "Error getting ViewPager current view", e);
+            return null;
+        }
+    }
+
+    private Bitmap createBitmapFromView(View view) {
+        try {
+            // Buscar el CardView dentro de la vista actual del item
+            androidx.cardview.widget.CardView cardView = view.findViewById(R.id.cardMainRecommendation);
+
+            if (cardView == null) {
+                Log.e("ShareRecommendation", "CardView not found");
+                return null;
+            }
+
+            // Obtener ancho y alto actuales del CardView (ya está medido en pantalla)
+            int width = cardView.getWidth();
+            int height = cardView.getHeight();
+
+            // Si la vista aún no está medida, usar getMeasuredWidth/Height
+            if (width <= 0 || height <= 0) {
+                width = cardView.getMeasuredWidth();
+                height = cardView.getMeasuredHeight();
+            }
+
+            // Encontrar las vistas que queremos capturar (hasta cardPrice)
+            View cardPrice = cardView.findViewById(R.id.cardPrice);
+
+            int captureHeight = height; // Por defecto, capturar todo
+
+            if (cardPrice != null) {
+                // Calcular la altura hasta el final de cardPrice
+                int cardPriceBottom = cardPrice.getBottom();
+                int cardViewPaddingBottom = cardView.getPaddingBottom();
+
+                // Capturar hasta cardPrice + un poco de espacio
+                captureHeight = cardPriceBottom + cardViewPaddingBottom + 20; // 20dp de margen extra
+            }
+
+            // Crear bitmap sin modificar el layout actual de la vista
+            Bitmap bitmap = Bitmap.createBitmap(width, captureHeight, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+
+            // Dibujar la vista (el fondo se dibuja automáticamente)
+            cardView.draw(canvas);
+
+            return bitmap;
+        } catch (Exception e) {
+            Log.e("ShareRecommendation", "Error creating bitmap from view", e);
+            return null;
+        }
+    }
+
+    private File saveBitmapToFile(Bitmap bitmap) {
+        try {
+            File cacheDir = getContext().getCacheDir();
+            File imageFile = new File(cacheDir, "recomendacion_paseador.png");
+
+            FileOutputStream fos = new FileOutputStream(imageFile);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            fos.flush();
+            fos.close();
+
+            return imageFile;
+        } catch (IOException e) {
+            Log.e("ShareRecommendation", "Error saving bitmap to file", e);
+            return null;
+        }
     }
 
 

@@ -3,6 +3,7 @@ package com.mjc.mascota.ui.busqueda;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
@@ -28,17 +29,25 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
 
     private final List<Map<String, Object>> recommendations;
     private final OnRecommendationActionListener listener;
+    private final String tamanoPetUsuario; // Tamaño del perro del usuario para filtrar especialidad
 
     public interface OnRecommendationActionListener {
         void onViewProfile(String paseadorId, int matchScore);
         void onFavorite(String paseadorId, int matchScore);
         void onShare(String paseadorId, int matchScore);
         void onNotInterested(String paseadorId);
+        void onCloseDialog();
     }
 
-    public RecomendacionIAPagerAdapter(List<Map<String, Object>> recommendations, OnRecommendationActionListener listener) {
+    public RecomendacionIAPagerAdapter(List<Map<String, Object>> recommendations, String tamanoPetUsuario, OnRecommendationActionListener listener) {
         this.recommendations = recommendations;
         this.listener = listener;
+        this.tamanoPetUsuario = tamanoPetUsuario;
+    }
+
+    // Constructor para compatibilidad hacia atrás
+    public RecomendacionIAPagerAdapter(List<Map<String, Object>> recommendations, OnRecommendationActionListener listener) {
+        this(recommendations, null, listener);
     }
 
     @NonNull
@@ -71,11 +80,13 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
         private final TextView tvMatchScore;
         private final TextView tvReasonIA;
         private final TextView tvRecommendationNumber;
+        private final TextView tvSpecialty;
         private final ChipGroup chipGroup;
         private final MaterialButton btnViewProfile;
         private final MaterialButton btnFavorite;
         private final MaterialButton btnShare;
         private final MaterialButton btnNotInterested;
+        private final ImageButton btnClose;
 
         public RecommendationViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -90,11 +101,13 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
             tvMatchScore = itemView.findViewById(R.id.tvMatchScore);
             tvReasonIA = itemView.findViewById(R.id.tvRazonIA);
             tvRecommendationNumber = itemView.findViewById(R.id.tvHeadlineSubtitle);
+            tvSpecialty = itemView.findViewById(R.id.tvSpecialty);
             chipGroup = itemView.findViewById(R.id.chipGroupReasons);
             btnViewProfile = itemView.findViewById(R.id.btnViewProfile);
             btnFavorite = itemView.findViewById(R.id.btnFavorite);
             btnShare = itemView.findViewById(R.id.btnShare);
             btnNotInterested = itemView.findViewById(R.id.btnNoMeInteresa);
+            btnClose = itemView.findViewById(R.id.btnClose);
         }
 
         public void bind(Map<String, Object> recommendation, int position, int total) {
@@ -105,13 +118,13 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
             List<String> tags = (List<String>) recommendation.get("tags");
 
             // Datos adicionales del paseador
-            String fotoPerfil = (String) recommendation.get("foto_perfil");
-            String ubicacion = (String) recommendation.get("ubicacion");
+            String fotoPerfil = getStringValue(recommendation.get("foto_perfil"));
+            String ubicacion = getStringValue(recommendation.get("ubicacion"));
             int anosExperiencia = getIntValue(recommendation.get("anos_experiencia"));
             double calificacionPromedio = getDoubleValue(recommendation.get("calificacion_promedio"));
             int totalResenas = getIntValue(recommendation.get("total_resenas"));
             double precioHora = getDoubleValue(recommendation.get("precio_hora"));
-            String especialidad = (String) recommendation.get("especialidad");
+            String especialidad = getStringValue(recommendation.get("especialidad"));
 
             // Indicador de posición (ej: "Opción 1 de 2")
             if (tvRecommendationNumber != null) {
@@ -126,7 +139,7 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
             // Datos básicos
             if (tvName != null) tvName.setText(nombre);
             if (tvReasonIA != null) tvReasonIA.setText(razonIA);
-            if (tvMatchScore != null) tvMatchScore.setText(matchScore + "%");
+            if (tvMatchScore != null) tvMatchScore.setText(String.valueOf(matchScore));
 
             // Foto de perfil
             if (ivProfilePic != null && fotoPerfil != null && !fotoPerfil.isEmpty()) {
@@ -137,9 +150,19 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
                     .into(ivProfilePic);
             }
 
-            // Ubicación
-            if (tvLocation != null && ubicacion != null && !ubicacion.isEmpty()) {
-                tvLocation.setText(ubicacion);
+            // Ubicación (usar zonas_principales si está disponible)
+            if (tvLocation != null) {
+                List<String> zonasPrincipales = (List<String>) recommendation.get("zonas_principales");
+                String ubicacionAMostrar = ubicacion;
+
+                // Preferir zonas_principales sobre ubicacion
+                if (zonasPrincipales != null && !zonasPrincipales.isEmpty()) {
+                    ubicacionAMostrar = zonasPrincipales.get(0); // Usar la primera zona
+                }
+
+                if (ubicacionAMostrar != null && !ubicacionAMostrar.isEmpty()) {
+                    tvLocation.setText(ubicacionAMostrar);
+                }
             }
 
             // Experiencia
@@ -164,6 +187,28 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
             // Precio
             if (tvPrice != null && precioHora > 0) {
                 tvPrice.setText(String.format("$%.2f", precioHora));
+            }
+
+            // Especialidad (basada en tipos de perros que acepta)
+            if (tvSpecialty != null) {
+                List<String> tiposPerro = (List<String>) recommendation.get("tipos_perro_aceptados");
+                if (tiposPerro != null && !tiposPerro.isEmpty()) {
+                    // Filtrar por tamaño del perro del usuario si está disponible
+                    List<String> tiposAMostrar = tiposPerro;
+                    if (tamanoPetUsuario != null && !tamanoPetUsuario.isEmpty()) {
+                        // Si el paseador acepta el tamaño del usuario, solo mostrar ese tamaño
+                        if (tiposPerro.contains(tamanoPetUsuario)) {
+                            tiposAMostrar = java.util.Collections.singletonList(tamanoPetUsuario);
+                        }
+                    }
+
+                    // Generar dinámicamente: "Especialista en Perros Medianos"
+                    especialidad = "Especialista en Perros " + String.join(" y ", tiposAMostrar);
+                    tvSpecialty.setText(especialidad);
+                    tvSpecialty.setVisibility(View.VISIBLE);
+                } else {
+                    tvSpecialty.setVisibility(View.GONE);
+                }
             }
 
             // Tags
@@ -201,6 +246,20 @@ public class RecomendacionIAPagerAdapter extends RecyclerView.Adapter<Recomendac
                     if (listener != null) listener.onNotInterested(paseadorId);
                 });
             }
+
+            if (btnClose != null) {
+                btnClose.setOnClickListener(v -> {
+                    if (listener != null) listener.onCloseDialog();
+                });
+            }
+        }
+
+        private String getStringValue(Object obj) {
+            if (obj == null) return "";
+            if (obj instanceof String) {
+                return (String) obj;
+            }
+            return obj.toString();
         }
 
         private int getIntValue(Object obj) {

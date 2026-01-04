@@ -548,7 +548,12 @@ exports.recomendarPaseadores = onCall(async (request) => {
             distancia_km: parseFloat(distance.toFixed(2)),
             // Campos adicionales optimizados (solo los que Gemini realmente usa)
             top_resenas: (searchData.top_resenas || []).slice(0, 2), // Solo 2 reseñas en vez de todas
-            zonas_principales: (searchData.zonas_principales || []).slice(0, 2) // Solo 2 zonas
+            zonas_principales: (searchData.zonas_principales || []).slice(0, 2), // Solo 2 zonas
+            // Campos para enriquecer la recomendación en el cliente
+            foto_perfil: userData.foto_perfil || fullWalkerData.foto_perfil || '',
+            ubicacion: userData.ubicacion_actual || userData.ubicacion || fullWalkerData.ubicacion_principal?.nombre || '',
+            total_resenas: searchData.total_resenas || 0,
+            especialidad: fullWalkerData.especialidad || ''
           });
           logDebug(`     Agregado a lista de candidatos`);
         } else {
@@ -711,7 +716,7 @@ exports.recomendarPaseadores = onCall(async (request) => {
     const tamanoMascota = petData.tamano; // "Pequeño", "Mediano", "Grande", "Gigante"
     const candidatosCompatibles = paseadoresForAI.filter(paseador => {
       const aceptaTamano = paseador.tipos_perro_aceptados.some(tipo =>
-        tipo.toLowerCase().includes(tamanoMascota.toLowerCase().replace('s', '')) // "Grandes" includes "Grande"
+        tipo.toLowerCase() === tamanoMascota.toLowerCase() // Comparación exacta: "Mediano" === "Mediano"
       );
       if (!aceptaTamano) {
         console.log(`  🚫 Filtrado: ${paseador.nombre} no acepta perros ${tamanoMascota}`);
@@ -831,36 +836,38 @@ exports.recomendarPaseadores = onCall(async (request) => {
 
     const prompt = `Experto en matching de paseadores. Analiza y recomienda.
 
-MASCOTA: ${petData.nombre}, ${petData.tamano}, ${petData.raza || 'sin raza'}
+MASCOTA DEL USUARIO: ${petData.nombre}, Tamaño: ${petData.tamano}, Raza: ${petData.raza || 'sin especificar'}
 
-CRITERIOS:
-1. Tamaño DEBE coincidir (40%)
-2. Reputación: cal>=4.5, serv>=10 (25%)
-3. Distancia: <2km excelente (20%)
-4. Experiencia: exp>=3 ideal (10%)
-5. Precio vs calidad (5%)
+CRITERIOS ESTRICTOS:
+1. Tamaño DEBE coincidir: Paseador acepta ${petData.tamano} (40%)
+2. Reputación: Calificación + número de servicios (25%)
+3. Distancia: <2km es excelente (20%)
+4. Experiencia: años de experiencia (10%)
+5. Precio competitivo (5%)
 
-REGLAS:
-- NO recomendar si tamano no coincide
-- NO si match_score < 50
-- MAX 2 recomendaciones
-- Si empate: priorizar menor distancia
+REGLAS OBLIGATORIAS:
+- RECHAZAR si los "tipos" del paseador NO incluyen "${petData.tamano}"
+- RECHAZAR si match_score < 50
+- Máximo 2 recomendaciones
+- En empate: priorizar por menor distancia
+- IMPORTANTE: Solo mencionar DATOS REALES del paseador (nombre, calificación, distancia, experiencia)
+- NO inventar especialidades, características o datos no presentes
 
-CANDIDATOS:
+CANDIDATOS DISPONIBLES:
 ${JSON.stringify(candidatosSimplificados)}
 
-SALIDA (JSON puro):
+SALIDA (JSON VÁLIDO):
 [
   {
     "id": "walker_id",
-    "nombre": "Nombre",
-    "razon_ia": "Explicación concisa (máx 100 chars)",
-    "match_score": 85,
-    "tags": ["📍 2.5km", "⭐ 4.9", "🐕 ${petData.tamano}"]
+    "nombre": "Nombre del paseador",
+    "razon_ia": "Experiencia comprobada con ${petData.tamano}s, calificación X.X/5 con X servicios completados. Ubicado a Xkm. Una excelente opción para ${petData.nombre}.",
+    "match_score": 75,
+    "tags": ["📍 Xkm", "⭐ X.X/5", "🐕 ${petData.tamano}"]
   }
 ]
 
-Devuelve SOLO JSON. Si no hay matches >= 50: []`;
+IMPORTANTE: Devuelve SOLO JSON válido. Si no hay matches: []`;
 
     logDebug(` DEBUG: ⚡ Enviando prompt a Gemini AI (longitud: ${prompt.length} caracteres)...`);
     const result = await model.generateContent(prompt);
@@ -915,6 +922,7 @@ Devuelve SOLO JSON. Si no hay matches >= 50: []`;
           ...rec,
           foto_perfil: paseadorCompleto.foto_perfil || '',
           ubicacion: paseadorCompleto.ubicacion || '',
+          zonas_principales: paseadorCompleto.zonas_principales || [],
           anos_experiencia: paseadorCompleto.anos_experiencia || 0,
           calificacion_promedio: paseadorCompleto.calificacion_promedio || 0,
           total_resenas: paseadorCompleto.total_resenas || 0,
@@ -950,6 +958,7 @@ Devuelve SOLO JSON. Si no hay matches >= 50: []`;
           is_fallback: true, // Marcar como fallback
           foto_perfil: mejorCandidato.foto_perfil || '',
           ubicacion: mejorCandidato.ubicacion || '',
+          zonas_principales: mejorCandidato.zonas_principales || [],
           anos_experiencia: mejorCandidato.anos_experiencia || 0,
           calificacion_promedio: mejorCandidato.calificacion_promedio || 0,
           total_resenas: mejorCandidato.total_resenas || 0,
