@@ -373,6 +373,14 @@ public class ResumenPaseoActivity extends AppCompatActivity {
                     if (!querySnapshot.isEmpty()) {
                         // Already rated, hide card or show "Thanks"
                         cardCalificacion.setVisibility(View.GONE);
+                        tvTituloCalificacion.setText("¡Ya has calificado este paseo!");
+                        ratingBar.setIsIndicator(true); // Solo lectura
+                        btnEnviarCalificacion.setVisibility(View.GONE);
+                        etComentario.setVisibility(View.GONE);
+                        tilComentario.setVisibility(View.GONE);
+                        
+                        // Auto-fix: Marcar reserva como calificada si es antigua
+                        db.collection("reservas").document(reservaId).update("calificado", true);
                     }
                 });
     }
@@ -439,6 +447,10 @@ public class ResumenPaseoActivity extends AppCompatActivity {
             transaction.set(newReviewRef, reviewData);
             transaction.update(profileRef, "calificacion_promedio", newAvg);
             transaction.update(profileRef, "total_resenas", newTotalReviews);
+            
+            // Marcar reserva como calificada
+            DocumentReference reservaRef = db.collection("reservas").document(reservaId);
+            transaction.update(reservaRef, "calificado", true);
             
             return null;
         }).addOnSuccessListener(aVoid -> {

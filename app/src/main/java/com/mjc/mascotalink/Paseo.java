@@ -60,10 +60,13 @@ public class Paseo implements Serializable {
     private Double distancia_acumulada_metros;
     private Double distancia_km;
     private Boolean dueno_viendo_mapa;
+    private Boolean calificado;
 
     public Paseo() {}
 
     // Getters & Setters
+    public Boolean getCalificado() { return calificado; }
+    public void setCalificado(Boolean calificado) { this.calificado = calificado; }
     public String getReservaId() { return reservaId; }
     public void setReservaId(String id) { this.reservaId = id; }
     public String getEstado() { return estado; }

@@ -575,8 +575,12 @@ public class PaseosAdapter extends RecyclerView.Adapter<PaseosAdapter.PaseoViewH
                 }
             }
             else if (estado.equals("COMPLETADO")) {
-                holder.btnAccion1.setText("Calificar ⭐");
-                holder.btnAccion1.setOnClickListener(v -> listener.onCalificarClick(paseo));
+                if (paseo.getCalificado() != null && paseo.getCalificado()) {
+                    holder.btnAccion1.setText("Ver Resumen");
+                } else {
+                    holder.btnAccion1.setText("Calificar ⭐");
+                }
+                holder.btnAccion1.setOnClickListener(v -> listener.onPaseoClick(paseo));
             }
             else if (estado.equals("CANCELADO")) {
                 holder.btnAccion1.setText("Ver Motivo ℹ️");

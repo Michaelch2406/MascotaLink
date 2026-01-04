@@ -285,10 +285,15 @@ public class PaseosActivity extends AppCompatActivity {
                         intent.putExtra("id_reserva", paseo.getReservaId());
                         startActivity(intent);
                     }
-                } else if ("COMPLETADO".equals(estado) || "CANCELADO".equals(estado)) {
-                    // Historial
+                } else if ("COMPLETADO".equals(estado)) {
+                    // Ver Resumen / Calificar
+                    Intent intent = new Intent(PaseosActivity.this, ResumenPaseoActivity.class);
+                    intent.putExtra("id_reserva", paseo.getReservaId());
+                    startActivity(intent);
+                } else if ("CANCELADO".equals(estado)) {
+                    // Historial para cancelados
                     Intent intent = new Intent(PaseosActivity.this, DetalleHistorialActivity.class);
-                    intent.putExtra("paseo_obj", paseo);
+                    intent.putExtra("id_reserva", paseo.getReservaId());
                     intent.putExtra("rol_usuario", userRole);
                     startActivity(intent);
                 } else {

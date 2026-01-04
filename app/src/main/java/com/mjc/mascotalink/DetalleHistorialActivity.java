@@ -50,7 +50,7 @@ public class DetalleHistorialActivity extends AppCompatActivity {
     private TextView tvCostoTotal, tvMetodoPago;
     private RatingBar ratingBar;
     private TextView tvComentario;
-    private MaterialButton btnDescargar, btnSoporte;
+    private MaterialButton btnDescargar, btnSoporte, btnCalificar;
     private View cardCalificacion;
     private View btnBack;
 
@@ -93,6 +93,7 @@ public class DetalleHistorialActivity extends AppCompatActivity {
         tvComentario = findViewById(R.id.tv_comentario);
         btnDescargar = findViewById(R.id.btn_descargar_comprobante);
         btnSoporte = findViewById(R.id.btn_contactar_soporte);
+        btnCalificar = findViewById(R.id.btn_calificar);
         cardCalificacion = findViewById(R.id.card_calificacion);
         btnBack = findViewById(R.id.btn_back);
     }
@@ -101,6 +102,15 @@ public class DetalleHistorialActivity extends AppCompatActivity {
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());
         }
+        
+        btnCalificar.setOnClickListener(v -> {
+            if (paseo != null) {
+                android.content.Intent intent = new android.content.Intent(this, ResumenPaseoActivity.class);
+                intent.putExtra("id_reserva", paseo.getReservaId());
+                startActivity(intent);
+            }
+        });
+
         btnDescargar.setOnClickListener(v -> {
             if (paseo == null) return;
             Uri pdfUri = null;
@@ -420,15 +430,19 @@ public class DetalleHistorialActivity extends AppCompatActivity {
                             ratingBar.setRating(calificacion.floatValue());
                             tvComentario.setText(comentario != null ? comentario : "");
                             cardCalificacion.setVisibility(View.VISIBLE);
+                            btnCalificar.setVisibility(View.GONE);
                         } else {
                             cardCalificacion.setVisibility(View.GONE);
+                            btnCalificar.setVisibility(View.VISIBLE);
                         }
                     } else {
                         cardCalificacion.setVisibility(View.GONE);
+                        btnCalificar.setVisibility(View.VISIBLE);
                     }
                 })
                 .addOnFailureListener(e -> {
                     cardCalificacion.setVisibility(View.GONE);
+                    btnCalificar.setVisibility(View.VISIBLE);
                 });
     }
 
