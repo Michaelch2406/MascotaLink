@@ -81,12 +81,11 @@
                     android:id="@+id/tv_estado_paseo"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_status_chip"
-                    android:backgroundTint="@color/green_100"
+                    android:background="@drawable/bg_status_completado"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="6dp"
                     android:text="COMPLETADO"
-                    android:textColor="@color/green_700"
+                    android:textColor="@color/white"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
