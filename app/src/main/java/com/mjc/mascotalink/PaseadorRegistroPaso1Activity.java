@@ -277,55 +277,47 @@ public class PaseadorRegistroPaso1Activity extends AppCompatActivity {
     }
 
     private void configurarTerminosYCondiciones() {
-        String textoTerminos = "Acepto los <a href='#'>Términos y Condiciones</a> y la <a href='#'>Política de Privacidad</a>";
-        cbAceptaTerminos.setText(Html.fromHtml(textoTerminos, Html.FROM_HTML_MODE_LEGACY));
-        cbAceptaTerminos.setMovementMethod(LinkMovementMethod.getInstance());
-        cbAceptaTerminos.setOnClickListener(v -> {
-            if (!cbAceptaTerminos.isChecked()) {
-                mostrarDialogoTerminos();
+        String texto = "Acepto los Términos y Condiciones y la Política de Privacidad";
+        android.text.SpannableString ss = new android.text.SpannableString(texto);
+
+        android.text.style.ClickableSpan terminosSpan = new android.text.style.ClickableSpan() {
+            @Override
+            public void onClick(@NonNull View widget) {
+                widget.cancelPendingInputEvents();
+                startActivity(new Intent(PaseadorRegistroPaso1Activity.this, TerminosCondicionesActivity.class));
             }
-        });
+
+            @Override
+            public void updateDrawState(@NonNull android.text.TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setUnderlineText(true);
+                ds.setColor(ContextCompat.getColor(PaseadorRegistroPaso1Activity.this, R.color.blue_primary));
+            }
+        };
+
+        android.text.style.ClickableSpan politicaSpan = new android.text.style.ClickableSpan() {
+            @Override
+            public void onClick(@NonNull View widget) {
+                widget.cancelPendingInputEvents();
+                startActivity(new Intent(PaseadorRegistroPaso1Activity.this, PoliticaPrivacidadActivity.class));
+            }
+
+            @Override
+            public void updateDrawState(@NonNull android.text.TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setUnderlineText(true);
+                ds.setColor(ContextCompat.getColor(PaseadorRegistroPaso1Activity.this, R.color.blue_primary));
+            }
+        };
+
+        ss.setSpan(terminosSpan, 11, 33, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(politicaSpan, 39, 61, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        cbAceptaTerminos.setText(ss);
+        cbAceptaTerminos.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
     }
 
-    private void mostrarDialogoTerminos() {
-        new AlertDialog.Builder(this)
-            .setTitle("Términos y Condiciones")
-            .setMessage(getTextoTerminosCompleto())
-            .setPositiveButton("Aceptar", (dialog, which) -> {
-                cbAceptaTerminos.setChecked(true);
-                updateButtonEnabled();
-            })
-            .setNegativeButton("Cancelar", (dialog, which) -> cbAceptaTerminos.setChecked(false))
-            .setCancelable(false)
-            .show();
-    }
 
-    private String getTextoTerminosCompleto() {
-        return "TÉRMINOS Y CONDICIONES DE USO - Walki\n\n" +
-                "1. ACEPTACIÓN DE TÉRMINOS\n" +
-                "Al registrarte como paseador en Walki, aceptas cumplir con estos términos y condiciones.\n\n" +
-                "2. RESPONSABILIDADES DEL PASEADOR\n" +
-                "- Cuidar la seguridad y bienestar de las mascotas bajo tu responsabilidad\n" +
-                "- Seguir las instrucciones específicas del dueño de la mascota\n" +
-                "- Reportar cualquier incidente o emergencia inmediatamente\n" +
-                "- Mantener actualizados tus documentos de verificación\n\n" +
-                "3. VERIFICACIÓN Y DOCUMENTOS\n" +
-                "- Proporcionar documentación veraz y actualizada\n" +
-                "- Someterte al proceso de verificación de antecedentes\n" +
-                "- Mantener vigentes los certificados médicos requeridos\n\n" +
-                "4. CÓDIGO DE CONDUCTA\n" +
-                "- Tratar a las mascotas con respeto y cuidado\n" +
-                "- Comunicarte de manera profesional con los dueños\n" +
-                "- Seguir todas las normas de seguridad establecidas\n\n" +
-                "5. PRIVACIDAD Y DATOS\n" +
-                "- Proteger la información personal de los clientes\n" +
-                "- No compartir datos de contacto fuera de la plataforma\n" +
-                "- Respetar la privacidad de los hogares visitados\n\n" +
-                "6. TERMINACIÓN DEL SERVICIO\n" +
-                "Walki se reserva el derecho de suspender o terminar el acceso del paseador en caso de incumplimiento de estos términos.\n\n" +
-                "Al marcar esta casilla, confirmas que has leído, entendido y aceptas cumplir con todos estos términos y condiciones.\n\n" +
-                "Fecha de última actualización: Septiembre 2025";
-    }
 
     private void onContinuar() {
         // Rate limiting ya integrado en SafeClickListener
