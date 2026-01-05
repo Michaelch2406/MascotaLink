@@ -1,11 +1,37 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.MascotaLink" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Base.Theme.MascotaLink" parent="Theme.MaterialComponents.Light.NoActionBar">
         <!-- Brand colors -->
         <item name="colorPrimary">#13A4EC</item>
+        <item name="colorPrimaryDark">#0D8AC7</item> <!-- Necesario en MaterialComponents -->
+        <item name="colorAccent">#13A4EC</item> <!-- Controla widgets como checkbox/radio -->
         <item name="colorOnPrimary">#FFFFFF</item>
+
+        <!-- Secondary -->
+        <item name="colorSecondary">#13A4EC</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+
+        <!-- Backgrounds & Surfaces (BLANCO DE VERDAD) -->
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorOnSurface">#111827</item>
+        
+        <!-- Eliminar el rosa en enlaces -->
+        <item name="android:textColorLink">#13A4EC</item>
+
+        <!-- Ripple Neutral -->
+        <item name="colorControlHighlight">#1A000000</item>
+
+        <!-- SYSTEM BARS -->
         <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
-        <item name="android:navigationBarColor" tools:targetApi="l">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        
+        <!-- Navigation Bar Blanca Opaca -->
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+        
+        <!-- Botones: Forzar estilo Material 3 visualmente -->
+        <item name="materialButtonStyle">@style/Widget.Mascota.PrimaryButton</item>
     </style>
 
     <style name="Theme.MascotaLink" parent="Base.Theme.MascotaLink" />
@@ -36,16 +62,17 @@
     </style>
 
     <!-- Buttons -->
-    <style name="Widget.Mascota.PrimaryButton" parent="Widget.Material3.Button">
-        <item name="android:height">48dp</item>
+    <style name="Widget.Mascota.PrimaryButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:height">56dp</item> <!-- Altura estándar moderna -->
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:textSize">16sp</item> <!-- Forzar tamaño legible -->
         <item name="backgroundTint">#13A4EC</item>
         <item name="cornerRadius">12dp</item>
         <item name="android:textColor">#FFFFFF</item>
     </style>
 
-    <style name="Widget.Mascota.PrimaryPillButton" parent="Widget.Material3.Button">
+    <style name="Widget.Mascota.PrimaryPillButton" parent="Widget.MaterialComponents.Button">
         <item name="android:height">40dp</item>
         <item name="android:minWidth">0dp</item>
         <item name="android:textAllCaps">false</item>
