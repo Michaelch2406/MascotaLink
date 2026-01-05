@@ -45,6 +45,7 @@ public class DetalleHistorialActivity extends AppCompatActivity {
 
     // Views
     private CircleImageView ivFotoPrincipal, ivFotoMascota;
+    private com.mjc.mascotalink.views.OverlappingAvatarsView overlappingAvatars;
     private TextView tvNombrePrincipal, tvRolPrincipal, tvEstadoPaseo;
     private TextView tvNombreMascota, tvFechaHora, tvDuracionReal;
     private TextView tvCostoTotal, tvMetodoPago;
@@ -81,6 +82,7 @@ public class DetalleHistorialActivity extends AppCompatActivity {
     private void initViews() {
         ivFotoPrincipal = findViewById(R.id.iv_foto_principal);
         ivFotoMascota = findViewById(R.id.iv_foto_mascota);
+        overlappingAvatars = findViewById(R.id.overlapping_avatars);
         tvNombrePrincipal = findViewById(R.id.tv_nombre_principal);
         tvRolPrincipal = findViewById(R.id.tv_rol_principal);
         tvEstadoPaseo = findViewById(R.id.tv_estado_paseo);
@@ -164,6 +166,14 @@ public class DetalleHistorialActivity extends AppCompatActivity {
                             // Asegurar ID Mascota
                             if (paseo.getIdMascota() == null && doc.contains("id_mascota")) {
                                 paseo.setIdMascota(doc.getString("id_mascota"));
+                            }
+
+                            // Asegurar datos de múltiples mascotas
+                            if (doc.contains("mascotas_nombres")) {
+                                paseo.setMascotasNombres((java.util.List<String>) doc.get("mascotas_nombres"));
+                            }
+                            if (doc.contains("mascotas_fotos")) {
+                                paseo.setMascotasFotos((java.util.List<String>) doc.get("mascotas_fotos"));
                             }
 
                             // Leer tipo de reserva
@@ -300,6 +310,12 @@ public class DetalleHistorialActivity extends AppCompatActivity {
         // Soportar ambos formatos: nuevo (mascotas array) y antiguo (id_mascota string)
         @SuppressWarnings("unchecked")
         java.util.List<String> mascotasNombres = (java.util.List<String>) reservaDoc.get("mascotas_nombres");
+        @SuppressWarnings("unchecked")
+        java.util.List<String> mascotasFotos = (java.util.List<String>) reservaDoc.get("mascotas_fotos");
+
+        if (mascotasFotos != null) {
+            paseo.setMascotasFotos(mascotasFotos);
+        }
 
         if (mascotasNombres != null && !mascotasNombres.isEmpty()) {
             // Formato nuevo: múltiples mascotas con nombres precargados
@@ -330,6 +346,7 @@ public class DetalleHistorialActivity extends AppCompatActivity {
                 DocumentSnapshot duenoDoc = (DocumentSnapshot) results.get(1);
                 if (duenoDoc != null && duenoDoc.exists()) {
                     paseo.setDuenoNombre(duenoDoc.getString("nombre_display"));
+                    paseo.setDuenoFoto(duenoDoc.getString("foto_perfil"));
                 }
 
                 // Resultado 2: Mascota
@@ -338,7 +355,7 @@ public class DetalleHistorialActivity extends AppCompatActivity {
                     // Formato nuevo: usar nombres precargados
                     String nombresConcatenados = String.join(", ", mascotasNombres);
                     paseo.setMascotaNombre(nombresConcatenados);
-                    // No hay foto única para múltiples mascotas
+                    // No hay foto única para múltiples mascotas, se maneja en llenarDatos con la lista de fotos
                 } else {
                     // Formato antiguo: una sola mascota
                     DocumentSnapshot mascotaDoc = (DocumentSnapshot) results.get(2);
@@ -361,19 +378,48 @@ public class DetalleHistorialActivity extends AppCompatActivity {
     private void llenarDatos() {
         if (paseo == null) return;
 
+        // Limpiar estados previos
+        overlappingAvatars.setVisibility(View.GONE);
+        ivFotoPrincipal.setVisibility(View.VISIBLE);
+        ivFotoMascota.setVisibility(View.VISIBLE);
+
         if ("PASEADOR".equalsIgnoreCase(userRole)) {
+            // VISTA PASEADOR: Principal = Mascota, Secundaria = Dueño
             tvNombrePrincipal.setText(paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Mascota");
             tvRolPrincipal.setText("Mascota");
             tvNombreMascota.setText(paseo.getDuenoNombre() != null ? "Dueño: " + paseo.getDuenoNombre() : "Dueño");
-            cargarImagen(paseo.getMascotaFoto(), ivFotoPrincipal);
-            // Foto secundaria podría ser del dueño si tuviéramos la URL
-            ivFotoMascota.setVisibility(View.GONE); 
+            
+            // 1. Manejar Fotos de Mascotas (Principal o Múltiple)
+            java.util.List<String> mascotasFotos = paseo.getMascotasFotos();
+            if (mascotasFotos != null && mascotasFotos.size() > 1) {
+                overlappingAvatars.setVisibility(View.VISIBLE);
+                ivFotoPrincipal.setVisibility(View.GONE);
+                overlappingAvatars.setImageUrls(mascotasFotos);
+            } else {
+                cargarImagen(paseo.getMascotaFoto(), ivFotoPrincipal);
+            }
+
+            // 2. Manejar Foto del Dueño (Secundaria)
+            cargarImagen(paseo.getDuenoFoto(), ivFotoMascota);
+            
         } else {
+            // VISTA DUEÑO: Principal = Paseador, Secundaria = Mascota
             tvNombrePrincipal.setText(paseo.getPaseadorNombre() != null ? paseo.getPaseadorNombre() : "Paseador");
             tvRolPrincipal.setText("Paseador");
             tvNombreMascota.setText(paseo.getMascotaNombre() != null ? paseo.getMascotaNombre() : "Mascota");
+            
+            // 1. Foto del Paseador (Principal)
             cargarImagen(paseo.getPaseadorFoto(), ivFotoPrincipal);
-            cargarImagen(paseo.getMascotaFoto(), ivFotoMascota);
+
+            // 2. Foto de Mascota (Secundaria o Múltiple)
+            java.util.List<String> mascotasFotos = paseo.getMascotasFotos();
+            if (mascotasFotos != null && mascotasFotos.size() > 1) {
+                overlappingAvatars.setVisibility(View.VISIBLE);
+                ivFotoMascota.setVisibility(View.GONE);
+                overlappingAvatars.setImageUrls(mascotasFotos);
+            } else {
+                cargarImagen(paseo.getMascotaFoto(), ivFotoMascota);
+            }
         }
 
         tvEstadoPaseo.setText(paseo.getEstado() != null ? paseo.getEstado() : "");

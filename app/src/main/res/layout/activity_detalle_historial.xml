@@ -122,11 +122,23 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <de.hdodenhof.circleimageview.CircleImageView
-                            android:id="@+id/iv_foto_principal"
-                            android:layout_width="48dp"
+                        <FrameLayout
+                            android:layout_width="wrap_content"
                             android:layout_height="48dp"
-                            android:src="@drawable/ic_user_placeholder" />
+                            android:minWidth="48dp">
+
+                            <de.hdodenhof.circleimageview.CircleImageView
+                                android:id="@+id/iv_foto_principal"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/ic_user_placeholder" />
+
+                            <com.mjc.mascotalink.views.OverlappingAvatarsView
+                                android:id="@+id/overlapping_avatars_principal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="48dp"
+                                android:visibility="gone" />
+                        </FrameLayout>
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -162,11 +174,23 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <de.hdodenhof.circleimageview.CircleImageView
-                            android:id="@+id/iv_foto_mascota"
-                            android:layout_width="40dp"
+                        <FrameLayout
+                            android:layout_width="wrap_content"
                             android:layout_height="40dp"
-                            android:src="@drawable/ic_pet_placeholder" />
+                            android:minWidth="40dp">
+
+                            <de.hdodenhof.circleimageview.CircleImageView
+                                android:id="@+id/iv_foto_mascota"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:src="@drawable/ic_pet_placeholder" />
+
+                            <com.mjc.mascotalink.views.OverlappingAvatarsView
+                                android:id="@+id/overlapping_avatars"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:visibility="gone" />
+                        </FrameLayout>
 
                         <TextView
                             android:id="@+id/tv_nombre_mascota"

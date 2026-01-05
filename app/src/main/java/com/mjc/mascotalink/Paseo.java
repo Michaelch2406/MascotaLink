@@ -14,10 +14,13 @@ import java.util.List;
 
 public class Paseo implements Serializable {
     private String reservaId;
-    private String paseadorNombre, paseadorFoto, duenoNombre, mascotaNombre, mascotaFoto;
+    private String paseadorNombre, paseadorFoto, duenoNombre, duenoFoto, mascotaNombre, mascotaFoto;
     @PropertyName("id_mascota") private String idMascota;
 
-    // Campos para múltiples mascotas (nuevo formato)
+    // ... (campos de mascotas)
+
+    public String getDuenoFoto() { return duenoFoto; }
+    public void setDuenoFoto(String f) { this.duenoFoto = f; }
     private List<String> mascotas;
     @PropertyName("mascotas_nombres") private List<String> mascotasNombres;
     @PropertyName("mascotas_fotos") private List<String> mascotasFotos;
