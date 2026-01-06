@@ -1,7 +1,9 @@
 const getIdValue = (value) => (value && typeof value === "object" && value.id ? value.id : value);
 
 // Helper para logs de debug (solo en desarrollo)
-const isProduction = process.env.NODE_ENV === 'production' || process.env.GCLOUD_PROJECT === 'mascotalink-e44a7';
+// Production detection: check NODE_ENV or if running in Cloud Functions (GCLOUD_PROJECT is automatically set)
+const isProduction = process.env.NODE_ENV === 'production' ||
+                     (process.env.GCLOUD_PROJECT && process.env.GCLOUD_PROJECT !== 'demo' && !process.env.FIRESTORE_EMULATOR_HOST);
 
 function logDebug(message) {
   if (!isProduction) {
