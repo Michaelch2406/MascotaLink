@@ -198,14 +198,40 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:background="@color/white"
         android:padding="16dp"
-        android:elevation="24dp">
+        android:elevation="24dp"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginEnd="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total a pagar"
+                android:textSize="12sp"
+                android:textColor="@color/gray_dark"/>
+
+            <TextView
+                android:id="@+id/tv_total_floating"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="$0.00"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"/>
+
+        </LinearLayout>
         
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_confirmar_reserva"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="56dp"
             android:text="Confirmar Reserva"
             android:textColor="@color/white"
@@ -214,19 +240,15 @@
             app:cornerRadius="16dp"
             app:backgroundTint="@color/blue_primary"
             android:enabled="false"
-            android:textAllCaps="false"/>
+            android:textAllCaps="false"
+            android:minWidth="160dp"/>
 
         <!-- Bottom Nav (Hidden for design, present for code) -->
          <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottom_nav"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:background="@color/white"
-            app:labelVisibilityMode="labeled"
-            app:itemIconTint="@color/bottom_nav_item_color"
-            app:itemTextColor="@color/bottom_nav_item_color"
-            app:elevation="0dp"/>
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"/>
 
     </LinearLayout>
 

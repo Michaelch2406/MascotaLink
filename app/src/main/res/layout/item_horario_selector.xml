@@ -1,29 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:gravity="center_vertical"
-    android:background="@drawable/selector_horario_background">
+    android:gravity="center"
+    android:padding="4dp">
 
     <TextView
-        android:id="@+id/tv_horario"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
+        android:id="@+id/tv_hora"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_time_slot_selector"
+        android:gravity="center"
         android:text="10:00 AM"
-        android:textColor="@color/selector_texto_horario"
-        android:textSize="14sp" />
-
-    <TextView
-        android:id="@+id/tv_checkmark"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="✓"
-        android:textColor="@color/blue_primary"
-        android:textSize="16sp"
+        android:textColor="@color/color_time_slot_text"
+        android:textSize="13sp"
         android:textStyle="bold"
-        android:visibility="gone" />
+        tools:selected="true" />
 
 </LinearLayout>

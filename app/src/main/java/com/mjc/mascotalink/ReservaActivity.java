@@ -71,7 +71,7 @@ public class ReservaActivity extends AppCompatActivity {
     private TextView tvDuracionTitulo, tvDuracionSubtitulo;
     private Chip chip1Hora, chip2Horas, chip3Horas, chipPersonalizado;
     private TextView tvCalculoResumen;
-    private TextView tvTarifaValor, tvDuracionValor, tvTotalValor;
+    private TextView tvTarifaValor, tvDuracionValor, tvTotalValor, tvTotalFloating; // Added tvTotalFloating
     private TextView tvPaseadorNombre, tvMascotaNombre, tvDetalleFecha, tvDetalleHora, tvDetalleDuracion;
     private BottomNavigationView bottomNav;
     private String bottomNavRole = "DUEÑO";
@@ -1059,8 +1059,11 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void setupHorarios() {
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        // Usar Grid de 4 columnas para un look más moderno
+        androidx.recyclerview.widget.GridLayoutManager layoutManager = 
+            new androidx.recyclerview.widget.GridLayoutManager(this, 4);
         rvHorarios.setLayoutManager(layoutManager);
+        
         generarHorariosBase();
         horarioAdapter = new HorarioSelectorAdapter(this, horarioList, (horario, position) -> {
             horarioSeleccionado = horario;
@@ -1665,7 +1668,11 @@ public class ReservaActivity extends AppCompatActivity {
 
         animator.addUpdateListener(animation -> {
             float animatedValue = (float) animation.getAnimatedValue();
-            tvTotalValor.setText(String.format(Locale.US, "$%.2f", animatedValue));
+            String precioFormat = String.format(Locale.US, "$%.2f", animatedValue);
+            tvTotalValor.setText(precioFormat);
+            if (tvTotalFloating != null) {
+                tvTotalFloating.setText(precioFormat);
+            }
         });
 
         animator.start();

@@ -39,32 +39,16 @@ public class HorarioSelectorAdapter extends RecyclerView.Adapter<HorarioSelector
         Horario horario = horarioList.get(position);
         holder.tvHorario.setText(horario.getHoraFormateada());
 
-        // Aplicar estilos según estado
-        if (!horario.isDisponible()) {
-            // No disponible: el selector de color se encarga del texto.
-            holder.tvHorario.setPaintFlags(holder.tvHorario.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
-            holder.itemView.setEnabled(false);
-            holder.itemView.setSelected(false);
-            holder.tvCheckmark.setVisibility(View.GONE);
-        } else if (selectedPosition == position) {
-            // Seleccionado: los selectores de color de fondo y texto se encargan.
-            holder.tvHorario.setPaintFlags(holder.tvHorario.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
-            holder.itemView.setSelected(true);
-            holder.itemView.setEnabled(true);
-            holder.tvCheckmark.setVisibility(View.VISIBLE);
-            holder.tvCheckmark.setTextColor(context.getResources().getColor(android.R.color.white)); // Checkmark blanco
-        } else {
-            // No seleccionado: los selectores de color de fondo y texto se encargan.
-            holder.tvHorario.setPaintFlags(holder.tvHorario.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
-            holder.itemView.setSelected(false);
-            holder.itemView.setEnabled(true);
-            holder.tvCheckmark.setVisibility(View.GONE);
-            holder.tvCheckmark.setTextColor(context.getResources().getColor(R.color.blue_primary)); // Devolver checkmark a azul
-        }
+        boolean isSelected = (selectedPosition == position);
+        boolean isAvailable = horario.isDisponible();
+
+        // Configurar estado de la vista (esto activa los selectores de color/fondo)
+        holder.tvHorario.setEnabled(isAvailable);
+        holder.tvHorario.setSelected(isSelected);
 
         // Click listener
-        holder.itemView.setOnClickListener(v -> {
-            if (horario.isDisponible()) {
+        holder.tvHorario.setOnClickListener(v -> {
+            if (isAvailable) {
                 int previousPosition = selectedPosition;
                 selectedPosition = holder.getAdapterPosition();
                 notifyItemChanged(previousPosition);
@@ -73,6 +57,13 @@ public class HorarioSelectorAdapter extends RecyclerView.Adapter<HorarioSelector
                     listener.onHorarioSelected(horario, selectedPosition);
                 }
             }
+        });
+        
+        // También permitir click en el contenedor padre para mejor área táctil
+        holder.itemView.setOnClickListener(v -> {
+             if (isAvailable) {
+                holder.tvHorario.performClick();
+             }
         });
     }
 
@@ -104,12 +95,11 @@ public class HorarioSelectorAdapter extends RecyclerView.Adapter<HorarioSelector
 
     static class HorarioViewHolder extends RecyclerView.ViewHolder {
         TextView tvHorario;
-        TextView tvCheckmark;
 
         public HorarioViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvHorario = itemView.findViewById(R.id.tv_horario);
-            tvCheckmark = itemView.findViewById(R.id.tv_checkmark);
+            // El ID cambió de tv_horario a tv_hora en el nuevo layout
+            tvHorario = itemView.findViewById(R.id.tv_hora);
         }
     }
 
