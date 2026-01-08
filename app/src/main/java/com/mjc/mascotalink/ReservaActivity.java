@@ -204,6 +204,7 @@ public class ReservaActivity extends AppCompatActivity {
         tvTarifaValor = findViewById(R.id.tv_tarifa_valor);
         tvDuracionValor = findViewById(R.id.tv_duracion_valor);
         tvTotalValor = findViewById(R.id.tv_total_valor);
+        tvTotalFloating = findViewById(R.id.tv_total_floating);
         tvPaseadorNombre = findViewById(R.id.tv_paseador_nombre);
         tvMascotaNombre = findViewById(R.id.tv_mascota_nombre);
         tvDetalleFecha = findViewById(R.id.tv_detalle_fecha);
@@ -216,10 +217,10 @@ public class ReservaActivity extends AppCompatActivity {
             ivMesAnterior == null || ivMesSiguiente == null || tvMesAnio == null || gvCalendario == null ||
             calendarioContainer == null || tvFechaSeleccionada == null || rvHorarios == null || llDisponibilidad == null ||
             tvDisponibilidad == null || tabPorHoras == null || tabPorMes == null || tvDuracionTitulo == null ||
-            tvDuracionSubtitulo == null || chipGroupDuracion == null || chip1Hora == null || 
-            chip2Horas == null || chip3Horas == null || chipPersonalizado == null || 
+            tvDuracionSubtitulo == null || chipGroupDuracion == null || chip1Hora == null ||
+            chip2Horas == null || chip3Horas == null || chipPersonalizado == null ||
             tvCalculoResumen == null || tvTarifaValor == null ||
-            tvDuracionValor == null || tvTotalValor == null || tvPaseadorNombre == null ||
+            tvDuracionValor == null || tvTotalValor == null || tvTotalFloating == null || tvPaseadorNombre == null ||
             tvMascotaNombre == null || tvDetalleFecha == null || tvDetalleHora == null ||
             tvDetalleDuracion == null || btnConfirmarReserva == null || bottomNav == null) {
 
