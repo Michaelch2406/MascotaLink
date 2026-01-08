@@ -334,6 +334,7 @@
                     android:layout_height="120dp"
                     android:gravity="top|start"
                     android:hint="@string/paseo_en_curso_hint_notas"
+                    android:contentDescription="@string/accessibility_field_notes"
                     android:inputType="textMultiLine"
                     android:maxLines="6"
                     android:padding="12dp"

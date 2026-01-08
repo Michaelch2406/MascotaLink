@@ -30,6 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Por días específicos"
+            android:contentDescription="@string/accessibility_reservation_date_specific"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             app:chipBackgroundColor="@color/chip_background_selector" />
 
@@ -38,6 +39,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Por semana"
+            android:contentDescription="@string/accessibility_reservation_date_weekly"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             app:chipBackgroundColor="@color/chip_background_selector" />
 
@@ -46,6 +48,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Por mes"
+            android:contentDescription="@string/accessibility_reservation_date_monthly"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             app:chipBackgroundColor="@color/chip_background_selector" />
 

@@ -158,6 +158,14 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             );
             getDialog().getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+
+            // Agregar animación suave de entrada
+            android.view.animation.Animation slideIn = android.view.animation.AnimationUtils.loadAnimation(
+                requireContext(),
+                android.R.anim.slide_in_left
+            );
+            slideIn.setDuration(300);
+            getView().startAnimation(slideIn);
         }
     }
 
@@ -353,14 +361,15 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
                 .collection("disponibilidad").document("horario_default")
                 .set(horarioDefault)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(requireContext(), "Horario guardado exitosamente", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "✓ Horario guardado exitosamente", Toast.LENGTH_SHORT).show();
                     if (listener != null) {
                         listener.onHorarioGuardado();
                     }
                     dismiss();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(requireContext(), "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Error al guardar horario en Firestore", e);
+                    Toast.makeText(requireContext(), "❌ No se pudo guardar el horario. Verifique su conexión e intente nuevamente.", Toast.LENGTH_LONG).show();
                 });
         }
     }
@@ -375,14 +384,14 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
             editor.putBoolean("disponibilidad_completa", true);
             editor.apply();
 
-            Toast.makeText(requireContext(), "Horario guardado exitosamente", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "✓ Horario guardado exitosamente", Toast.LENGTH_SHORT).show();
             if (listener != null) {
                 listener.onHorarioGuardado();
             }
             dismiss();
         } catch (Exception e) {
             Log.e(TAG, "Error al guardar horario en prefs", e);
-            Toast.makeText(requireContext(), "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(), "❌ No se pudo guardar el horario. Por favor, intente nuevamente.", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -399,13 +408,13 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
         if (!cbLunes.isChecked() && !cbMartes.isChecked() && !cbMiercoles.isChecked() &&
             !cbJueves.isChecked() && !cbViernes.isChecked() && !cbSabado.isChecked() &&
             !cbDomingo.isChecked()) {
-            Toast.makeText(requireContext(), R.string.horario_default_validacion_dia, Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "⚠️ Debe seleccionar al menos un día disponible", Toast.LENGTH_SHORT).show();
             return false;
         }
 
         // Validar que hora fin > hora inicio
         if (horaInicio.compareTo(horaFin) >= 0) {
-            Toast.makeText(requireContext(), R.string.horario_default_validacion_horario, Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "⚠️ La hora de fin debe ser posterior a la hora de inicio", Toast.LENGTH_SHORT).show();
             return false;
         }
 
@@ -417,13 +426,13 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
         int diferencia = minutosFin - minutosInicio;
 
         if (diferencia < 60) {
-            Toast.makeText(requireContext(), R.string.horario_default_validacion_diferencia, Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "⚠️ El horario debe tener al menos 1 hora de duración", Toast.LENGTH_SHORT).show();
             return false;
         }
 
         // Validar que no sea después de 11 PM (23:00)
         if (horaFin.compareTo("23:00") > 0) {
-            Toast.makeText(requireContext(), R.string.horario_default_validacion_nocturno, Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "⚠️ La hora de fin no puede ser después de las 11:00 PM", Toast.LENGTH_SHORT).show();
             return false;
         }
 

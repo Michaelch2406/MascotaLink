@@ -204,9 +204,26 @@ public class PaseosActivity extends AppCompatActivity {
 
     private void handleRoleError() {
         Toast.makeText(this, "No se pudo verificar el rol del usuario.", Toast.LENGTH_LONG).show();
+        detachDataListeners(); // Limpiar listeners ANTES de logout
         mAuth.signOut();
         startActivity(new Intent(this, LoginActivity.class));
         finish();
+    }
+
+    /**
+     * Limpia todos los listeners de Firestore para evitar notificaciones después de logout
+     * Debe ser llamado ANTES de mAuth.signOut() para prevenir memory leaks
+     */
+    private void detachDataListeners() {
+        if (firestoreListener != null) {
+            try {
+                firestoreListener.remove();
+                Log.d(TAG, "Firestore listener removido correctamente en PaseosActivity");
+            } catch (Exception e) {
+                Log.e(TAG, "Error al remover Firestore listener", e);
+            }
+            firestoreListener = null;
+        }
     }
 
     private void setupBottomNavigation() {
@@ -759,10 +776,7 @@ public class PaseosActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (firestoreListener != null) {
-            firestoreListener.remove();
-            firestoreListener = null;
-        }
+        detachDataListeners(); // Limpiar listeners cuando se destruye la Activity
     }
 
     private void finalizarCarga() {

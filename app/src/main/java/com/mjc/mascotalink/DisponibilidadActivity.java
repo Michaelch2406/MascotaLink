@@ -2,6 +2,7 @@ package com.mjc.mascotalink;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.GridView;
 import android.widget.TextView;
@@ -295,13 +296,23 @@ public class DisponibilidadActivity extends AppCompatActivity {
                 .add(bloqueo)
                 .addOnSuccessListener(documentReference -> {
                     String mensaje = tipo.equals(Bloqueo.TIPO_DIA_COMPLETO)
-                        ? "Día bloqueado completamente"
-                        : "Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
+                        ? "🔒 Día bloqueado completamente"
+                        : "🔒 Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
                     Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+                    // Feedback visual: vibración y reload
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        android.os.VibrationEffect effect = android.os.VibrationEffect.createOneShot(
+                            100,
+                            android.os.VibrationEffect.DEFAULT_AMPLITUDE
+                        );
+                        android.os.Vibrator vibrator = (android.os.Vibrator) getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                        if (vibrator != null) vibrator.vibrate(effect);
+                    }
                     cargarDatosDisponibilidad();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error al bloquear: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error al bloquear día en Firestore", e);
+                    Toast.makeText(this, "❌ No se pudo bloquear el día. Intente nuevamente.", Toast.LENGTH_SHORT).show();
                 });
         }
     }
@@ -335,13 +346,22 @@ public class DisponibilidadActivity extends AppCompatActivity {
             editor.apply();
 
             String mensaje = tipo.equals(Bloqueo.TIPO_DIA_COMPLETO)
-                ? "Día bloqueado completamente"
-                : "Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
+                ? "🔒 Día bloqueado completamente"
+                : "🔒 Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
             Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+            // Feedback visual: vibración
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                android.os.VibrationEffect effect = android.os.VibrationEffect.createOneShot(
+                    100,
+                    android.os.VibrationEffect.DEFAULT_AMPLITUDE
+                );
+                android.os.Vibrator vibrator = (android.os.Vibrator) getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                if (vibrator != null) vibrator.vibrate(effect);
+            }
             cargarDatosDisponibilidad();
         } catch (Exception e) {
             Log.e(TAG, "Error al guardar bloqueo en prefs", e);
-            Toast.makeText(this, "Error al guardar bloqueo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "❌ No se pudo guardar el bloqueo. Por favor, intente nuevamente.", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -349,14 +369,14 @@ public class DisponibilidadActivity extends AppCompatActivity {
         // Tarjeta 1: Horario Estándar con SafeClickListener
         cardHorarioEstandar.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (currentUserId == null && !esRegistroMode) {
-                Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "❌ Debe autenticarse para configurar horarios.", Toast.LENGTH_SHORT).show();
                 return;
             }
             String uid = esRegistroMode ? null : currentUserId;
             DialogHorarioDefaultFragment dialog = DialogHorarioDefaultFragment.newInstance(uid, esRegistroMode);
             dialog.setOnHorarioGuardadoListener(() -> {
                 cargarDatosDisponibilidad();
-                Toast.makeText(this, "Horario por defecto actualizado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "✓ Horario por defecto actualizado correctamente", Toast.LENGTH_SHORT).show();
             });
             dialog.show(getSupportFragmentManager(), "horario_default");
         }));
@@ -364,16 +384,17 @@ public class DisponibilidadActivity extends AppCompatActivity {
         // Tarjeta 2: Bloquear Días con SafeClickListener
         cardBloquearDias.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (currentUserId == null && !esRegistroMode) {
-                Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "❌ Debe autenticarse para bloquear días.", Toast.LENGTH_SHORT).show();
                 return;
             }
             if (esRegistroMode) {
-                Toast.makeText(this, "Nota: Estos cambios se guardarán temporalmente. Después del registro podrá editarlos.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "ℹ️ Estos cambios se guardarán temporalmente. Podrá editarlos después del registro.", Toast.LENGTH_LONG).show();
             }
             String uid = esRegistroMode ? null : currentUserId;
             DialogBloquearDiasFragment dialog = DialogBloquearDiasFragment.newInstance(uid);
             dialog.setOnDiasBloqueadosListener(cantidad -> {
                 cargarDatosDisponibilidad();
+                Toast.makeText(DisponibilidadActivity.this, "✓ Cambios guardados", Toast.LENGTH_SHORT).show();
             });
             dialog.show(getSupportFragmentManager(), "bloquear_dias");
         }));
@@ -381,16 +402,19 @@ public class DisponibilidadActivity extends AppCompatActivity {
         // Tarjeta 3: Horarios Especiales con SafeClickListener
         cardHorariosEspeciales.setOnClickListener(InputUtils.createSafeClickListener(v -> {
             if (currentUserId == null && !esRegistroMode) {
-                Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "❌ Debe autenticarse para crear horarios especiales.", Toast.LENGTH_SHORT).show();
                 return;
             }
             if (esRegistroMode) {
-                Toast.makeText(this, "Nota: Estos cambios se guardarán temporalmente. Después del registro podrá editarlos.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "ℹ️ Estos cambios se guardarán temporalmente. Podrá editarlos después del registro.", Toast.LENGTH_LONG).show();
             }
             String uid = esRegistroMode ? null : currentUserId;
             // Mostrar diálogo para seleccionar fecha primero
             DialogHorarioEspecialFragment dialog = DialogHorarioEspecialFragment.newInstance(uid, null);
-            dialog.setOnHorarioEspecialGuardadoListener(this::cargarDatosDisponibilidad);
+            dialog.setOnHorarioEspecialGuardadoListener(() -> {
+                cargarDatosDisponibilidad();
+                Toast.makeText(DisponibilidadActivity.this, "✓ Horario especial guardado", Toast.LENGTH_SHORT).show();
+            });
             dialog.show(getSupportFragmentManager(), "horario_especial");
         }));
     }

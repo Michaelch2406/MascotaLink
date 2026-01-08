@@ -56,6 +56,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="Por horas"
+            android:contentDescription="@string/accessibility_reservation_duration_hourly"
             android:textColor="@color/blue_primary"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -73,6 +74,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="Por mes"
+            android:contentDescription="@string/accessibility_reservation_duration_monthly"
             android:textColor="@color/secondary"
             android:textSize="14sp"
             android:gravity="center"
@@ -121,6 +123,7 @@
                 android:layout_marginHorizontal="4dp"
                 android:background="@drawable/selector_duracion_button"
                 android:text="1 hora"
+                android:contentDescription="@string/accessibility_reservation_duration_1hour"
                 android:textSize="12sp" />
 
             <Button
@@ -132,6 +135,7 @@
                 android:layout_marginHorizontal="4dp"
                 android:background="@drawable/selector_duracion_button"
                 android:text="2 horas"
+                android:contentDescription="@string/accessibility_reservation_duration_2hours"
                 android:textSize="12sp" />
 
             <Button
@@ -143,6 +147,7 @@
                 android:layout_marginHorizontal="4dp"
                 android:background="@drawable/selector_duracion_button"
                 android:text="3 horas"
+                android:contentDescription="@string/accessibility_reservation_duration_3hours"
                 android:textSize="12sp" />
 
             <Button
@@ -155,6 +160,7 @@
                 android:background="@drawable/selector_duracion_button"
                 android:maxLines="2"
                 android:text="Personalizado"
+                android:contentDescription="@string/accessibility_reservation_duration_custom"
                 android:textSize="12sp" />
 
         </LinearLayout>

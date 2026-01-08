@@ -1,5 +1,6 @@
 package com.mjc.mascotalink;
 
+import android.animation.ValueAnimator;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
@@ -8,6 +9,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridView;
@@ -375,7 +377,7 @@ public class ReservaActivity extends AppCompatActivity {
             if (!mascotaList.isEmpty()) {
                 mascotasSeleccionadas = new ArrayList<>();
                 mascotasSeleccionadas.add(mascotaList.get(0));
-                tvMascotaNombre.setText(mascotaList.get(0).getNombre());
+                actualizarConAnimacion(tvMascotaNombre, mascotaList.get(0).getNombre());
                 if (mascotaAdapter != null) {
                     mascotaAdapter.setSelectedPosition(0);
                 }
@@ -427,7 +429,7 @@ public class ReservaActivity extends AppCompatActivity {
                     if (!mascotaList.isEmpty()) {
                         mascotasSeleccionadas = new ArrayList<>();
                         mascotasSeleccionadas.add(mascotaList.get(0));
-                        tvMascotaNombre.setText(mascotaList.get(0).getNombre());
+                        actualizarConAnimacion(tvMascotaNombre, mascotaList.get(0).getNombre());
                         if (mascotaAdapter != null) {
                             mascotaAdapter.setSelectedPosition(0);
                         }
@@ -457,14 +459,14 @@ public class ReservaActivity extends AppCompatActivity {
                 mascotasSeleccionadas = mascotas;
 
                 if (mascotas.isEmpty()) {
-                    tvMascotaNombre.setText("Ninguna");
+                    actualizarConAnimacion(tvMascotaNombre, "Ninguna");
                     notasAdicionalesMascota = "";
                 } else {
                     List<String> nombres = new ArrayList<>();
                     for (MascotaSelectorAdapter.Mascota m : mascotas) {
                         nombres.add(m.getNombre());
                     }
-                    tvMascotaNombre.setText(String.join(", ", nombres));
+                    actualizarConAnimacion(tvMascotaNombre, String.join(", ", nombres));
 
                     // Cargar notas de la primera mascota seleccionada
                     if (!mascotas.isEmpty()) {
@@ -751,7 +753,7 @@ public class ReservaActivity extends AppCompatActivity {
 
         tvFechaSeleccionada.setText(textoResumen);
         tvFechaSeleccionada.setVisibility(View.VISIBLE);
-        tvDetalleFecha.setText(textoResumen);
+        actualizarConAnimacion(tvDetalleFecha, textoResumen);
     }
 
     /**
@@ -814,7 +816,7 @@ public class ReservaActivity extends AppCompatActivity {
 
         tvFechaSeleccionada.setText(rangoTexto);
         tvFechaSeleccionada.setVisibility(View.VISIBLE);
-        tvDetalleFecha.setText(rangoTexto);
+        actualizarConAnimacion(tvDetalleFecha, rangoTexto);
     }
 
     /**
@@ -872,7 +874,7 @@ public class ReservaActivity extends AppCompatActivity {
 
         tvFechaSeleccionada.setText(rangoTexto);
         tvFechaSeleccionada.setVisibility(View.VISIBLE);
-        tvDetalleFecha.setText(rangoTexto);
+        actualizarConAnimacion(tvDetalleFecha, rangoTexto);
     }
 
     private void cargarEstadosDisponibilidadDelMes() {
@@ -1057,7 +1059,7 @@ public class ReservaActivity extends AppCompatActivity {
         String fechaFormateada = capitalizeFirst(sdf.format(date));
         tvFechaSeleccionada.setText(fechaFormateada);
         tvFechaSeleccionada.setVisibility(View.VISIBLE);
-        tvDetalleFecha.setText(fechaFormateada);
+        actualizarConAnimacion(tvDetalleFecha, fechaFormateada);
     }
 
     private void setupHorarios() {
@@ -1066,7 +1068,7 @@ public class ReservaActivity extends AppCompatActivity {
         generarHorariosBase();
         horarioAdapter = new HorarioSelectorAdapter(this, horarioList, (horario, position) -> {
             horarioSeleccionado = horario;
-            tvDetalleHora.setText(horario.getHoraFormateada());
+            actualizarConAnimacion(tvDetalleHora, horario.getHoraFormateada());
             actualizarIndicadorDisponibilidad(horario);
             verificarCamposCompletos();
         });
@@ -1267,7 +1269,7 @@ public class ReservaActivity extends AppCompatActivity {
 
                 // Actualizar variables de selección
                 horarioSeleccionado = horarioFinal;
-                tvDetalleHora.setText(horarioFinal.getHoraFormateada());
+                actualizarConAnimacion(tvDetalleHora, horarioFinal.getHoraFormateada());
                 actualizarIndicadorDisponibilidad(horarioFinal);
                 verificarCamposCompletos();
             });
@@ -1574,7 +1576,7 @@ public class ReservaActivity extends AppCompatActivity {
         if (duracionMinutos == 0) {
             tvDuracionValor.setText("-");
             tvTotalValor.setText("-");
-            tvDetalleDuracion.setText("-");
+            actualizarConAnimacion(tvDetalleDuracion, "-");
             tvCalculoResumen.setVisibility(View.GONE);
             return;
         }
@@ -1600,8 +1602,8 @@ public class ReservaActivity extends AppCompatActivity {
         costoTotal = tarifaPorHora * horas * diasCalculo * numeroMascotas;
 
         tvDuracionValor.setText(String.format(Locale.US, "%.1f horas", horas));
-        tvTotalValor.setText(String.format(Locale.US, "$%.2f", costoTotal));
-        tvDetalleDuracion.setText(String.format(Locale.US, "%.1f horas", horas));
+        animarCostoTotal(costoTotal);
+        actualizarConAnimacion(tvDetalleDuracion, String.format(Locale.US, "%.1f horas", horas));
 
         String calculoTexto;
         if (numeroMascotas > 1) {
@@ -1639,6 +1641,45 @@ public class ReservaActivity extends AppCompatActivity {
                 duracionMinutos > 0 &&
                 horarioSeleccionado.isDisponible(); // Verificar que el horario esté disponible
         btnConfirmarReserva.setEnabled(todosCompletos);
+    }
+
+    // Animación suave del costo total: cuenta desde 0 hasta el valor final
+    private void animarCostoTotal(double costoFinal) {
+        ValueAnimator animator = ValueAnimator.ofFloat(0f, (float) costoFinal);
+        animator.setDuration(1000); // 1 segundo de duración
+        animator.setInterpolator(new DecelerateInterpolator()); // Desaceleración suave
+
+        animator.addUpdateListener(animation -> {
+            float animatedValue = (float) animation.getAnimatedValue();
+            tvTotalValor.setText(String.format(Locale.US, "$%.2f", animatedValue));
+        });
+
+        animator.start();
+    }
+
+    // Método general: Actualiza texto con animación fade-in/out suave
+    private void actualizarConAnimacion(TextView view, String nuevoTexto) {
+        if (view == null || nuevoTexto == null) return;
+
+        // Si el texto es igual, no animar
+        if (nuevoTexto.equals(view.getText().toString())) {
+            return;
+        }
+
+        // Fade-out rápido (150ms)
+        view.animate()
+                .alpha(0.3f)
+                .setDuration(150)
+                .withEndAction(() -> {
+                    // Cambiar texto cuando está semi-transparente
+                    view.setText(nuevoTexto);
+                    // Fade-in de vuelta (300ms)
+                    view.animate()
+                            .alpha(1f)
+                            .setDuration(300)
+                            .start();
+                })
+                .start();
     }
 
     private void mostrarDialogoConfirmacion() {

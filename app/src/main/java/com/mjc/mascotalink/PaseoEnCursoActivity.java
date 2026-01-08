@@ -1470,22 +1470,25 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         data.put("fecha_fin_paseo", new Date());
         data.put("tiempo_total_minutos", TimeUnit.MILLISECONDS.toMinutes(calcularTiempoTranscurrido()));
 
-        reservaRef.update(data)
-                .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "¡Paseo finalizado con éxito!", Toast.LENGTH_SHORT).show();
-                    mostrarLoading(false);
-                    stopLocationService(); // Stop tracking immediately
-                    
-                    Intent intent = new Intent(PaseoEnCursoActivity.this, ResumenPaseoActivity.class);
-                    intent.putExtra("id_reserva", idReserva);
-                    startActivity(intent);
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    mostrarLoading(false);
-                    Toast.makeText(this, "Error al finalizar paseo", Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "Error finalizando paseo", e);
-                });
+        // Usar retry helper para operación MUY crítica (finalización de paseo)
+        com.mjc.mascotalink.util.FirestoreRetryHelper.executeCritical(
+            () -> reservaRef.update(data),
+            unused -> {
+                Toast.makeText(this, "¡Paseo finalizado con éxito!", Toast.LENGTH_SHORT).show();
+                mostrarLoading(false);
+                stopLocationService(); // Stop tracking immediately
+
+                Intent intent = new Intent(PaseoEnCursoActivity.this, ResumenPaseoActivity.class);
+                intent.putExtra("id_reserva", idReserva);
+                startActivity(intent);
+                finish();
+            },
+            e -> {
+                mostrarLoading(false);
+                Toast.makeText(this, "Error al finalizar paseo después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Error crítico finalizando paseo", e);
+            }
+        );
     }
 
     private void mostrarDialogoSolicitudCancelacion(String motivo) {
@@ -1507,30 +1510,38 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         data.put("sub_estado", "CANCELADO_MUTUO");
         data.put("fecha_fin_paseo", new Date());
 
-        reservaRef.update(data)
-                .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Paseo cancelado mutuamente.", Toast.LENGTH_SHORT).show();
-                    mostrarLoading(false);
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    mostrarLoading(false);
-                    Toast.makeText(this, "Error al aceptar cancelación", Toast.LENGTH_SHORT).show();
-                });
+        // Usar retry helper para operación crítica (cancelación mutua requiere confirmación)
+        com.mjc.mascotalink.util.FirestoreRetryHelper.executeCritical(
+            () -> reservaRef.update(data),
+            unused -> {
+                Toast.makeText(this, "Paseo cancelado mutuamente.", Toast.LENGTH_SHORT).show();
+                mostrarLoading(false);
+                finish();
+            },
+            e -> {
+                mostrarLoading(false);
+                Toast.makeText(this, "Error al aceptar cancelación después de varios intentos. Verifica tu conexión.", Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Error crítico aceptando cancelación mutua", e);
+            }
+        );
     }
 
     private void rechazarCancelacion() {
         mostrarLoading(true);
         // Volver al estado activo
-        reservaRef.update("estado", "EN_CURSO")
-                .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Cancelación rechazada. El paseo continúa.", Toast.LENGTH_SHORT).show();
-                    mostrarLoading(false);
-                })
-                .addOnFailureListener(e -> {
-                    mostrarLoading(false);
-                    Toast.makeText(this, "Error al rechazar", Toast.LENGTH_SHORT).show();
-                });
+        // Usar retry helper para operación crítica (cambio de estado de paseo)
+        com.mjc.mascotalink.util.FirestoreRetryHelper.executeCritical(
+            () -> reservaRef.update("estado", "EN_CURSO"),
+            unused -> {
+                Toast.makeText(this, "Cancelación rechazada. El paseo continúa.", Toast.LENGTH_SHORT).show();
+                mostrarLoading(false);
+            },
+            e -> {
+                mostrarLoading(false);
+                Toast.makeText(this, "Error al rechazar cancelación después de varios intentos.", Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Error crítico rechazando cancelación", e);
+            }
+        );
     }
 
     private long calcularTiempoTranscurrido() {

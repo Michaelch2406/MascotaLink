@@ -373,4 +373,29 @@
     <string name="login_register_link">¿No tienes una cuenta? Regístrate</string>
     <string name="cd_logo">Logo de la aplicación</string>
     <string name="cd_google_icon">Icono de Google</string>
+
+    <!-- Accessibility Descriptions -->
+    <string name="accessibility_button_back">Atrás</string>
+    <string name="accessibility_button_filters">Abrir filtros de búsqueda</string>
+    <string name="accessibility_button_refresh_location">Actualizar ubicación actual</string>
+    <string name="accessibility_button_retry">Reintentar búsqueda</string>
+    <string name="accessibility_filter_high_rating">Filtro: Paseadores con calificación 4.5 o superior</string>
+    <string name="accessibility_filter_experience">Filtro: Paseadores con 3 o más años de experiencia</string>
+    <string name="accessibility_filter_low_price">Filtro: Paseadores con tarifa baja</string>
+    <string name="accessibility_filter_online">Filtro: Paseadores en línea</string>
+    <string name="accessibility_field_notes">Campo de notas: Escribe notas sobre el paseo</string>
+    <string name="accessibility_reservation_date_specific">Seleccionar fechas específicas para el paseo</string>
+
+    <!-- Tooltips (Ayuda al mantener presionado) -->
+    <string name="tooltip_back">Vuelve a la pantalla anterior</string>
+    <string name="tooltip_filters">Ajusta filtros de búsqueda (calificación, precio, experiencia)</string>
+    <string name="tooltip_refresh_location">Actualiza tu ubicación actual en el mapa</string>
+    <string name="accessibility_reservation_date_weekly">Seleccionar reserva semanal</string>
+    <string name="accessibility_reservation_date_monthly">Seleccionar reserva mensual</string>
+    <string name="accessibility_reservation_duration_hourly">Seleccionar duración por horas</string>
+    <string name="accessibility_reservation_duration_monthly">Seleccionar duración mensual</string>
+    <string name="accessibility_reservation_duration_1hour">Seleccionar duración de 1 hora</string>
+    <string name="accessibility_reservation_duration_2hours">Seleccionar duración de 2 horas</string>
+    <string name="accessibility_reservation_duration_3hours">Seleccionar duración de 3 horas</string>
+    <string name="accessibility_reservation_duration_custom">Seleccionar duración personalizada</string>
 </resources>

@@ -34,6 +34,8 @@
                 android:layout_height="40dp"
                 android:padding="10dp"
                 android:src="@drawable/ic_arrow_back"
+                android:contentDescription="@string/accessibility_button_back"
+                android:tooltipText="@string/tooltip_back"
                 app:tint="@color/gray_dark"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"/>
@@ -58,6 +60,8 @@
                 android:layout_height="40dp"
                 android:padding="10dp"
                 android:src="@drawable/ic_settings"
+                android:contentDescription="@string/accessibility_button_filters"
+                android:tooltipText="@string/tooltip_filters"
                 app:tint="@color/gray_dark"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"/>
@@ -88,6 +92,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⭐ 4.5+"
+                android:contentDescription="@string/accessibility_filter_high_rating"
                 android:textSize="13sp"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeColor="@color/primary"
@@ -99,6 +104,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🎓 Experiencia 3+ años"
+                android:contentDescription="@string/accessibility_filter_experience"
                 android:textSize="13sp"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeColor="@color/primary"
@@ -110,6 +116,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="💰 Precio bajo"
+                android:contentDescription="@string/accessibility_filter_low_price"
                 android:textSize="13sp"
                 app:chipBackgroundColor="@color/chip_background_selector"
                 app:chipStrokeColor="@color/primary"
@@ -121,6 +128,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="En línea"
+                android:contentDescription="@string/accessibility_filter_online"
                 android:textSize="13sp"
                 app:chipIcon="@drawable/ic_online_dot"
                 app:chipIconVisible="true"
@@ -266,6 +274,8 @@
                                 android:layout_gravity="top|end"
                                 android:layout_margin="16dp"
                                 android:src="@drawable/ic_my_location"
+                                android:contentDescription="@string/accessibility_button_refresh_location"
+                                android:tooltipText="@string/tooltip_refresh_location"
                                 app:fabSize="mini"
                                 app:tint="@color/white"
                                 app:backgroundTint="@color/blue_primary"/>
@@ -331,6 +341,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Reintentar"
+                android:contentDescription="@string/accessibility_button_retry"
                 android:layout_marginTop="8dp"/>
         </LinearLayout>
 
