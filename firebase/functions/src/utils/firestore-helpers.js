@@ -31,6 +31,45 @@ async function obtenerNombreMascota(duenoId, mascotaId) {
   return "tu mascota";
 }
 
+/**
+ * Realiza un commit con reintentos automáticos para mejorar confiabilidad
+ * @param {FirebaseFirestore.WriteBatch} batch - Batch a ejecutar
+ * @param {number} maxRetries - Máximo número de intentos
+ * @param {number} delayMs - Retraso inicial en milisegundos
+ * @returns {Promise<void>}
+ */
+async function commitWithRetries(batch, maxRetries = 3, delayMs = 100) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await batch.commit();
+      return; // Éxito
+    } catch (error) {
+      lastError = error;
+      const isLastAttempt = attempt === maxRetries;
+
+      // Reintentar solo en errores transitorios
+      const isTransient = error.code === 'DEADLINE_EXCEEDED' ||
+                         error.code === 'UNAVAILABLE' ||
+                         error.code === 'RESOURCE_EXHAUSTED' ||
+                         error.message?.includes('DEADLINE_EXCEEDED') ||
+                         error.message?.includes('UNAVAILABLE');
+
+      if (!isTransient || isLastAttempt) {
+        throw error;
+      }
+
+      // Esperar con backoff exponencial antes de reintentar
+      const waitTime = delayMs * Math.pow(2, attempt - 1);
+      console.warn(`⚠️  Reintentando operación batch (intento ${attempt}/${maxRetries}) en ${waitTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+
+  throw lastError;
+}
+
 async function commitBatchedUpdates(updateEntries, { batchSize = 450 } = {}) {
   if (!updateEntries || updateEntries.length === 0) return 0;
 
@@ -57,14 +96,15 @@ async function commitBatchedUpdates(updateEntries, { batchSize = 450 } = {}) {
     batch.update(ref, data);
     counter++;
     if (counter >= batchSize) {
-      commits.push(batch.commit());
+      // Usar commit con reintentos en lugar de commit directo
+      commits.push(commitWithRetries(batch, 3, 100));
       batch = db.batch();
       counter = 0;
     }
   }
 
   if (counter > 0) {
-    commits.push(batch.commit());
+    commits.push(commitWithRetries(batch, 3, 100));
   }
 
   await Promise.all(commits);
