@@ -44,6 +44,9 @@ import java.util.Set;
  */
 public class DisponibilidadActivity extends AppCompatActivity {
 
+    private static final String TAG = "DisponibilidadActivity";
+    private static final String PREFS = "WizardPaseador";
+
     // UI Components
     private GridView gridCalendario;
     private TextView tvMesActual;
@@ -69,6 +72,10 @@ public class DisponibilidadActivity extends AppCompatActivity {
     private String currentUserId;
     private List<ListenerRegistration> realtimeListeners = new ArrayList<>();
 
+    // Registration Mode
+    private boolean esRegistroMode = false;
+    private android.content.SharedPreferences encryptedPrefs;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,8 +83,28 @@ public class DisponibilidadActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+
+        // Inicializar EncryptedPreferences
+        try {
+            encryptedPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                PREFS,
+                androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC),
+                this,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "Error al crear EncryptedPreferences, usando SharedPreferences normal", e);
+            encryptedPrefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        }
+
+        // Detectar si está en modo registro o edición
         if (mAuth.getCurrentUser() != null) {
             currentUserId = mAuth.getCurrentUser().getUid();
+            esRegistroMode = false;
+        } else {
+            currentUserId = null;
+            esRegistroMode = true;
         }
 
         mesActual = Calendar.getInstance();
@@ -155,7 +182,12 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void mostrarDetalleDelDia(Date fecha) {
-        if (currentUserId == null || fecha == null) {
+        if (fecha == null) {
+            Toast.makeText(this, "Error: Fecha no válida", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId == null && !esRegistroMode) {
             Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -241,39 +273,87 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void bloquearDiaRapido(Date fecha, String tipo) {
-        if (fecha == null || currentUserId == null) return;
+        if (fecha == null) return;
 
-        Bloqueo bloqueo = new Bloqueo();
-        bloqueo.setFecha(new Timestamp(fecha));
-        bloqueo.setTipo(tipo);
-        bloqueo.setRazon("Bloqueado desde calendario");
-        bloqueo.setRepetir(false);
-        bloqueo.setActivo(true);
+        if (esRegistroMode) {
+            // Modo registro: guardar a EncryptedPreferences
+            guardarBloqueoEnPrefs(fecha, tipo);
+        } else {
+            // Modo edición: guardar a Firestore
+            if (currentUserId == null) return;
 
-        db.collection("paseadores").document(currentUserId)
-            .collection("disponibilidad").document("bloqueos")
-            .collection("items")
-            .add(bloqueo)
-            .addOnSuccessListener(documentReference -> {
-                String mensaje = tipo.equals(Bloqueo.TIPO_DIA_COMPLETO)
-                    ? "Día bloqueado completamente"
-                    : "Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
-                Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
-                cargarDatosDisponibilidad();
-            })
-            .addOnFailureListener(e -> {
-                Toast.makeText(this, "Error al bloquear: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            });
+            Bloqueo bloqueo = new Bloqueo();
+            bloqueo.setFecha(new Timestamp(fecha));
+            bloqueo.setTipo(tipo);
+            bloqueo.setRazon("Bloqueado desde calendario");
+            bloqueo.setRepetir(false);
+            bloqueo.setActivo(true);
+
+            db.collection("paseadores").document(currentUserId)
+                .collection("disponibilidad").document("bloqueos")
+                .collection("items")
+                .add(bloqueo)
+                .addOnSuccessListener(documentReference -> {
+                    String mensaje = tipo.equals(Bloqueo.TIPO_DIA_COMPLETO)
+                        ? "Día bloqueado completamente"
+                        : "Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
+                    Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+                    cargarDatosDisponibilidad();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error al bloquear: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+        }
+    }
+
+    private void guardarBloqueoEnPrefs(Date fecha, String tipo) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+
+            // Leer bloqueos existentes
+            String bloqueosJson = encryptedPrefs.getString("disponibilidad_bloqueos", "[]");
+            java.util.List<Map<String, Object>> bloqueos = gson.fromJson(bloqueosJson, java.util.List.class);
+
+            // Null-check de seguridad
+            if (bloqueos == null) {
+                bloqueos = new ArrayList<>();
+            }
+
+            // Crear nuevo bloqueo
+            Map<String, Object> nuevoBloqueo = new HashMap<>();
+            nuevoBloqueo.put("fecha", fecha.getTime());
+            nuevoBloqueo.put("tipo", tipo);
+            nuevoBloqueo.put("razon", "Bloqueado desde calendario");
+            nuevoBloqueo.put("repetir", false);
+            nuevoBloqueo.put("activo", true);
+
+            bloqueos.add(nuevoBloqueo);
+
+            // Guardar a EncryptedPreferences
+            android.content.SharedPreferences.Editor editor = encryptedPrefs.edit();
+            editor.putString("disponibilidad_bloqueos", gson.toJson(bloqueos));
+            editor.apply();
+
+            String mensaje = tipo.equals(Bloqueo.TIPO_DIA_COMPLETO)
+                ? "Día bloqueado completamente"
+                : "Bloqueado " + (tipo.equals(Bloqueo.TIPO_MANANA) ? "mañana" : "tarde");
+            Toast.makeText(this, mensaje, Toast.LENGTH_SHORT).show();
+            cargarDatosDisponibilidad();
+        } catch (Exception e) {
+            Log.e(TAG, "Error al guardar bloqueo en prefs", e);
+            Toast.makeText(this, "Error al guardar bloqueo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setupTarjetasAccion() {
         // Tarjeta 1: Horario Estándar con SafeClickListener
         cardHorarioEstandar.setOnClickListener(InputUtils.createSafeClickListener(v -> {
-            if (currentUserId == null) {
+            if (currentUserId == null && !esRegistroMode) {
                 Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
                 return;
             }
-            DialogHorarioDefaultFragment dialog = DialogHorarioDefaultFragment.newInstance(currentUserId);
+            String uid = esRegistroMode ? null : currentUserId;
+            DialogHorarioDefaultFragment dialog = DialogHorarioDefaultFragment.newInstance(uid, esRegistroMode);
             dialog.setOnHorarioGuardadoListener(() -> {
                 cargarDatosDisponibilidad();
                 Toast.makeText(this, "Horario por defecto actualizado", Toast.LENGTH_SHORT).show();
@@ -283,11 +363,15 @@ public class DisponibilidadActivity extends AppCompatActivity {
 
         // Tarjeta 2: Bloquear Días con SafeClickListener
         cardBloquearDias.setOnClickListener(InputUtils.createSafeClickListener(v -> {
-            if (currentUserId == null) {
+            if (currentUserId == null && !esRegistroMode) {
                 Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
                 return;
             }
-            DialogBloquearDiasFragment dialog = DialogBloquearDiasFragment.newInstance(currentUserId);
+            if (esRegistroMode) {
+                Toast.makeText(this, "Nota: Estos cambios se guardarán temporalmente. Después del registro podrá editarlos.", Toast.LENGTH_LONG).show();
+            }
+            String uid = esRegistroMode ? null : currentUserId;
+            DialogBloquearDiasFragment dialog = DialogBloquearDiasFragment.newInstance(uid);
             dialog.setOnDiasBloqueadosListener(cantidad -> {
                 cargarDatosDisponibilidad();
             });
@@ -296,12 +380,16 @@ public class DisponibilidadActivity extends AppCompatActivity {
 
         // Tarjeta 3: Horarios Especiales con SafeClickListener
         cardHorariosEspeciales.setOnClickListener(InputUtils.createSafeClickListener(v -> {
-            if (currentUserId == null) {
+            if (currentUserId == null && !esRegistroMode) {
                 Toast.makeText(this, "Error: Usuario no autenticado", Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (esRegistroMode) {
+                Toast.makeText(this, "Nota: Estos cambios se guardarán temporalmente. Después del registro podrá editarlos.", Toast.LENGTH_LONG).show();
+            }
+            String uid = esRegistroMode ? null : currentUserId;
             // Mostrar diálogo para seleccionar fecha primero
-            DialogHorarioEspecialFragment dialog = DialogHorarioEspecialFragment.newInstance(currentUserId, null);
+            DialogHorarioEspecialFragment dialog = DialogHorarioEspecialFragment.newInstance(uid, null);
             dialog.setOnHorarioEspecialGuardadoListener(this::cargarDatosDisponibilidad);
             dialog.show(getSupportFragmentManager(), "horario_especial");
         }));
@@ -314,7 +402,7 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void cargarDatosDisponibilidad() {
-        if (currentUserId == null) return;
+        if (currentUserId == null && !esRegistroMode) return;
 
         // Cargar horario por defecto
         cargarHorarioDefault();
@@ -325,35 +413,65 @@ public class DisponibilidadActivity extends AppCompatActivity {
         // Cargar disponibilidad del mes actual en calendario
         cargarDisponibilidadDelMes();
 
-        // Configurar listeners en tiempo real para detectar cambios
-        setupRealtimeListeners();
+        // Configurar listeners en tiempo real para detectar cambios (solo en modo edición)
+        if (!esRegistroMode) {
+            setupRealtimeListeners();
+        }
     }
 
     private void cargarHorarioDefault() {
-        if (currentUserId == null || tvHorarioEstandarDesc == null) return;
+        if (tvHorarioEstandarDesc == null) return;
 
-        db.collection("paseadores").document(currentUserId)
-                .collection("disponibilidad").document("horario_default")
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        // Extraer información para mostrar en la tarjeta
-                        Map<String, Object> data = documentSnapshot.getData();
-                        if (data != null && tvHorarioEstandarDesc != null) {
-                            String desc = construirDescripcionHorario(data);
-                            tvHorarioEstandarDesc.setText(desc);
+        if (esRegistroMode) {
+            cargarHorarioDefaultDesdePrefs();
+        } else {
+            if (currentUserId == null) return;
+
+            db.collection("paseadores").document(currentUserId)
+                    .collection("disponibilidad").document("horario_default")
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            // Extraer información para mostrar en la tarjeta
+                            Map<String, Object> data = documentSnapshot.getData();
+                            if (data != null && tvHorarioEstandarDesc != null) {
+                                String desc = construirDescripcionHorario(data);
+                                tvHorarioEstandarDesc.setText(desc);
+                            }
+                        } else {
+                            if (tvHorarioEstandarDesc != null) {
+                                tvHorarioEstandarDesc.setText("No configurado");
+                            }
                         }
-                    } else {
+                    })
+                    .addOnFailureListener(e -> {
                         if (tvHorarioEstandarDesc != null) {
-                            tvHorarioEstandarDesc.setText("No configurado");
+                            tvHorarioEstandarDesc.setText("Error al cargar");
                         }
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    if (tvHorarioEstandarDesc != null) {
-                        tvHorarioEstandarDesc.setText("Error al cargar");
-                    }
-                });
+                    });
+        }
+    }
+
+    private void cargarHorarioDefaultDesdePrefs() {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String horarioJson = encryptedPrefs.getString("disponibilidad_horario_default", null);
+
+            if (horarioJson != null && tvHorarioEstandarDesc != null) {
+                Map<String, Object> data = gson.fromJson(horarioJson, Map.class);
+                if (data != null) {
+                    String desc = construirDescripcionHorario(data);
+                    tvHorarioEstandarDesc.setText(desc);
+                }
+            } else if (tvHorarioEstandarDesc != null) {
+                tvHorarioEstandarDesc.setText("No configurado");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al cargar horario default desde prefs", e);
+            if (tvHorarioEstandarDesc != null) {
+                tvHorarioEstandarDesc.setText("Error al cargar");
+            }
+        }
     }
 
     private String construirDescripcionHorario(Map<String, Object> data) {
@@ -416,44 +534,141 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void cargarConfiguracionesActivas() {
-        if (currentUserId == null) return;
+        if (esRegistroMode) {
+            cargarConfiguracionesActivasDesdePrefs();
+        } else {
+            if (currentUserId == null) return;
 
-        List<ConfiguracionesAdapter.ConfiguracionItem> items = new ArrayList<>();
+            List<ConfiguracionesAdapter.ConfiguracionItem> items = new ArrayList<>();
 
-        // Cargar bloqueos próximos (próximos 30 días)
-        Calendar hoy = Calendar.getInstance();
-        hoy.set(Calendar.HOUR_OF_DAY, 0);
-        hoy.set(Calendar.MINUTE, 0);
-        hoy.set(Calendar.SECOND, 0);
-        Timestamp inicioRango = new Timestamp(hoy.getTime());
+            // Cargar bloqueos próximos (próximos 30 días)
+            Calendar hoy = Calendar.getInstance();
+            hoy.set(Calendar.HOUR_OF_DAY, 0);
+            hoy.set(Calendar.MINUTE, 0);
+            hoy.set(Calendar.SECOND, 0);
+            Timestamp inicioRango = new Timestamp(hoy.getTime());
 
-        Calendar fin30Dias = (Calendar) hoy.clone();
-        fin30Dias.add(Calendar.DAY_OF_MONTH, 30);
-        Timestamp finRango = new Timestamp(fin30Dias.getTime());
+            Calendar fin30Dias = (Calendar) hoy.clone();
+            fin30Dias.add(Calendar.DAY_OF_MONTH, 30);
+            Timestamp finRango = new Timestamp(fin30Dias.getTime());
 
-        db.collection("paseadores").document(currentUserId)
-                .collection("disponibilidad").document("bloqueos")
-                .collection("items")
-                .whereGreaterThanOrEqualTo("fecha", inicioRango)
-                .whereLessThanOrEqualTo("fecha", finRango)
-                .whereEqualTo("activo", true)
-                .orderBy("fecha")
-                .limit(10)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
-                        Bloqueo bloqueo = doc.toObject(Bloqueo.class);
-                        if (bloqueo != null && bloqueo.getFecha() != null) {
-                            String titulo = formatearFecha(bloqueo.getFecha().toDate()) + " - Bloqueado";
-                            String desc = bloqueo.getDescripcion() != null ? bloqueo.getDescripcion() : "Sin descripción";
-                            items.add(new ConfiguracionesAdapter.ConfiguracionItem(
-                                    doc.getId(), titulo, desc, "bloqueo"));
+            db.collection("paseadores").document(currentUserId)
+                    .collection("disponibilidad").document("bloqueos")
+                    .collection("items")
+                    .whereGreaterThanOrEqualTo("fecha", inicioRango)
+                    .whereLessThanOrEqualTo("fecha", finRango)
+                    .whereEqualTo("activo", true)
+                    .orderBy("fecha")
+                    .limit(10)
+                    .get()
+                    .addOnSuccessListener(queryDocumentSnapshots -> {
+                        for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                            Bloqueo bloqueo = doc.toObject(Bloqueo.class);
+                            if (bloqueo != null && bloqueo.getFecha() != null) {
+                                String titulo = formatearFecha(bloqueo.getFecha().toDate()) + " - Bloqueado";
+                                String desc = bloqueo.getDescripcion() != null ? bloqueo.getDescripcion() : "Sin descripción";
+                                items.add(new ConfiguracionesAdapter.ConfiguracionItem(
+                                        doc.getId(), titulo, desc, "bloqueo"));
+                            }
                         }
-                    }
 
-                    // Cargar horarios especiales
-                    cargarHorariosEspeciales(items);
-                });
+                        // Cargar horarios especiales
+                        cargarHorariosEspeciales(items);
+                    });
+        }
+    }
+
+    private void cargarConfiguracionesActivasDesdePrefs() {
+        try {
+            List<ConfiguracionesAdapter.ConfiguracionItem> items = new ArrayList<>();
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+
+            // Cargar bloqueos
+            String bloqueosJson = encryptedPrefs.getString("disponibilidad_bloqueos", "[]");
+            java.util.List<Map<String, Object>> bloqueos = gson.fromJson(bloqueosJson, java.util.List.class);
+
+            if (bloqueos != null) {
+                int count = 0;
+                for (Map<String, Object> bloqueo : bloqueos) {
+                    if (count >= 10) break; // Limitar a 10 items
+
+                    try {
+                        Double fechaMs = (Double) bloqueo.get("fecha");
+                        Boolean activo = (Boolean) bloqueo.get("activo");
+
+                        if (fechaMs != null && Boolean.TRUE.equals(activo)) {
+                            Date fecha = new Date(fechaMs.longValue());
+                            String titulo = formatearFecha(fecha) + " - Bloqueado";
+                            String razon = (String) bloqueo.get("razon");
+                            String desc = razon != null ? razon : "Sin descripción";
+                            items.add(new ConfiguracionesAdapter.ConfiguracionItem(
+                                    String.valueOf(count), titulo, desc, "bloqueo"));
+                            count++;
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error al procesar bloqueo desde prefs", e);
+                    }
+                }
+            }
+
+            // Cargar horarios especiales desde EncryptedPreferences
+            cargarHorariosEspecialesDesdePrefs(items);
+        } catch (Exception e) {
+            Log.e(TAG, "Error al cargar configuraciones activas desde prefs", e);
+        }
+    }
+
+    private void cargarHorariosEspecialesDesdePrefs(List<ConfiguracionesAdapter.ConfiguracionItem> items) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String horariosJson = encryptedPrefs.getString("disponibilidad_horarios_especiales", "[]");
+            java.util.List<Map<String, Object>> horarios = gson.fromJson(horariosJson, java.util.List.class);
+
+            if (horarios != null) {
+                int count = 0;
+                for (Map<String, Object> horario : horarios) {
+                    if (items.size() >= 10) break; // Limitar total a 10 items
+
+                    try {
+                        Double fechaMs = (Double) horario.get("fecha");
+                        Boolean activo = (Boolean) horario.get("activo");
+                        String horaInicio = (String) horario.get("hora_inicio");
+                        String horaFin = (String) horario.get("hora_fin");
+                        String nota = (String) horario.get("nota");
+
+                        if (fechaMs != null && Boolean.TRUE.equals(activo) && horaInicio != null && horaFin != null) {
+                            Date fecha = new Date(fechaMs.longValue());
+                            String titulo = formatearFecha(fecha);
+                            String desc = horaInicio + " - " + horaFin;
+                            if (nota != null && !nota.isEmpty()) {
+                                desc += " (" + nota + ")";
+                            }
+                            items.add(new ConfiguracionesAdapter.ConfiguracionItem(
+                                    String.valueOf(count), titulo, desc, "horario_especial"));
+                            count++;
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error al procesar horario especial desde prefs", e);
+                    }
+                }
+            }
+
+            // Actualizar adapter
+            if (configuracionesAdapter != null) {
+                configuracionesAdapter.setItems(items);
+            }
+            if (tvSinConfiguraciones != null && rvConfiguracionesActivas != null) {
+                if (items.isEmpty()) {
+                    tvSinConfiguraciones.setVisibility(View.VISIBLE);
+                    rvConfiguracionesActivas.setVisibility(View.GONE);
+                } else {
+                    tvSinConfiguraciones.setVisibility(View.GONE);
+                    rvConfiguracionesActivas.setVisibility(View.VISIBLE);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al cargar horarios especiales desde prefs", e);
+        }
     }
 
     private void cargarHorariosEspeciales(List<ConfiguracionesAdapter.ConfiguracionItem> items) {
@@ -505,30 +720,127 @@ public class DisponibilidadActivity extends AppCompatActivity {
     }
 
     private void cargarDisponibilidadDelMes() {
-        if (currentUserId == null) return;
-
         // Limpiar sets
         diasDisponibles.clear();
         diasBloqueados.clear();
         diasParciales.clear();
 
-        // PASO 1: Cargar horario por defecto primero
-        db.collection("paseadores").document(currentUserId)
-                .collection("disponibilidad").document("horario_default")
-                .get()
-                .addOnSuccessListener(horarioDoc -> {
-                    // Marcar días disponibles según horario estándar
-                    if (horarioDoc.exists()) {
-                        marcarDiasDisponiblesSegunHorario(horarioDoc);
-                    }
+        if (esRegistroMode) {
+            // Modo registro: cargar de EncryptedPreferences
+            cargarDisponibilidadDelMesDesdePrefs();
+        } else {
+            if (currentUserId == null) return;
 
-                    // PASO 2: Cargar bloqueos del mes
-                    cargarBloqueosDelMes();
-                })
-                .addOnFailureListener(e -> {
-                    // Si falla, al menos intentar cargar bloqueos
-                    cargarBloqueosDelMes();
-                });
+            // PASO 1: Cargar horario por defecto primero
+            db.collection("paseadores").document(currentUserId)
+                    .collection("disponibilidad").document("horario_default")
+                    .get()
+                    .addOnSuccessListener(horarioDoc -> {
+                        // Marcar días disponibles según horario estándar
+                        if (horarioDoc.exists()) {
+                            marcarDiasDisponiblesSegunHorario(horarioDoc);
+                        }
+
+                        // PASO 2: Cargar bloqueos del mes
+                        cargarBloqueosDelMes();
+                    })
+                    .addOnFailureListener(e -> {
+                        // Si falla, al menos intentar cargar bloqueos
+                        cargarBloqueosDelMes();
+                    });
+        }
+    }
+
+    private void cargarDisponibilidadDelMesDesdePrefs() {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String horarioJson = encryptedPrefs.getString("disponibilidad_horario_default", null);
+
+            if (horarioJson != null) {
+                Map<String, Object> horarioData = gson.fromJson(horarioJson, Map.class);
+                marcarDiasDisponiblesSegunHorarioPrefs(horarioData);
+            }
+
+            // Cargar bloqueos de EncryptedPreferences
+            String bloqueosJson = encryptedPrefs.getString("disponibilidad_bloqueos", "[]");
+            java.util.List<Map<String, Object>> bloqueos = gson.fromJson(bloqueosJson, java.util.List.class);
+
+            if (bloqueos != null) {
+                for (Map<String, Object> bloqueo : bloqueos) {
+                    try {
+                        Double fechaMs = (Double) bloqueo.get("fecha");
+                        String tipo = (String) bloqueo.get("tipo");
+                        Boolean activo = (Boolean) bloqueo.get("activo");
+
+                        if (fechaMs != null && tipo != null && Boolean.TRUE.equals(activo)) {
+                            Date fecha = new Date(fechaMs.longValue());
+                            Date fechaNormalizada = normalizarFecha(fecha);
+
+                            if (Bloqueo.TIPO_DIA_COMPLETO.equals(tipo)) {
+                                diasBloqueados.add(fechaNormalizada);
+                                diasDisponibles.remove(fechaNormalizada);
+                            } else {
+                                diasParciales.add(fechaNormalizada);
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error al procesar bloqueo desde prefs", e);
+                    }
+                }
+            }
+
+            // Actualizar calendario
+            if (calendarioAdapter != null) {
+                calendarioAdapter.setDiasDisponibles(diasDisponibles);
+                calendarioAdapter.setDiasBloqueados(diasBloqueados);
+                calendarioAdapter.setDiasParciales(diasParciales);
+                calendarioAdapter.notifyDataSetChanged();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al cargar disponibilidad del mes desde prefs", e);
+        }
+    }
+
+    private void marcarDiasDisponiblesSegunHorarioPrefs(Map<String, Object> horarioData) {
+        try {
+            Map<Integer, Boolean> diasLaborales = new HashMap<>();
+            diasLaborales.put(Calendar.MONDAY, extraerDisponibilidad(horarioData, "lunes"));
+            diasLaborales.put(Calendar.TUESDAY, extraerDisponibilidad(horarioData, "martes"));
+            diasLaborales.put(Calendar.WEDNESDAY, extraerDisponibilidad(horarioData, "miercoles"));
+            diasLaborales.put(Calendar.THURSDAY, extraerDisponibilidad(horarioData, "jueves"));
+            diasLaborales.put(Calendar.FRIDAY, extraerDisponibilidad(horarioData, "viernes"));
+            diasLaborales.put(Calendar.SATURDAY, extraerDisponibilidad(horarioData, "sabado"));
+            diasLaborales.put(Calendar.SUNDAY, extraerDisponibilidad(horarioData, "domingo"));
+
+            // Marcar cada día del mes según configuración
+            Calendar cal = (Calendar) mesActual.clone();
+            int diasDelMes = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+            for (int dia = 1; dia <= diasDelMes; dia++) {
+                cal.set(Calendar.DAY_OF_MONTH, dia);
+                int diaSemana = cal.get(Calendar.DAY_OF_WEEK);
+                Boolean estaDisponible = diasLaborales.get(diaSemana);
+
+                if (estaDisponible != null && estaDisponible) {
+                    diasDisponibles.add(normalizarFecha(cal.getTime()));
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al marcar días disponibles desde prefs", e);
+        }
+    }
+
+    private Boolean extraerDisponibilidad(Map<String, Object> horarioData, String dia) {
+        try {
+            Map<String, Object> diaData = (Map<String, Object>) horarioData.get(dia);
+            if (diaData != null) {
+                Object disponible = diaData.get("disponible");
+                return disponible instanceof Boolean ? (Boolean) disponible : false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al extraer disponibilidad para " + dia, e);
+        }
+        return false;
     }
 
     private void marcarDiasDisponiblesSegunHorario(DocumentSnapshot horarioDoc) {

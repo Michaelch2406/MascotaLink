@@ -679,24 +679,86 @@ public class PaseadorRegistroPaso5Activity extends AppCompatActivity {
         if (!prefs.getBoolean("disponibilidad_completa", false)) {
             return;
         }
-        Set<String> dias = prefs.getStringSet("disponibilidad_dias", new HashSet<>());
-        String inicio = prefs.getString("disponibilidad_inicio", "");
-        String fin = prefs.getString("disponibilidad_fin", "");
 
-        if (dias.isEmpty() || inicio.isEmpty() || fin.isEmpty()) {
-            return;
+        // Inicializar EncryptedPreferences
+        android.content.SharedPreferences encryptedPrefs = null;
+        try {
+            encryptedPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                "WizardPaseador",
+                androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC),
+                this,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "Error al crear EncryptedPreferences en guardarDisponibilidad", e);
+            encryptedPrefs = prefs;
         }
 
-        Map<String, Object> disponibilidadData = new HashMap<>();
-        disponibilidadData.put("dias", new ArrayList<>(dias));
-        disponibilidadData.put("hora_inicio", inicio);
-        disponibilidadData.put("hora_fin", fin);
-        disponibilidadData.put("ultima_actualizacion", FieldValue.serverTimestamp());
+        com.google.gson.Gson gson = new com.google.gson.Gson();
 
-        db.collection("paseadores").document(uid).collection("disponibilidad")
-                .add(disponibilidadData)
-                .addOnSuccessListener(documentReference -> Log.d(TAG, "Disponibilidad guardada con ID: " + documentReference.getId()))
-                .addOnFailureListener(e -> Log.e(TAG, "Error al guardar disponibilidad", e));
+        // 1. Guardar horario por defecto (si existe)
+        try {
+            String horarioJson = encryptedPrefs.getString("disponibilidad_horario_default", null);
+            if (horarioJson != null && !horarioJson.isEmpty()) {
+                Map<String, Object> horarioDefault = gson.fromJson(horarioJson, Map.class);
+                if (horarioDefault != null) {
+                    db.collection("paseadores").document(uid)
+                        .collection("disponibilidad").document("horario_default")
+                        .set(horarioDefault)
+                        .addOnSuccessListener(aVoid -> Log.d(TAG, "Horario por defecto guardado"))
+                        .addOnFailureListener(e -> Log.e(TAG, "Error al guardar horario por defecto", e));
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al migrar horario por defecto", e);
+        }
+
+        // 2. Guardar bloqueos (si existen)
+        try {
+            String bloqueosJson = encryptedPrefs.getString("disponibilidad_bloqueos", "[]");
+            java.util.List<Map<String, Object>> bloqueos = gson.fromJson(bloqueosJson, java.util.List.class);
+
+            if (bloqueos != null && !bloqueos.isEmpty()) {
+                for (Map<String, Object> bloqueo : bloqueos) {
+                    try {
+                        db.collection("paseadores").document(uid)
+                            .collection("disponibilidad").document("bloqueos")
+                            .collection("items")
+                            .add(bloqueo)
+                            .addOnFailureListener(e -> Log.e(TAG, "Error al guardar bloqueo", e));
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error al procesar bloqueo individual", e);
+                    }
+                }
+                Log.d(TAG, "Bloqueos guardados: " + bloqueos.size());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al migrar bloqueos", e);
+        }
+
+        // 3. Guardar horarios especiales (si existen)
+        try {
+            String horariosJson = encryptedPrefs.getString("disponibilidad_horarios_especiales", "[]");
+            java.util.List<Map<String, Object>> horarios = gson.fromJson(horariosJson, java.util.List.class);
+
+            if (horarios != null && !horarios.isEmpty()) {
+                for (Map<String, Object> horario : horarios) {
+                    try {
+                        db.collection("paseadores").document(uid)
+                            .collection("disponibilidad").document("horarios_especiales")
+                            .collection("items")
+                            .add(horario)
+                            .addOnFailureListener(e -> Log.e(TAG, "Error al guardar horario especial", e));
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error al procesar horario especial individual", e);
+                    }
+                }
+                Log.d(TAG, "Horarios especiales guardados: " + horarios.size());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al migrar horarios especiales", e);
+        }
     }
 
     private void guardarZonasDeServicio(String uid, SharedPreferences prefs) {

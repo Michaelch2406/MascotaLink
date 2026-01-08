@@ -25,11 +25,15 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import android.content.SharedPreferences;
+import android.util.Log;
 
 /**
  * Diálogo para configurar el horario por defecto (recurrente) del paseador
  */
 public class DialogHorarioDefaultFragment extends DialogFragment {
+
+    private static final String TAG = "DialogHorarioDefault";
 
     private CheckBox cbLunes, cbMartes, cbMiercoles, cbJueves, cbViernes, cbSabado, cbDomingo;
     private TextView tvHoraInicio, tvHoraFin;
@@ -41,6 +45,8 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
 
     private FirebaseFirestore db;
     private String paseadorId;
+    private boolean isRegistrationMode = false;
+    private SharedPreferences encryptedPrefs;
 
     public interface OnHorarioGuardadoListener {
         void onHorarioGuardado();
@@ -49,9 +55,14 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
     private OnHorarioGuardadoListener listener;
 
     public static DialogHorarioDefaultFragment newInstance(String paseadorId) {
+        return newInstance(paseadorId, false);
+    }
+
+    public static DialogHorarioDefaultFragment newInstance(String paseadorId, boolean isRegistrationMode) {
         DialogHorarioDefaultFragment fragment = new DialogHorarioDefaultFragment();
         Bundle args = new Bundle();
         args.putString("paseadorId", paseadorId);
+        args.putBoolean("isRegistrationMode", isRegistrationMode);
         fragment.setArguments(args);
         return fragment;
     }
@@ -67,10 +78,27 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
 
         if (getArguments() != null) {
             paseadorId = getArguments().getString("paseadorId");
+            isRegistrationMode = getArguments().getBoolean("isRegistrationMode", false);
         }
 
         if (paseadorId == null && FirebaseAuth.getInstance().getCurrentUser() != null) {
             paseadorId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        }
+
+        // Inicializar EncryptedPreferences
+        if (isRegistrationMode) {
+            try {
+                encryptedPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                    "WizardPaseador",
+                    androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC),
+                    requireContext(),
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                );
+            } catch (Exception e) {
+                Log.e(TAG, "Error al crear EncryptedPreferences", e);
+                encryptedPrefs = requireContext().getSharedPreferences("WizardPaseador", android.content.Context.MODE_PRIVATE);
+            }
         }
     }
 
@@ -210,40 +238,82 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
     private void cargarHorarioExistente() {
         if (paseadorId == null) return;
 
-        db.collection("paseadores").document(paseadorId)
-            .collection("disponibilidad").document("horario_default")
-            .get()
-            .addOnSuccessListener(documentSnapshot -> {
-                if (documentSnapshot.exists() && getView() != null) {
-                    // Cargar configuración existente
-                    Map<String, Object> data = documentSnapshot.getData();
-                    if (data != null) {
-                        cargarDiaDesdeFirestore(data, "lunes", cbLunes);
-                        cargarDiaDesdeFirestore(data, "martes", cbMartes);
-                        cargarDiaDesdeFirestore(data, "miercoles", cbMiercoles);
-                        cargarDiaDesdeFirestore(data, "jueves", cbJueves);
-                        cargarDiaDesdeFirestore(data, "viernes", cbViernes);
-                        cargarDiaDesdeFirestore(data, "sabado", cbSabado);
-                        cargarDiaDesdeFirestore(data, "domingo", cbDomingo);
+        if (isRegistrationMode) {
+            cargarHorarioDesdePrefs();
+        } else {
+            db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("horario_default")
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists() && getView() != null) {
+                        // Cargar configuración existente
+                        Map<String, Object> data = documentSnapshot.getData();
+                        if (data != null) {
+                            cargarDiaDesdeFirestore(data, "lunes", cbLunes);
+                            cargarDiaDesdeFirestore(data, "martes", cbMartes);
+                            cargarDiaDesdeFirestore(data, "miercoles", cbMiercoles);
+                            cargarDiaDesdeFirestore(data, "jueves", cbJueves);
+                            cargarDiaDesdeFirestore(data, "viernes", cbViernes);
+                            cargarDiaDesdeFirestore(data, "sabado", cbSabado);
+                            cargarDiaDesdeFirestore(data, "domingo", cbDomingo);
 
-                        // Cargar horas del primer día disponible
-                        for (String dia : new String[]{"lunes", "martes", "miercoles", "jueves", "viernes"}) {
-                            Map<String, Object> diaData = (Map<String, Object>) data.get(dia);
-                            if (diaData != null && Boolean.TRUE.equals(diaData.get("disponible"))) {
-                                String inicio = (String) diaData.get("hora_inicio");
-                                String fin = (String) diaData.get("hora_fin");
-                                if (inicio != null && fin != null) {
-                                    horaInicio = inicio;
-                                    horaFin = fin;
-                                    tvHoraInicio.setText(horaInicio);
-                                    tvHoraFin.setText(horaFin);
-                                    break;
+                            // Cargar horas del primer día disponible
+                            for (String dia : new String[]{"lunes", "martes", "miercoles", "jueves", "viernes"}) {
+                                Map<String, Object> diaData = (Map<String, Object>) data.get(dia);
+                                if (diaData != null && Boolean.TRUE.equals(diaData.get("disponible"))) {
+                                    String inicio = (String) diaData.get("hora_inicio");
+                                    String fin = (String) diaData.get("hora_fin");
+                                    if (inicio != null && fin != null) {
+                                        horaInicio = inicio;
+                                        horaFin = fin;
+                                        tvHoraInicio.setText(horaInicio);
+                                        tvHoraFin.setText(horaFin);
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
+                });
+        }
+    }
+
+    private void cargarHorarioDesdePrefs() {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String horarioJson = encryptedPrefs.getString("disponibilidad_horario_default", null);
+
+            if (horarioJson != null && getView() != null) {
+                Map<String, Object> data = gson.fromJson(horarioJson, Map.class);
+                if (data != null) {
+                    cargarDiaDesdeFirestore(data, "lunes", cbLunes);
+                    cargarDiaDesdeFirestore(data, "martes", cbMartes);
+                    cargarDiaDesdeFirestore(data, "miercoles", cbMiercoles);
+                    cargarDiaDesdeFirestore(data, "jueves", cbJueves);
+                    cargarDiaDesdeFirestore(data, "viernes", cbViernes);
+                    cargarDiaDesdeFirestore(data, "sabado", cbSabado);
+                    cargarDiaDesdeFirestore(data, "domingo", cbDomingo);
+
+                    // Cargar horas
+                    for (String dia : new String[]{"lunes", "martes", "miercoles", "jueves", "viernes"}) {
+                        Map<String, Object> diaData = (Map<String, Object>) data.get(dia);
+                        if (diaData != null && Boolean.TRUE.equals(diaData.get("disponible"))) {
+                            String inicio = (String) diaData.get("hora_inicio");
+                            String fin = (String) diaData.get("hora_fin");
+                            if (inicio != null && fin != null) {
+                                horaInicio = inicio;
+                                horaFin = fin;
+                                tvHoraInicio.setText(horaInicio);
+                                tvHoraFin.setText(horaFin);
+                                break;
+                            }
+                        }
+                    }
                 }
-            });
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al cargar horario desde prefs", e);
+        }
     }
 
     private void cargarDiaDesdeFirestore(Map<String, Object> data, String dia, CheckBox checkBox) {
@@ -274,20 +344,46 @@ public class DialogHorarioDefaultFragment extends DialogFragment {
         horarioDefault.put("fecha_creacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
         horarioDefault.put("ultima_actualizacion", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
-        // Guardar en Firestore
-        db.collection("paseadores").document(paseadorId)
-            .collection("disponibilidad").document("horario_default")
-            .set(horarioDefault)
-            .addOnSuccessListener(aVoid -> {
-                Toast.makeText(requireContext(), "Horario guardado exitosamente", Toast.LENGTH_SHORT).show();
-                if (listener != null) {
-                    listener.onHorarioGuardado();
-                }
-                dismiss();
-            })
-            .addOnFailureListener(e -> {
-                Toast.makeText(requireContext(), "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            });
+        if (isRegistrationMode) {
+            // Modo registro: guardar a EncryptedPreferences
+            guardarHorarioEnPrefs(horarioDefault);
+        } else {
+            // Modo edición: guardar a Firestore
+            db.collection("paseadores").document(paseadorId)
+                .collection("disponibilidad").document("horario_default")
+                .set(horarioDefault)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(requireContext(), "Horario guardado exitosamente", Toast.LENGTH_SHORT).show();
+                    if (listener != null) {
+                        listener.onHorarioGuardado();
+                    }
+                    dismiss();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(requireContext(), "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+        }
+    }
+
+    private void guardarHorarioEnPrefs(Map<String, Object> horarioDefault) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            String horarioJson = gson.toJson(horarioDefault);
+
+            SharedPreferences.Editor editor = encryptedPrefs.edit();
+            editor.putString("disponibilidad_horario_default", horarioJson);
+            editor.putBoolean("disponibilidad_completa", true);
+            editor.apply();
+
+            Toast.makeText(requireContext(), "Horario guardado exitosamente", Toast.LENGTH_SHORT).show();
+            if (listener != null) {
+                listener.onHorarioGuardado();
+            }
+            dismiss();
+        } catch (Exception e) {
+            Log.e(TAG, "Error al guardar horario en prefs", e);
+            Toast.makeText(requireContext(), "Error al guardar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private Map<String, Object> crearMapaDia(boolean disponible) {
