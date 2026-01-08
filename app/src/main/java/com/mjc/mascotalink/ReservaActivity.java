@@ -62,14 +62,14 @@ public class ReservaActivity extends AppCompatActivity {
     private ImageView ivBack;
     private RecyclerView rvMascotas, rvHorarios;
     private Button btnConfirmarReserva;
-    private ChipGroup chipGroupFecha;
-    private ImageView ivMesAnterior, ivMesSiguiente;
+    private ChipGroup chipGroupFecha, chipGroupDuracion;
+    private ImageView ivMesAnterior, ivMesSiguiente, ivDisponibilidadIcon;
     private TextView tvMesAnio, tvFechaSeleccionada, tvDisponibilidad;
     private GridView gvCalendario;
     private LinearLayout llDisponibilidad, calendarioContainer;
     private TextView tabPorHoras, tabPorMes;
     private TextView tvDuracionTitulo, tvDuracionSubtitulo;
-    private Button btn1Hora, btn2Horas, btn3Horas, btnPersonalizado;
+    private Chip chip1Hora, chip2Horas, chip3Horas, chipPersonalizado;
     private TextView tvCalculoResumen;
     private TextView tvTarifaValor, tvDuracionValor, tvTotalValor;
     private TextView tvPaseadorNombre, tvMascotaNombre, tvDetalleFecha, tvDetalleHora, tvDetalleDuracion;
@@ -112,10 +112,6 @@ public class ReservaActivity extends AppCompatActivity {
         setContentView(R.layout.activity_reserva);
 
         // --- FIX INICIO: Validaciones críticas de seguridad y datos ---
-        // RIESGO: Si el usuario no está autenticado, currentUserId será nulo, causando fallos
-        // en las consultas a Firebase.
-        // SOLUCIÓN: Se verifica la sesión del usuario. Si es nula, se notifica y se
-        // cierra la actividad para prevenir operaciones inválidas.
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         disponibilidadHelper = new DisponibilidadHelper();
@@ -127,10 +123,6 @@ public class ReservaActivity extends AppCompatActivity {
         }
         currentUserId = currentUser.getUid();
 
-        // RIESGO: Si no se recibe 'paseador_id' o 'tarifa_por_hora', la reserva no puede
-        // crearse correctamente, usando datos por defecto o nulos.
-        // SOLUCIÓN: Se valida la presencia y validez de los extras del Intent. Si falta
-        // información esencial, se notifica y se cierra la actividad.
         Intent intent = getIntent();
         paseadorId = intent.getStringExtra("paseador_id");
         paseadorNombre = intent.getStringExtra("paseador_nombre");
@@ -141,7 +133,6 @@ public class ReservaActivity extends AppCompatActivity {
             return;
         }
 
-        // Se mantiene el valor por defecto para la tarifa, pero se asegura que no sea cero.
         tarifaPorHora = intent.getDoubleExtra("precio_hora", 0.0);
         if (tarifaPorHora <= 0) {
             Toast.makeText(this, "Error: Tarifa por hora no válida.", Toast.LENGTH_LONG).show();
@@ -160,15 +151,17 @@ public class ReservaActivity extends AppCompatActivity {
         tvPaseadorNombre.setText(paseadorNombre != null ? paseadorNombre : "Alex");
         tvTarifaValor.setText(String.format(Locale.US, "$%.1f/hora", tarifaPorHora));
 
-        // Setup inmediato de componentes UI
         setupNetworkMonitor();
         setupListeners();
         setupBottomNavigation();
         setupCalendario();
         setupHorarios();
-        seleccionarDuracion(60, btn1Hora);
+        
+        // Seleccionar 1 hora por defecto (usando chips)
+        if (chipGroupDuracion != null) {
+            chipGroupDuracion.check(R.id.chip_1_hora);
+        }
 
-        // Cargar datos de Firebase en paralelo
         cargarDatosIniciales();
     }
 
@@ -180,12 +173,6 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        // --- FIX INICIO: Verificación de nulidad para las vistas ---
-        // RIESGO: Si una ID del layout XML no coincide con la del código Java,
-        // findViewById() devuelve null, causando un NullPointerException al usar la vista.
-        // SOLUCIÓN: Se comprueba cada vista después de buscarla. Si alguna es nula,
-        // se lanza una excepción clara para un diagnóstico rápido.
-
         ivBack = findViewById(R.id.iv_back);
         rvMascotas = findViewById(R.id.rv_mascotas);
         chipGroupFecha = findViewById(R.id.chip_group_fecha);
@@ -198,14 +185,21 @@ public class ReservaActivity extends AppCompatActivity {
         rvHorarios = findViewById(R.id.rv_horarios);
         llDisponibilidad = findViewById(R.id.ll_disponibilidad);
         tvDisponibilidad = findViewById(R.id.tv_disponibilidad);
+        ivDisponibilidadIcon = findViewById(R.id.iv_disponibilidad_icon);
         tabPorHoras = findViewById(R.id.tab_por_horas);
         tabPorMes = findViewById(R.id.tab_por_mes);
         tvDuracionTitulo = findViewById(R.id.tv_duracion_titulo);
         tvDuracionSubtitulo = findViewById(R.id.tv_duracion_subtitulo);
-        btn1Hora = findViewById(R.id.btn_1_hora);
-        btn2Horas = findViewById(R.id.btn_2_horas);
-        btn3Horas = findViewById(R.id.btn_3_horas);
-        btnPersonalizado = findViewById(R.id.btn_personalizado);
+        
+        // ...
+        
+        // Nuevas referencias a Chips
+        chipGroupDuracion = findViewById(R.id.chip_group_duracion);
+        chip1Hora = findViewById(R.id.chip_1_hora);
+        chip2Horas = findViewById(R.id.chip_2_horas);
+        chip3Horas = findViewById(R.id.chip_3_horas);
+        chipPersonalizado = findViewById(R.id.chip_personalizado);
+        
         tvCalculoResumen = findViewById(R.id.tv_calculo_resumen);
         tvTarifaValor = findViewById(R.id.tv_tarifa_valor);
         tvDuracionValor = findViewById(R.id.tv_duracion_valor);
@@ -222,30 +216,28 @@ public class ReservaActivity extends AppCompatActivity {
             ivMesAnterior == null || ivMesSiguiente == null || tvMesAnio == null || gvCalendario == null ||
             calendarioContainer == null || tvFechaSeleccionada == null || rvHorarios == null || llDisponibilidad == null ||
             tvDisponibilidad == null || tabPorHoras == null || tabPorMes == null || tvDuracionTitulo == null ||
-            tvDuracionSubtitulo == null || btn1Hora == null || btn2Horas == null || btn3Horas == null ||
-            btnPersonalizado == null || tvCalculoResumen == null || tvTarifaValor == null ||
+            tvDuracionSubtitulo == null || chipGroupDuracion == null || chip1Hora == null || 
+            chip2Horas == null || chip3Horas == null || chipPersonalizado == null || 
+            tvCalculoResumen == null || tvTarifaValor == null ||
             tvDuracionValor == null || tvTotalValor == null || tvPaseadorNombre == null ||
             tvMascotaNombre == null || tvDetalleFecha == null || tvDetalleHora == null ||
             tvDetalleDuracion == null || btnConfirmarReserva == null || bottomNav == null) {
 
-            throw new IllegalStateException("Error de inicialización: Una o más vistas no se encontraron en el layout. " +
-                    "Verifica que los IDs en activity_reserva.xml coincidan con los usados en ReservaActivity.java.");
+            throw new IllegalStateException("Error de inicialización: Una o más vistas no se encontraron en el layout.");
         }
 
         mascotaList = new ArrayList<>();
         horarioList = new ArrayList<>();
-        // --- FIX FIN ---
     }
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
 
         chipGroupFecha.setOnCheckedChangeListener((group, checkedId) -> {
-            // --- FIX INICIO: Lógica para llamar a los métodos de vista de calendario ---
             if (checkedId == R.id.chip_dias_especificos) {
                 modoFechaActual = "DIAS_ESPECIFICOS";
                 tipoReserva = "PUNTUAL";
-                cargarVistaMensual(); // El modo "días específicos" muestra el calendario mensual.
+                cargarVistaMensual();
             } else if (checkedId == R.id.chip_semana) {
                 modoFechaActual = "SEMANA";
                 tipoReserva = "SEMANAL";
@@ -253,9 +245,8 @@ public class ReservaActivity extends AppCompatActivity {
             } else if (checkedId == R.id.chip_mes) {
                 modoFechaActual = "MES";
                 tipoReserva = "MENSUAL";
-                cargarVistaMensual(); // El modo "por mes" también usa la vista de calendario mensual.
+                cargarVistaMensual();
             } else {
-                // Por defecto, si no hay nada seleccionado, mostrar la vista mensual.
                 modoFechaActual = "DIAS_ESPECIFICOS";
                 tipoReserva = "PUNTUAL";
                 cargarVistaMensual();
@@ -265,39 +256,44 @@ public class ReservaActivity extends AppCompatActivity {
                 calendarioContainer.setVisibility(View.VISIBLE);
             }
 
-            // Resetear selección de fecha y horario al cambiar de modo para evitar inconsistencias
             fechaSeleccionada = null;
             horarioSeleccionado = null;
             tvFechaSeleccionada.setVisibility(View.GONE);
             llDisponibilidad.setVisibility(View.GONE);
 
-            // Limpiar selecciones múltiples del calendario
             if (calendarioAdapter != null) {
                 calendarioAdapter.setFechasSeleccionadas(new HashSet<>());
-                // Configurar bloqueo de deselección según el modo
                 boolean bloquear = modoFechaActual.equals("SEMANA") || modoFechaActual.equals("MES");
                 calendarioAdapter.setBloquearDeseleccion(bloquear);
             }
 
             actualizarTextoDuracion();
-            actualizarResumenCosto(); // Recalcular costo al cambiar de modo
+            actualizarResumenCosto();
             verificarCamposCompletos();
 
-            // Auto-seleccionar DESPUÉS del reset para modos SEMANA y MES
             if (modoFechaActual.equals("SEMANA") || modoFechaActual.equals("MES")) {
                 autoSeleccionarFechaInicialYAplicar();
             }
-            // --- FIX FIN ---
         });
 
         ivMesAnterior.setOnClickListener(v -> cambiarMes(-1));
         ivMesSiguiente.setOnClickListener(v -> cambiarMes(1));
         tabPorHoras.setOnClickListener(v -> activarTabPorHoras());
         tabPorMes.setOnClickListener(v -> activarTabPorMes());
-        btn1Hora.setOnClickListener(v -> seleccionarDuracion(60, btn1Hora));
-        btn2Horas.setOnClickListener(v -> seleccionarDuracion(120, btn2Horas));
-        btn3Horas.setOnClickListener(v -> seleccionarDuracion(180, btn3Horas));
-        btnPersonalizado.setOnClickListener(v -> mostrarDialogDuracionPersonalizada());
+        
+        // Listener para Chips de Duración
+        chipGroupDuracion.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.chip_1_hora) {
+                seleccionarDuracion(60);
+            } else if (checkedId == R.id.chip_2_horas) {
+                seleccionarDuracion(120);
+            } else if (checkedId == R.id.chip_3_horas) {
+                seleccionarDuracion(180);
+            } else if (checkedId == R.id.chip_personalizado) {
+                mostrarDialogDuracionPersonalizada();
+            }
+        });
+
         btnConfirmarReserva.setOnClickListener(v -> {
             v.setEnabled(false);
             confirmarReserva();
@@ -1423,30 +1419,57 @@ public class ReservaActivity extends AppCompatActivity {
 
     private void actualizarIndicadorDisponibilidad(HorarioSelectorAdapter.Horario horario) {
         llDisponibilidad.setVisibility(View.VISIBLE);
+
+        // Animación de entrada suave si estaba oculto
+        if (llDisponibilidad.getAlpha() == 0f) {
+            llDisponibilidad.setAlpha(0f);
+            llDisponibilidad.animate().alpha(1f).setDuration(300).start();
+        }
+
+        int colorBackground, colorIcon, colorText, iconRes;
+        String mensaje;
+
         switch (horario.getDisponibilidadEstado()) {
             case "DISPONIBLE":
-                tvDisponibilidad.setText("✓ Paseador disponible en este horario");
-                tvDisponibilidad.setTextColor(getResources().getColor(R.color.green_success));
+                mensaje = "¡Genial! " + (paseadorNombre != null ? paseadorNombre : "El paseador") + " está disponible";
+                colorBackground = getResources().getColor(R.color.green_100);
+                colorIcon = getResources().getColor(R.color.green_success);
+                colorText = getResources().getColor(R.color.green_700);
+                iconRes = R.drawable.ic_check_circle;
                 break;
             case "LIMITADO":
-                tvDisponibilidad.setText("⚠ Disponibilidad limitada");
-                tvDisponibilidad.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
+                mensaje = "Disponibilidad limitada. Te recomendamos reservar pronto.";
+                colorBackground = getResources().getColor(R.color.orange_100);
+                colorIcon = getResources().getColor(R.color.orange_primary);
+                colorText = getResources().getColor(R.color.amber_dark);
+                iconRes = R.drawable.ic_info;
                 break;
             case "NO_DISPONIBLE":
                 String razon = horario.getRazonNoDisponible();
-                String mensaje = "✗ Paseador no disponible en este horario";
-                if (razon != null && !razon.isEmpty()) {
-                    mensaje = "✗ " + razon;
-                }
-                tvDisponibilidad.setText(mensaje);
-                tvDisponibilidad.setTextColor(getResources().getColor(R.color.red_error));
+                mensaje = (razon != null && !razon.isEmpty()) ? razon : "Lo sentimos, este horario ya está ocupado.";
+                colorBackground = getResources().getColor(R.color.red_100);
+                colorIcon = getResources().getColor(R.color.red_error);
+                colorText = getResources().getColor(R.color.red_error);
+                iconRes = R.drawable.ic_close;
                 break;
             case "PENDIENTE":
             default:
-                tvDisponibilidad.setText("ℹ️ Selecciona una duración para verificar disponibilidad");
-                tvDisponibilidad.setTextColor(getResources().getColor(R.color.text_secondary));
+                mensaje = "Selecciona una duración para verificar disponibilidad";
+                colorBackground = getResources().getColor(R.color.gray_100);
+                colorIcon = getResources().getColor(R.color.gray_dark);
+                colorText = getResources().getColor(R.color.gray_dark);
+                iconRes = R.drawable.ic_info;
                 break;
         }
+
+        // Aplicar cambios
+        llDisponibilidad.setBackgroundTintList(android.content.res.ColorStateList.valueOf(colorBackground));
+        if (ivDisponibilidadIcon != null) {
+            ivDisponibilidadIcon.setImageResource(iconRes);
+            ivDisponibilidadIcon.setColorFilter(colorIcon);
+        }
+        tvDisponibilidad.setText(mensaje);
+        tvDisponibilidad.setTextColor(colorText);
     }
 
     private void activarTabPorHoras() {
@@ -1477,9 +1500,9 @@ public class ReservaActivity extends AppCompatActivity {
         if (tabPorMesActivo) {
             tvDuracionTitulo.setText("¿Cuántas horas DIARIAS?");
             tvDuracionSubtitulo.setText("Se multiplicará por los días del mes");
-            btn1Hora.setText("1 hora/día");
-            btn2Horas.setText("2 horas/día");
-            btn3Horas.setText("3 horas/día");
+            chip1Hora.setText("1 hora/día");
+            chip2Horas.setText("2 horas/día");
+            chip3Horas.setText("3 horas/día");
         } else {
             switch (modoFechaActual) {
                 case "DIAS_ESPECIFICOS":
@@ -1495,17 +1518,14 @@ public class ReservaActivity extends AppCompatActivity {
                     tvDuracionSubtitulo.setText("Se aplicará a todos los días");
                     break;
             }
-            btn1Hora.setText("1 hora");
-            btn2Horas.setText("2 horas");
-            btn3Horas.setText("3 horas");
+            chip1Hora.setText("1 hora");
+            chip2Horas.setText("2 horas");
+            chip3Horas.setText("3 horas");
         }
     }
 
-    private void seleccionarDuracion(int minutos, Button botonSeleccionado) {
+    private void seleccionarDuracion(int minutos) {
         duracionMinutos = minutos;
-        resetearBotonesDuracion();
-        botonSeleccionado.setSelected(true);
-        botonSeleccionado.setTextColor(getResources().getColor(android.R.color.white));
         actualizarResumenCosto();
 
         // Re-validar disponibilidad de horarios con la nueva duración
@@ -1514,24 +1534,17 @@ public class ReservaActivity extends AppCompatActivity {
         verificarCamposCompletos();
     }
 
-    private void resetearBotonesDuracion() {
-        Button[] botones = {btn1Hora, btn2Horas, btn3Horas, btnPersonalizado};
-        for (Button btn : botones) {
-            btn.setSelected(false);
-            btn.setTextColor(getResources().getColor(android.R.color.black));
-        }
-    }
-
     private void resetearDuracionSeleccionada() {
         duracionMinutos = 0;
-        resetearBotonesDuracion();
+        if (chipGroupDuracion != null) {
+            chipGroupDuracion.clearCheck();
+        }
         tvCalculoResumen.setVisibility(View.GONE);
         actualizarResumenCosto();
         verificarCamposCompletos();
     }
 
     private void mostrarDialogDuracionPersonalizada() {
-        // --- FIX INICIO: Reemplazar EditText por NumberPicker para una mejor UX ---
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LayoutInflater inflater = this.getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_duracion_picker, null);
@@ -1547,9 +1560,11 @@ public class ReservaActivity extends AppCompatActivity {
             int horasSeleccionadas = numberPicker.getValue();
             duracionMinutos = horasSeleccionadas * 60;
 
-            resetearBotonesDuracion();
-            btnPersonalizado.setSelected(true);
-            btnPersonalizado.setTextColor(getResources().getColor(android.R.color.white));
+            if (chipGroupDuracion.getCheckedChipId() != R.id.chip_personalizado) {
+                 chipGroupDuracion.check(R.id.chip_personalizado);
+            }
+            chipPersonalizado.setText(horasSeleccionadas + " horas");
+
             actualizarResumenCosto();
 
             // Re-validar disponibilidad de horarios con la nueva duración
@@ -1565,7 +1580,6 @@ public class ReservaActivity extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
         dialog.show();
-        // --- FIX FIN ---
     }
 
     private void actualizarCostoTotal() {

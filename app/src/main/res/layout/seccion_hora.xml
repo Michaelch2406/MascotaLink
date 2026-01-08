@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:padding="16dp"
     android:orientation="vertical">
 
     <TextView
@@ -13,32 +15,47 @@
         android:textColor="@android:color/black"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="12dp"
+        android:visibility="gone"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_horarios"
         android:layout_width="match_parent"
         android:layout_height="200dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="16dp"
         tools:itemCount="5"
         tools:listitem="@layout/item_horario_selector" />
 
     <LinearLayout
         android:id="@+id/ll_disponibilidad"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:background="@drawable/bg_status_message"
+        android:backgroundTint="@color/green_100"
         android:layout_marginBottom="16dp"
-        android:visibility="gone">
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/iv_disponibilidad_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_check_circle"
+            app:tint="@color/green_success"
+            android:layout_marginEnd="12dp"/>
 
         <TextView
             android:id="@+id/tv_disponibilidad"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="✓ Disponible"
-            android:textColor="@color/green_success"
-            android:textSize="12sp" />
+            android:text="¡Genial! Alex está disponible"
+            android:textColor="@color/green_700"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
 
     </LinearLayout>
 
@@ -47,7 +64,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:orientation="horizontal"
-        android:background="@android:color/white"
+        android:background="@drawable/bg_input_rounded"
         android:layout_marginBottom="16dp">
 
         <TextView
@@ -66,7 +83,8 @@
         <View
             android:layout_width="1dp"
             android:layout_height="match_parent"
-            android:background="@color/gray_light" />
+            android:background="@color/gray_light"
+            android:layout_marginVertical="8dp" />
 
         <TextView
             android:id="@+id/tab_por_mes"
@@ -108,62 +126,59 @@
             android:textSize="12sp"
             android:layout_marginBottom="12dp" />
 
-        <LinearLayout
+        <!-- New ChipGroup for Duration -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:scrollbars="none"
+            android:layout_marginBottom="12dp"
+            android:clipToPadding="false">
 
-            <Button
-                android:id="@+id/btn_1_hora"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/selector_duracion_button"
-                android:text="1 hora"
-                android:contentDescription="@string/accessibility_reservation_duration_1hour"
-                android:textSize="12sp" />
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_duracion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleLine="true"
+                app:singleSelection="true"
+                app:selectionRequired="true">
 
-            <Button
-                android:id="@+id/btn_2_horas"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/selector_duracion_button"
-                android:text="2 horas"
-                android:contentDescription="@string/accessibility_reservation_duration_2hours"
-                android:textSize="12sp" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_1_hora"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1 hora"
+                    app:chipBackgroundColor="@color/chip_background_selector"/>
 
-            <Button
-                android:id="@+id/btn_3_horas"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/selector_duracion_button"
-                android:text="3 horas"
-                android:contentDescription="@string/accessibility_reservation_duration_3hours"
-                android:textSize="12sp" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_2_horas"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2 horas"
+                    app:chipBackgroundColor="@color/chip_background_selector"/>
 
-            <Button
-                android:id="@+id/btn_personalizado"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/selector_duracion_button"
-                android:maxLines="2"
-                android:text="Personalizado"
-                android:contentDescription="@string/accessibility_reservation_duration_custom"
-                android:textSize="12sp" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_3_horas"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3 horas"
+                    app:chipBackgroundColor="@color/chip_background_selector"/>
 
-        </LinearLayout>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_personalizado"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Personalizado"
+                    app:chipBackgroundColor="@color/chip_background_selector"/>
+
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+        
+        <!-- Hidden buttons for backwards compatibility until Java is updated (Logic requires View references) -->
+        <!-- Actually, I will remove them and update Java. Keeping them would require View.GONE which Java might check visibility of. -->
 
         <TextView
             android:id="@+id/tv_calculo_resumen"

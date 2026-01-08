@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:padding="16dp"
     android:orientation="vertical">
 
     <TextView
@@ -15,44 +16,54 @@
         android:textSize="18sp"
         android:textStyle="bold"
         android:layout_marginTop="16dp"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="12dp"
+        android:visibility="gone"/>
 
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chip_group_fecha"
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:scrollbars="none"
         android:layout_marginBottom="16dp"
-        app:singleSelection="true"
-        app:checkedChip="@id/chip_dias_especificos">
+        android:clipToPadding="false">
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chip_dias_especificos"
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_fecha"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Por días específicos"
-            android:contentDescription="@string/accessibility_reservation_date_specific"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
-            app:chipBackgroundColor="@color/chip_background_selector" />
+            app:singleLine="true"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:checkedChip="@id/chip_dias_especificos">
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chip_semana"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Por semana"
-            android:contentDescription="@string/accessibility_reservation_date_weekly"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
-            app:chipBackgroundColor="@color/chip_background_selector" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_dias_especificos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Por días específicos"
+                android:contentDescription="@string/accessibility_reservation_date_specific"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                app:chipBackgroundColor="@color/chip_background_selector" />
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chip_mes"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Por mes"
-            android:contentDescription="@string/accessibility_reservation_date_monthly"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
-            app:chipBackgroundColor="@color/chip_background_selector" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_semana"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Por semana"
+                android:contentDescription="@string/accessibility_reservation_date_weekly"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                app:chipBackgroundColor="@color/chip_background_selector" />
 
-    </com.google.android.material.chip.ChipGroup>
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_mes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Por mes"
+                android:contentDescription="@string/accessibility_reservation_date_monthly"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                app:chipBackgroundColor="@color/chip_background_selector" />
+
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
 
     <LinearLayout
         android:id="@+id/calendario_container"
