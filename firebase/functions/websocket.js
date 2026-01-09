@@ -442,12 +442,13 @@ function initializeSocketServer(io, db) {
           }).catch(err => console.warn("Warn: Error actualizando usuario", err.message));
 
           // ===== ACTUALIZAR 3: Paseadores Search (CRÍTICO para búsqueda) =====
-          await db.collection("paseadores_search").doc(socket.userId).update({
+          // Usar set con merge en lugar de update para crear si no existe
+          await db.collection("paseadores_search").doc(socket.userId).set({
             ubicacion_actual: geoPoint,
             ubicacion_geohash: geoHash,
             updated_at: admin.firestore.FieldValue.serverTimestamp(),
             estado: "online",
-          }).catch(err => console.warn("Warn: Error actualizando paseadores_search", err.message));
+          }, { merge: true }).catch(err => console.warn("Warn: Error actualizando paseadores_search", err.message));
 
           socket.lastLocationSave = Date.now();
           console.log(`📍 Ubicación guardada en: reservas + usuarios + paseadores_search para paseo ${paseoId}`);
@@ -602,15 +603,14 @@ async function updateUserPresence(db, userId, status) {
     });
 
     // ===== ACTUALIZAR 2: Colección 'paseadores_search' (CRÍTICO) =====
-    await db.collection("paseadores_search").doc(userId).update({
+    // Usar set con merge en lugar de update para crear si no existe
+    await db.collection("paseadores_search").doc(userId).set({
       estado: status,
       en_linea: status === "online",
       last_seen: admin.firestore.FieldValue.serverTimestamp(),
-    }).catch(err => {
-      // No es crítico si paseadores_search no existe (puede ser un dueño)
-      if (err.code !== "not-found") {
-        console.warn("Warn: Error actualizando paseadores_search en presencia:", err.message);
-      }
+    }, { merge: true }).catch(err => {
+      // Puede no ser crítico si el usuario no es un paseador (puede ser un dueño)
+      console.warn("Warn: Error actualizando paseadores_search en presencia:", err.message);
     });
 
     console.log(`✅ Presencia actualizada a '${status}' para usuario ${userId} en ambas colecciones`);

@@ -18,6 +18,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -85,10 +86,10 @@ public class PresenceManager {
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ Usuario marcado como offline en usuarios"))
                 .addOnFailureListener(e -> Log.w(TAG, "Error marcando offline en usuarios", e));
 
-        // Actualizar en paseadores_search
-        db.collection("paseadores_search").document(userId).update(updates)
+        // Actualizar en paseadores_search (usar set con merge para crear si no existe)
+        db.collection("paseadores_search").document(userId).set(updates, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ Usuario marcado como offline en paseadores_search"))
-                .addOnFailureListener(e -> Log.d(TAG, "Nota: No es crítico si no existe en paseadores_search"));
+                .addOnFailureListener(e -> Log.d(TAG, "Nota: Error actualizando paseadores_search:", e));
     }
 
     /**
@@ -106,10 +107,10 @@ public class PresenceManager {
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ Usuario marcado como online en usuarios"))
                 .addOnFailureListener(e -> Log.w(TAG, "Error marcando online en usuarios", e));
 
-        // Actualizar en paseadores_search
-        db.collection("paseadores_search").document(userId).update(updates)
+        // Actualizar en paseadores_search (usar set con merge para crear si no existe)
+        db.collection("paseadores_search").document(userId).set(updates, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ Usuario marcado como online en paseadores_search"))
-                .addOnFailureListener(e -> Log.d(TAG, "Nota: No es crítico si no existe en paseadores_search (puede ser dueño)"));
+                .addOnFailureListener(e -> Log.d(TAG, "Nota: Error actualizando paseadores_search:", e));
     }
 
     /**
@@ -165,10 +166,10 @@ public class PresenceManager {
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ Ubicación actualizada en usuarios"))
                 .addOnFailureListener(e -> Log.w(TAG, "Error actualizando ubicación en usuarios", e));
 
-        // ===== ACTUALIZAR 2: paseadores_search =====
-        db.collection("paseadores_search").document(userId).update(updates)
+        // ===== ACTUALIZAR 2: paseadores_search (usar set con merge para crear si no existe) =====
+        db.collection("paseadores_search").document(userId).set(updates, SetOptions.merge())
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ Ubicación actualizada en paseadores_search"))
-                .addOnFailureListener(e -> Log.d(TAG, "Nota: Usuario no existe en paseadores_search (puede ser dueño)"));
+                .addOnFailureListener(e -> Log.d(TAG, "Nota: Error actualizando paseadores_search:", e));
 
         Log.d(TAG, "📡 Ubicación enviada a Firestore: (" + lat + ", " + lng + ") - Geohash: " + geohash);
     }
