@@ -540,8 +540,9 @@ public class LocationService extends Service {
             float distance = lastLocation.distanceTo(location);
             long timeDelta = location.getTime() - lastLocation.getTime();
 
-            // Detectar saltos > 100m en < 2 segundos
-            if (distance > MAX_JUMP_METERS && timeDelta < MIN_TIME_BETWEEN_JUMPS_MS) {
+            // Detectar saltos > 100m en < 2 segundos, pero PERMITIR salto inicial grande
+            // Esto permite que el paseador se conecte desde una ubicación diferente
+            if (distance > MAX_JUMP_METERS && timeDelta < MIN_TIME_BETWEEN_JUMPS_MS && timeDelta > 0) {
                 Log.w(TAG, " Ubicación rechazada: salto anormal de " + (int)distance + "m en " + timeDelta + "ms");
                 return;
             }
@@ -648,17 +649,45 @@ public class LocationService extends Service {
 
     private void updateUserRealtimeLocation(double lat, double lng, float accuracy) {
         String geohash = GeoFireUtils.getGeoHashForLocation(new GeoLocation(lat, lng));
-        Map<String, Object> updates = new HashMap<>();
-        Map<String, Object> locationMap = new HashMap<>();
-        locationMap.put("latitude", lat);
-        locationMap.put("longitude", lng);
-        
-        updates.put("ubicacion_actual", new com.google.firebase.firestore.GeoPoint(lat, lng)); // Usar GeoPoint nativo
-        updates.put("ubicacion_geohash", geohash);
-        
-        db.collection("usuarios").document(auth.getCurrentUser().getUid())
-                .update(updates)
+        com.google.firebase.firestore.GeoPoint geoPoint = new com.google.firebase.firestore.GeoPoint(lat, lng);
+        String userId = auth.getCurrentUser().getUid();
+
+        // ===== ACTUALIZAR 1: Colección 'usuarios' =====
+        Map<String, Object> userUpdates = new HashMap<>();
+        userUpdates.put("ubicacion_actual", geoPoint);
+        userUpdates.put("ubicacion", geoPoint);
+        userUpdates.put("ubicacion_geohash", geohash);
+        userUpdates.put("updated_at", Timestamp.now());
+        userUpdates.put("estado", "online");  // Marcar como online
+
+        db.collection("usuarios").document(userId)
+                .update(userUpdates)
                 .addOnFailureListener(e -> Log.w(TAG, "Error actualizando ubicación usuario", e));
+
+        // ===== ACTUALIZAR 2: Colección 'paseadores_search' (CRÍTICO para BusquedaPaseadoresActivity) =====
+        Map<String, Object> searchUpdates = new HashMap<>();
+        searchUpdates.put("ubicacion_actual", geoPoint);
+        searchUpdates.put("ubicacion_geohash", geohash);
+        searchUpdates.put("estado", "online");
+        searchUpdates.put("updated_at", Timestamp.now());
+
+        db.collection("paseadores_search").document(userId)
+                .update(searchUpdates)
+                .addOnFailureListener(e -> Log.w(TAG, "Error actualizando en paseadores_search", e));
+
+        // ===== ACTUALIZAR 3: Reserva (para que el mapa del dueño funcione) =====
+        if (currentReservaId != null && !currentReservaId.isEmpty()) {
+            Map<String, Object> reservaUpdates = new HashMap<>();
+            reservaUpdates.put("ubicacion_actual", geoPoint);
+            reservaUpdates.put("ubicacion_actual_paseador", geoPoint);
+            reservaUpdates.put("updated_at", Timestamp.now());
+
+            db.collection("reservas").document(currentReservaId)
+                    .update(reservaUpdates)
+                    .addOnFailureListener(e -> Log.w(TAG, "Error actualizando ubicación en reserva", e));
+        }
+
+        Log.d(TAG, "📍 Ubicación actualizada en: usuarios + paseadores_search + reserva (" + lat + ", " + lng + ")");
     }
 
     /**

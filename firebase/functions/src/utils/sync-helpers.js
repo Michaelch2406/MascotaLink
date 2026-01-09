@@ -126,12 +126,25 @@ async function sincronizarPaseador(docId) {
       anos_experiencia: anosExperiencia,
       verificacion_estado: paseadorData.verificacion_estado || "pendiente",
       activo: userData.activo !== false, // Por defecto true si no existe
+
+      // ===== CAMPOS DE UBICACIÓN Y PRESENCIA (CRÍTICOS para búsqueda) =====
+      ubicacion_actual: userData.ubicacion_actual || userData.ubicacion || null,
       ubicacion: userData.ubicacion_actual || userData.ubicacion || null,
+      ubicacion_geohash: userData.ubicacion_geohash || "", // Necesario para GeoFire
+
+      // ===== CAMPOS DE PRESENCIA =====
+      estado: userData.estado || "offline",
+      en_linea: userData.en_linea || false,
+      last_seen: userData.last_seen || FieldValue.serverTimestamp(),
+
+      // ===== OTROS CAMPOS =====
       top_resenas: topResenas,
       zonas_principales: zonasPrincipales,
       total_resenas: paseadorData.total_resenas || 0,
       updated_at: FieldValue.serverTimestamp()
     };
+
+    console.log(`📍 Sincronizando ubicación para ${docId}: estado=${searchData.estado}, geohash=${searchData.ubicacion_geohash}`);
 
     await searchRef.set(searchData, { merge: true });
     console.log(`✅ Datos de búsqueda sincronizados para ${docId}`);

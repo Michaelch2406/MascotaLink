@@ -17,6 +17,7 @@ import com.mjc.mascotalink.network.SocketManager;
 import com.mjc.mascotalink.upload.UploadScheduler;
 import com.mjc.mascotalink.notifications.FcmTokenSyncWorker;
 import com.mjc.mascotalink.util.UnreadBadgeManager;
+import com.mjc.mascotalink.util.PresenceManager;
 
 import dagger.hilt.android.HiltAndroidApp;
 
@@ -159,6 +160,10 @@ public class MyApplication extends Application {
                 String userId = firebaseAuth.getCurrentUser().getUid();
                 Log.d(TAG, " Usuario autenticado (" + userId + ") - Conectando WebSocket");
                 socketManager.connect();
+
+                // ===== NUEVO: Actualizar presencia y ubicación al login =====
+                PresenceManager presenceManager = new PresenceManager(this);
+                presenceManager.updatePresenceOnLogin();
 
                 // Sincronizar FCM y badges
                 FcmTokenSyncWorker.enqueueNow(this);

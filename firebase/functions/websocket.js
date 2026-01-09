@@ -419,13 +419,38 @@ function initializeSocketServer(io, db) {
             ts: admin.firestore.Timestamp.fromMillis(timestamp),
           };
 
+          const geoPoint = new admin.firestore.GeoPoint(latitud, longitud);
+
+          // ===== ACTUALIZAR 1: Reserva (para mapa del dueño) =====
           await db.collection("reservas").doc(paseoId).update({
-            ubicacion_actual: new admin.firestore.GeoPoint(latitud, longitud),
+            ubicacion_actual: geoPoint,
             ultima_actualizacion: admin.firestore.FieldValue.serverTimestamp(),
+            updated_at: admin.firestore.FieldValue.serverTimestamp(),
             ubicaciones: admin.firestore.FieldValue.arrayUnion(locationData),
           });
+
+          // ===== ACTUALIZAR 2: Usuario (para perfil) =====
+          // Calcular geohash para búsquedas geoespaciales (usando algoritmo simple)
+          const geoHash = calculateGeoHash(latitud, longitud);
+
+          await db.collection("usuarios").doc(socket.userId).update({
+            ubicacion_actual: geoPoint,
+            ubicacion: geoPoint,
+            ubicacion_geohash: geoHash,
+            updated_at: admin.firestore.FieldValue.serverTimestamp(),
+            estado: "online",
+          }).catch(err => console.warn("Warn: Error actualizando usuario", err.message));
+
+          // ===== ACTUALIZAR 3: Paseadores Search (CRÍTICO para búsqueda) =====
+          await db.collection("paseadores_search").doc(socket.userId).update({
+            ubicacion_actual: geoPoint,
+            ubicacion_geohash: geoHash,
+            updated_at: admin.firestore.FieldValue.serverTimestamp(),
+            estado: "online",
+          }).catch(err => console.warn("Warn: Error actualizando paseadores_search", err.message));
+
           socket.lastLocationSave = Date.now();
-          console.log(` Ubicación guardada en Firestore para paseo ${paseoId}`);
+          console.log(`📍 Ubicación guardada en: reservas + usuarios + paseadores_search para paseo ${paseoId}`);
         }
       } catch (error) {
         console.error("Error al actualizar ubicación:", error);
@@ -564,14 +589,31 @@ function initializeSocketServer(io, db) {
 // ========================================
 
 /**
- * Actualiza el estado de presencia del usuario
+ * Actualiza el estado de presencia del usuario en usuarios y paseadores_search
  */
 async function updateUserPresence(db, userId, status) {
   try {
+    // ===== ACTUALIZAR 1: Colección 'usuarios' =====
     await db.collection("usuarios").doc(userId).update({
       estado: status,
+      en_linea: status === "online",
       ultima_actividad: admin.firestore.FieldValue.serverTimestamp(),
+      last_seen: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // ===== ACTUALIZAR 2: Colección 'paseadores_search' (CRÍTICO) =====
+    await db.collection("paseadores_search").doc(userId).update({
+      estado: status,
+      en_linea: status === "online",
+      last_seen: admin.firestore.FieldValue.serverTimestamp(),
+    }).catch(err => {
+      // No es crítico si paseadores_search no existe (puede ser un dueño)
+      if (err.code !== "not-found") {
+        console.warn("Warn: Error actualizando paseadores_search en presencia:", err.message);
+      }
+    });
+
+    console.log(`✅ Presencia actualizada a '${status}' para usuario ${userId} en ambas colecciones`);
   } catch (error) {
     console.error("Error al actualizar presencia:", error);
   }
@@ -617,6 +659,51 @@ function extractId(value) {
   if (typeof value === "string") return value;
   if (typeof value === "object" && value.id) return value.id;
   return null;
+}
+
+/**
+ * Calcula un geohash basado en coordenadas (compatible con GeoFire)
+ * Implementación simplificada basada en interleaving binario
+ */
+function calculateGeoHash(lat, lng, precision = 9) {
+  const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+  const isEven = true;
+  const latRange = [-90, 90];
+  const lngRange = [-180, 180];
+  let geohash = "";
+
+  let bit = 0;
+  let ch = 0;
+
+  while (geohash.length < precision) {
+    if (isEven) {
+      const mid = (lngRange[0] + lngRange[1]) / 2;
+      if (lng > mid) {
+        ch |= (1 << (4 - bit));
+        lngRange[0] = mid;
+      } else {
+        lngRange[1] = mid;
+      }
+    } else {
+      const mid = (latRange[0] + latRange[1]) / 2;
+      if (lat > mid) {
+        ch |= (1 << (4 - bit));
+        latRange[0] = mid;
+      } else {
+        latRange[1] = mid;
+      }
+    }
+
+    if (bit < 4) {
+      bit++;
+    } else {
+      geohash += BASE32[ch];
+      bit = 0;
+      ch = 0;
+    }
+  }
+
+  return geohash;
 }
 
 module.exports = { initializeSocketServer };

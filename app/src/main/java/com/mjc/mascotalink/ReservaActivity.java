@@ -191,8 +191,6 @@ public class ReservaActivity extends AppCompatActivity {
         tvDuracionTitulo = findViewById(R.id.tv_duracion_titulo);
         tvDuracionSubtitulo = findViewById(R.id.tv_duracion_subtitulo);
         
-        // ...
-        
         // Nuevas referencias a Chips
         chipGroupDuracion = findViewById(R.id.chip_group_duracion);
         chip1Hora = findViewById(R.id.chip_1_hora);

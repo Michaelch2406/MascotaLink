@@ -7,6 +7,8 @@ import android.util.Log;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -783,11 +785,52 @@ public class SocketManager {
             return;
         }
         isConnected = connected;
+
+        // ===== ACTUALIZAR ESTADO ONLINE/OFFLINE EN FIRESTORE =====
+        updateOnlineStatusInFirestore(connected);
+
         if (connected) {
             notifyConnected();
         } else {
             notifyDisconnected();
         }
+    }
+
+    /**
+     * Actualiza el estado online/offline del usuario en Firestore (usuarios y paseadores_search)
+     */
+    private void updateOnlineStatusInFirestore(boolean isOnline) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        String userId = user.getUid();
+        String estado = isOnline ? "online" : "offline";
+
+        // ===== ACTUALIZAR 1: Colección 'usuarios' =====
+        Map<String, Object> userUpdates = new HashMap<>();
+        userUpdates.put("en_linea", isOnline);
+        userUpdates.put("estado", estado);
+        userUpdates.put("last_seen", Timestamp.now());
+
+        FirebaseFirestore.getInstance()
+                .collection("usuarios")
+                .document(userId)
+                .update(userUpdates)
+                .addOnFailureListener(e -> Log.w(TAG, "Error actualizando estado en usuarios", e));
+
+        // ===== ACTUALIZAR 2: Colección 'paseadores_search' (CRÍTICO para búsqueda) =====
+        Map<String, Object> searchUpdates = new HashMap<>();
+        searchUpdates.put("estado", estado);
+        searchUpdates.put("en_linea", isOnline);
+        searchUpdates.put("last_seen", Timestamp.now());
+
+        FirebaseFirestore.getInstance()
+                .collection("paseadores_search")
+                .document(userId)
+                .update(searchUpdates)
+                .addOnFailureListener(e -> Log.w(TAG, "Error actualizando estado en paseadores_search", e));
+
+        Log.d(TAG, "Estado online/offline actualizado en ambas colecciones: " + estado.toUpperCase());
     }
 
     private void rebindEventListeners() {
