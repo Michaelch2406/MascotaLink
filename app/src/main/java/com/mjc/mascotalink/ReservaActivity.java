@@ -10,11 +10,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -66,7 +69,8 @@ public class ReservaActivity extends AppCompatActivity {
     private ImageView ivMesAnterior, ivMesSiguiente, ivDisponibilidadIcon;
     private TextView tvMesAnio, tvFechaSeleccionada, tvDisponibilidad;
     private GridView gvCalendario;
-    private LinearLayout llDisponibilidad, calendarioContainer;
+    private LinearLayout llDisponibilidad, calendarioContainer, containerSelectorMeses;
+    private android.widget.Spinner spinnerDuracionMeses;
     private TextView tabPorHoras, tabPorMes;
     private TextView tvDuracionTitulo, tvDuracionSubtitulo;
     private Chip chip1Hora, chip2Horas, chip3Horas, chipPersonalizado;
@@ -96,6 +100,7 @@ public class ReservaActivity extends AppCompatActivity {
     private double costoTotal = 0.0;
     private String tipoReserva = "PUNTUAL";
     private String modoFechaActual = "DIAS_ESPECIFICOS";
+    private int mesesSeleccionados = 1;
     private boolean tabPorMesActivo = false;
     private String notasAdicionalesMascota = "";
     private String direccionUsuario = ""; // Dirección del dueño para la reserva
@@ -181,6 +186,8 @@ public class ReservaActivity extends AppCompatActivity {
         tvMesAnio = findViewById(R.id.tv_mes_anio);
         gvCalendario = findViewById(R.id.gv_calendario);
         calendarioContainer = findViewById(R.id.calendario_container);
+        containerSelectorMeses = findViewById(R.id.container_selector_meses);
+        spinnerDuracionMeses = findViewById(R.id.spinner_duracion_meses);
         tvFechaSeleccionada = findViewById(R.id.tv_fecha_seleccionada);
         rvHorarios = findViewById(R.id.rv_horarios);
         llDisponibilidad = findViewById(R.id.ll_disponibilidad);
@@ -213,7 +220,8 @@ public class ReservaActivity extends AppCompatActivity {
 
         if (ivBack == null || rvMascotas == null || chipGroupFecha == null ||
             ivMesAnterior == null || ivMesSiguiente == null || tvMesAnio == null || gvCalendario == null ||
-            calendarioContainer == null || tvFechaSeleccionada == null || rvHorarios == null || llDisponibilidad == null ||
+            calendarioContainer == null || containerSelectorMeses == null || spinnerDuracionMeses == null ||
+            tvFechaSeleccionada == null || rvHorarios == null || llDisponibilidad == null ||
             tvDisponibilidad == null || tabPorHoras == null || tabPorMes == null || tvDuracionTitulo == null ||
             tvDuracionSubtitulo == null || chipGroupDuracion == null || chip1Hora == null ||
             chip2Horas == null || chip3Horas == null || chipPersonalizado == null ||
@@ -236,33 +244,48 @@ public class ReservaActivity extends AppCompatActivity {
             if (checkedId == R.id.chip_dias_especificos) {
                 modoFechaActual = "DIAS_ESPECIFICOS";
                 tipoReserva = "PUNTUAL";
+
+                // Mostrar calendario, ocultar spinner
+                calendarioContainer.setVisibility(View.VISIBLE);
+                containerSelectorMeses.setVisibility(View.GONE);
                 cargarVistaMensual();
-            } else if (checkedId == R.id.chip_semana) {
-                modoFechaActual = "SEMANA";
-                tipoReserva = "SEMANAL";
-                cargarVistaSemanales();
+
             } else if (checkedId == R.id.chip_mes) {
                 modoFechaActual = "MES";
                 tipoReserva = "MENSUAL";
-                cargarVistaMensual();
+
+                // Ocultar calendario, mostrar spinner
+                calendarioContainer.setVisibility(View.GONE);
+                containerSelectorMeses.setVisibility(View.VISIBLE);
+
+                // Inicializar fecha base (hoy o mañana si es después de las 8 PM)
+                Calendar now = Calendar.getInstance();
+                int currentHour = now.get(Calendar.HOUR_OF_DAY);
+                if (currentHour >= 20) {
+                    now.add(Calendar.DAY_OF_MONTH, 1);
+                }
+                fechaSeleccionada = now.getTime();
+
+                // Aplicar selección de meses
+                aplicarSeleccionMeses();
+
             } else {
+                // Fallback a días específicos
                 modoFechaActual = "DIAS_ESPECIFICOS";
                 tipoReserva = "PUNTUAL";
+                calendarioContainer.setVisibility(View.VISIBLE);
+                containerSelectorMeses.setVisibility(View.GONE);
                 cargarVistaMensual();
             }
 
-            if (calendarioContainer != null) {
-                calendarioContainer.setVisibility(View.VISIBLE);
-            }
-
-            fechaSeleccionada = null;
+            // Limpiar selección anterior
             horarioSeleccionado = null;
             tvFechaSeleccionada.setVisibility(View.GONE);
             llDisponibilidad.setVisibility(View.GONE);
 
             if (calendarioAdapter != null) {
                 calendarioAdapter.setFechasSeleccionadas(new HashSet<>());
-                boolean bloquear = modoFechaActual.equals("SEMANA") || modoFechaActual.equals("MES");
+                boolean bloquear = modoFechaActual.equals("MES");
                 calendarioAdapter.setBloquearDeseleccion(bloquear);
             }
 
@@ -270,7 +293,7 @@ public class ReservaActivity extends AppCompatActivity {
             actualizarResumenCosto();
             verificarCamposCompletos();
 
-            if (modoFechaActual.equals("SEMANA") || modoFechaActual.equals("MES")) {
+            if (modoFechaActual.equals("MES")) {
                 autoSeleccionarFechaInicialYAplicar();
             }
         });
@@ -290,6 +313,26 @@ public class ReservaActivity extends AppCompatActivity {
                 seleccionarDuracion(180);
             } else if (checkedId == R.id.chip_personalizado) {
                 mostrarDialogDuracionPersonalizada();
+            }
+        });
+
+        // Listener para Spinner de Duración de Meses
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,
+            new String[]{"1 mes", "2 meses", "3 meses"});
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerDuracionMeses.setAdapter(spinnerAdapter);
+
+        spinnerDuracionMeses.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mesesSeleccionados = position + 1; // 1, 2, o 3 meses
+                aplicarSeleccionMeses();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mesesSeleccionados = 1;
             }
         });
 
@@ -557,7 +600,7 @@ public class ReservaActivity extends AppCompatActivity {
                     fechasIniciales.add(normalizarFecha(fechaInicial));
                     calendarioAdapter.setFechasSeleccionadas(fechasIniciales);
                 } else {
-                    // Para SEMANA y MES, usar selección simple
+                    // Para MES, usar selección simple (aunque MES ahora usa Spinner)
                     calendarioAdapter.setSelectedDate(fechaInicial);
                 }
                 calendarioAdapter.notifyDataSetChanged();
@@ -565,55 +608,6 @@ public class ReservaActivity extends AppCompatActivity {
             cargarHorariosDisponibles();
             verificarCamposCompletos();
         }, 300);
-    }
-
-    // --- FIX INICIO: Nuevos métodos para cargar las vistas del calendario ---
-
-    /**
-     * Carga la vista del calendario para mostrar 7 días consecutivos de servicio desde hoy.
-     */
-    private void cargarVistaSemanales() {
-        // Ocultar flechas de navegación y cambiar título
-        ivMesAnterior.setVisibility(View.INVISIBLE);
-        ivMesSiguiente.setVisibility(View.INVISIBLE);
-        tvMesAnio.setText("Próximos 7 Días");
-
-        datesList.clear();
-        Calendar cal = Calendar.getInstance();
-
-        // Si son más de las 8 PM, comenzar desde mañana
-        int currentHour = cal.get(Calendar.HOUR_OF_DAY);
-        if (currentHour >= 20) {
-            cal.add(Calendar.DAY_OF_MONTH, 1);
-        }
-
-        // Generar 7 días consecutivos desde hoy (o mañana)
-        for (int i = 0; i < 7; i++) {
-            datesList.add(cal.getTime());
-            cal.add(Calendar.DAY_OF_MONTH, 1);
-        }
-
-        if (calendarioAdapter == null) {
-             calendarioAdapter = new CalendarioAdapter(this, datesList, currentMonth, (date, position) -> {
-                onFechaSeleccionada(date);
-            });
-            calendarioAdapter.setEsVistaPaseador(false); // Vista de cliente
-            // Activar selección múltiple para modo SEMANA
-            calendarioAdapter.setSeleccionMultiple(true);
-            calendarioAdapter.setBloquearDeseleccion(true); // Bloquear deselección en modo SEMANA
-            gvCalendario.setAdapter(calendarioAdapter);
-        } else {
-            calendarioAdapter.updateDates(datesList, (Calendar) cal.clone());
-            calendarioAdapter.setBloquearDeseleccion(true); // Asegurar bloqueo al actualizar
-        }
-
-        // Si hay una fecha previamente seleccionada, seleccionar la semana completa
-        if (fechaSeleccionada != null) {
-            seleccionarSemanaCompleta(fechaSeleccionada);
-        }
-
-        // Cargar estados de disponibilidad
-        cargarEstadosDisponibilidadDelMes();
     }
 
     /**
@@ -625,8 +619,6 @@ public class ReservaActivity extends AppCompatActivity {
         ivMesSiguiente.setVisibility(View.VISIBLE);
         actualizarCalendario(); // Este método ya dibuja el mes completo
     }
-
-    // --- FIX FIN ---
 
     private void actualizarCalendario() {
         SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", new Locale("es", "ES"));
@@ -692,28 +684,18 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     /**
-     * Maneja la selección de fecha según el modo activo (DIAS_ESPECIFICOS, SEMANA, MES)
+     * Maneja la selección de fecha según el modo activo (DIAS_ESPECIFICOS, MES)
      */
     private void onFechaSeleccionada(Date date) {
         if (date == null) return;
 
         switch (modoFechaActual) {
-            case "SEMANA":
-                // Siempre seleccionar la semana completa (bloquea deselección individual)
-                fechaSeleccionada = date;
-                gvCalendario.post(() -> {
-                    seleccionarSemanaCompleta(date);
-                    mostrarRangoSemana(date);
-                });
-                break;
-
             case "MES":
-                // Siempre seleccionar el mes completo (bloquea deselección individual)
+                // Modo MES ya no se usa con calendario (se usa Spinner)
+                // Pero se mantiene por compatibilidad
                 fechaSeleccionada = date;
-                gvCalendario.post(() -> {
-                    seleccionarMesCompleto(date);
-                    mostrarRangoMes(date);
-                });
+                seleccionarMesCompleto(date);
+                mostrarRangoMes(date);
                 break;
 
             case "DIAS_ESPECIFICOS":
@@ -752,25 +734,6 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     /**
-     * Selecciona visualmente 7 días consecutivos desde la fecha dada
-     */
-    private void seleccionarSemanaCompleta(Date date) {
-        if (calendarioAdapter == null || date == null) return;
-
-        Set<Date> diasSemana = new HashSet<>();
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(date);
-
-        // Seleccionar 7 días consecutivos desde la fecha dada
-        for (int i = 0; i < 7; i++) {
-            diasSemana.add(normalizarFecha(cal.getTime()));
-            cal.add(Calendar.DAY_OF_MONTH, 1);
-        }
-
-        calendarioAdapter.setFechasSeleccionadas(diasSemana);
-    }
-
-    /**
      * Selecciona visualmente 30 días consecutivos desde la fecha dada
      */
     private void seleccionarMesCompleto(Date date) {
@@ -790,28 +753,47 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     /**
-     * Muestra el rango de fechas para 7 días consecutivos desde la fecha dada
+     * Aplica la selección de meses y actualiza la UI con el rango calculado
      */
-    private void mostrarRangoSemana(Date date) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(date);
+    private void aplicarSeleccionMeses() {
+        if (fechaSeleccionada == null) {
+            Calendar now = Calendar.getInstance();
+            int currentHour = now.get(Calendar.HOUR_OF_DAY);
+            if (currentHour >= 20) {
+                now.add(Calendar.DAY_OF_MONTH, 1);
+            }
+            fechaSeleccionada = now.getTime();
+        }
 
-        Date inicioSemana = cal.getTime();
+        // Calcular fecha de inicio y fin
+        Calendar calInicio = Calendar.getInstance();
+        calInicio.setTime(fechaSeleccionada);
 
-        // 6 días después para completar 7 días
-        cal.add(Calendar.DATE, 6);
-        Date finSemana = cal.getTime();
+        Date fechaInicio = calInicio.getTime();
 
-        // Formato con nombre del día incluido
-        SimpleDateFormat sdfConDia = new SimpleDateFormat("EEEE d 'de' MMMM", new Locale("es", "ES"));
-        String inicioTexto = capitalizeFirst(sdfConDia.format(inicioSemana));
-        String finTexto = capitalizeFirst(sdfConDia.format(finSemana));
+        // Calcular fecha final: mesesSeleccionados * 30 días
+        Calendar calFin = (Calendar) calInicio.clone();
+        int diasTotales = mesesSeleccionados * 30;
+        calFin.add(Calendar.DAY_OF_MONTH, diasTotales - 1);
+        Date fechaFin = calFin.getTime();
 
-        String rangoTexto = inicioTexto + " - " + finTexto + " (7 días)";
+        // Mostrar rango en el TextView
+        SimpleDateFormat sdf = new SimpleDateFormat("d 'de' MMMM yyyy", new Locale("es", "ES"));
+        String inicioTexto = sdf.format(fechaInicio);
+        String finTexto = sdf.format(fechaFin);
+
+        String rangoTexto = inicioTexto + " - " + finTexto +
+                           " (" + diasTotales + " días, " + mesesSeleccionados +
+                           (mesesSeleccionados == 1 ? " mes" : " meses") + ")";
 
         tvFechaSeleccionada.setText(rangoTexto);
         tvFechaSeleccionada.setVisibility(View.VISIBLE);
         actualizarConAnimacion(tvDetalleFecha, rangoTexto);
+
+        // Actualizar cálculos
+        actualizarResumenCosto();
+        cargarHorariosDisponibles();
+        verificarCamposCompletos();
     }
 
     /**
@@ -832,20 +814,14 @@ public class ReservaActivity extends AppCompatActivity {
         fechaSeleccionada = fechaInicial;
 
         // Aplicar selección según el modo
-        gvCalendario.postDelayed(() -> {
-            if (modoFechaActual.equals("SEMANA")) {
-                seleccionarSemanaCompleta(fechaInicial);
-                mostrarRangoSemana(fechaInicial);
-                fechaSeleccionada = fechaInicial; // Restaurar después de reset
-            } else if (modoFechaActual.equals("MES")) {
-                seleccionarMesCompleto(fechaInicial);
-                mostrarRangoMes(fechaInicial);
-                fechaSeleccionada = fechaInicial; // Restaurar después de reset
-            }
-            actualizarResumenCosto(); // Actualizar costo después de auto-selección
-            cargarHorariosDisponibles();
-            verificarCamposCompletos();
-        }, 100); // Pequeño delay para asegurar que el calendario esté listo
+        if (modoFechaActual.equals("MES")) {
+            gvCalendario.postDelayed(() -> {
+                aplicarSeleccionMeses();
+                actualizarResumenCosto(); // Actualizar costo después de auto-selección
+                cargarHorariosDisponibles();
+                verificarCamposCompletos();
+            }, 100);
+        }
     }
 
     /**
@@ -1511,10 +1487,6 @@ public class ReservaActivity extends AppCompatActivity {
                     tvDuracionTitulo.setText("¿Cuántas horas para ese día?");
                     tvDuracionSubtitulo.setText("Duración total del paseo");
                     break;
-                case "SEMANA":
-                    tvDuracionTitulo.setText("¿Cuántas horas DIARIAS durante la semana?");
-                    tvDuracionSubtitulo.setText("Se aplicará a todos los días");
-                    break;
                 case "MES":
                     tvDuracionTitulo.setText("¿Cuántas horas DIARIAS durante el mes?");
                     tvDuracionSubtitulo.setText("Se aplicará a todos los días");
@@ -1600,10 +1572,8 @@ public class ReservaActivity extends AppCompatActivity {
         double horas = duracionMinutos / 60.0;
         int diasCalculo = 1;
 
-        if (tipoReserva.equals("SEMANAL")) {
-            diasCalculo = 7; // 7 días consecutivos
-        } else if (tipoReserva.equals("MENSUAL")) {
-            diasCalculo = 30; // 30 días consecutivos
+        if (tipoReserva.equals("MENSUAL")) {
+            diasCalculo = mesesSeleccionados * 30; // Meses seleccionados × 30 días
         } else if (modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
             // Contar días específicos seleccionados
             Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
@@ -1649,6 +1619,8 @@ public class ReservaActivity extends AppCompatActivity {
         if (modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
             Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
             hasFechaValida = fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty();
+        } else if (modoFechaActual.equals("MES")) {
+            hasFechaValida = mesesSeleccionados > 0 && fechaSeleccionada != null;
         }
 
         boolean todosCompletos = !mascotasSeleccionadas.isEmpty() &&
@@ -1713,10 +1685,8 @@ public class ReservaActivity extends AppCompatActivity {
             if (fechasSeleccionadas != null && !fechasSeleccionadas.isEmpty()) {
                 diasCalculo = fechasSeleccionadas.size();
             }
-        } else if (tipoReserva.equals("SEMANAL")) {
-            diasCalculo = 7; // 7 días consecutivos
         } else if (tipoReserva.equals("MENSUAL")) {
-            diasCalculo = 30; // 30 días consecutivos
+            diasCalculo = mesesSeleccionados * 30; // Meses seleccionados × 30 días
         }
 
         // CRÍTICO: Incluir número de mascotas en el cálculo del costo del diálogo
@@ -1802,10 +1772,8 @@ public class ReservaActivity extends AppCompatActivity {
                 // Recalcular
                 double horas = duracionMinutos / 60.0;
                 int diasCalculo = 1;
-                if (tipoReserva.equals("SEMANAL")) {
-                    diasCalculo = 7; // 7 días consecutivos
-                } else if (tipoReserva.equals("MENSUAL")) {
-                    diasCalculo = 30; // 30 días consecutivos
+                if (tipoReserva.equals("MENSUAL")) {
+                    diasCalculo = mesesSeleccionados * 30; // Meses seleccionados × 30 días
                 } else if (tipoReserva.equals("PUNTUAL") && modoFechaActual.equals("DIAS_ESPECIFICOS") && calendarioAdapter != null) {
                     // Para días específicos múltiples, contar los días seleccionados
                     Set<Date> fechasSeleccionadas = calendarioAdapter.getFechasSeleccionadas();
@@ -1873,7 +1841,7 @@ public class ReservaActivity extends AppCompatActivity {
     }
 
     /**
-     * Crea una sola reserva (modo PUNTUAL simple, SEMANAL, o MENSUAL)
+     * Crea una sola reserva (modo PUNTUAL simple o MENSUAL)
      */
     private void crearReservaIndividual(double costoTotal, double tarifaConfirmada, Date horaInicio,
                                         Date fecha, String grupoId, boolean esGrupo) {

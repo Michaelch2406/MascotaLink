@@ -390,8 +390,8 @@
     <string name="tooltip_back">Vuelve a la pantalla anterior</string>
     <string name="tooltip_filters">Ajusta filtros de búsqueda (calificación, precio, experiencia)</string>
     <string name="tooltip_refresh_location">Actualiza tu ubicación actual en el mapa</string>
-    <string name="accessibility_reservation_date_weekly">Seleccionar reserva semanal</string>
     <string name="accessibility_reservation_date_monthly">Seleccionar reserva mensual</string>
+    <string name="accessibility_duration_months">Seleccionar duración en meses</string>
     <string name="accessibility_reservation_duration_hourly">Seleccionar duración por horas</string>
     <string name="accessibility_reservation_duration_monthly">Seleccionar duración mensual</string>
     <string name="accessibility_reservation_duration_1hour">Seleccionar duración de 1 hora</string>

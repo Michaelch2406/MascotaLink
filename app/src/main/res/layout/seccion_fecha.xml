@@ -44,14 +44,6 @@
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 app:chipBackgroundColor="@color/chip_background_selector" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_semana"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Por semana"
-                android:contentDescription="@string/accessibility_reservation_date_weekly"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                app:chipBackgroundColor="@color/chip_background_selector" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_mes"
@@ -194,6 +186,36 @@
             android:verticalSpacing="4dp"
             android:stretchMode="columnWidth"
             android:gravity="center" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/container_selector_meses"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:padding="16dp"
+        android:background="@android:color/white"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Selecciona la duración"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <Spinner
+            android:id="@+id/spinner_duracion_meses"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:background="@drawable/bg_input_rounded"
+            android:padding="12dp"
+            android:contentDescription="@string/accessibility_duration_months"/>
 
     </LinearLayout>
 
