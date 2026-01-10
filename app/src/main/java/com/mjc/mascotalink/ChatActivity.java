@@ -1210,19 +1210,53 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
 
+        // Primero, resetear el contador de mensajes no leídos
         Map<String, Object> updates = new HashMap<>();
         updates.put(FirestoreConstants.FIELD_MENSAJES_NO_LEIDOS + "." + currentUserId, 0);
 
         db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
                 .update(updates)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Contador de no leídos reseteado"))
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Contador de no leídos reseteado");
+                    // Luego, marcar todos los mensajes no leídos del otro usuario como leídos
+                    marcarTodosLosNoLeidosComoLeidos();
+                })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error reseteando contador de no leídos", e);
                     db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
                             .set(updates, com.google.firebase.firestore.SetOptions.merge())
-                            .addOnSuccessListener(aVoid2 -> Log.d(TAG, "Contador reseteado con merge"))
+                            .addOnSuccessListener(aVoid2 -> {
+                                Log.d(TAG, "Contador reseteado con merge");
+                                marcarTodosLosNoLeidosComoLeidos();
+                            })
                             .addOnFailureListener(e2 -> Log.e(TAG, "Error en merge también", e2));
                 });
+    }
+
+    /**
+     * Marca todos los mensajes no leídos del otro usuario como leídos
+     */
+    private void marcarTodosLosNoLeidosComoLeidos() {
+        db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
+                .collection(FirestoreConstants.COLLECTION_MENSAJES)
+                .whereEqualTo(FirestoreConstants.FIELD_ID_REMITENTE, otroUsuarioId)
+                .whereEqualTo(FirestoreConstants.FIELD_LEIDO, false)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : snapshot.getDocuments()) {
+                        Map<String, Object> msgUpdates = new HashMap<>();
+                        msgUpdates.put(FirestoreConstants.FIELD_LEIDO, true);
+
+                        db.collection(FirestoreConstants.COLLECTION_CHATS).document(chatId)
+                                .collection(FirestoreConstants.COLLECTION_MENSAJES)
+                                .document(doc.getId())
+                                .update(msgUpdates)
+                                .addOnSuccessListener(aVoid -> Log.d(TAG, "Mensaje marcado como leído en batch: " + doc.getId()))
+                                .addOnFailureListener(e -> Log.e(TAG, "Error marcando mensaje en batch", e));
+                    }
+                    Log.d(TAG, "Marcados " + snapshot.size() + " mensajes como leídos");
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error obteniendo mensajes no leídos", e));
     }
 
     private void cargarDatosOtroUsuario() {

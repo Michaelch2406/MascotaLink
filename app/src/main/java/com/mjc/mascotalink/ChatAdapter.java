@@ -294,16 +294,6 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             detectionMethod = "default";
         }
 
-        // Debug detallado
-        Log.d("ChatAdapter_DEBUG", "========== MENSAJE ==========");
-        Log.d("ChatAdapter_DEBUG", "ID Mensaje: " + mensaje.getId());
-        Log.d("ChatAdapter_DEBUG", "ID Remitente: [" + idRemitente + "]");
-        Log.d("ChatAdapter_DEBUG", "ID Destinatario: [" + idDestinatario + "]");
-        Log.d("ChatAdapter_DEBUG", "Current User ID: [" + currentUserId + "]");
-        Log.d("ChatAdapter_DEBUG", "¿IsSent? " + isSent + " (detectado por: " + detectionMethod + ")");
-        Log.d("ChatAdapter_DEBUG", "Tipo de mensaje: " + tipo);
-        Log.d("ChatAdapter_DEBUG", "ViewType retornado: " + (isSent ? "SENT" : "RECEIVED"));
-        Log.d("ChatAdapter_DEBUG", "==============================");
 
         // Determinar tipo según contenido y remitente
         if ("imagen".equals(tipo)) {

@@ -61,6 +61,12 @@ function initializeSocketServer(io, db) {
     // Actualizar presencia a "online"
     updateUserPresence(db, socket.userId, "online");
 
+    // Notificar a todos los que están suscritos a la presencia de este usuario
+    io.to(`presence_${socket.userId}`).emit("online_users_response", {
+      online: [socket.userId]
+    });
+    console.log(`📢 Notificado a suscriptores de presencia para ${socket.userId}`);
+
     // ========================================
     // EVENTOS DE CHAT
     // ========================================
@@ -539,7 +545,50 @@ function initializeSocketServer(io, db) {
           onlineUsers.push(uid);
         }
       });
-      socket.emit("online_users", onlineUsers);
+      socket.emit("online_users_response", { online: onlineUsers });
+      console.log(`📍 Online users consultados: ${JSON.stringify(onlineUsers)}`);
+    });
+
+    /**
+     * Suscribirse a cambios de presencia de usuarios
+     */
+    socket.on("subscribe_presence", (userIds) => {
+      if (!Array.isArray(userIds)) {
+        console.warn("subscribe_presence: userIds no es un array");
+        return;
+      }
+
+      console.log(`👁️ Usuario ${socket.userName} suscrito a presencia de: ${JSON.stringify(userIds)}`);
+
+      // Crear una sala para presencia de estos usuarios
+      userIds.forEach((uid) => {
+        const presenceRoom = `presence_${uid}`;
+        socket.join(presenceRoom);
+        console.log(`✅ Socket unido a sala de presencia: ${presenceRoom}`);
+
+        // Enviar estado actual inmediatamente
+        const sockets = io.sockets.adapter.rooms.get(uid);
+        const isOnline = sockets && sockets.size > 0;
+        socket.emit("online_users_response", { online: isOnline ? [uid] : [] });
+      });
+    });
+
+    /**
+     * Desuscribirse de cambios de presencia
+     */
+    socket.on("unsubscribe_presence", (userIds) => {
+      if (!Array.isArray(userIds)) {
+        console.warn("unsubscribe_presence: userIds no es un array");
+        return;
+      }
+
+      console.log(`👁️ Usuario ${socket.userName} desuscrito de presencia de: ${JSON.stringify(userIds)}`);
+
+      userIds.forEach((uid) => {
+        const presenceRoom = `presence_${uid}`;
+        socket.leave(presenceRoom);
+        console.log(`❌ Socket salió de sala de presencia: ${presenceRoom}`);
+      });
     });
 
     /**
@@ -556,6 +605,12 @@ function initializeSocketServer(io, db) {
       console.log(` Usuario desconectado: ${socket.userName} [${reason}]`);
 
       try {
+        // Notificar a todos los que están suscritos a la presencia de este usuario
+        io.to(`presence_${socket.userId}`).emit("online_users_response", {
+          online: []
+        });
+        console.log(`📢 Notificado a suscriptores de desconexión para ${socket.userId}`);
+
         // Actualizar presencia a "offline"
         await updateUserPresence(db, socket.userId, "offline");
 
