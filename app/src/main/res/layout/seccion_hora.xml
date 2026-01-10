@@ -60,47 +60,6 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/ll_tabs_duracion"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:orientation="horizontal"
-        android:background="@drawable/bg_input_rounded"
-        android:layout_marginBottom="16dp">
-
-        <TextView
-            android:id="@+id/tab_por_horas"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="Por horas"
-            android:contentDescription="@string/accessibility_reservation_duration_hourly"
-            android:textColor="@color/blue_primary"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:background="?attr/selectableItemBackground" />
-
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="@color/gray_light"
-            android:layout_marginVertical="8dp" />
-
-        <TextView
-            android:id="@+id/tab_por_mes"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="Por mes"
-            android:contentDescription="@string/accessibility_reservation_duration_monthly"
-            android:textColor="@color/secondary"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:background="?attr/selectableItemBackground" />
-
-    </LinearLayout>
-
-    <LinearLayout
         android:id="@+id/ll_duracion_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

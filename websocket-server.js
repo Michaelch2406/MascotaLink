@@ -444,12 +444,14 @@ io.on('connection', (socket) => {
         return socket.emit('error', { message: 'Solo el paseador puede enviar ubicación' });
       }
 
-      io.to(`paseo_${paseoId}`).emit('walker_location', {
+      // ===== EMITIR A LA SALA DEL PASEO =====
+      // Nota: Usar 'update_location' para coincidir con lo que espera PaseoEnCursoDuenoActivity
+      io.to(`paseo_${paseoId}`).emit('update_location', {
         paseoId,
-        latitud,
-        longitud,
-        accuracy,
-        timestamp: timestamp,
+        lat: latitud,      // Formato comprimido
+        lng: longitud,     // Formato comprimido
+        acc: accuracy,
+        ts: timestamp,
       });
 
       const lastSave = socket.lastLocationSave || 0;

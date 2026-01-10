@@ -906,11 +906,21 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
         reservaRef.get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot != null && snapshot.exists()) {
+                        List<LatLng> ubicacionesNuevas = new ArrayList<>();
+
+                        // ===== PRIMERO: Intentar obtener ubicacion_actual como punto inicial =====
+                        Object ubicacionActualObj = snapshot.get("ubicacion_actual");
+                        if (ubicacionActualObj instanceof com.google.firebase.firestore.GeoPoint) {
+                            com.google.firebase.firestore.GeoPoint geoPoint = (com.google.firebase.firestore.GeoPoint) ubicacionActualObj;
+                            ubicacionesNuevas.add(new LatLng(geoPoint.getLatitude(), geoPoint.getLongitude()));
+                            Log.d(TAG, "📍 Ubicación actual obtenida: " + geoPoint.getLatitude() + ", " + geoPoint.getLongitude());
+                        }
+
+                        // ===== LUEGO: Agregar ubicaciones del array =====
                         Object ubicacionesObj = snapshot.get("ubicaciones");
                         if (ubicacionesObj instanceof List) {
                             List<?> ubicacionesList = (List<?>) ubicacionesObj;
 
-                            List<LatLng> ubicacionesNuevas = new ArrayList<>();
                             for (Object ubicObj : ubicacionesList) {
                                 if (ubicObj instanceof Map) {
                                     Map<?, ?> ubicMap = (Map<?, ?>) ubicObj;
@@ -924,45 +934,45 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                                     }
                                 }
                             }
+                        }
 
-                            // Solo actualizar si hay nuevas ubicaciones
-                            if (!ubicacionesNuevas.isEmpty()) {
-                                runOnUiThread(() -> {
-                                    rutaPaseo.clear();
-                                    rutaPaseo.addAll(ubicacionesNuevas);
+                        // Solo actualizar si hay nuevas ubicaciones
+                        if (!ubicacionesNuevas.isEmpty()) {
+                            runOnUiThread(() -> {
+                                rutaPaseo.clear();
+                                rutaPaseo.addAll(ubicacionesNuevas);
 
-                                    if (mMap != null && !rutaPaseo.isEmpty()) {
-                                        // Actualizar polyline
-                                        if (polylineRuta != null) {
-                                            polylineRuta.setPoints(rutaPaseo);
-                                        }
-
-                                        // Actualizar marcador en última ubicación
-                                        LatLng ultimaPos = rutaPaseo.get(rutaPaseo.size() - 1);
-                                        if (marcadorActual != null) {
-                                            marcadorActual.setPosition(ultimaPos);
-                                        } else {
-                                            BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120);
-                                            marcadorActual = mMap.addMarker(new MarkerOptions()
-                                                    .position(ultimaPos)
-                                                    .title("Paseador")
-                                                    .icon(walkerIcon != null ? walkerIcon : BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                                                    .anchor(0.5f, 1.0f));
-                                        }
-
-                                        // Centrar cámara
-                                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaPos, 17f), 500, null);
-
-                                        // Actualizar estado
-                                        if (tvUbicacionEstado != null) {
-                                            tvUbicacionEstado.setText("Ubicación actualizada desde servidor (" + rutaPaseo.size() + " puntos)");
-                                            tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
-                                        }
+                                if (mMap != null && !rutaPaseo.isEmpty()) {
+                                    // Actualizar polyline
+                                    if (polylineRuta != null) {
+                                        polylineRuta.setPoints(rutaPaseo);
                                     }
 
-                                    Log.d(TAG, " Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
-                                });
-                            }
+                                    // Actualizar marcador en última ubicación
+                                    LatLng ultimaPos = rutaPaseo.get(rutaPaseo.size() - 1);
+                                    if (marcadorActual != null) {
+                                        marcadorActual.setPosition(ultimaPos);
+                                    } else {
+                                        BitmapDescriptor walkerIcon = getResizedBitmapDescriptor(R.drawable.ic_paseador_perro_marcador, 120);
+                                        marcadorActual = mMap.addMarker(new MarkerOptions()
+                                                .position(ultimaPos)
+                                                .title("Paseador")
+                                                .icon(walkerIcon != null ? walkerIcon : BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                                                .anchor(0.5f, 1.0f));
+                                    }
+
+                                    // Centrar cámara
+                                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaPos, 17f), 500, null);
+
+                                    // Actualizar estado
+                                    if (tvUbicacionEstado != null) {
+                                        tvUbicacionEstado.setText("Ubicación actualizada desde servidor (" + rutaPaseo.size() + " puntos)");
+                                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
+                                    }
+                                }
+
+                                Log.d(TAG, " Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
+                            });
                         }
                     }
                 })

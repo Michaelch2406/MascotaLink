@@ -71,7 +71,6 @@ public class ReservaActivity extends AppCompatActivity {
     private GridView gvCalendario;
     private LinearLayout llDisponibilidad, calendarioContainer, containerSelectorMeses;
     private android.widget.Spinner spinnerDuracionMeses;
-    private TextView tabPorHoras, tabPorMes;
     private TextView tvDuracionTitulo, tvDuracionSubtitulo;
     private Chip chip1Hora, chip2Horas, chip3Horas, chipPersonalizado;
     private TextView tvCalculoResumen;
@@ -101,7 +100,6 @@ public class ReservaActivity extends AppCompatActivity {
     private String tipoReserva = "PUNTUAL";
     private String modoFechaActual = "DIAS_ESPECIFICOS";
     private int mesesSeleccionados = 1;
-    private boolean tabPorMesActivo = false;
     private String notasAdicionalesMascota = "";
     private String direccionUsuario = ""; // Dirección del dueño para la reserva
 
@@ -193,8 +191,6 @@ public class ReservaActivity extends AppCompatActivity {
         llDisponibilidad = findViewById(R.id.ll_disponibilidad);
         tvDisponibilidad = findViewById(R.id.tv_disponibilidad);
         ivDisponibilidadIcon = findViewById(R.id.iv_disponibilidad_icon);
-        tabPorHoras = findViewById(R.id.tab_por_horas);
-        tabPorMes = findViewById(R.id.tab_por_mes);
         tvDuracionTitulo = findViewById(R.id.tv_duracion_titulo);
         tvDuracionSubtitulo = findViewById(R.id.tv_duracion_subtitulo);
         
@@ -222,7 +218,7 @@ public class ReservaActivity extends AppCompatActivity {
             ivMesAnterior == null || ivMesSiguiente == null || tvMesAnio == null || gvCalendario == null ||
             calendarioContainer == null || containerSelectorMeses == null || spinnerDuracionMeses == null ||
             tvFechaSeleccionada == null || rvHorarios == null || llDisponibilidad == null ||
-            tvDisponibilidad == null || tabPorHoras == null || tabPorMes == null || tvDuracionTitulo == null ||
+            tvDisponibilidad == null || tvDuracionTitulo == null ||
             tvDuracionSubtitulo == null || chipGroupDuracion == null || chip1Hora == null ||
             chip2Horas == null || chip3Horas == null || chipPersonalizado == null ||
             tvCalculoResumen == null || tvTarifaValor == null ||
@@ -300,9 +296,7 @@ public class ReservaActivity extends AppCompatActivity {
 
         ivMesAnterior.setOnClickListener(v -> cambiarMes(-1));
         ivMesSiguiente.setOnClickListener(v -> cambiarMes(1));
-        tabPorHoras.setOnClickListener(v -> activarTabPorHoras());
-        tabPorMes.setOnClickListener(v -> activarTabPorMes());
-        
+
         // Listener para Chips de Duración
         chipGroupDuracion.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.chip_1_hora) {
@@ -1450,52 +1444,20 @@ public class ReservaActivity extends AppCompatActivity {
         tvDisponibilidad.setTextColor(colorText);
     }
 
-    private void activarTabPorHoras() {
-        tabPorMesActivo = false;
-        tabPorHoras.setTextColor(getResources().getColor(R.color.blue_primary));
-        tabPorHoras.setTypeface(null, android.graphics.Typeface.BOLD);
-        tabPorMes.setTextColor(getResources().getColor(R.color.secondary));
-        tabPorMes.setTypeface(null, android.graphics.Typeface.NORMAL);
-        actualizarTextoDuracion();
-        resetearDuracionSeleccionada();
-    }
-
-    private void activarTabPorMes() {
-        if (!modoFechaActual.equals("MES")) {
-            Toast.makeText(this, "Primero selecciona 'Por mes' en la fecha", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        tabPorMesActivo = true;
-        tabPorMes.setTextColor(getResources().getColor(R.color.blue_primary));
-        tabPorMes.setTypeface(null, android.graphics.Typeface.BOLD);
-        tabPorHoras.setTextColor(getResources().getColor(R.color.secondary));
-        tabPorHoras.setTypeface(null, android.graphics.Typeface.NORMAL);
-        actualizarTextoDuracion();
-        resetearDuracionSeleccionada();
-    }
-
     private void actualizarTextoDuracion() {
-        if (tabPorMesActivo) {
-            tvDuracionTitulo.setText("¿Cuántas horas DIARIAS?");
-            tvDuracionSubtitulo.setText("Se multiplicará por los días del mes");
-            chip1Hora.setText("1 hora/día");
-            chip2Horas.setText("2 horas/día");
-            chip3Horas.setText("3 horas/día");
-        } else {
-            switch (modoFechaActual) {
-                case "DIAS_ESPECIFICOS":
-                    tvDuracionTitulo.setText("¿Cuántas horas para ese día?");
-                    tvDuracionSubtitulo.setText("Duración total del paseo");
-                    break;
-                case "MES":
-                    tvDuracionTitulo.setText("¿Cuántas horas DIARIAS durante el mes?");
-                    tvDuracionSubtitulo.setText("Se aplicará a todos los días");
-                    break;
-            }
-            chip1Hora.setText("1 hora");
-            chip2Horas.setText("2 horas");
-            chip3Horas.setText("3 horas");
+        switch (modoFechaActual) {
+            case "DIAS_ESPECIFICOS":
+                tvDuracionTitulo.setText("¿Cuántas horas para ese día?");
+                tvDuracionSubtitulo.setText("Duración total del paseo");
+                break;
+            case "MES":
+                tvDuracionTitulo.setText("¿Cuántas horas DIARIAS durante los meses?");
+                tvDuracionSubtitulo.setText("Se multiplicará por los días seleccionados");
+                break;
         }
+        chip1Hora.setText("1 hora");
+        chip2Horas.setText("2 horas");
+        chip3Horas.setText("3 horas");
     }
 
     private void seleccionarDuracion(int minutos) {

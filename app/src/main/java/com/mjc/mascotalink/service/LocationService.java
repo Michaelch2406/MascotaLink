@@ -275,6 +275,11 @@ public class LocationService extends Service {
     private void startTracking(String reservaId) {
         Log.d(TAG, "Iniciando servicio de rastreo para reserva: " + reservaId);
         currentReservaId = reservaId;
+        // CRÍTICO: Inicializar currentEstado a EN_CURSO ANTES de requestLocationUpdates()
+        // para evitar race condition donde la primera ubicación llega antes que el listener
+        // responda de Firestore. LocationService solo se inicia durante paseos EN_CURSO.
+        currentEstado = "EN_CURSO";
+        Log.d(TAG, "✅ Estado inicial establecido a EN_CURSO para evitar rechazo de ubicaciones");
 
         // 1. Iniciar notificación Foreground
         startForeground(NOTIFICATION_ID, getNotification(),
