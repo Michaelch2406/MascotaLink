@@ -3,6 +3,8 @@ package com.mjc.mascotalink.util;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
 import android.net.Uri;
@@ -88,35 +90,41 @@ public class ImageCompressor {
             
             // Corregir orientación si es necesario
             Bitmap rotatedBitmap = correctOrientation(context, imageUri, originalBitmap);
-            
+
             // Redimensionar si es necesario
             Bitmap resizedBitmap = resizeBitmap(rotatedBitmap, MAX_WIDTH, MAX_HEIGHT);
-            
+
+            // Añadir fondo blanco si la imagen tiene transparencia
+            Bitmap finalBitmap = addWhiteBackground(resizedBitmap);
+
             // Comprimir a JPEG
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             int currentQuality = QUALITY;
-            
+
             // Comprimir iterativamente hasta que sea menor a MAX_SIZE_BYTES
             do {
                 outputStream.reset();
-                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, currentQuality, outputStream);
+                finalBitmap.compress(Bitmap.CompressFormat.JPEG, currentQuality, outputStream);
                 currentQuality -= 5;
             } while (outputStream.size() > MAX_SIZE_BYTES && currentQuality > 50);
-            
+
             byte[] compressedData = outputStream.toByteArray();
             outputStream.close();
-            
+
             // Guardar en archivo temporal
             File tempFile = new File(context.getCacheDir(), "compressed_" + System.currentTimeMillis() + ".jpg");
             FileOutputStream fos = new FileOutputStream(tempFile);
             fos.write(compressedData);
             fos.close();
-            
+
             // Liberar memoria
             if (rotatedBitmap != originalBitmap) {
                 originalBitmap.recycle();
             }
             resizedBitmap.recycle();
+            if (finalBitmap != resizedBitmap) {
+                finalBitmap.recycle();
+            }
             
             Log.d(TAG, "Imagen comprimida: " + (compressedData.length / 1024) + " KB");
             return tempFile;
@@ -156,14 +164,14 @@ public class ImageCompressor {
         try {
             InputStream inputStream = context.getContentResolver().openInputStream(imageUri);
             if (inputStream == null) return bitmap;
-            
+
             ExifInterface exif = new ExifInterface(inputStream);
             int orientation = exif.getAttributeInt(
                 ExifInterface.TAG_ORIENTATION,
                 ExifInterface.ORIENTATION_NORMAL
             );
             inputStream.close();
-            
+
             Matrix matrix = new Matrix();
             switch (orientation) {
                 case ExifInterface.ORIENTATION_ROTATE_90:
@@ -178,12 +186,36 @@ public class ImageCompressor {
                 default:
                     return bitmap;
             }
-            
+
             return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-            
+
         } catch (IOException e) {
             Log.e(TAG, "Error corrigiendo orientación", e);
             return bitmap;
         }
+    }
+
+    /**
+     * Añade un fondo blanco a la imagen si tiene transparencia.
+     * Crea un nuevo Bitmap blanco y dibuja la imagen original encima.
+     */
+    private static Bitmap addWhiteBackground(Bitmap sourceBitmap) {
+        int width = sourceBitmap.getWidth();
+        int height = sourceBitmap.getHeight();
+
+        // Crear un nuevo Bitmap blanco con las mismas dimensiones
+        Bitmap bitmapWithBackground = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+
+        // Canvas para dibujar en el nuevo Bitmap
+        Canvas canvas = new Canvas(bitmapWithBackground);
+
+        // Llenar con color blanco
+        canvas.drawColor(Color.WHITE);
+
+        // Dibujar la imagen original encima
+        canvas.drawBitmap(sourceBitmap, 0, 0, null);
+
+        Log.d(TAG, "Fondo blanco añadido a la imagen");
+        return bitmapWithBackground;
     }
 }

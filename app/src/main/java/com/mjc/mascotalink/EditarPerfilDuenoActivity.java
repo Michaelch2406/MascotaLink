@@ -46,6 +46,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.utils.InputUtils;
@@ -352,7 +353,7 @@ public class EditarPerfilDuenoActivity extends AppCompatActivity {
             userUpdates.put("ubicacion", domicilioLatLng);
         }
 
-        db.collection("usuarios").document(currentUserId).update(userUpdates)
+        db.collection("usuarios").document(currentUserId).set(userUpdates, SetOptions.merge())
             .addOnSuccessListener(aVoid -> {
                 InputUtils.setButtonLoading(btnGuardarCambios, false);
                 Toast.makeText(EditarPerfilDuenoActivity.this, "Perfil actualizado con éxito.", Toast.LENGTH_SHORT).show();
