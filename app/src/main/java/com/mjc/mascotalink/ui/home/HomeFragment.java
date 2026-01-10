@@ -1,6 +1,10 @@
 package com.mjc.mascotalink.ui.home;
 
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,6 +20,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -38,6 +44,7 @@ public class HomeFragment extends Fragment {
     private static final String TAG = "HomeFragment";
     private static final long MIN_REFRESH_INTERVAL_MS = 2000;
     private static final long MIN_SKELETON_DISPLAY_TIME_MS = 800;
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 100;
 
     private HomeViewModel viewModel;
     private String userId;
@@ -93,6 +100,9 @@ public class HomeFragment extends Fragment {
             setupSkeleton(userRole);
             setupRoleBasedUI(userRole);
             loadData();
+
+            // Request notification permissions
+            requestNotificationPermission(userRole);
         } else {
             Log.w(TAG, "No authenticated user found");
         }
@@ -428,6 +438,41 @@ public class HomeFragment extends Fragment {
                 isInitialLoadComplete = true;
                 skeletonContainer.setVisibility(View.GONE);
                 Log.d(TAG, "hideSkeleton: Skeleton ocultado (inmediato)");
+            }
+        }
+    }
+
+    private void requestNotificationPermission(String userRole) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), Manifest.permission.POST_NOTIFICATIONS)) {
+                    String mensaje = "PASEADOR".equals(userRole)
+                        ? "Habilita notificaciones para saber cuándo tienes nuevos clientes."
+                        : "Habilita notificaciones para saber cuándo inicia tu paseo.";
+
+                    new AlertDialog.Builder(requireContext())
+                        .setTitle("Permiso de Notificaciones")
+                        .setMessage(mensaje)
+                        .setPositiveButton("Aceptar", (dialog, which) -> {
+                            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                        })
+                        .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
+                        .show();
+                } else {
+                    ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "POST_NOTIFICATIONS permission granted.");
+            } else {
+                Log.w(TAG, "POST_NOTIFICATIONS permission denied.");
             }
         }
     }

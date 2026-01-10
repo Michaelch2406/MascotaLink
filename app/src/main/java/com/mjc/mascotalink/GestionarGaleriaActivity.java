@@ -3,6 +3,7 @@ package com.mjc.mascotalink;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -41,9 +42,14 @@ public class GestionarGaleriaActivity extends AppCompatActivity implements Gesti
     private ProgressBar progressBar;
     private TextView tvContador;
 
-    private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
-            new ActivityResultContracts.GetContent(),
-            this::subirImagen
+    private final ActivityResultLauncher<Intent> pickImageLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri imageUri = result.getData().getData();
+                    subirImagen(imageUri);
+                }
+            }
     );
 
     @Override
@@ -108,7 +114,8 @@ public class GestionarGaleriaActivity extends AppCompatActivity implements Gesti
             Toast.makeText(this, "Límite de 10 fotos alcanzado", Toast.LENGTH_SHORT).show();
             return;
         }
-        pickImageLauncher.launch("image/*");
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        pickImageLauncher.launch(intent);
     }
 
     @Override

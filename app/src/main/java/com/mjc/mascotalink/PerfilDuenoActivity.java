@@ -940,34 +940,6 @@ public class PerfilDuenoActivity extends AppCompatActivity {
         if (mAuthListener != null) {
             mAuth.addAuthStateListener(mAuthListener);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
-                    new AlertDialog.Builder(this)
-                            .setTitle("Permiso de Notificaciones")
-                            .setMessage("Habilita notificaciones para saber cuándo inicia tu paseo.")
-                            .setPositiveButton("Aceptar", (dialog, which) -> {
-                                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
-                            })
-                            .setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss())
-                            .show();
-                } else {
-                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
-                }
-            }
-        }
-    }
-    
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "POST_NOTIFICATIONS permission granted.");
-            } else {
-                Log.w(TAG, "POST_NOTIFICATIONS permission denied.");
-            }
-        }
     }
 
     @Override

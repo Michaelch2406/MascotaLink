@@ -3,6 +3,7 @@ package com.mjc.mascotalink;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -104,7 +105,8 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
     }
 
     private void elegirFotoPerfil() {
-        galeriaLauncher.launch("image/*");
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        galeriaLauncher.launch(intent);
     }
 
     private void tomarFotoPerfil() {
@@ -122,11 +124,11 @@ public class DuenoRegistroPaso2Activity extends AppCompatActivity {
                 }
             });
 
-    private final ActivityResultLauncher<String> galeriaLauncher = registerForActivityResult(
-            new ActivityResultContracts.GetContent(),
-            uri -> {
-                if (uri != null) {
-                    fotoPerfilUri = uri;
+    private final ActivityResultLauncher<Intent> galeriaLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    fotoPerfilUri = result.getData().getData();
                     updateUI();
                 }
             });
