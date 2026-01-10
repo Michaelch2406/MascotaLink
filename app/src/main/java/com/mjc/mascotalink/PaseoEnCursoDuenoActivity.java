@@ -1066,6 +1066,57 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     Log.e(TAG, "Error escuchando reserva", e);
                 }
             });
+
+        // ===== MEJORA: Listener específico para ubicacion_actual en tiempo real =====
+        // Esto responde INMEDIATAMENTE cuando la ubicacion_actual cambia en Firestore
+        // Sin esperar al fallback de 10 segundos
+        reservaRef.addSnapshotListener((snapshot, error) -> {
+            if (error != null) {
+                Log.w(TAG, "Error escuchando ubicacion_actual", error);
+                return;
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                Object ubicacionActualObj = snapshot.get("ubicacion_actual");
+                if (ubicacionActualObj instanceof com.google.firebase.firestore.GeoPoint) {
+                    com.google.firebase.firestore.GeoPoint geoPoint = (com.google.firebase.firestore.GeoPoint) ubicacionActualObj;
+                    double lat = geoPoint.getLatitude();
+                    double lng = geoPoint.getLongitude();
+                    LatLng ubicacion = new LatLng(lat, lng);
+
+                    Log.d(TAG, "🎯 [FIRESTORE LISTENER] ubicacion_actual actualizada: " + lat + ", " + lng);
+
+                    runOnUiThread(() -> {
+                        // Actualizar ubicación actual en el mapa
+                        if (mMap != null && ultimaUbicacionConocida == null) {
+                            // Primera vez: mostrar ubicación inicial desde Firestore
+                            ultimaUbicacionConocida = ubicacion;
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ubicacion, 17f), 500, null);
+                            Log.d(TAG, "✅ Posición inicial desde Firestore mostrada en mapa");
+                        } else if (mMap != null && ultimaUbicacionConocida != null) {
+                            // Verificar si hay movimiento significativo
+                            float[] results = new float[1];
+                            android.location.Location.distanceBetween(
+                                ultimaUbicacionConocida.latitude, ultimaUbicacionConocida.longitude,
+                                lat, lng, results);
+
+                            if (results[0] > 3f) {  // Más de 3 metros
+                                ultimaUbicacionConocida = ubicacion;
+                                actualizarMapaEnTiempoReal(ubicacion, 0f);
+                                Log.d(TAG, "📍 Actualización desde Firestore fallback (movimiento: " + (int)results[0] + "m)");
+                            }
+                        }
+
+                        // Actualizar estado visual
+                        if (tvUbicacionEstado != null) {
+                            tvUbicacionEstado.setText("📍 Ubicación: desde servidor (Firestore)");
+                            tvUbicacionEstado.setTextColor(
+                                ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void manejarSnapshotReserva(DocumentSnapshot snapshot) {

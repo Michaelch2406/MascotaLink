@@ -1,6 +1,7 @@
 package com.mjc.mascotalink;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -263,14 +264,46 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     @Override
     public int getItemViewType(int position) {
         ChatItem item = differ.getCurrentList().get(position);
-        
+
         if (item instanceof DateSeparator) {
             return VIEW_TYPE_DATE_SEPARATOR;
         }
 
         Mensaje mensaje = (Mensaje) item;
-        boolean isSent = mensaje.getIdRemitente() != null && mensaje.getIdRemitente().equals(currentUserId);
+        String idRemitente = mensaje.getIdRemitente();
+        String idDestinatario = mensaje.getIdDestinatario();
         String tipo = mensaje.getTipo() != null ? mensaje.getTipo() : "texto";
+
+        // Determinar si fue enviado: usar múltiples estrategias
+        boolean isSent;
+        String detectionMethod;
+
+        if (idRemitente != null && !idRemitente.isEmpty()) {
+            // Método 1: Usar idRemitente si existe (mensajes nuevos)
+            isSent = idRemitente.equals(currentUserId);
+            detectionMethod = "idRemitente";
+        } else if (idDestinatario != null && !idDestinatario.isEmpty()) {
+            // Método 2: Usar idDestinatario si idRemitente no existe (mensajes antiguos)
+            // Si el usuario actual es el DESTINATARIO, entonces RECIBIÓ el mensaje (isSent=false)
+            // Si el usuario actual NO es el destinatario, entonces lo ENVIÓ (isSent=true)
+            isSent = !idDestinatario.equals(currentUserId);
+            detectionMethod = "idDestinatario";
+        } else {
+            // Método 3: Por defecto, asumir que fue recibido
+            isSent = false;
+            detectionMethod = "default";
+        }
+
+        // Debug detallado
+        Log.d("ChatAdapter_DEBUG", "========== MENSAJE ==========");
+        Log.d("ChatAdapter_DEBUG", "ID Mensaje: " + mensaje.getId());
+        Log.d("ChatAdapter_DEBUG", "ID Remitente: [" + idRemitente + "]");
+        Log.d("ChatAdapter_DEBUG", "ID Destinatario: [" + idDestinatario + "]");
+        Log.d("ChatAdapter_DEBUG", "Current User ID: [" + currentUserId + "]");
+        Log.d("ChatAdapter_DEBUG", "¿IsSent? " + isSent + " (detectado por: " + detectionMethod + ")");
+        Log.d("ChatAdapter_DEBUG", "Tipo de mensaje: " + tipo);
+        Log.d("ChatAdapter_DEBUG", "ViewType retornado: " + (isSent ? "SENT" : "RECEIVED"));
+        Log.d("ChatAdapter_DEBUG", "==============================");
 
         // Determinar tipo según contenido y remitente
         if ("imagen".equals(tipo)) {

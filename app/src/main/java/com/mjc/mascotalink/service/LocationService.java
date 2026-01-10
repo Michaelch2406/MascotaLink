@@ -145,6 +145,11 @@ public class LocationService extends Service {
     // ===== LAZY CONNECTION: Callback para reconexión =====
     private com.mjc.mascotalink.network.SocketManager.OnConnectionListener socketConnectionListener;
 
+    // ===== WEBSOCKET FALLBACK: Si socket no conecta en 5s, forzar guardado a Firestore =====
+    private long socketStartConnectTime = 0;
+    private static final long WEBSOCKET_CONNECTION_TIMEOUT_MS = 5000; // 5 segundos
+    private boolean hasWarnedAboutSlowConnection = false;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -291,10 +296,15 @@ public class LocationService extends Service {
         // 3. Escuchar cambios de estado en tiempo real
         setupEstadoListener();
 
-        // 4. Unirse al room del Socket
+        // 4. Rastrear tiempo de conexión de socket para fallback
+        socketStartConnectTime = System.currentTimeMillis();
+        hasWarnedAboutSlowConnection = false;
+        Log.d(TAG, "⏱️ Iniciando rastreo de conexión WebSocket (timeout: " + WEBSOCKET_CONNECTION_TIMEOUT_MS + "ms)");
+
+        // 5. Unirse al room del Socket
         socketManager.joinPaseo(currentReservaId);
 
-        // 5. Solicitar actualizaciones de ubicación
+        // 6. Solicitar actualizaciones de ubicación
         requestLocationUpdates();
     }
 
@@ -602,17 +612,28 @@ public class LocationService extends Service {
                 WEBSOCKET_SEND_INTERVAL_SLOW_MS : // 30s si detenido
                 WEBSOCKET_SEND_INTERVAL_MS; // 10s si en movimiento
 
+        // ===== WEBSOCKET FALLBACK: Timeout si socket tarda > 5s en conectar =====
+        boolean socketTardando = !socketManager.isConnected() &&
+                (now - socketStartConnectTime) > WEBSOCKET_CONNECTION_TIMEOUT_MS;
+
+        if (socketTardando && !hasWarnedAboutSlowConnection) {
+            Log.w(TAG, "⚠️ WebSocket tardando > 5s en conectar. Usando FALLBACK directo a Firestore");
+            hasWarnedAboutSlowConnection = true;
+        }
+
         if (now - lastWebSocketSendTime > intervaloWebSocket) {
-            // SOLO enviar si dueño está viendo
+            // SOLO enviar si dueño está viendo Y socket está conectado
             if (duenoViendoMapa && socketManager.isConnected()) {
-                Log.d(TAG, "📡 ENVIANDO WebSocket - duenoViendoMapa=" + duenoViendoMapa + ", connected=" + socketManager.isConnected() + ", paseoId=" + currentReservaId);
+                Log.d(TAG, "📡 ENVIANDO WebSocket - duenoViendoMapa=" + duenoViendoMapa + ", connected=true, paseoId=" + currentReservaId);
                 socketManager.updateLocation(currentReservaId, lat, lng, accuracy);
                 lastWebSocketSendTime = now;
                 Log.v(TAG, " WebSocket enviado exitosamente (próximo en " + (intervaloWebSocket / 1000) + "s)");
             } else if (!duenoViendoMapa) {
-                Log.d(TAG, " WebSocket PAUSADO - duenoViendoMapa=" + duenoViendoMapa + " (ahorro ~10% batería)");
+                Log.d(TAG, " WebSocket PAUSADO - duenoViendoMapa=false (ahorro ~10% batería)");
+            } else if (socketTardando) {
+                Log.w(TAG, " WebSocket DESHABILITADO - Socket tardando > 5s, usando FALLBACK Firestore");
             } else if (!socketManager.isConnected()) {
-                Log.w(TAG, " WebSocket NO enviado - Socket desconectado");
+                Log.d(TAG, " WebSocket pendiente - Socket conectando...");
             }
         } else {
             Log.v(TAG, "⏭️ WebSocket throttled (esperando " +
