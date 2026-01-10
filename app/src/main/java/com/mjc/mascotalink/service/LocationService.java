@@ -114,7 +114,10 @@ public class LocationService extends Service {
     // MODO PAUSA COMPLETA
     private long tiempoSinMovimiento = 0;
     private long ultimoMovimientoDetectado = System.currentTimeMillis();
-    private static final long PAUSA_COMPLETA_THRESHOLD_MS = 180000; // 3 minutos
+    private static final long PAUSA_COMPLETA_THRESHOLD_MS = 480000; // 8 minutos
+    private long tiempoDetenciónInicio = 0; // Timestamp cuando empezó a estar quieto > 8 minutos
+    private long lastStationaryUpdateTime = 0; // Última actualización de ubicacion_actual cuando quieto
+    private static final long STATIONARY_UPDATE_INTERVAL_MS = 30000; // 30 segundos - actualizar ubicacion_actual cuando quieto
     private boolean gpsPausado = false;
 
     // Estado de batería
@@ -149,6 +152,13 @@ public class LocationService extends Service {
     private long socketStartConnectTime = 0;
     private static final long WEBSOCKET_CONNECTION_TIMEOUT_MS = 5000; // 5 segundos
     private boolean hasWarnedAboutSlowConnection = false;
+
+    // ===== FIRESTORE BATCH RETRY LOGIC =====
+    private List<Map<String, Object>> failedBatch = null;  // Cola de locations fallidas
+    private int batchRetryCount = 0;
+    private long lastBatchRetryTime = 0;
+    private static final int MAX_BATCH_RETRIES = 3;
+    private static final long BATCH_RETRY_DELAY_MS = 2000;  // Exponencial: 2s, 4s, 8s
 
     @Override
     public void onCreate() {
@@ -580,6 +590,7 @@ public class LocationService extends Service {
                 // Detectar movimiento para modo pausa
                 ultimoMovimientoDetectado = System.currentTimeMillis();
                 tiempoSinMovimiento = 0;
+                tiempoDetenciónInicio = 0; // Resetear contador de detención
 
                 // Si estaba pausado, reactivar GPS
                 if (gpsPausado) {
@@ -589,6 +600,15 @@ public class LocationService extends Service {
             } else {
                 // No hay movimiento significativo
                 tiempoSinMovimiento = System.currentTimeMillis() - ultimoMovimientoDetectado;
+
+                // ===== NUEVA LÓGICA: Detectar si está quieto > 8 minutos =====
+                if (tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS) {
+                    if (tiempoDetenciónInicio == 0) {
+                        // Primera vez que detectamos quieto > 8 minutos
+                        tiempoDetenciónInicio = System.currentTimeMillis();
+                        Log.w(TAG, "🛑 Paseador QUIETO > 8 minutos - Dejando de marcar ubicaciones en array");
+                    }
+                }
             }
         } else {
             // Primera ubicación
@@ -598,11 +618,22 @@ public class LocationService extends Service {
         lastLocation = location;
 
         // ===== VERIFICAR SI DEBE ENTRAR EN MODO PAUSA =====
-        if (!gpsPausado && tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS) {
-            Log.w(TAG, " Sin movimiento por " + (tiempoSinMovimiento / 60000) + " minutos - Activando MODO PAUSA (GPS apagado)");
-            activarModoPausa();
-            return; // No procesar más
+        // COMPLETAMENTE DESHABILITADO: GPS Pause Mode causa pérdida de ubicaciones
+        // Los perros se pausan naturalmente para olisquear, jugar, descansar, etc.
+        // Activar pausa durante paseos = PÉRDIDA TOTAL DE DATOS
+        //
+        // CRÍTICO: LocationService debe SIEMPRE guardar ubicaciones sin importar movimiento
+        // El único modo de pausa sería si batería < 5% (caso extremo)
+        //
+        // NO HACER: if (tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS) activarModoPausa()
+        // RESULTADO: Ubicaciones se guardan CONTINUAMENTE
+
+        if (gpsPausado && isLowBattery == false) {
+            // Si estaba pausado pero batería está normal, REACTIVAR
+            Log.w(TAG, "🔄 Reactivando GPS - Batería OK, continuando con paseo");
+            reactivarGPSDesdePausa();
         }
+        // GPS SIEMPRE ACTIVO durante el paseo
 
         // 1. Enviar por WebSocket (OPTIMIZADO: Throttling + Condicional)
         // Ahorro adicional: No enviar si dueño no está viendo (~5-10% batería)
@@ -641,7 +672,12 @@ public class LocationService extends Service {
         }
 
         // 2. Actualizar ubicación en tiempo real del usuario (para búsquedas/mapa general)
-        if (now - lastRealtimeUpdateTime > REALTIME_UPDATE_INTERVAL_MS) {
+        // CAMBIO: Si está quieto > 8 minutos, actualizar cada 30s EN VEZ de cada 5s
+        long intervalActualizar = tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS ?
+                STATIONARY_UPDATE_INTERVAL_MS :  // 30s cuando quieto > 8 min
+                REALTIME_UPDATE_INTERVAL_MS;      // 5s cuando en movimiento/normal
+
+        if (now - lastRealtimeUpdateTime > intervalActualizar) {
             updateUserRealtimeLocation(lat, lng, accuracy);
             lastRealtimeUpdateTime = now;
         }
@@ -701,16 +737,35 @@ public class LocationService extends Service {
                 .update(searchUpdates)
                 .addOnFailureListener(e -> Log.w(TAG, "Error actualizando en paseadores_search", e));
 
-        // ===== ACTUALIZAR 3: Reserva (para que el mapa del dueño funcione) =====
+        // ===== ACTUALIZAR 3: Reserva (CRÍTICO - Esto es lo que ve el mapa del dueño) =====
+        // FIX: Guardar ubicacion_actual cada 5s sin importar el batch
+        // Esto asegura que PaseoEnCursoDuenoActivity vea la ubicación actual en tiempo real
         if (currentReservaId != null && !currentReservaId.isEmpty()) {
             Map<String, Object> reservaUpdates = new HashMap<>();
             reservaUpdates.put("ubicacion_actual", geoPoint);
             reservaUpdates.put("ubicacion_actual_paseador", geoPoint);
             reservaUpdates.put("updated_at", Timestamp.now());
 
+            // ===== NUEVA LÓGICA: Guardar timestamp de detención si está quieto > 8 min =====
+            // IMPORTANTE: Si nunca se movió desde el inicio, usar ultimoMovimientoDetectado como base
+            if (tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS) {
+                long timestampQuieto = tiempoDetenciónInicio > 0 ? tiempoDetenciónInicio : ultimoMovimientoDetectado;
+                reservaUpdates.put("paseador_quieto_desde", new com.google.firebase.Timestamp(timestampQuieto / 1000, 0));
+                Log.d(TAG, "🛑 Guardando timestamp de detención en Firestore (quieto desde: " + timestampQuieto + ")");
+            } else {
+                // Si se movió nuevamente o está en primeros 8 minutos, limpiar el campo
+                reservaUpdates.put("paseador_quieto_desde", null);
+            }
+
             db.collection("reservas").document(currentReservaId)
                     .update(reservaUpdates)
-                    .addOnFailureListener(e -> Log.w(TAG, "Error actualizando ubicación en reserva", e));
+                    .addOnSuccessListener(aVoid -> {
+                        Log.v(TAG, "✅ ubicacion_actual actualizada en reserva (fallback Firestore para mapa)");
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.w(TAG, "⚠️ Error actualizando ubicacion_actual en reserva - El WebSocket debería mantener mapa actualizado", e);
+                        // Si falla, el WebSocket debería estar manejando los updates en tiempo real
+                    });
         }
 
         Log.d(TAG, "📍 Ubicación actualizada en: usuarios + paseadores_search + reserva (" + lat + ", " + lng + ")");
@@ -719,23 +774,40 @@ public class LocationService extends Service {
     /**
      * Agrega ubicación al batch para escritura eficiente
      * OPTIMIZACIÓN: Reduce escrituras de Firestore de ~240/hora a ~12/hora
+     *
+     * CAMBIO: Si paseador está quieto > 8 minutos, NO agrega más ubicaciones al array
+     * CAMBIO2: Durante los primeros 8 minutos, elimina el filtro de 3 metros para capturar TODAS las ubicaciones
      */
     private void addLocationToBatch(Location location) {
-        // ===== OPTIMIZACIÓN: Eliminar duplicados cercanos =====
-        // Si la última ubicación en el batch es muy similar (< 3 metros), no agregar
-        if (!locationBatch.isEmpty()) {
-            Map<String, Object> ultimaUbicacion = locationBatch.get(locationBatch.size() - 1);
-            double lastLat = (double) ultimaUbicacion.get("lat");
-            double lastLng = (double) ultimaUbicacion.get("lng");
+        // ===== NUEVA LÓGICA: Si está quieto > 8 minutos, NO agregar más ubicaciones =====
+        if (tiempoSinMovimiento > PAUSA_COMPLETA_THRESHOLD_MS) {
+            Log.d(TAG, "⏸️ Paseador QUIETO > 8 minutos - NO agregando más ubicaciones al array");
+            // Pero updateLocationInFirestore() aún actualiza ubicacion_actual cada 30s
+            return;
+        }
 
-            float[] results = new float[1];
-            Location.distanceBetween(lastLat, lastLng,
-                                    location.getLatitude(), location.getLongitude(),
-                                    results);
+        // ===== NUEVA LÓGICA: Durante primeros 8 minutos, CAPTURAR TODAS las ubicaciones SIN filtro =====
+        // Esto permite una ruta más precisa durante el paseo activo
+        if (tiempoSinMovimiento <= PAUSA_COMPLETA_THRESHOLD_MS) {
+            // DURANTE LOS PRIMEROS 8 MINUTOS: No aplicar filtro de 3 metros
+            // Agregar todas las ubicaciones para ruta precisa
+            Log.v(TAG, "📍 [ACTIVO] Agregando ubicación sin filtro de 3m (primeros 8 minutos)");
+        } else {
+            // Después de 8 minutos quieto: aplicar filtro (pero ya habría retornado arriba)
+            if (!locationBatch.isEmpty()) {
+                Map<String, Object> ultimaUbicacion = locationBatch.get(locationBatch.size() - 1);
+                double lastLat = (double) ultimaUbicacion.get("lat");
+                double lastLng = (double) ultimaUbicacion.get("lng");
 
-            if (results[0] < 3.0f) { // Menos de 3 metros de diferencia
-                Log.v(TAG, "📍 Ubicación duplicada ignorada (distancia: " + String.format("%.1f", results[0]) + "m)");
-                return; // No agregar duplicado
+                float[] results = new float[1];
+                Location.distanceBetween(lastLat, lastLng,
+                                        location.getLatitude(), location.getLongitude(),
+                                        results);
+
+                if (results[0] < 3.0f) { // Menos de 3 metros de diferencia
+                    Log.v(TAG, "📍 Ubicación duplicada ignorada (distancia: " + String.format("%.1f", results[0]) + "m)");
+                    return; // No agregar duplicado
+                }
             }
         }
 
@@ -779,16 +851,43 @@ public class LocationService extends Service {
     }
 
     /**
-     * Envía batch de ubicaciones a Firestore
+     * Envía batch de ubicaciones a Firestore con reintentos exponenciales
      * Usa subcollection si hay > 500 puntos para evitar límite de 1MB
      */
     private void sendLocationBatch() {
+        // Primero, intentar reenviar batch fallido anterior (si existe)
+        if (failedBatch != null && !failedBatch.isEmpty()) {
+            long now = System.currentTimeMillis();
+            long timeSinceLastRetry = now - lastBatchRetryTime;
+            long retryDelay = BATCH_RETRY_DELAY_MS * (1L << batchRetryCount);  // Exponencial: 2s, 4s, 8s
+
+            if (timeSinceLastRetry > retryDelay && batchRetryCount < MAX_BATCH_RETRIES) {
+                Log.w(TAG, "🔄 Reintentando batch fallido (" + (batchRetryCount + 1) + "/" + MAX_BATCH_RETRIES + ") en " + retryDelay + "ms");
+                sendBatchToFirestore(failedBatch);
+                lastBatchRetryTime = now;
+                batchRetryCount++;
+                return;  // No procesar nuevo batch hasta que se resuelva el fallido
+            } else if (batchRetryCount >= MAX_BATCH_RETRIES) {
+                Log.e(TAG, "❌ Batch fallido después de " + MAX_BATCH_RETRIES + " reintentos, descartando " + failedBatch.size() + " ubicaciones");
+                failedBatch = null;
+                batchRetryCount = 0;
+            }
+        }
+
         if (locationBatch.isEmpty()) return;
 
         List<Map<String, Object>> batchToSend = new ArrayList<>(locationBatch);
         locationBatch.clear();
         lastBatchSendTime = System.currentTimeMillis();
 
+        sendBatchToFirestore(batchToSend);
+    }
+
+    /**
+     * Helper method que actualiza Firestore con el batch
+     * Registra fallos para reintentos exponenciales
+     */
+    private void sendBatchToFirestore(List<Map<String, Object>> batchToSend) {
         DocumentReference reservaRef = db.collection("reservas").document(currentReservaId);
 
         // ===== MIGRACIÓN A SUBCOLLECTION SI ES NECESARIO =====
@@ -800,18 +899,27 @@ public class LocationService extends Service {
             // Guardar en subcollection
             guardarEnSubcollection(batchToSend);
         } else {
-            // Guardar en array principal (método original)
+            // Guardar en array principal con reintentos
             reservaRef.update("ubicaciones", FieldValue.arrayUnion(batchToSend.toArray()))
                     .addOnSuccessListener(aVoid -> {
                         ubicacionesCount += batchToSend.size();
-                        Log.d(TAG, " Batch enviado: " + batchToSend.size() + " ubicaciones (total: " + ubicacionesCount + ")");
+                        failedBatch = null;  // Clear failed batch on success
+                        batchRetryCount = 0;
+                        Log.d(TAG, "✅ Batch enviado: " + batchToSend.size() + " ubicaciones (total: " + ubicacionesCount + ")");
                     })
                     .addOnFailureListener(e -> {
-                        Log.w(TAG, "Error guardando batch, reintentando individuales", e);
-                        // Fallback: guardar individualmente
+                        Log.w(TAG, "❌ Error guardando batch: " + e.getMessage() + " - Almacenando para reintentos");
+                        // Almacenar para reintentos exponenciales
+                        failedBatch = new ArrayList<>(batchToSend);
+                        lastBatchRetryTime = System.currentTimeMillis();
+                        batchRetryCount = 0;
+
+                        // También intentar guardado individual como fallback final
+                        Log.w(TAG, "Intentando guardar puntos individualmente como fallback final...");
                         for (Map<String, Object> punto : batchToSend) {
                             reservaRef.update("ubicaciones", FieldValue.arrayUnion(punto))
-                                    .addOnSuccessListener(v -> ubicacionesCount++);
+                                    .addOnSuccessListener(v -> ubicacionesCount++)
+                                    .addOnFailureListener(e2 -> Log.e(TAG, "Error guardando punto individual", e2));
                         }
                     });
         }

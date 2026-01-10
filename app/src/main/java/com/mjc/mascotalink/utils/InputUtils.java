@@ -177,9 +177,9 @@ public class InputUtils {
     }
 
     /**
-     * Formatea un teléfono ecuatoriano al formato internacional (+593)
+     * Limpia un teléfono ecuatoriano removiendo caracteres especiales
      * @param telefono Teléfono en cualquier formato válido
-     * @return Teléfono en formato +593XXXXXXXXX o el original si no es válido
+     * @return Teléfono limpio en formato nacional 09XXXXXXXX o el original si no es válido
      */
     public static String formatTelefonoEcuador(String telefono) {
         if (TextUtils.isEmpty(telefono)) {
@@ -189,9 +189,9 @@ public class InputUtils {
         String cleaned = telefono.trim().replaceAll("[^0-9+]", "");
 
         if (cleaned.startsWith("09") && cleaned.length() == 10) {
-            return "+593" + cleaned.substring(1);
-        } else if (cleaned.startsWith("+593") && cleaned.length() == 13) {
             return cleaned;
+        } else if (cleaned.startsWith("+593") && cleaned.length() == 13) {
+            return "0" + cleaned.substring(4);
         }
 
         return telefono; // Retornar original si no coincide

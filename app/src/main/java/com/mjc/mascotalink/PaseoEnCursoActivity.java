@@ -18,6 +18,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -187,6 +188,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private String mascotaIdActual;
     private String paseadorIdActual;
     private String duenoIdActual;
+
+    // Flag para evitar que LocationService se inicie múltiples veces
+    private boolean locationServiceStarted = false;
 
     // Ventana de tiempo para permitir inicio anticipado
     private static final long VENTANA_ANTICIPACION_MS = 15 * 60 * 1000; // 15 minutos
@@ -779,18 +783,29 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                 Log.d(TAG, "Paseo completado, cerrando actividad");
                 Toast.makeText(this, "El paseo ha sido completado.", Toast.LENGTH_SHORT).show();
                 stopTimer();
+                // Resetear flag para próximos paseos
+                locationServiceStarted = false;
                 // Update en_paseo to false when walk finishes, before activity closes
                 new Handler(Looper.getMainLooper()).postDelayed(this::finish, 1500);
             } else {
                 // Otro estado (CANCELADO, etc.)
                 Toast.makeText(this, "Este paseo ya no está en curso.", Toast.LENGTH_SHORT).show();
                 stopTimer();
+                // Resetear flag para próximos paseos
+                locationServiceStarted = false;
                 // Update en_paseo to false if the walk is ending for any reason
                 finish();
             }
             return;
         }
         tvEstado.setText(getString(R.string.paseo_en_curso_state_en_progreso));
+
+        // 🔴 CRÍTICO: Iniciar LocationService cuando estado cambia a EN_CURSO
+        // Esto asegura que se comience a grabar ubicaciones INMEDIATAMENTE
+        // cuando el paseador hace clic en "Comenzar" (no esperar a salir/entrar app)
+        // El check de duplicados está en startLocationService()
+        Log.d(TAG, "✅ Estado EN_CURSO detectado - Iniciando LocationService");
+        startLocationUpdates();
 
         // Ocultar botón "Comenzar Paseo" cuando ya está en curso
         btnComenzarPaseo.setVisibility(View.GONE);
@@ -1281,7 +1296,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
 
     private void mostrarFotoCompleta(String url) {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_fullscreen_image, null);
-        com.google.android.material.imageview.ShapeableImageView imageView = dialogView.findViewById(R.id.iv_fullscreen);
+        ImageView imageView = dialogView.findViewById(R.id.iv_fullscreen);
         Glide.with(this)
                 .load(MyApplication.getFixedUrl(url))
                 .placeholder(R.drawable.ic_pet_placeholder)
@@ -1689,18 +1704,22 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     protected void onPause() {
         super.onPause();
         stopTimer();
-        stopLocationUpdates();
+        // 🔴 CRÍTICO: NO detener LocationService en onPause()
+        // LocationService DEBE continuar en background para grabar ubicaciones
+        // Si detenemos aquí, pierden todas las ubicaciones mientras la app está paused
+        // stopLocationUpdates();  // ← COMENTADO
+
+        Log.d(TAG, "onPause() - LocationService CONTINÚA ACTIVO en background");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         stopTimer();
-        stopLocationUpdates();
-        saveHandler.removeCallbacksAndMessages(null);
 
-        // FirebaseQueryOptimizer maneja la limpieza de listeners automáticamente
-        // No es necesario remover listeners manualmente
+        Log.d(TAG, "onDestroy() - LocationService continúa activo, manejándose con sus propios listeners");
+
+        saveHandler.removeCallbacksAndMessages(null);
 
         // Limpiar monitor de red
         if (networkMonitor != null) {
@@ -1761,6 +1780,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     }
 
     private void startLocationService() {
+        // 🔴 CRÍTICO: Evitar duplicados - NO iniciar si ya se inició en esta sesión
+        if (locationServiceStarted) {
+            Log.d(TAG, "ℹ️ LocationService ya iniciado, ignorando reinicio");
+            return;
+        }
+
         Log.d(TAG, ">>> INTENTANDO INICIAR LocationService para paseo: " + idReserva);
         try {
             Intent serviceIntent = new Intent(this, LocationService.class);
@@ -1775,6 +1800,8 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                 startService(serviceIntent);
             }
             Log.d(TAG, ">>> LocationService iniciado exitosamente");
+            locationServiceStarted = true;  // Marcar como iniciado
+            actualizarEstadoUbicacion("📍 Grabando ubicaciones en tiempo real...");
         } catch (Exception e) {
             Log.e(TAG, ">>> ERROR al iniciar LocationService", e);
             Toast.makeText(this, "Error al iniciar tracking: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -1790,13 +1817,13 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private void startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-            
+
             // Start the Foreground Service for background tracking
             startLocationService();
 
             if (fusedLocationClient != null && locationCallback != null) {
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
-                actualizarEstadoUbicacion("Ubicación: buscando señal...");
+                // NO sobrescribir el mensaje "📍 Grabando ubicaciones en tiempo real..." que ya se configuró en startLocationService()
                 Log.d(TAG, " Location updates iniciados - Intervalo: 7s, Min distancia: 6m");
             } else {
                 Log.e(TAG, " No se puede iniciar location updates - fusedLocationClient o callback null");

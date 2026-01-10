@@ -205,6 +205,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 Log.d(TAG, "Reconectado exitosamente");
                 runOnUiThread(() -> {
                     if (tvUbicacionEstado != null) {
+                        tvUbicacionEstado.setText("✅ Conectado - Esperando ubicación...");
                         tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
                     }
                     // Dismiss Snackbar de reconexión
@@ -872,19 +873,19 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             @Override
             public void run() {
                 long timeSinceLastUpdate = System.currentTimeMillis() - lastWebSocketUpdate;
+                long minutosQuieto = timeSinceLastUpdate / 60000;
 
-                if (timeSinceLastUpdate > WEBSOCKET_TIMEOUT_MS) {
-                    Log.w(TAG, " WebSocket sin actualizaciones por " + (timeSinceLastUpdate / 1000) + "s - Activando fallback a Firestore");
-
-                    // Actualizar UI para indicar que estamos usando datos retrasados
+                // ===== NUEVA LÓGICA: Si lleva 8+ minutos sin actualizaciones, mostrar "Quieto" =====
+                if (minutosQuieto >= 8) {
+                    Log.w(TAG, " Sin actualizaciones por " + minutosQuieto + " minutos - Paseador parece estar QUIETO");
                     runOnUiThread(() -> {
                         if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText(" Datos retrasados - Cargando desde servidor...");
-                            tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
+                            tvUbicacionEstado.setText("🛑 Paseador quieto hace " + minutosQuieto + " minutos");
+                            tvUbicacionEstado.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
                         }
                     });
-
-                    // Cargar ubicaciones desde Firestore
+                } else if (timeSinceLastUpdate > WEBSOCKET_TIMEOUT_MS) {
+                    Log.w(TAG, " WebSocket sin actualizaciones por " + (timeSinceLastUpdate / 1000) + "s - Activando fallback a Firestore");
                     loadUbicacionesFromFirestore();
                 }
 
@@ -963,12 +964,6 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
                                     // Centrar cámara
                                     mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(ultimaPos, 17f), 500, null);
-
-                                    // Actualizar estado
-                                    if (tvUbicacionEstado != null) {
-                                        tvUbicacionEstado.setText("Ubicación actualizada desde servidor (" + rutaPaseo.size() + " puntos)");
-                                        tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.secondary));
-                                    }
                                 }
 
                                 Log.d(TAG, " Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
@@ -1067,16 +1062,21 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 }
             });
 
-        // ===== MEJORA: Listener específico para ubicacion_actual en tiempo real =====
-        // Esto responde INMEDIATAMENTE cuando la ubicacion_actual cambia en Firestore
-        // Sin esperar al fallback de 10 segundos
+        // ===== MEJORA: Listener para cambios en tiempo real =====
+        // Escucha cambios en la reserva y recarga ubicaciones cuando el array cambia
+        // Esto asegura que el polyline se actualice en TIEMPO REAL sin necesidad de salir/entrar
         reservaRef.addSnapshotListener((snapshot, error) -> {
             if (error != null) {
-                Log.w(TAG, "Error escuchando ubicacion_actual", error);
+                Log.w(TAG, "Error escuchando cambios en reserva", error);
                 return;
             }
 
             if (snapshot != null && snapshot.exists()) {
+                // NOTA: El mensaje "Paseador quieto" ahora se calcula en startFallbackCheck()
+                // basado en tiempo sin actualizaciones, no en este listener
+                // Este listener solo actualiza ubicaciones cuando el paseador se mueve
+
+                // ===== 1. Actualizar ubicacion_actual (punto único) - SOLO si NO está quieto =====
                 Object ubicacionActualObj = snapshot.get("ubicacion_actual");
                 if (ubicacionActualObj instanceof com.google.firebase.firestore.GeoPoint) {
                     com.google.firebase.firestore.GeoPoint geoPoint = (com.google.firebase.firestore.GeoPoint) ubicacionActualObj;
@@ -1109,11 +1109,26 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
                         // Actualizar estado visual
                         if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText("📍 Ubicación: desde servidor (Firestore)");
+                            tvUbicacionEstado.setText("📍 Ubicación actualizada desde servidor (" + rutaPaseo.size() + " puntos)");
                             tvUbicacionEstado.setTextColor(
                                 ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
                         }
                     });
+                }
+
+                // ===== 2. Cuando ubicaciones array cambia, recargar todo el polyline =====
+                // CRÍTICO: Este listener se ejecuta cada vez que se agrega una ubicación
+                // Nota: Si estaba quieto > 8 min, ya hizo return arriba, así que solo llega aquí si NO está quieto
+                Object ubicacionesObj = snapshot.get("ubicaciones");
+                if (ubicacionesObj instanceof List) {
+                    List<?> ubicacionesList = (List<?>) ubicacionesObj;
+                    int nuevoTamanio = ubicacionesList.size();
+
+                    // Si el tamaño del array cambió, recargar las ubicaciones
+                    if (nuevoTamanio != rutaPaseo.size()) {
+                        Log.d(TAG, "🔄 [FIRESTORE LISTENER] ARRAY cambió: " + rutaPaseo.size() + " → " + nuevoTamanio + " puntos. Recargando polyline...");
+                        runOnUiThread(this::loadUbicacionesFromFirestore);
+                    }
                 }
             }
         });
@@ -1185,6 +1200,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     .addOnFailureListener(e ->
                         Log.e(TAG, " Error actualizando dueno_viendo_mapa en EN_CURSO", e)
                     );
+                Log.d(TAG, "✅ EN_CURSO detectado - Cargando ubicación inicial desde Firestore");
+                loadUbicacionesFromFirestore();
             }
         }
         // -------------------------------------------------------------------
@@ -1973,7 +1990,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
     private void mostrarFotoCompleta(String url) {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_fullscreen_image, null);
-        ShapeableImageView imageView = dialogView.findViewById(R.id.iv_fullscreen);
+        ImageView imageView = dialogView.findViewById(R.id.iv_fullscreen);
         Glide.with(this).load(MyApplication.getFixedUrl(url)).into(imageView);
         new AlertDialog.Builder(this).setView(dialogView).setPositiveButton("Cerrar", null).show();
     }

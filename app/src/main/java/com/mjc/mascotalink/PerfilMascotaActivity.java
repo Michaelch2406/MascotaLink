@@ -22,6 +22,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.ImageViewerUtil;
 import com.mjc.mascotalink.MyApplication;
 
 import java.time.LocalDate;
@@ -132,6 +133,20 @@ public class PerfilMascotaActivity extends AppCompatActivity {
         galeriaUrls = new ArrayList<>();
         galeriaAdapter = new GaleriaAdapter(this, galeriaUrls);
         rvGaleria.setAdapter(galeriaAdapter);
+
+        // NUEVO: Configurar click listener para abrir imágenes de galería en fullscreen
+        galeriaAdapter.setOnImageClickListener((position, imageUrl) -> {
+            // Si hay varias fotos, usar GaleriaActivity con ViewPager2
+            if (galeriaUrls.size() > 1) {
+                Intent intent = new Intent(PerfilMascotaActivity.this, GaleriaActivity.class);
+                intent.putStringArrayListExtra("imageUrls", new ArrayList<>(galeriaUrls));
+                // Nota: GaleriaActivity podría mejorarse para soportar startPosition
+                startActivity(intent);
+            } else {
+                // Si es solo una foto, usar zoom dialog
+                ImageViewerUtil.showFullscreenImage(PerfilMascotaActivity.this, imageUrl);
+            }
+        });
 
         // Galería - botones de añadir
         btnAddPhoto = findViewById(R.id.btn_add_photo);
@@ -313,8 +328,14 @@ public class PerfilMascotaActivity extends AppCompatActivity {
                         String fotoUrl = document.getString("foto_principal_url");
                         if (fotoUrl != null && !fotoUrl.isEmpty()) {
                             Glide.with(this).load(MyApplication.getFixedUrl(fotoUrl)).circleCrop().into(ivAvatarMascota);
+
+                            // NUEVO: Click listener para ver foto en fullscreen con zoom
+                            final String finalFotoUrl = fotoUrl;
+                            ivAvatarMascota.setOnClickListener(v ->
+                                ImageViewerUtil.showFullscreenImage(PerfilMascotaActivity.this, finalFotoUrl));
                         } else {
                             ivAvatarMascota.setImageResource(R.drawable.ic_pet_placeholder);
+                            ivAvatarMascota.setOnClickListener(null);
                         }
 
                         // Galería - usar galeria_mascotas

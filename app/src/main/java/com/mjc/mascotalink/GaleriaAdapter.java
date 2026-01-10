@@ -19,10 +19,21 @@ public class GaleriaAdapter extends RecyclerView.Adapter<GaleriaAdapter.ViewHold
 
     private final Context context;
     private final List<String> imageUrls;
+    private OnImageClickListener listener;
+
+    // NUEVO: Interface para clicks en imágenes
+    public interface OnImageClickListener {
+        void onImageClick(int position, String imageUrl);
+    }
 
     public GaleriaAdapter(Context context, List<String> imageUrls) {
         this.context = context;
         this.imageUrls = imageUrls;
+    }
+
+    // NUEVO: Setter para el listener
+    public void setOnImageClickListener(OnImageClickListener listener) {
+        this.listener = listener;
     }
 
     @NonNull
@@ -44,6 +55,13 @@ public class GaleriaAdapter extends RecyclerView.Adapter<GaleriaAdapter.ViewHold
                 .error(R.drawable.foto_principal_mascota)
                 .thumbnail(0.1f)
                 .into(holder.ivGaleriaFoto);
+
+        // NUEVO: Click listener para abrir imagen en fullscreen
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onImageClick(position, imageUrl);
+            }
+        });
 
         preloadNextImages(position);
     }

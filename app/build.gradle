@@ -136,6 +136,7 @@ dependencies {
     // ========== IMAGE LOADING ==========
     implementation libs.glide
     implementation libs.circleimageview
+    implementation libs.photoview
     annotationProcessor libs.glide.compiler
 
     // ========== ANDROIDX CORE ==========

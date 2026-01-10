@@ -76,6 +76,7 @@ import com.mjc.mascotalink.MyApplication;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.ImageViewerUtil;
 import com.mjc.mascota.modelo.Resena;
 import com.mjc.mascota.ui.perfil.ResenaAdapter;
 import com.mjc.mascota.ui.busqueda.BusquedaPaseadoresActivity;
@@ -1119,6 +1120,15 @@ public class PerfilPaseadorActivity extends AppCompatActivity implements OnMapRe
                 tvNombre.setText(usuarioDoc.getString("nombre_display"));
                 if (!isDestroyed() && !isFinishing()) {
                     Glide.with(this).load(MyApplication.getFixedUrl(usuarioDoc.getString("foto_perfil"))).placeholder(R.drawable.ic_person).into(ivAvatar);
+
+                    // NUEVO: Click listener para ver foto en fullscreen con zoom
+                    final String fotoUrl = usuarioDoc.getString("foto_perfil");
+                    if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                        ivAvatar.setOnClickListener(v ->
+                            ImageViewerUtil.showFullscreenImage(PerfilPaseadorActivity.this, fotoUrl));
+                    } else {
+                        ivAvatar.setOnClickListener(null);
+                    }
                 }
                 Timestamp fechaRegistro = usuarioDoc.getTimestamp("fecha_registro");
                 if (fechaRegistro != null) {

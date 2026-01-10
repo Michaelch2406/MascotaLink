@@ -48,6 +48,7 @@ import com.mjc.mascota.ui.perfil.ResenaAdapter;
 import com.mjc.mascotalink.security.CredentialManager;
 import com.mjc.mascotalink.security.EncryptedPreferencesHelper;
 import com.mjc.mascotalink.util.BottomNavManager;
+import com.mjc.mascotalink.util.ImageViewerUtil;
 import com.mjc.mascotalink.network.SocketManager;
 import org.json.JSONObject;
 import android.text.format.DateUtils;
@@ -558,8 +559,17 @@ public class PerfilDuenoActivity extends AppCompatActivity {
                 tvNombre.setText(usuarioDoc.getString("nombre_display"));
                 if (!isDestroyed() && !isFinishing()) {
                     Glide.with(this).load(MyApplication.getFixedUrl(usuarioDoc.getString("foto_perfil"))).placeholder(R.drawable.ic_user_placeholder).into(ivAvatar);
+
+                    // NUEVO: Click listener para ver foto en fullscreen con zoom
+                    final String fotoUrl = usuarioDoc.getString("foto_perfil");
+                    if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                        ivAvatar.setOnClickListener(v ->
+                            ImageViewerUtil.showFullscreenImage(PerfilDuenoActivity.this, fotoUrl));
+                    } else {
+                        ivAvatar.setOnClickListener(null);
+                    }
                 }
-                
+
                 tvEmailDueno.setText(usuarioDoc.getString("correo"));
                 tvTelefonoDueno.setText(usuarioDoc.getString("telefono"));
                 

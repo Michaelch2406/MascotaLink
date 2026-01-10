@@ -32,6 +32,7 @@ biometric = "1.1.0"
 # Image Loading
 glide = "4.16.0"
 circleimageview = "3.1.0"
+photoview = "2.3.0"
 
 # Google Play Services
 playServicesMaps = "19.2.0"
@@ -106,6 +107,7 @@ biometric = { group = "androidx.biometric", name = "biometric", version.ref = "b
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
 circleimageview = { group = "de.hdodenhof", name = "circleimageview", version.ref = "circleimageview" }
+photoview = { group = "com.github.chrisbanes", name = "PhotoView", version.ref = "photoview" }
 
 # ========== ANDROIDX CORE ==========
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
