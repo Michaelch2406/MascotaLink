@@ -488,26 +488,26 @@ public class LocationService extends Service {
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
             Log.d(TAG, "GPS en modo PRECISIÓN BAJA (12s, accuracy: " + (int)lastAccuracy + "m)");
         } else if (currentSpeed < SPEED_THRESHOLD_MPS) {
-            // Usuario casi detenido: reducir frecuencia
-            interval = 12000; // 12 segundos (antes 10s)
+            // Usuario casi detenido: punto medio entre precisión y batería
+            interval = 11000; // 11 segundos
             minInterval = 8000; // 8 segundos
-            minDistance = 12; // 12 metros
+            minDistance = 8; // 8 metros (punto medio entre 12 y 5)
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
-            Log.d(TAG, "GPS en modo DETENIDO (12s, baja velocidad)");
+            Log.d(TAG, "GPS en modo DETENIDO (11s, baja velocidad, 8m resolución)");
         } else if (currentSpeed > 3.0f) {
-            // NUEVO: Modo alta velocidad (corriendo/bicicleta) - más frecuente
-            interval = 5000; // 5 segundos
-            minInterval = 3000; // 3 segundos
-            minDistance = 5; // 5 metros
+            // Modo alta velocidad (corriendo/bicicleta) - balance precisión/batería
+            interval = 6000; // 6 segundos
+            minInterval = 4000; // 4 segundos
+            minDistance = 4; // 4 metros (punto medio entre 5 y 3)
             priority = Priority.PRIORITY_HIGH_ACCURACY;
-            Log.d(TAG, "GPS en modo ALTA VELOCIDAD (5s, HIGH_ACCURACY - " + String.format("%.1f", currentSpeed * 3.6) + " km/h)");
+            Log.d(TAG, "GPS en modo ALTA VELOCIDAD (6s, HIGH_ACCURACY - " + String.format("%.1f", currentSpeed * 3.6) + " km/h)");
         } else {
-            // Modo normal caminando
+            // Modo normal caminando - balance entre precisión y ahorro de batería
             interval = 8000; // 8 segundos
             minInterval = 5000; // 5 segundos
-            minDistance = 8; // 8 metros
+            minDistance = 5; // 5 metros (punto medio entre 8 y 3)
             priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
-            Log.d(TAG, "GPS en modo CAMINANDO (8s, BALANCED)");
+            Log.d(TAG, "GPS en modo CAMINANDO (8s, BALANCED, 5m resolución)");
         }
 
         return new LocationRequest.Builder(priority, interval)
