@@ -969,6 +969,15 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                                 Log.d(TAG, " Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
                                 // ===== RESETEAR CONTADOR DE INACTIVIDAD =====
                                 lastWebSocketUpdate = System.currentTimeMillis();
+
+                                // ===== ACTUALIZAR UI CON RETROALIMENTACIÓN CLARA =====
+                                if (tvUbicacionEstado != null) {
+                                    String mensaje = String.format(Locale.US,
+                                        "Ruta cargada: %d puntos guardados",
+                                        ubicacionesNuevas.size());
+                                    tvUbicacionEstado.setText(mensaje);
+                                    tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
+                                }
                             });
                         }
                     }
