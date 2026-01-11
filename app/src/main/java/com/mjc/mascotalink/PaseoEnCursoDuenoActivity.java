@@ -972,10 +972,18 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
                                 // ===== ACTUALIZAR UI CON RETROALIMENTACIÓN CLARA =====
                                 if (tvUbicacionEstado != null) {
-                                    String mensaje = String.format(Locale.US,
-                                        "Ruta cargada: %d puntos guardados",
-                                        ubicacionesNuevas.size());
-                                    tvUbicacionEstado.setText(mensaje);
+                                    int puntosNuevos = ubicacionesNuevas.size() - rutaPaseo.size();
+                                    if (puntosNuevos > 0) {
+                                        String mensaje = String.format(Locale.US,
+                                            "Movimiento detectado - Ruta: %d puntos",
+                                            ubicacionesNuevas.size());
+                                        tvUbicacionEstado.setText(mensaje);
+                                    } else {
+                                        String mensaje = String.format(Locale.US,
+                                            "Ruta cargada: %d puntos",
+                                            ubicacionesNuevas.size());
+                                        tvUbicacionEstado.setText(mensaje);
+                                    }
                                     tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
                                 }
                             });
@@ -1115,11 +1123,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                         }
 
                         // Actualizar estado visual
-                        if (tvUbicacionEstado != null) {
-                            tvUbicacionEstado.setText("📍 Ubicación actualizada desde servidor (" + rutaPaseo.size() + " puntos)");
-                            tvUbicacionEstado.setTextColor(
-                                ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
-                        }
+                        // (Comentado para no interferir con loadUbicacionesFromFirestore)
+                        // if (tvUbicacionEstado != null) {
+                        //     tvUbicacionEstado.setText("📍 Ubicación actualizada desde servidor (" + rutaPaseo.size() + " puntos)");
+                        //     tvUbicacionEstado.setTextColor(
+                        //         ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
+                        // }
                     });
                 }
 
