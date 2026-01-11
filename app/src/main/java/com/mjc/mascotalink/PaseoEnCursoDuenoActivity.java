@@ -10,6 +10,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -1754,6 +1755,10 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
 
         android.widget.RadioGroup rgMotivos = view.findViewById(R.id.rg_motivos);
         com.google.android.material.textfield.TextInputEditText etOtroMotivo = view.findViewById(R.id.et_otro_motivo);
+        MaterialButton btnConfirmar = view.findViewById(R.id.btn_confirmar_cancelacion);
+        MaterialButton btnVolver = view.findViewById(R.id.btn_volver_paseo);
+
+        btnConfirmar.setText("Enviar Solicitud");
 
         rgMotivos.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_otro) {
@@ -1763,10 +1768,15 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             }
         });
 
-        builder.setPositiveButton("Enviar Solicitud", (dialog, which) -> {
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnConfirmar.setOnClickListener(v -> {
             String motivo = "";
             int selectedId = rgMotivos.getCheckedRadioButtonId();
-            
+
             if (selectedId == -1) {
                 Toast.makeText(this, "Debes seleccionar un motivo", Toast.LENGTH_SHORT).show();
                 return;
@@ -1782,14 +1792,12 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                 return;
             }
 
+            dialog.dismiss();
             confirmarCancelacionDueno(motivo);
         });
 
-        builder.setNegativeButton("Volver al paseo", null);
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-        }
+        btnVolver.setOnClickListener(v -> dialog.dismiss());
+
         dialog.show();
     }
 
@@ -1972,38 +1980,58 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             return;
         }
 
-        String[] opciones = { "Chat", "Llamar", "WhatsApp", "SMS", "Cancelar" };
-        new AlertDialog.Builder(this)
-                .setTitle("Contactar a " + (nombrePaseador != null ? nombrePaseador : "Paseador"))
-                .setItems(opciones, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            FirebaseUser user = auth.getCurrentUser();
-                            if (user == null) {
-                                Toast.makeText(this, "Inicia sesion para chatear", Toast.LENGTH_SHORT).show();
-                                return;
-                            }
-                            if (idPaseador == null) {
-                                Toast.makeText(this, "No se pudo abrir el chat", Toast.LENGTH_SHORT).show();
-                                return;
-                            }
-                            com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(this, db, user.getUid(), idPaseador);
-                            break;
-                        case 1:
-                            intentarLlamar();
-                            break;
-                        case 2:
-                            enviarWhatsApp(telefonoPaseador);
-                            break;
-                        case 3:
-                            enviarSMS();
-                            break;
-                        case 4:
-                            dialog.dismiss();
-                            break;
-                    }
-                })
-                .show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_contactar_persona, null);
+        builder.setView(view);
+
+        TextView tvTitulo = view.findViewById(R.id.tv_title_contact);
+        if (tvTitulo != null) {
+            tvTitulo.setText("Contactar paseador");
+        }
+
+        LinearLayout optionChat = view.findViewById(R.id.option_chat);
+        LinearLayout optionCall = view.findViewById(R.id.option_call);
+        LinearLayout optionWhatsApp = view.findViewById(R.id.option_whatsapp);
+        LinearLayout optionSms = view.findViewById(R.id.option_sms);
+        MaterialButton btnCerrar = view.findViewById(R.id.btn_cerrar_dialog);
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        optionChat.setOnClickListener(v -> {
+            FirebaseUser user = auth.getCurrentUser();
+            if (user == null) {
+                Toast.makeText(this, "Inicia sesion para chatear", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (idPaseador == null) {
+                Toast.makeText(this, "No se pudo abrir el chat", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            com.mjc.mascotalink.util.ChatHelper.openOrCreateChat(this, db, user.getUid(), idPaseador);
+            dialog.dismiss();
+        });
+
+        optionCall.setOnClickListener(v -> {
+            intentarLlamar();
+            dialog.dismiss();
+        });
+
+        optionWhatsApp.setOnClickListener(v -> {
+            enviarWhatsApp(telefonoPaseador);
+            dialog.dismiss();
+        });
+
+        optionSms.setOnClickListener(v -> {
+            enviarSMS();
+            dialog.dismiss();
+        });
+
+        btnCerrar.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     private void intentarLlamar() {
