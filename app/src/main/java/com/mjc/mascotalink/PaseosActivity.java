@@ -564,6 +564,12 @@ public class PaseosActivity extends AppCompatActivity {
                 // Cargar fotos de mascotas si están disponibles
                 if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
                     paseo.setMascotasFotos(mascotasFotos);
+
+                    // Si solo hay UNA mascota, establecer también la foto individual
+                    if (mascotasNombres != null && mascotasNombres.size() == 1) {
+                        paseo.setMascotaFoto(mascotasFotos.get(0));
+                        Log.d(TAG, "✅ Foto única de mascota establecida (Fase 1): " + mascotasFotos.get(0));
+                    }
                 }
 
                 // Verificar si el paseo CONFIRMADO debe transicionar a LISTO_PARA_INICIAR
@@ -686,6 +692,12 @@ public class PaseosActivity extends AppCompatActivity {
                     // Cargar fotos de mascotas si están disponibles
                     if (mascotasFotos != null && !mascotasFotos.isEmpty()) {
                         paseo.setMascotasFotos(mascotasFotos);
+
+                        // Si solo hay UNA mascota, establecer también la foto individual
+                        if (mascotasNombres != null && mascotasNombres.size() == 1) {
+                            paseo.setMascotaFoto(mascotasFotos.get(0));
+                            Log.d(TAG, "✅ Foto única de mascota establecida en PaseosActivity: " + mascotasFotos.get(0));
+                        }
                     }
 
                     // Cargar datos desnormalizados si están disponibles

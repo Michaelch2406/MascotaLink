@@ -399,14 +399,50 @@ public class SolicitudDetalleActivity extends AppCompatActivity {
 
     private void cargarMascotaIndividual(String duenoId, String mascotaId) {
         if (duenoId == null || mascotaId == null) return;
-        
+
         db.collection("duenos").document(duenoId).collection("mascotas").document(mascotaId)
             .get().addOnSuccessListener(doc -> {
                 if (doc.exists()) {
                     tvMascotaNombre.setText(doc.getString("nombre"));
                     tvMascotaRaza.setText(doc.getString("raza"));
-                    tvMascotaEdad.setText(doc.getString("edad") + " años");
-                    tvMascotaPeso.setText(doc.getString("peso") + " kg");
+
+                    // Calcular edad desde fecha_nacimiento (no hay campo "edad" directo)
+                    com.google.firebase.Timestamp fechaNacimiento = doc.getTimestamp("fecha_nacimiento");
+                    int edad = 0;
+                    if (fechaNacimiento != null) {
+                        java.util.Date birthDate = fechaNacimiento.toDate();
+                        java.time.LocalDate localBirthDate = birthDate.toInstant()
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalDate();
+                        java.time.LocalDate currentDate = java.time.LocalDate.now();
+                        edad = java.time.Period.between(localBirthDate, currentDate).getYears();
+                        tvMascotaEdad.setText(edad + " años");
+                    } else {
+                        tvMascotaEdad.setText("Edad desconocida");
+                    }
+                    Log.d(TAG, "Edad calculada: " + edad + " años");
+
+                    // Extraer peso - puede ser Double, Long o String
+                    Double peso = null;
+                    if (doc.contains("peso")) {
+                        Object pesoObj = doc.get("peso");
+                        Log.d(TAG, "Peso object: " + pesoObj + " (tipo: " + (pesoObj != null ? pesoObj.getClass().getSimpleName() : "null") + ")");
+                        if (pesoObj instanceof Double) {
+                            peso = (Double) pesoObj;
+                        } else if (pesoObj instanceof Long) {
+                            peso = ((Long) pesoObj).doubleValue();
+                        } else if (pesoObj instanceof Integer) {
+                            peso = ((Integer) pesoObj).doubleValue();
+                        } else if (pesoObj instanceof String) {
+                            try {
+                                peso = Double.parseDouble((String) pesoObj);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing peso", e);
+                            }
+                        }
+                    }
+                    tvMascotaPeso.setText(peso != null ? peso + " kg" : "Peso desconocido");
+                    Log.d(TAG, "Peso final: " + peso);
                 }
             });
     }

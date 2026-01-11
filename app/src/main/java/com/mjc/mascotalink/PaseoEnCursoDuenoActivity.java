@@ -967,6 +967,8 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                                 }
 
                                 Log.d(TAG, " Ubicaciones cargadas desde Firestore: " + ubicacionesNuevas.size() + " puntos");
+                                // ===== RESETEAR CONTADOR DE INACTIVIDAD =====
+                                lastWebSocketUpdate = System.currentTimeMillis();
                             });
                         }
                     }
@@ -1072,11 +1074,7 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
             }
 
             if (snapshot != null && snapshot.exists()) {
-                // NOTA: El mensaje "Paseador quieto" ahora se calcula en startFallbackCheck()
-                // basado en tiempo sin actualizaciones, no en este listener
-                // Este listener solo actualiza ubicaciones cuando el paseador se mueve
-
-                // ===== 1. Actualizar ubicacion_actual (punto único) - SOLO si NO está quieto =====
+                // ===== 1. Actualizar ubicacion_actual (punto único) =====
                 Object ubicacionActualObj = snapshot.get("ubicacion_actual");
                 if (ubicacionActualObj instanceof com.google.firebase.firestore.GeoPoint) {
                     com.google.firebase.firestore.GeoPoint geoPoint = (com.google.firebase.firestore.GeoPoint) ubicacionActualObj;
@@ -1202,6 +1200,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     );
                 Log.d(TAG, "✅ EN_CURSO detectado - Cargando ubicación inicial desde Firestore");
                 loadUbicacionesFromFirestore();
+
+                // ===== CRÍTICO: Resetear contador de inactividad =====
+                // Si no hacemos esto, el fallback check pensará que pasaron 260 segundos sin actualizaciones
+                lastWebSocketUpdate = System.currentTimeMillis();
+                Log.d(TAG, "⏱️ Contador de inactividad resetado");
             }
         }
         // -------------------------------------------------------------------

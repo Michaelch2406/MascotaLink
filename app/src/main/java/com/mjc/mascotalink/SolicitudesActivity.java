@@ -291,11 +291,18 @@ public class SolicitudesActivity extends AppCompatActivity {
 
                     // Setear datos de la mascota en el objeto Paseo
                     if (solicitud.getMascotasNombres() != null && !solicitud.getMascotasNombres().isEmpty()) {
-                        // Formato nuevo: múltiples mascotas
+                        // Formato nuevo: mascotas desnormalizadas
                         String nombresConcatenados = String.join(", ", solicitud.getMascotasNombres());
                         Log.d(TAG, "✅ Concatenando nombres: " + solicitud.getMascotasNombres() + " → '" + nombresConcatenados + "'");
                         solicitud.setMascotaNombre(nombresConcatenados);
-                        // Para UI: si son múltiples, no mostramos foto individual
+
+                        // Si solo hay UNA mascota, establecer la foto individual también
+                        if (solicitud.getMascotasNombres().size() == 1 &&
+                            solicitud.getMascotasFotos() != null &&
+                            !solicitud.getMascotasFotos().isEmpty()) {
+                            solicitud.setMascotaFoto(solicitud.getMascotasFotos().get(0));
+                            Log.d(TAG, "✅ Foto única de mascota establecida: " + solicitud.getMascotaFoto());
+                        }
                     } else if (mascotaDoc != null && mascotaDoc.exists()) {
                         // Formato antiguo: una sola mascota
                         solicitud.setMascotaNombre(mascotaDoc.getString("nombre"));

@@ -175,7 +175,8 @@ service cloud.firestore {
         (isCurrentUser(resource.data.get('id_dueno', null)) &&
           request.resource.data.get('estado', '') in ['SOLICITADO', 'CANCELADO', 'COMPLETADO', 'CONFIRMADO']) ||
         (isCurrentUser(resource.data.get('id_paseador', null)) &&
-          request.resource.data.get('estado', '') in ['ACEPTADO', 'CONFIRMADO', 'EN_PROGRESO', 'EN_CURSO', 'COMPLETADO']) ||
+          (request.resource.data.get('estado', '') in ['ACEPTADO', 'CONFIRMADO', 'EN_PROGRESO', 'EN_CURSO', 'COMPLETADO'] ||
+           resource.data.get('estado', '') == 'EN_CURSO')) ||
         (
           (isCurrentUser(resource.data.get('id_dueno', null)) ||
             isCurrentUser(resource.data.get('id_paseador', null))) &&
