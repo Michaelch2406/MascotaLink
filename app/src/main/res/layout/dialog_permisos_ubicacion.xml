@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/bg_dialog_rounded">
+
+    <ImageView
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_location_required"
+        android:tint="@color/blue_primary"
+        android:contentDescription="Ubicación"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Permisos de Ubicación Requeridos"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        android:layout_marginBottom="12dp"
+        android:gravity="center" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Para iniciar el paseo necesitamos acceso a tu ubicación en tiempo real."
+        android:textSize="14sp"
+        android:textColor="@color/gray_dark"
+        android:layout_marginBottom="24dp"
+        android:gravity="center_vertical"
+        android:lineSpacingExtra="2dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel_permisos"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Cancelar"
+            android:textColor="@color/blue_primary"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_dar_permisos"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Dar Permisos"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/blue_primary"
+            style="@style/Widget.MaterialComponents.Button" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/bg_dialog_rounded">
+
+    <ImageView
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_check_circle"
+        android:tint="@color/blue_primary"
+        android:contentDescription="Confirmación"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Confirmar Solicitud"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        android:layout_marginBottom="16dp"
+        android:gravity="center" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:maxHeight="200dp">
+
+        <TextView
+            android:id="@+id/tv_resumen_reserva"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Resumen de la solicitud"
+            android:textSize="13sp"
+            android:textColor="@color/gray_dark"
+            android:lineSpacingExtra="6dp" />
+    </ScrollView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        app:cardBackgroundColor="@color/blue_100"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Costo Total"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/gray_dark"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tv_costo_total"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="$0.00"
+                android:textSize="18sp"
+                android:textColor="@color/blue_primary"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Al confirmar, se enviará una solicitud al paseador. El costo final se verificará antes de enviar."
+        android:textSize="12sp"
+        android:textColor="@color/gray_dark"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancelar_solicitud"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Cancelar"
+            android:textColor="@color/blue_primary"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_enviar_solicitud"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Enviar Solicitud"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/blue_primary"
+            style="@style/Widget.MaterialComponents.Button" />
+    </LinearLayout>
+
+</LinearLayout>

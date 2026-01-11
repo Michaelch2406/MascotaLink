@@ -370,11 +370,12 @@ public class DetallePaseoActivity extends AppCompatActivity {
     private void cargarDatosUsuario(String userId) {
         if (userId == null) return;
         db.collection("usuarios").document(userId).get().addOnSuccessListener(doc -> {
+            if (isFinishing() || isDestroyed()) return;
             if (doc.exists()) {
                 String nombre = doc.getString("nombre_display");
                 String foto = doc.getString("foto_perfil");
                 tvPaseadorNombre.setText(nombre != null ? nombre : "Usuario");
-                if (foto != null) {
+                if (foto != null && !isFinishing() && !isDestroyed()) {
                     Glide.with(this).load(MyApplication.getFixedUrl(foto))
                         .placeholder(R.drawable.ic_user_placeholder).into(ivPaseadorFoto);
                 }
@@ -389,6 +390,7 @@ public class DetallePaseoActivity extends AppCompatActivity {
         for (String id : ids) {
             db.collection("duenos").document(duenoId).collection("mascotas").document(id)
                 .get().addOnSuccessListener(doc -> {
+                    if (isFinishing() || isDestroyed()) return;
                     if (doc.exists()) {
                         // Extraer datos con seguridad de tipos
                         String nombre = doc.getString("nombre");

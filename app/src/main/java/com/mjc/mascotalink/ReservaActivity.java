@@ -1698,12 +1698,35 @@ public class ReservaActivity extends AppCompatActivity {
         mensaje.append("Costo Total: $").append(String.format(Locale.US, "%.2f", costoEstimado)).append("\n\n");
         mensaje.append("Al confirmar, se enviará una solicitud al paseador. El costo final se verificará antes de enviar.");
 
-        new AlertDialog.Builder(this)
-                .setTitle("Confirmar Solicitud")
-                .setMessage(mensaje.toString())
-                .setPositiveButton("Enviar Solicitud", (dialog, which) -> iniciarProcesoConfirmacion())
-                .setNegativeButton("Cancelar", null)
-                .show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_confirmar_solicitud_reserva, null);
+        builder.setView(view);
+
+        TextView tvResumen = view.findViewById(R.id.tv_resumen_reserva);
+        TextView tvCostoTotal = view.findViewById(R.id.tv_costo_total);
+        com.google.android.material.button.MaterialButton btnEnviar = view.findViewById(R.id.btn_enviar_solicitud);
+        com.google.android.material.button.MaterialButton btnCancelar = view.findViewById(R.id.btn_cancelar_solicitud);
+
+        // Construir resumen sin costo total y sin el mensaje de confirmación
+        String resumenLimpio = mensaje.toString();
+        resumenLimpio = resumenLimpio.replace("Costo Total: $" + String.format(Locale.US, "%.2f", costoEstimado), "");
+        resumenLimpio = resumenLimpio.replace("\n\nAl confirmar, se enviará una solicitud al paseador. El costo final se verificará antes de enviar.", "").trim();
+        tvResumen.setText(resumenLimpio);
+        tvCostoTotal.setText(String.format(Locale.US, "$%.2f", costoEstimado));
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnEnviar.setOnClickListener(v -> {
+            dialog.dismiss();
+            iniciarProcesoConfirmacion();
+        });
+
+        btnCancelar.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     private void iniciarProcesoConfirmacion() {
@@ -1764,17 +1787,31 @@ public class ReservaActivity extends AppCompatActivity {
     private void confirmarReserva() {
         // CRÍTICO: Validar conexión ANTES de cualquier operación de pago/reserva
         if (networkMonitor != null && !networkMonitor.isNetworkAvailable()) {
-            new AlertDialog.Builder(this)
-                .setTitle("Sin conexión")
-                .setMessage("No se puede crear la reserva sin conexión a internet. Por favor, verifica tu conexión y vuelve a intentarlo.")
-                .setPositiveButton("Entendido", null)
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
+            mostrarDialogoSinConexion();
             return;
         }
 
         if (!validarDatosReserva()) return;
         mostrarDialogoConfirmacion();
+    }
+
+    private void mostrarDialogoSinConexion() {
+        if (isFinishing()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_sin_conexion, null);
+        builder.setView(view);
+
+        com.google.android.material.button.MaterialButton btnEntendido = view.findViewById(R.id.btn_entendido_conexion);
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnEntendido.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     private void validarDisponibilidadYCrear(double costoTotalReal, double tarifaConfirmada) {

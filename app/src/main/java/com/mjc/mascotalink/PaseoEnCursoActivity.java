@@ -272,7 +272,9 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         if (fechaInicioPaseo != null) {
             startTimer();
         }
-        startLocationUpdates();
+        // ===== COMENTADO: NO iniciar LocationService aquí =====
+        // LocationService solo se inicia cuando el estado CAMBIA a EN_CURSO
+        // startLocationUpdates();
 
         // Reconectar al WebSocket y unirse al paseo
         if (idReserva != null) {
@@ -564,16 +566,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             // 2. Verificar permisos de ubicación
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
-                new AlertDialog.Builder(this)
-                    .setTitle("Permisos de Ubicación Requeridos")
-                    .setMessage("Para iniciar el paseo necesitamos acceso a tu ubicación en tiempo real.")
-                    .setPositiveButton("Dar Permisos", (d, w) -> {
-                        ActivityCompat.requestPermissions(this,
-                            new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                            REQUEST_PERMISSION_LOCATION);
-                    })
-                    .setNegativeButton("Cancelar", null)
-                    .show();
+                mostrarDialogoPermisosUbicacion();
                 return;
             }
 
@@ -583,15 +576,7 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             boolean gpsEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER);
 
             if (!gpsEnabled) {
-                new AlertDialog.Builder(this)
-                    .setTitle("GPS Desactivado")
-                    .setMessage("Por favor activa el GPS para iniciar el paseo y rastrear la ubicación.")
-                    .setPositiveButton("Activar GPS", (d, w) -> {
-                        Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                        startActivity(intent);
-                    })
-                    .setNegativeButton("Cancelar", null)
-                    .show();
+                mostrarDialogoGPSDesactivado();
                 return;
             }
 
@@ -604,45 +589,110 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
      * Muestra el diálogo de confirmación final para iniciar el paseo
      */
     private void mostrarDialogoConfirmacionInicio() {
-        new AlertDialog.Builder(this)
-            .setTitle("Comenzar Paseo")
-            .setMessage("¿Estás listo para comenzar el paseo ahora?")
-            .setPositiveButton("Sí, comenzar", (dialog, which) -> {
-                mostrarLoading(true);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_confirmacion_inicio_paseo, null);
+        builder.setView(view);
 
-                // Actualizar estado a EN_CURSO y establecer fecha_inicio_paseo
-                Map<String, Object> updates = new HashMap<>();
-                updates.put("estado", "EN_CURSO");
-                updates.put("fecha_inicio_paseo", Timestamp.now());
-                updates.put("actualizado_por_paseador", true);
+        MaterialButton btnSiIniciar = view.findViewById(R.id.btn_si_iniciar);
+        MaterialButton btnNoIniciar = view.findViewById(R.id.btn_no_iniciar);
 
-                reservaRef.update(updates)
-                    .addOnSuccessListener(unused -> {
-                        Log.d(TAG, " Paseo iniciado manualmente - Notificando vía WebSocket");
-                        Toast.makeText(this, "¡Paseo iniciado! Disfruta el recorrido.", Toast.LENGTH_SHORT).show();
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
 
-                        // TalkBack: Anunciar inicio del paseo
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-                            findViewById(android.R.id.content).announceForAccessibility("Paseo iniciado correctamente. El cronómetro está en marcha. Disfruta el recorrido con " + (tvNombreMascota != null ? tvNombreMascota.getText() : "la mascota"));
-                        }
+        btnSiIniciar.setOnClickListener(v -> {
+            dialog.dismiss();
+            mostrarLoading(true);
 
-                        mostrarLoading(false);
+            // Actualizar estado a EN_CURSO y establecer fecha_inicio_paseo
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("estado", "EN_CURSO");
+            updates.put("fecha_inicio_paseo", Timestamp.now());
+            updates.put("actualizado_por_paseador", true);
 
-                        // Enviar notificación explícita vía WebSocket al dueño
-                        enviarNotificacionInicioPaseo();
+            reservaRef.update(updates)
+                .addOnSuccessListener(unused -> {
+                    Log.d(TAG, " Paseo iniciado manualmente - Notificando vía WebSocket");
+                    Toast.makeText(this, "¡Paseo iniciado! Disfruta el recorrido.", Toast.LENGTH_SHORT).show();
 
-                        // El listener de Firestore se encargará de actualizar la UI
-                        // cuando detecte el cambio a EN_CURSO
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e(TAG, " Error al iniciar paseo manualmente", e);
-                        Toast.makeText(this, "Error al iniciar el paseo: " + e.getMessage(),
-                            Toast.LENGTH_SHORT).show();
-                        mostrarLoading(false);
-                    });
-            })
-            .setNegativeButton("Aún no", null)
-            .show();
+                    // TalkBack: Anunciar inicio del paseo
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                        findViewById(android.R.id.content).announceForAccessibility("Paseo iniciado correctamente. El cronómetro está en marcha. Disfruta el recorrido con " + (tvNombreMascota != null ? tvNombreMascota.getText() : "la mascota"));
+                    }
+
+                    mostrarLoading(false);
+
+                    // Enviar notificación explícita vía WebSocket al dueño
+                    enviarNotificacionInicioPaseo();
+
+                    // El listener de Firestore se encargará de actualizar la UI
+                    // cuando detecte el cambio a EN_CURSO
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, " Error al iniciar paseo manualmente", e);
+                    Toast.makeText(this, "Error al iniciar el paseo: " + e.getMessage(),
+                        Toast.LENGTH_SHORT).show();
+                    mostrarLoading(false);
+                });
+        });
+
+        btnNoIniciar.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    private void mostrarDialogoPermisosUbicacion() {
+        if (isFinishing()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_permisos_ubicacion, null);
+        builder.setView(view);
+
+        MaterialButton btnDarPermisos = view.findViewById(R.id.btn_dar_permisos);
+        MaterialButton btnCancelar = view.findViewById(R.id.btn_cancel_permisos);
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnDarPermisos.setOnClickListener(v -> {
+            dialog.dismiss();
+            ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                REQUEST_PERMISSION_LOCATION);
+        });
+
+        btnCancelar.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
+    private void mostrarDialogoGPSDesactivado() {
+        if (isFinishing()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_gps_desactivado, null);
+        builder.setView(view);
+
+        MaterialButton btnActivarGPS = view.findViewById(R.id.btn_activar_gps);
+        MaterialButton btnCancelar = view.findViewById(R.id.btn_cancel_gps);
+
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnActivarGPS.setOnClickListener(v -> {
+            dialog.dismiss();
+            Intent intent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            startActivity(intent);
+        });
+
+        btnCancelar.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     /**
@@ -1549,13 +1599,33 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private void mostrarDialogoSolicitudCancelacion(String motivo) {
         if (isFinishing()) return;
 
-        new AlertDialog.Builder(this)
-                .setTitle("Solicitud de cancelación")
-                .setMessage("El dueño ha solicitado cancelar el paseo.\n\nMotivo: " + motivo)
-                .setCancelable(false)
-                .setPositiveButton("Aceptar cancelación", (dialog, which) -> aceptarCancelacionMutua())
-                .setNegativeButton("Rechazar / Continuar", (dialog, which) -> rechazarCancelacion())
-                .show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_solicitud_cancelacion, null);
+        builder.setView(view);
+
+        TextView tvMotivo = view.findViewById(R.id.tv_motivo_cancelacion);
+        MaterialButton btnAceptar = view.findViewById(R.id.btn_aceptar_cancelacion);
+        MaterialButton btnRechazar = view.findViewById(R.id.btn_rechazar_cancelacion);
+
+        tvMotivo.setText(motivo != null && !motivo.isEmpty() ? motivo : "Sin motivo especificado");
+
+        AlertDialog dialog = builder.create();
+        dialog.setCancelable(false);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        btnAceptar.setOnClickListener(v -> {
+            dialog.dismiss();
+            aceptarCancelacionMutua();
+        });
+
+        btnRechazar.setOnClickListener(v -> {
+            dialog.dismiss();
+            rechazarCancelacion();
+        });
+
+        dialog.show();
     }
 
     private void aceptarCancelacionMutua() {
@@ -1815,7 +1885,10 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSION_LOCATION);
         } else {
-            startLocationUpdates();
+            // ===== COMENTADO: NO iniciar LocationService aquí =====
+            // LocationService solo se inicia cuando el estado CAMBIA a EN_CURSO
+            // startLocationUpdates();
+            Log.d(TAG, "Permisos de ubicación disponibles - LocationService se iniciará al hacer clic en 'Comenzar paseo'");
         }
     }
 
@@ -1861,22 +1934,24 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
             // Start the Foreground Service for background tracking
             startLocationService();
 
-            if (fusedLocationClient != null && locationCallback != null) {
-                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
-                // NO sobrescribir el mensaje "📍 Grabando ubicaciones en tiempo real..." que ya se configuró en startLocationService()
-                Log.d(TAG, " Location updates iniciados - Intervalo: 7s, Min distancia: 6m");
-            } else {
-                Log.e(TAG, " No se puede iniciar location updates - fusedLocationClient o callback null");
-            }
+            // ===== COMENTADO: LocationService es el ÚNICO que debe pedir ubicaciones =====
+            // if (fusedLocationClient != null && locationCallback != null) {
+            //     fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+            //     Log.d(TAG, " Location updates iniciados - Intervalo: 7s, Min distancia: 6m");
+            // } else {
+            //     Log.e(TAG, " No se puede iniciar location updates - fusedLocationClient o callback null");
+            // }
+            Log.d(TAG, " LocationService es el encargado de obtener ubicaciones en background");
         } else {
             Log.e(TAG, " Permiso ACCESS_FINE_LOCATION no otorgado");
         }
     }
 
     private void stopLocationUpdates() {
-        if (fusedLocationClient != null && locationCallback != null) {
-            fusedLocationClient.removeLocationUpdates(locationCallback);
-        }
+        // ===== COMENTADO: LocationService maneja removeLocationUpdates por sí solo =====
+        // if (fusedLocationClient != null && locationCallback != null) {
+        //     fusedLocationClient.removeLocationUpdates(locationCallback);
+        // }
         stopLocationService();
     }
 

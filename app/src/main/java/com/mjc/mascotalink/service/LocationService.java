@@ -72,10 +72,8 @@ public class LocationService extends Service {
     private LocationCallback locationCallback;
     private SocketManager socketManager;
     private String currentReservaId;
-    @Inject
-    FirebaseFirestore db;
-    @Inject
-    FirebaseAuth auth;
+    private FirebaseFirestore db;
+    private FirebaseAuth auth;
 
     // Throttling para Firestore (guardar historial)
     private long lastFirestoreSaveTime = 0;
@@ -168,11 +166,12 @@ public class LocationService extends Service {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         socketManager = SocketManager.getInstance(this); // Obtener instancia singleton
-        // db = FirebaseFirestore.getInstance(); // Injected by Hilt
-        // auth = FirebaseAuth.getInstance(); // Injected by Hilt
+        db = FirebaseFirestore.getInstance(); // Obtener directamente sin Hilt
+        auth = FirebaseAuth.getInstance(); // Obtener directamente sin Hilt
 
         Log.d(TAG, ">>> SocketManager obtenido: " + (socketManager != null ? "SI" : "NULL"));
-        Log.d(TAG, ">>> Firestore inyectado: " + (db != null ? "SI" : "NULL"));
+        Log.d(TAG, ">>> Firestore obtenido: " + (db != null ? "SI" : "NULL"));
+        Log.d(TAG, ">>> FirebaseAuth obtenido: " + (auth != null ? "SI" : "NULL"));
 
         createNotificationChannel();
         setupBatteryMonitoring();
@@ -343,7 +342,9 @@ public class LocationService extends Service {
                         Log.d(TAG, " Listener ejecutado - Estado: " + nuevoEstado + ", FromCache: " + isFromCache);
 
                         // Actualizar estado actual
-                        if (nuevoEstado != null && !nuevoEstado.equals(currentEstado)) {
+                        // CRÍTICO: Solo cambiar estado si es del servidor (!isFromCache) o si es EN_CURSO
+                        // Esto evita que el cache desactualizado sobrescriba el estado EN_CURSO inicial
+                        if (nuevoEstado != null && !nuevoEstado.equals(currentEstado) && (!isFromCache || "EN_CURSO".equals(nuevoEstado))) {
                             Log.d(TAG, " Estado cambió: " + currentEstado + " → " + nuevoEstado);
                             String estadoAnterior = currentEstado;
                             currentEstado = nuevoEstado;
