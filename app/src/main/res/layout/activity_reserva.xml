@@ -36,7 +36,8 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:layout_centerVertical="true"
                     android:layout_marginStart="8dp"
-                    android:contentDescription="Volver"/>
+                    android:contentDescription="@string/cd_reserva_back"
+                    android:importantForAccessibility="yes"/>
 
                 <TextView
                     android:id="@+id/toolbar_title"
@@ -241,7 +242,9 @@
             app:backgroundTint="@color/blue_primary"
             android:enabled="false"
             android:textAllCaps="false"
-            android:minWidth="160dp"/>
+            android:minWidth="160dp"
+            android:contentDescription="@string/cd_reserva_confirmar_button"
+            android:importantForAccessibility="yes"/>
 
         <!-- Bottom Nav (Hidden for design, present for code) -->
          <com.google.android.material.bottomnavigation.BottomNavigationView

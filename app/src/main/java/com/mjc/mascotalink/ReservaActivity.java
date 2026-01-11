@@ -113,6 +113,8 @@ public class ReservaActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reserva);
+        // Animación de entrada: slide in desde la derecha
+        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
 
         // --- FIX INICIO: Validaciones críticas de seguridad y datos ---
         mAuth = FirebaseAuth.getInstance();
@@ -1882,6 +1884,11 @@ public class ReservaActivity extends AppCompatActivity {
             documentReference -> {
                 String reservaId = documentReference.getId();
                 Toast.makeText(this, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show();
+
+                // TalkBack: Anunciar confirmación de reserva
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                    findViewById(android.R.id.content).announceForAccessibility("Reserva confirmada exitosamente. El paseador será notificado de tu solicitud.");
+                }
 
                 Intent intent = new Intent(ReservaActivity.this, PerfilDuenoActivity.class);
                 intent.putExtra("reserva_id", reservaId);

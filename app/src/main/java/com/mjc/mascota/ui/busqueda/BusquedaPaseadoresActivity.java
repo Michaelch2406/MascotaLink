@@ -990,6 +990,17 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
         progressBar.setVisibility(View.GONE); // Ocultar progress bar
         resultadosAdapter.submitList(data);
         setupPresenceForResults(data);
+
+        // TalkBack: Anunciar resultados de búsqueda
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            String mensaje = "Búsqueda completada. " + data.size() + " paseadores disponibles";
+            if (data.size() == 1) {
+                mensaje = "Búsqueda completada. Un paseador encontrado";
+            } else if (data.size() == 0) {
+                mensaje = "No se encontraron paseadores";
+            }
+            findViewById(android.R.id.content).announceForAccessibility(mensaje);
+        }
     }
 
     private void showLoading() {
@@ -1283,6 +1294,10 @@ public class BusquedaPaseadoresActivity extends AppCompatActivity implements OnM
           if (!isInitialLoadComplete) {
               skeletonShowTime = System.currentTimeMillis();
               skeletonLayout.setVisibility(View.VISIBLE);
+              // Animación fade in al mostrar skeleton
+              android.view.animation.Animation fadeIn = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.fade_in);
+              skeletonLayout.startAnimation(fadeIn);
+
               contentScrollView.setVisibility(View.GONE);
               recyclerViewResultados.setVisibility(View.GONE);
               emptyStateView.setVisibility(View.GONE);

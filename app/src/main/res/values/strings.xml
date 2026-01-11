@@ -398,4 +398,12 @@
     <string name="accessibility_reservation_duration_2hours">Seleccionar duración de 2 horas</string>
     <string name="accessibility_reservation_duration_3hours">Seleccionar duración de 3 horas</string>
     <string name="accessibility_reservation_duration_custom">Seleccionar duración personalizada</string>
+
+    <!-- Content Descriptions for Updated Screens -->
+    <string name="cd_reserva_back">Botón para volver a la pantalla anterior</string>
+    <string name="cd_reserva_confirmar_button">Botón para confirmar la reserva del paseo</string>
+    <string name="cd_reserva_calendario_icon">Icono de calendario</string>
+    <string name="cd_paseo_mascota_foto">Foto de la mascota a pasear</string>
+    <string name="cd_paseo_dueno_foto_paseador">Foto del paseador responsable del paseo</string>
+    <string name="cd_paseo_dueno_calificacion">Calificación en estrellas del paseador</string>
 </resources>

@@ -73,7 +73,9 @@
                             android:layout_height="56dp"
                             android:scaleType="centerCrop"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
-                            tools:src="@drawable/ic_user_placeholder" />
+                            tools:src="@drawable/ic_user_placeholder"
+                            android:contentDescription="@string/cd_paseo_dueno_foto_paseador"
+                            android:importantForAccessibility="yes" />
 
                         <!-- Datos Paseador -->
                         <LinearLayout
@@ -105,7 +107,9 @@
                                     android:layout_width="14dp"
                                     android:layout_height="14dp"
                                     android:src="@drawable/ic_star_filled"
-                                    app:tint="#FFC107"/>
+                                    app:tint="#FFC107"
+                                    android:contentDescription="@string/cd_paseo_dueno_calificacion"
+                                    android:importantForAccessibility="no"/>
 
                                 <TextView
                                     android:id="@+id/tv_rating"

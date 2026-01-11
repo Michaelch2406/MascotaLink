@@ -303,6 +303,17 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
         pbLoading = findViewById(R.id.pb_loading);
         pbProgresoPaseo = findViewById(R.id.pb_progreso_paseo);
         scrollContainer = findViewById(R.id.scroll_container); // Initialize
+
+        // Animación de escala en la tarjeta de mascota
+        View cardMascota = findViewById(R.id.card_mascota);
+        if (cardMascota != null) {
+            cardMascota.setAlpha(0.0f);
+            cardMascota.postDelayed(() -> {
+                android.view.animation.Animation scaleUp = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.scale_up);
+                cardMascota.startAnimation(scaleUp);
+                cardMascota.setAlpha(1.0f);
+            }, 200);
+        }
     }
 
     private void setupMap() {
@@ -608,6 +619,12 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
                     .addOnSuccessListener(unused -> {
                         Log.d(TAG, " Paseo iniciado manualmente - Notificando vía WebSocket");
                         Toast.makeText(this, "¡Paseo iniciado! Disfruta el recorrido.", Toast.LENGTH_SHORT).show();
+
+                        // TalkBack: Anunciar inicio del paseo
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                            findViewById(android.R.id.content).announceForAccessibility("Paseo iniciado correctamente. El cronómetro está en marcha. Disfruta el recorrido con " + (tvNombreMascota != null ? tvNombreMascota.getText() : "la mascota"));
+                        }
+
                         mostrarLoading(false);
 
                         // Enviar notificación explícita vía WebSocket al dueño
@@ -2070,6 +2087,16 @@ public class PaseoEnCursoActivity extends AppCompatActivity implements OnMapRead
     private void actualizarEstadoUbicacion(String texto) {
         if (tvUbicacionEstado != null) {
             tvUbicacionEstado.setText(texto);
+
+            // TalkBack: Anunciar cambios de ubicación críticos
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                if (texto.contains("sin red") || texto.contains("buscando")) {
+                    tvUbicacionEstado.announceForAccessibility(texto);
+                } else if (texto.contains("±")) {
+                    // Anunciar solo cuando hay ubicación confirmada con precisión
+                    tvUbicacionEstado.announceForAccessibility("Ubicación actualizada: " + texto);
+                }
+            }
         }
     }
 

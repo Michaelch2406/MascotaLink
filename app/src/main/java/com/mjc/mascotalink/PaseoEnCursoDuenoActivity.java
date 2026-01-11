@@ -171,6 +171,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     if (tvUbicacionEstado != null) {
                         tvUbicacionEstado.setText(" Sin conexión - Intentando reconectar...");
                         tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.red_error));
+
+                        // TalkBack: Anunciar pérdida de conexión
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                            tvUbicacionEstado.announceForAccessibility("Conexión perdida. Reconectando automáticamente...");
+                        }
                     }
                     // Mostrar Snackbar persistente
                     if (reconnectSnackbar == null || !reconnectSnackbar.isShown()) {
@@ -207,6 +212,11 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
                     if (tvUbicacionEstado != null) {
                         tvUbicacionEstado.setText("✅ Conectado - Esperando ubicación...");
                         tvUbicacionEstado.setTextColor(ContextCompat.getColor(PaseoEnCursoDuenoActivity.this, R.color.blue_primary));
+
+                        // TalkBack: Anunciar reconexión exitosa
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                            tvUbicacionEstado.announceForAccessibility("Conexión restaurada exitosamente. Monitoreando la ubicación del paseo en tiempo real.");
+                        }
                     }
                     // Dismiss Snackbar de reconexión
                     if (reconnectSnackbar != null && reconnectSnackbar.isShown()) {
@@ -589,8 +599,18 @@ public class PaseoEnCursoDuenoActivity extends AppCompatActivity implements OnMa
     }
 
     private void setupButtons() {
-        btnContactar.setOnClickListener(v -> mostrarOpcionesContacto());
-        btnCancelar.setOnClickListener(v -> iniciarProcesoCancelacion());
+        btnContactar.setOnClickListener(v -> {
+            // Animación pulse al presionar
+            android.view.animation.Animation pulse = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.pulse);
+            v.startAnimation(pulse);
+            mostrarOpcionesContacto();
+        });
+        btnCancelar.setOnClickListener(v -> {
+            // Animación pulse al presionar
+            android.view.animation.Animation pulse = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.pulse);
+            v.startAnimation(pulse);
+            iniciarProcesoCancelacion();
+        });
     }
 
     private void setupBottomNav() {

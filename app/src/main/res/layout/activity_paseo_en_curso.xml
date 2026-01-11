@@ -81,7 +81,9 @@
                                 android:layout_height="56dp"
                                 android:scaleType="centerCrop"
                                 app:shapeAppearanceOverlay="@style/ShapeAppearance.App.Circle"
-                                tools:src="@drawable/ic_pet_placeholder" />
+                                tools:src="@drawable/ic_pet_placeholder"
+                                android:contentDescription="@string/cd_paseo_mascota_foto"
+                                android:importantForAccessibility="yes" />
 
                             <!-- Avatares superpuestos para múltiples mascotas -->
                             <com.mjc.mascotalink.views.OverlappingAvatarsView
@@ -158,7 +160,9 @@
                                 android:layout_width="16dp"
                                 android:layout_height="16dp"
                                 android:src="@drawable/ic_calendar"
-                                app:tint="@color/secondary" />
+                                app:tint="@color/secondary"
+                                android:contentDescription="@string/cd_reserva_calendario_icon"
+                                android:importantForAccessibility="no" />
 
                             <TextView
                                 android:id="@+id/tv_fecha_hora"

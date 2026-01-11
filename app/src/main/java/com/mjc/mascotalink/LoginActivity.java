@@ -94,6 +94,8 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_login);
+        // Animación de entrada: fade in suave
+        overridePendingTransition(R.anim.fade_in, android.R.anim.fade_out);
         bindViews();
 
         if (checkForSavedSession()) {
@@ -473,6 +475,10 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         if (intent != null) {
+            // TalkBack: Anunciar login exitoso
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                btnLogin.announceForAccessibility("Sesión iniciada exitosamente. Cargando tu inicio...");
+            }
             startActivity(intent);
             finish();
             return true;
@@ -573,6 +579,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void mostrarError(String msg) {
+        // TalkBack: Anunciar error
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            findViewById(android.R.id.content).announceForAccessibility("Error: " + msg);
+        }
+
         if (msg.length() > 100) {
             new androidx.appcompat.app.AlertDialog.Builder(this)
                     .setTitle("Error")

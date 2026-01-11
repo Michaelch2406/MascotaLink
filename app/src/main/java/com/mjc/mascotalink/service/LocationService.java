@@ -70,8 +70,7 @@ public class LocationService extends Service {
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
-    @Inject
-    SocketManager socketManager;
+    private SocketManager socketManager;
     private String currentReservaId;
     @Inject
     FirebaseFirestore db;
@@ -168,11 +167,11 @@ public class LocationService extends Service {
         Log.d(TAG, "========================================");
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        // socketManager = SocketManager.getInstance(this); // Injected by Hilt
+        socketManager = SocketManager.getInstance(this); // Obtener instancia singleton
         // db = FirebaseFirestore.getInstance(); // Injected by Hilt
         // auth = FirebaseAuth.getInstance(); // Injected by Hilt
 
-        Log.d(TAG, ">>> SocketManager inyectado: " + (socketManager != null ? "SI" : "NULL"));
+        Log.d(TAG, ">>> SocketManager obtenido: " + (socketManager != null ? "SI" : "NULL"));
         Log.d(TAG, ">>> Firestore inyectado: " + (db != null ? "SI" : "NULL"));
 
         createNotificationChannel();
